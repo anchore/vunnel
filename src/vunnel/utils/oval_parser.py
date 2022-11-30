@@ -1,0 +1,233 @@
+# pylint: skip-file
+
+import copy
+import logging as logger
+import os
+import re
+import xml.etree.ElementTree as ET
+
+# from anchore_engine.subsys import logger
+from vunnel.utils.vulnerability import vulnerability_element
+
+# from anchore_enterprise.services.feeds.drivers.common import vulnerability_element
+
+
+class Config(object):
+    """
+    Capture regular expressions, xpath queries and other driver specific configuration
+    in an instance of this class
+
+    """
+
+    # regexes
+    tag_pattern = None
+    ns_pattern = None
+    is_installed_pattern = None
+    pkg_version_pattern = None
+    signed_with_pattern = None
+    platform_version_pattern = None
+
+    # xpath queries
+    title_xpath_query = None
+    severity_xpath_query = None
+    platform_xpath_query = None
+    date_issued_xpath_query = None
+    date_updated_xpath_query = None
+    description_xpath_query = None
+    sa_ref_xpath_query = None
+    cve_xpath_query = None
+    criteria_xpath_query = None
+    criterion_xpath_query = None
+
+    # maps
+    severity_dict = None
+
+    # string formats
+    ns_format = None
+
+
+def parse(dest_file, config):
+    """
+    Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
+    and tuple (version, vulnerability-dictionary) as the value
+
+    :param dest_file: path object to oval file to be parsed
+    :param config: configuration for parsing oval file
+    :return:
+    """
+    if not isinstance(config, Config):
+        logger.warn("Invalid config found, expected an instance of Config class")
+        raise TypeError("Invalid config")
+
+    logger.debug("Parsing {}".format(dest_file))
+    vuln_dict = {}
+
+    if os.path.exists(dest_file):
+        processing = False
+        for event, element in ET.iterparse(dest_file, events=("start", "end")):
+            # gather definition
+            if event == "start" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
+                processing = True
+            elif event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
+                try:
+                    _process_definition(element, vuln_dict, config)
+                except:
+                    logger.exception("Error parsing oval record. Logging error and continuing")
+                finally:
+                    processing = False
+
+            if not processing and event == "end":
+                # print('Clearing element: {} post event: {}'.format(re.search(tag_pattern, element.tag).group(1), event))
+                element.clear()
+
+            # bail after definitions
+            if event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definitions":
+                # print('Stopped parsing')
+                break
+    else:
+        logger.warn("{} not found, returning empty results".format(dest_file))
+
+    return vuln_dict
+
+
+def _process_definition(def_element, vuln_dict, config):
+    oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
+
+    def_version = def_element.attrib["version"]
+    title = def_element.find(config.title_xpath_query.format(oval_ns)).text
+    name = title[: title.index(": ")].strip()
+    try:
+        severity = config.severity_dict.get(def_element.find(config.severity_xpath_query.format(oval_ns)).text.lower())
+    except (AttributeError, ET.ParseError):
+        logger.warn("Unable to parse severity for %s, defaulting to Unknown", name)
+        severity = "Unknown"
+    issued = def_element.find(config.date_issued_xpath_query.format(oval_ns)).attrib["date"]
+    # check for xpath query first since oracle does not provide this and its not initialized in the config
+    if config.date_updated_xpath_query:
+        updated = def_element.find(config.date_updated_xpath_query.format(oval_ns)).attrib["date"]
+    else:
+        updated = None
+    rhsa_ref = def_element.find(config.sa_ref_xpath_query.format(oval_ns))
+    ref_id = rhsa_ref.attrib["ref_id"]
+    link = rhsa_ref.attrib["ref_url"]
+
+    cves = []
+    for cve in def_element.iterfind(config.cve_xpath_query.format(oval_ns)):
+        if "cvss2" in cve.attrib:
+            cves.append(
+                {
+                    "Name": cve.text,
+                    "Link": cve.attrib["href"],
+                    "cvss2": cve.attrib["cvss2"],
+                }
+            )
+        else:
+            cves.append({"Name": cve.text, "Link": cve.attrib["href"]})
+
+    ns_pkgs_dict = _process_criteria(def_element, oval_ns, config)
+
+    for platform_element in def_element.iterfind(config.platform_xpath_query.format(oval_ns)):
+        v = copy.deepcopy(vulnerability_element)
+        ns_name = config.ns_format.format(re.search(config.platform_version_pattern, platform_element.text).group(1))
+
+        v["Vulnerability"]["NamespaceName"] = ns_name
+        v["Vulnerability"]["Severity"] = severity
+        v["Vulnerability"]["Metadata"] = (
+            {"Issued": issued, "Updated": updated, "RefId": ref_id} if updated else {"Issued": issued, "RefId": ref_id}
+        )
+        v["Vulnerability"]["Name"] = name
+        v["Vulnerability"]["Link"] = link
+
+        if cves:
+            v["Vulnerability"]["Metadata"]["CVE"] = cves
+
+        if ns_pkgs_dict and ns_name in ns_pkgs_dict:
+            v["Vulnerability"]["FixedIn"] = [
+                {
+                    "Name": x[0],
+                    "Version": x[1],
+                    "VersionFormat": "rpm",  # hard code version format for now
+                    "NamespaceName": ns_name,
+                }
+                for x in ns_pkgs_dict[ns_name]
+            ]
+        else:
+            logger.warn("No affected packages found for {}, this is unusual".format(name))
+
+        # handle duplicates using version version attribute of definition element
+        if (name, ns_name) in vuln_dict:
+            existing_version, _ = vuln_dict[(name, ns_name)]
+            logger.debug(
+                "Found an existing record for {} under {}. Version attribute of definition oval element: existing: {}, new: {}".format(
+                    name, ns_name, existing_version, def_version
+                )
+            )
+            # lexicographic comparison of versions to choose which vulnerability record wins
+            if def_version > existing_version:
+                # Replacing existing record with new one'
+                vuln_dict[(name, ns_name)] = (def_version, v)
+            else:
+                # Existing record stays
+                pass
+        else:
+            vuln_dict[(name, ns_name)] = (def_version, v)
+
+
+def _process_criteria(element_a, oval_ns, config):
+    """
+    Parse and return a dict containing namespace mapped to a set of (package, version) tuples
+
+    :param element_a: outermost criteria element within a definition element
+    :param oval_ns: namespace URL of the oval
+    :return:
+    """
+    criteria_element = element_a.find(config.criteria_xpath_query.format(oval_ns))
+    groups = []
+    ns_pkgs_dict = {}
+
+    if criteria_element.attrib["operator"].lower() == "or":
+        for child in list(criteria_element):
+            groups.append(_get_all_criterion(child, oval_ns, config))
+    else:
+        groups.append(_get_all_criterion(criteria_element, oval_ns, config))
+
+    for group in groups:
+        if not group:
+            # logger.debug('Parsed group for one or more criterion is empty, skipping')
+            continue  # bail out of processing the group if its empty
+
+        # Find the first platform version string in the returned list
+        ns_name = next((x for x in group if not isinstance(x, tuple)), None)
+
+        if ns_name:  # proceed only if a platform is found
+            # Filter out duplicate (package, version) tuples
+            ns_pkgs_dict[ns_name] = {x for x in group if isinstance(x, tuple)}
+        else:
+            # logger.debug('Namespace for the criteria not found, ignoring criteria')
+            continue  # ignore this group of conditions if namespace is not found
+
+    return ns_pkgs_dict
+
+
+def _get_all_criterion(element_b, oval_ns, config):
+    """
+    Search for all the criterion elements under the given criteria element and
+    parse contents into a list. Returned list may contain tuples and or simple strings.
+    Package name and version found in the comment of a criterion element is represented by a tuple.
+    Platform version found in the comment of a criterion element is represented by a simple string.
+
+    :param element_b: criteria element
+    :param oval_ns: namespace URL of the oval
+    :return:
+    """
+    collectibles = []
+
+    for criterion in element_b.iterfind(config.criterion_xpath_query.format(oval_ns)):
+        if re.search(config.pkg_version_pattern, criterion.attrib["comment"]):
+            pkg, version = re.search(config.pkg_version_pattern, criterion.attrib["comment"]).groups()
+            collectibles.append((pkg, version))
+        elif re.search(config.is_installed_pattern, criterion.attrib["comment"]):
+            ns_name = config.ns_format.format(re.search(config.is_installed_pattern, criterion.attrib["comment"]).group(1))
+            collectibles.append(ns_name)
+
+    return collectibles

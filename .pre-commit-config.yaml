@@ -1,0 +1,78 @@
+# the default is to run these on commit + push
+default_stages:
+  - push
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.4.0
+    hooks:
+    - id: check-added-large-files
+      stages:
+        - push
+    - id: check-ast
+      stages:
+        - push
+    - id: check-docstring-first
+      stages:
+        - push
+    - id: check-yaml
+      stages:
+        - push
+    - id: end-of-file-fixer
+      stages:
+        - push
+    - id: trailing-whitespace
+      stages:
+        - push
+    - id: check-merge-conflict
+      stages:
+        - push
+    - id: debug-statements
+      stages:
+        - push
+  # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
+  - repo: local
+    hooks:
+      - id: system
+        name: black
+        entry: poetry run black . --line-length 130
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: isort
+        entry: poetry run isort .
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: autoflake
+        # this doesn't play nice with __init__ imports
+        # --remove-all-unused-imports --remove-unused-variable
+        entry: poetry run autoflake --in-place -r src/vunnel
+        pass_filenames: false
+        language: system
+  - repo: local
+    hooks:
+      - id: system
+        name: pylint
+        entry: poetry run pylint src/vunnel
+        pass_filenames: false
+        language: system
+  # # add this back once we're not prototyping anymore
+  # - repo: local
+  #   hooks:
+  #     - id: system
+  #       name: mypy
+  #       entry: poetry run mypy --config-file ./pyproject.toml src/vunnel
+  #       pass_filenames: false
+  #       language: system
+  # - repo: local
+  #   hooks:
+  #     - id: system
+  #       name: tox
+  #       entry: poetry run tox
+  #       pass_filenames: false
+  #       language: system
