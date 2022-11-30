@@ -1,0 +1,89 @@
+[tool.poetry.scripts]
+vunnel = "vunnel.cli:run"
+
+[tool.poetry]
+name = "vunnel"
+version = "0.1.0"
+description = "vunnel ~= 'vulnerability data funnel'"
+authors = ["Alex Goodman <alex.goodman@anchore.com>"]
+license = "Apache 2.0"
+readme = "README.md"
+exclude = [
+    "tests/**/*"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.7.2,<4.0"
+click = "^8.1.3"
+requests = "^2.28.1"
+colorlog = "^6.7.0"
+rfc3339 = "^6.2"
+PyYAML = "^6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.1.3"
+tox = "^3.26.0"
+pre-commit = "^2.20.0"
+black = "^22.10.0"
+isort = "^5.10.1"
+autoflake = "^2.0.0"
+pylint = "^2.15.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.isort]
+# all settings suggested by black: https://black.readthedocs.io/en/stable/compatible_configs.html
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 100
+
+[tool.pylint.messages_control]
+disable = [
+        # pylint wants deferred formatting for log messages (to use less CPU if that log level is disabled). We prefer the legibility of f-strings: f"a is {a}"
+        "logging-format-interpolation",
+        "logging-fstring-interpolation",
+        "logging-not-lazy",
+
+        # haven't gotten around to doc strings yet
+        "missing-function-docstring",
+        "missing-module-docstring",
+        "missing-class-docstring",
+
+        # this is a bit strict for a few cases
+        "invalid-name",
+        "duplicate-code",
+
+        # having TODO's and FIXME's are OK in a codebase
+        "fixme",
+
+        # dataclasses shouldn't be restricted on the number of instance attributes
+        "R0902",
+
+        # this seems to make wrong guesses
+        "unnecessary-lambda",
+
+        # "too few public methods" does not take into account UI element bindings in an event update driven fashion
+        "R0903",
+    ]
+
+[tool.pylint.format]
+# allow for a wide-birth
+max-line-length = "150"
+
+# TODO: add tox support https://github.com/tox-dev/tox/issues/814 & https://tox.readthedocs.io/en/latest/example/basic.html#pyproject-toml-tox-legacy-ini
+
+# TODO: port this section to "tool.mypy" when supported
+[mypy]
+check_untyped_defs = 0
+ignore_missing_imports = 1
+ignore_errors = 0
+strict_optional = 0
+warn_unused_ignores = 1
+warn_redundant_casts = 1
+warn_unused_configs = 1
