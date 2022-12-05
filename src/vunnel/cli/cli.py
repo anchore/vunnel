@@ -95,6 +95,7 @@ def run_provider(cfg: config.Application, provider_name: str):
 
     # provider_config = cfg.provider.get("provider_name")
     provider = providers.create("centos", cfg.root, config=cfg.provider.get("centos"))
+    provider = providers.create("nvdv2", cfg.root, config=cfg.provider.get("nvdv2"))
     provider.populate()
 
 

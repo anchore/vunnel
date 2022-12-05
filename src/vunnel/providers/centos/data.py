@@ -5,6 +5,7 @@ import hashlib
 import logging
 import os
 import re
+from typing import List
 
 import requests
 
@@ -82,7 +83,7 @@ class CentOSDataProvider(object):
         self.logger = logger
 
     @property
-    def urls(self):
+    def urls(self) -> List[str]:
         return [
             self._url_,
             self._meta_url_,
