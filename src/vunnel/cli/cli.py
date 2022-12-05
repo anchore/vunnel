@@ -82,7 +82,6 @@ def show_config(cfg: config.Application):
         def increase_indent(self, flow=False, indentless=False):
             return super().increase_indent(flow, False)
 
-    print()
     cfg_dict = dataclasses.asdict(cfg)
     print(yaml.dump(cfg_dict, Dumper=IndentDumper, default_flow_style=False))
 

@@ -4,32 +4,34 @@ from dataclasses import dataclass, field
 
 from vunnel import provider
 
-from .data import CentOSDataProvider, centos_config
+from .data import DataProvider, centos_config
 
 
-@dataclass(frozen=True)
+@dataclass
 class Config:
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(existing_input=provider.ExistingStatePolicy.KEEP)
+    )
     skip_namespaces: list[str] = field(default_factory=lambda: ["centos:3", "centos:4"])
     request_timeout: int = 125
-    use_existing_data: bool = True
 
 
 class Provider(provider.Provider):
     name = "centos"
 
     def __init__(self, root: str, config: Config):
-        super().__init__(root)
+        super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
     def update(self) -> list[str]:
-        data_provider = CentOSDataProvider(
-            workspace=self.workspace,
+        data_provider = DataProvider(
+            workspace=self.input,
             config=centos_config,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
         # { (CVE, namespace): {...data...}" }
-        vuln_dict = data_provider.get(skip_if_exists=self.config.use_existing_data)
+        vuln_dict = data_provider.get(skip_if_exists=self.config.runtime.existing_input == provider.ExistingStatePolicy.KEEP)
 
         self.logger.info(f"processed {len(vuln_dict)} entries")
 
@@ -39,9 +41,10 @@ class Provider(provider.Provider):
                 el = {"key": key[0], "namespace": key[1], "payload": value[1]}
                 filename = os.path.join(self.results, f"{key[0].lower()}.json")
 
-                # TODO(ALEX): we should put this back in
-                # if filename in files:
-                #     raise RuntimeError(f"filename {filename!r} already processed")
+                # TODO: there seems to be a lot of duplicates... is that intentional?
+                if filename in files:
+                    self.logger.warning(f"file {filename!r} already processed (skipping)")
+                    continue
 
                 with open(filename, "w", encoding="utf-8") as f:
                     self.logger.trace(f"writing {filename}")

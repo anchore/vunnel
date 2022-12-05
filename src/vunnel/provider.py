@@ -1,50 +1,47 @@
 import abc
-import datetime
-import hashlib
-import json
+import enum
 import logging
 import os
 import shutil
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
-import rfc3339
-
-METADATA_FILENAME = "metadata.json"
+from . import workspace
 
 
-class DTEncoder(json.JSONEncoder):
-    def default(self, o):
-        # if passed in object is datetime object
-        # convert it to a string
-        if isinstance(o, datetime.datetime):
-            return rfc3339.rfc3339(o)
-        # otherwise use the default behavior
-        return json.JSONEncoder.default(self, o)
+class OnErrorPolicy(str, enum.Enum):
+    FAIL = "fail"
+    SKIP = "skip"
+    RETRY = "retry"
 
 
-@dataclass(frozen=True)
-class FileState:
-    path: str
-    digest: str
-    # timestamp: datetime.datetime
+class ExistingStatePolicy(str, enum.Enum):
+    KEEP = "keep"
+    DELETE = "delete"
 
 
-@dataclass(frozen=True)
-class State:
-    root: str
-    # the list of files should be:
-    # - relative to the root
-    # - be sorted by path
-    urls: list[str]
-    workspace: list[FileState]
-    results: list[FileState]
+@dataclass
+class RuntimeConfig:
+    on_error: OnErrorPolicy = OnErrorPolicy.FAIL  # TODO: hook this up and enforce
+    existing_input: ExistingStatePolicy = ExistingStatePolicy.DELETE
+    existing_results: ExistingStatePolicy = ExistingStatePolicy.DELETE
+    retry_attempts: int = 3
+
+    def __post_init__(self):
+
+        if not isinstance(self.on_error, OnErrorPolicy):
+            self.on_error = OnErrorPolicy(self.on_error)
+        if not isinstance(self.existing_input, ExistingStatePolicy):
+            self.existing_input = ExistingStatePolicy(self.existing_input)
+        if not isinstance(self.existing_results, ExistingStatePolicy):
+            self.existing_results = ExistingStatePolicy(self.existing_results)
 
 
 class Provider(abc.ABC):
-    def __init__(self, root: str):
-        self._root = root
+    def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):
+        self.root = root
         self.logger = logging.getLogger(self.name)
         self.urls = []
+        self.runtime_cfg = runtime_cfg
 
     @property
     @abc.abstractstaticmethod
@@ -56,56 +53,55 @@ class Provider(abc.ABC):
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
 
     def populate(self):
-        self.logger.info(f"using {self.workspace} as workspace")
-        self.clear_results()
-        self.create_workspace()
+        self.logger.info(f"using {self.workspace} as workspace root")
+
+        if self.runtime_cfg.existing_results == ExistingStatePolicy.DELETE:
+            self._clear_results()
+
+        if self.runtime_cfg.existing_input == ExistingStatePolicy.DELETE:
+            self._clear_input()
+
+        self._create_workspace()
         urls = self.update()
         self._catalog_workspace(urls=urls)
 
-    def create_workspace(self):
-        if not os.path.exists(self.workspace):
+    def _create_workspace(self):
+        if not os.path.exists(self.input):
             self.logger.debug(f"creating workspace for {self.name!r}")
-            os.makedirs(self.workspace)
+            os.makedirs(self.input)
         else:
             self.logger.debug(f"using existing workspace for {self.name!r}")
         if not os.path.exists(self.results):
             os.makedirs(self.results)
 
-    def clear(self):
-        self.clear_workspace()
-        self.clear_results()
-
-    def clear_results(self):
+    def _clear_results(self):
         if os.path.exists(self.results):
             self.logger.debug("clearing existing results")
             shutil.rmtree(self.results)
 
-    def clear_workspace(self):
-        if os.path.exists(self.workspace):
+    def _clear_input(self):
+        if os.path.exists(self.input):
             self.logger.debug("clearing existing workspace")
-            shutil.rmtree(self.workspace)
+            shutil.rmtree(self.input)
 
     def _catalog_workspace(self, urls: list[str]):
-        metadata_path = os.path.join(self.root, METADATA_FILENAME)
+        state = workspace.WorkspaceState.from_fs(provider=self.name, urls=urls, input=self.input, results=self.results)
 
-        state = State(root=self.root, urls=urls, workspace=file_listing(self.workspace), results=file_listing(self.results))
-
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(asdict(state), f, cls=DTEncoder, indent=2)
+        metadata_path = state.write(self.workspace)
 
         self.logger.debug(msg=f"wrote workspace state to {metadata_path}")
 
     @property
-    def root(self):
-        return f"{self._root}/{self.name}"
+    def workspace(self):
+        return f"{self.root}/{self.name}"
 
     @property
-    def workspace(self):
-        return f"{self.root}/input"
+    def input(self):
+        return f"{self.workspace}/input"
 
     @property
     def results(self):
-        return f"{self.root}/results"
+        return f"{self.workspace}/results"
 
     def __repr__(self):
         extra = []
@@ -114,27 +110,4 @@ class Provider(abc.ABC):
             extra.append(f"config={self.config}")  # pylint: disable=no-member
         if extra:
             prefix = ", "
-        return f"Provider(name={self.name}, workspace={self.workspace}{prefix}{', '.join(extra)})"
-
-
-def file_digest(path: str):
-    sha256_hash = hashlib.sha256()
-    with open(path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-    return "sha256:" + sha256_hash.hexdigest()
-
-
-def file_listing(path: str):
-    listing = []
-    for root, dirs, files in os.walk(path):  # pylint: disable=unused-variable
-        for file in files:
-            full_path = os.path.join(root, file)
-            listing.append(
-                FileState(
-                    path=file,
-                    digest=file_digest(full_path),
-                    # timestamp=datetime.datetime.fromtimestamp(os.path.getmtime(full_path))
-                )
-            )
-    return listing
+        return f"Provider(name={self.name}, input={self.input}{prefix}{', '.join(extra)})"
