@@ -16,11 +16,11 @@ test: unit ## Run all tests
 
 .PHONY: static-analysis
 static-analysis: ## Run all static analyses
-	poetry run pre-commit run -a --hook-stage push
+	poetry install && poetry run pre-commit run -a --hook-stage push
 
 .PHONY: unit
 unit: ## Run unit tests
-	poetry run tox
+	poetry install && poetry run tox
 
 .PHONY: help
 help:
