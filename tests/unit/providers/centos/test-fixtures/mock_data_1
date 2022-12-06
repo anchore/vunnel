@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:red-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+  <generator>
+    <oval:product_name>Red Hat OVAL Patch Definition Merger</oval:product_name>
+    <oval:product_version>3</oval:product_version>
+    <oval:schema_version>5.10</oval:schema_version>
+    <oval:timestamp>2019-09-24T15:51:35</oval:timestamp>
+    <oval:content_version>1569340295</oval:content_version>
+  </generator>
+  <definitions>
+    <definition class="patch" id="oval:com.redhat.rhba:def:20070026" version="634">
+      <metadata>
+        <title>RHSA-0000-0000: htdig bug fix update (None)</title>
+        <affected family="unix">
+          <platform>Red Hat Enterprise Linux 3</platform>
+        </affected>
+        <reference ref_id="RHSA-0000-0000" ref_url="https://access.redhat.com/errata/RHSA-0000-0000" source="RHSA"/>
+        <reference ref_id="CVE-2000-1191" ref_url="https://access.redhat.com/security/cve/CVE-2000-1191" source="CVE"/>
+        <description>The htdig system is a complete world wide web indexing and searchingsystem for a small domain or intranet. This system is not meant to replacethe need for powerful internet-wide search systems like Lycos, Infoseek,Webcrawler and AltaVista. Instead it is meant to cover the search needs fora single company, campus, or even a particular sub section of a web site. Asopposed to some WAIS-based or web-server based search engines, htdig canspan several web servers at a site. The type of these different web serversdoesn't matter as long as they understand the HTTP 1.0 protocol.htdig is also used by KDE to search KDE's HTML documentation.Bugs fixed in this update include:* rundig script (/usr/bin/rundig) missed &quot;$opts&quot; on two calls to htfuzzy.* htfuzzy segfaulted when database is empty.* htdig was unable to open empty database on 64bits.* htdig showed full path to configuration file when accessed from the web.Users should upgrade to this updated package, which resolves these issues.</description>
+        <advisory from="secalert@redhat.com">
+          <severity>None</severity>
+          <rights>Copyright 2008 Red Hat, Inc.</rights>
+          <issued date="2007-06-07"/>
+          <updated date="2008-03-20"/>
+          <cve href="https://access.redhat.com/security/cve/CVE-2000-1191" impact="low" public="20000418">CVE-2000-1191</cve>
+          <bugzilla href="https://bugzilla.redhat.com/130528" id="130528">/usr/bin/rundig is missing &quot;$opts&quot; on two calls to htfuzzy</bugzilla>
+          <bugzilla href="https://bugzilla.redhat.com/133840" id="133840">htdig will not run</bugzilla>
+          <bugzilla href="https://bugzilla.redhat.com/218715" id="218715">CVE-2000-1191 htdig configuration file path disclosure flaw</bugzilla>
+          <affected_cpe_list>
+            <cpe>cpe:/o:redhat:enterprise_linux:3</cpe>
+          </affected_cpe_list>
+        </advisory>
+      </metadata>
+      <criteria operator="AND">
+        <criterion comment="Red Hat Enterprise Linux 3 is installed" test_ref="oval:com.redhat.rhba:tst:20070026003"/>
+        <criterion comment="htdig is earlier than 2:3.1.6-7.el3" test_ref="oval:com.redhat.rhba:tst:20070026001"/>
+        <criterion comment="htdig is signed with Red Hat master key" test_ref="oval:com.redhat.rhba:tst:20070026002"/>
+      </criteria>
+    </definition>
+  </definitions>
+</oval_definitions>
