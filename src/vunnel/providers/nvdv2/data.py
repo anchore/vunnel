@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 import datetime
 import hashlib
 import json
@@ -56,7 +58,7 @@ encode_dict = {
 }
 
 
-class CPE(object):
+class CPE:
     """
     A helper class for converting CPE 2.3 formatted string into CPE 2.2 URI and matching CPE 2.3 formatted strings
     """
@@ -108,19 +110,8 @@ class CPE(object):
         return other and self == other
 
     def __repr__(self):
-        return "CPE: part={}, vendor={}, product={}, version={}, update={}, edition={}, language={}, sw_edition={}, target_sw={}, target_hw={}, other={}".format(
-            self.part,
-            self.vendor,
-            self.product,
-            self.version,
-            self.update,
-            self.edition,
-            self.language,
-            self.sw_edition,
-            self.target_sw,
-            self.target_hw,
-            self.other,
-        )
+        # pylint: disable=line-too-long
+        return f"CPE: part={self.part}, vendor={self.vendor}, product={self.product}, version={self.version}, update={self.update}, edition={self.edition}, language={self.language}, sw_edition={self.sw_edition}, target_sw={self.target_sw}, target_hw={self.target_hw}, other={self.other}"
 
     def copy(self):
         return CPE(
@@ -211,12 +202,9 @@ class CPE(object):
                 )
             else:
                 raise Exception("Cannot convert cpe 2.3 formatted string {} into wfn".format(cpe23_fs))
-        else:
-            raise Exception(
-                "Invalid cpe 2.3 formatted string {} Splitting with : delimiter resulted in less than 13 elements".format(
-                    cpe23_fs
-                )
-            )
+        raise Exception(
+            "Invalid cpe 2.3 formatted string {} Splitting with : delimiter resulted in less than 13 elements".format(cpe23_fs)
+        )
 
     def as_cpe23_fs(self):
         return "cpe:2.3:{}".format(
@@ -286,8 +274,7 @@ class CPE(object):
                 pos += 1
 
             return new_element
-        else:
-            return element
+        return element
 
     def is_match(self, other_cpe):
         """
@@ -323,11 +310,11 @@ class CPE(object):
                 return False
 
             return True
-        else:
-            return False
+
+        return False
 
 
-class NVDCPEDictionaryUtils(object):
+class NVDCPEDictionaryUtils:
     _tag_pattern_ = re.compile(r"\{.*\}(.*)")
     _cpe_url_ = "https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.gz"
 
@@ -503,9 +490,9 @@ class NVDCPEDictionaryUtils(object):
                             end_ver and end_ver == cpe_obj.version
                         ):  # end version was supplied, compare the versions to check if start and end are the same
                             beginning_of_end = True  # beginning of the end has been spotted
-                            if (
-                                not include_end
-                            ):  # begin and end versions are the same and end is excluded, so the result is empty. This happens when there is only one version and it is explicitly excluded
+                            if not include_end:
+                                # begin and end versions are the same and end is excluded, so the result is empty. This
+                                # happens when there is only one version and it is explicitly excluded
                                 break
 
                         if include_start:  # survived through
@@ -530,9 +517,11 @@ class NVDCPEDictionaryUtils(object):
                         else:  # end version was supplied and is not exact match
                             if (
                                 beginning_of_end
-                            ):  # beginning of end version spotted, which means this version is past the end. Do not include this
+                            ):  # beginning of end version spotted, which means this version is past the end. Do not
+                                # include this
                                 break
-                            else:  # end version was supplied but it didn't match, also beggining of end has not been encountered. this is probably the middle
+                            else:  # end version was supplied but it didn't match, also beggining of end has not been
+                                # encountered. this is probably the middle
                                 cpe_list.append(cpe23_fs)
                                 continue
             else:  # this cpe is not match for base
@@ -559,7 +548,7 @@ class NVDCPEDictionaryUtils(object):
         return cpe_list
 
 
-class NVDDataProvider(object):
+class NVDDataProvider:
     _url_format_ = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{}.json.gz"
     _meta_url_format_ = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{}.meta"
     _download_timeout_ = 125
