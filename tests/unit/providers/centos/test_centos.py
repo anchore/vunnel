@@ -4,7 +4,7 @@ from distutils import dir_util
 import pytest
 from pytest import fixture
 
-from vunnel.providers.centos.data import CentOSDataProvider
+from vunnel.providers.centos.parser import Parser
 from vunnel.utils.oval_parser import parse
 
 
@@ -18,10 +18,9 @@ from vunnel.utils.oval_parser import parse
 def test_parse(tmpdir, helpers, mock_data_path, request):
     mock_data_path = helpers.local_dir(mock_data_path)
 
-    provider = CentOSDataProvider(workspace=tmpdir)
+    provider = Parser(workspace=tmpdir)
     shutil.copy(mock_data_path, provider.xml_file_path)
-
-    vuln_dict = parse(provider.xml_file_path, provider.config)
+    vuln_dict = provider.parse()
 
     assert vuln_dict is not None
     _, (_, vuln) = vuln_dict.popitem()

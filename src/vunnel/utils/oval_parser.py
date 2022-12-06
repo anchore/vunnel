@@ -1,15 +1,12 @@
 # pylint: skip-file
 
 import copy
-import logging as logger
+import logging
 import os
 import re
 import xml.etree.ElementTree as ET
 
-# from anchore_engine.subsys import logger
 from vunnel.utils.vulnerability import vulnerability_element
-
-# from anchore_enterprise.services.feeds.drivers.common import vulnerability_element
 
 
 class Config(object):
@@ -55,11 +52,13 @@ def parse(dest_file, config):
     :param config: configuration for parsing oval file
     :return:
     """
+    logger = logging.getLogger("oval-parser")
+
     if not isinstance(config, Config):
         logger.warn("Invalid config found, expected an instance of Config class")
         raise TypeError("Invalid config")
 
-    logger.debug("Parsing {}".format(dest_file))
+    logger.debug("parsing {}".format(dest_file))
     vuln_dict = {}
 
     if os.path.exists(dest_file):
@@ -91,6 +90,7 @@ def parse(dest_file, config):
 
 
 def _process_definition(def_element, vuln_dict, config):
+    logger = logging.getLogger("oval-parser")
     oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
 
     def_version = def_element.attrib["version"]
@@ -181,6 +181,8 @@ def _process_criteria(element_a, oval_ns, config):
     :param oval_ns: namespace URL of the oval
     :return:
     """
+    logger = logging.getLogger("oval-parser")
+
     criteria_element = element_a.find(config.criteria_xpath_query.format(oval_ns))
     groups = []
     ns_pkgs_dict = {}

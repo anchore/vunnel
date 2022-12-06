@@ -59,7 +59,7 @@ requests_timeout = 125
 driver_workspace = None
 
 
-class DataProvider(object):
+class Parser(object):
     _url_ = "https://www.redhat.com/security/data/oval/com.redhat.rhsa-all.xml.bz2"
     _meta_url_ = "https://www.redhat.com/security/data/oval/PULP_MANIFEST"
     _sha_line_regex_ = re.compile(r"com.redhat.rhsa-all.xml,([^,]+),.*")
@@ -103,7 +103,7 @@ class DataProvider(object):
     def _download(self, skip_if_exists=False):
 
         if skip_if_exists and os.path.exists(self.xml_file_path):
-            self.logger.warn("skip_if_exists flag enabled and found {}. Skipping download".format(self.xml_file_path))
+            self.logger.warn("'skip_if_exists' flag enabled and found {}. Skipping download".format(self.xml_file_path))
         else:
             download = True
 
@@ -151,9 +151,12 @@ class DataProvider(object):
 
         return None
 
+    def parse(self):
+        # normalize and return results
+        return parse(self.xml_file_path, self.config)
+
     def get(self, skip_if_exists=False):
         # download
         self._download(skip_if_exists=skip_if_exists)
 
-        # normalize and return results
-        return parse(self.xml_file_path, self.config)
+        return self.parse()

@@ -2,11 +2,13 @@ import datetime
 import hashlib
 import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 import rfc3339
 import xxhash
+
+from vunnel import schema as schemaDef
 
 STATE_FILENAME = "state.json"
 
@@ -29,28 +31,16 @@ class FileState:
 
 
 @dataclass(frozen=True)
-class Schema:
-    version: str
-    url: str
-
-    @staticmethod
-    def default(version: str = "1.0.0") -> "Schema":
-        return Schema(
-            version=version,
-            url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider_workspace_state/schema-{version}.json",
-        )
-
-
-@dataclass(frozen=True)
 class WorkspaceState:
     provider: str
-    schema: Schema
     # the list of files should be:
     # - relative to the root
     # - be sorted by path
     urls: list[str]
     input: list[FileState]
     results: list[FileState]
+    schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderWorkspaceStateSchema)
+    timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
 
     @staticmethod
     def from_fs(
@@ -58,7 +48,6 @@ class WorkspaceState:
     ) -> "WorkspaceState":
         return WorkspaceState(
             provider=provider,
-            schema=Schema.default(),
             urls=urls,
             input=file_state_listing(input),
             results=file_state_listing(results),
@@ -97,13 +86,13 @@ def file_digests(path: str) -> list[str]:
 def file_state_listing(path: str):
     listing = []
     for root, dirs, files in os.walk(path):  # pylint: disable=unused-variable
-        for file in files:
+        for file in sorted(files):
             full_path = os.path.join(root, file)
             listing.append(
                 FileState(
                     path=file,
                     digests=file_digests(full_path),
-                    modified=datetime.datetime.fromtimestamp(os.path.getmtime(full_path)),
+                    modified=datetime.datetime.fromtimestamp(os.path.getmtime(full_path)).astimezone(datetime.timezone.utc),
                 )
             )
     return listing

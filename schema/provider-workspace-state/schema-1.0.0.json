@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string"
+    },
+    "urls": {
+      "type": "array",
+      "items": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "input": {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "digests": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "modified": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "digests",
+            "modified"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "digests": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "modified": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "digests",
+            "modified"
+          ]
+        }
+      ]
+    },
+    "results": {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "digests": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "modified": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "digests",
+            "modified"
+          ]
+        }
+      ]
+    },
+    "schema": {
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "type": "object",
+      "required": [
+        "version",
+        "url"
+      ]
+    }
+  },
+  "required": [
+    "provider",
+    "urls",
+    "input",
+    "results",
+    "schema"
+  ]
+}
