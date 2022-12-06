@@ -2,6 +2,7 @@
 
 import bz2
 import hashlib
+import logging
 import os
 import re
 
@@ -70,12 +71,14 @@ class CentOSDataProvider(object):
     _xml_file_ = "com.redhat.rhsa-all.xml"
     _xml_sha_file_ = "com.redhat.rhsa-all.xml.sha256sum"
 
-    def __init__(self, workspace, logger, config=None, download_timeout=125):
+    def __init__(self, workspace, logger=None, config=None, download_timeout=125):
         self.workspace = workspace
         self.config = config if config else centos_config
         self.download_timeout = download_timeout
         self.xml_file_path = os.path.join(workspace, self._xml_file_)
         self.xml_sha_file_path = os.path.join(workspace, self._xml_sha_file_)
+        if logger == None:
+            logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
     @property
