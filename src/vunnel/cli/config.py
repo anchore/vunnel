@@ -7,7 +7,7 @@ from vunnel import providers
 @dataclass
 class Providers:
     centos: providers.centos.Config = field(default_factory=providers.centos.Config)
-    nvdv2: providers.nvdv2.Config = field(default_factory=providers.nvdv2.Config)
+    nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
 
     def get(self, name: str) -> Optional[Any]:
         for f in fields(Providers):

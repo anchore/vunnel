@@ -17,7 +17,7 @@ class Config:
 
 
 class Provider(provider.Provider):
-    name = "nvdv2"
+    name = "nvd"
 
     def __init__(self, root: str, config: Config):
         super().__init__(root)
