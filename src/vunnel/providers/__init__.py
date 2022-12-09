@@ -1,6 +1,6 @@
-from vunnel.providers import centos
+from vunnel.providers import centos, nvd
 
-_providers = {centos.Provider.name: centos.Provider}
+_providers = {centos.Provider.name: centos.Provider, nvd.Provider.name: nvd.Provider}
 
 
 def create(name, workspace_path, *args, **kwargs):
