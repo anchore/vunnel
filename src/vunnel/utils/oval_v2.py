@@ -7,6 +7,7 @@ OVAL content, it's up to the driver to transform it into normalized feed data
 """
 
 import enum
+import logging
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -14,8 +15,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Type
-
-from anchore_engine.subsys import logger
 
 
 class OVALElementEnum(enum.Enum):
@@ -251,6 +250,8 @@ class TestParser(OVALElementParser):
           <state state_ref="oval:org.opensuse.security:ste:2009061809"/>
         </rpminfo_test>
         """
+        logger = logging.getLogger("oval-v2-parser")
+
         identity = artifact_id = version_id = None
         try:
             identity = xml_element.attrib["id"]
@@ -286,6 +287,8 @@ class ArtifactParser(OVALElementParser):
           <name>policycoreutils-python</name>
         </rpminfo_object>
         """
+        logger = logging.getLogger("oval-v2-parser")
+
         identity = name = None
         try:
             identity = xml_element.attrib["id"]
@@ -326,6 +329,8 @@ class VersionParser(OVALElementParser):
           <arch datatype="string" operation="pattern match">(noarch)</arch>
         </rpminfo_state>
         """
+        logger = logging.getLogger("oval-v2-parser")
+
         identity = op = value = None
         try:
             identity = xml_element.attrib["id"]
@@ -404,8 +409,9 @@ def iter_parse_vulnerability_file(
     Does not load the entire XML file into memory which makes it slower but OVAL files can be huge.
     Returns a dictionary where each key represents an oval element and the values are the parsed instances of that element
     """
+    logger = logging.getLogger("oval-v2-parser")
 
-    logger.debug("Parsing {}".format(oval_file_path))
+    logger.debug("parsing {}".format(oval_file_path))
     parsed_dict = defaultdict(dict)
 
     if os.path.exists(oval_file_path):

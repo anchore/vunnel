@@ -1,17 +1,17 @@
-import json
-import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
-from vunnel import provider
+from vunnel import provider, schema
 
-from .data import NVDDataProvider, namespace
+from .parser import Parser, namespace
 
 
 @dataclass(frozen=True)
 class Config:
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
+    )
     request_timeout: int = 125
-    use_existing_data: bool = True
     start_year: int = 2002
     end_year: Optional[int] = None
 
@@ -20,36 +20,26 @@ class Provider(provider.Provider):
     name = "nvd"
 
     def __init__(self, root: str, config: Config):
-        super().__init__(root)
+        super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
     def update(self) -> list[str]:
-        data_provider = NVDDataProvider(
-            workspace=self.workspace,
+        parser = Parser(
+            workspace=self.input,
             download_timeout=self.config.request_timeout,
             start_year=self.config.start_year,
             end_year=self.config.end_year,
             logger=self.logger,
         )
-        # { (CVE, namespace): {...data...}" }
-        vuln_dict = data_provider.get(skip_if_exists=self.config.use_existing_data)
 
-        # self.logger.info(f"processed {len(vuln_dict)} entries")
-        group = f"{namespace}:cves"
-        files = set()
-        for cve_id, cve in vuln_dict:
-            el = {"key": cve_id, "namespace": group, "payload": cve}
-            filename = os.path.join(self.results, f"{cve_id.lower()}.json")
+        vuln_tuples = parser.get(skip_if_exists=self.config.runtime.skip_if_exists)
 
-            # TODO(ALEX): we should put this back in
-            # if filename in files:
-            #     raise RuntimeError(f"filename {filename!r} already processed")
+        with self.results_writer(batch_size=500) as writer:
+            for cve_id, cve in vuln_tuples:
+                writer.write(
+                    identifier=f"nvd-{cve_id}".lower(),
+                    schema=schema.NVDSchema(),
+                    payload=cve,
+                )
 
-            with open(filename, "w", encoding="utf-8") as f:
-                self.logger.trace(f"writing {filename}")
-                json.dump(el, f)
-            files.add(filename)
-
-        self.logger.info(f"wrote {len(files)} entries")
-
-        return data_provider.urls
+        return parser.urls

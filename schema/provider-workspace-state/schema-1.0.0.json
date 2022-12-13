@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "provider-workspace-state",
+  "description": "describes the filesystem state of a provider workspace directory",
+  "properties": {
+    "provider": {
+      "type": "string"
+    },
+    "urls": {
+      "type": "array",
+      "items": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": [
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "digests": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "modified": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "digests",
+                "modified"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "digests": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "modified": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "digests",
+                "modified"
+              ]
+            }
+          ]
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "files",
+        "timestamp"
+      ]
+    },
+    "results": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": [
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "digests": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "modified": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "digests",
+                "modified"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "digests": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "modified": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "digests",
+                "modified"
+              ]
+            }
+          ]
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "files",
+        "timestamp"
+      ]
+    },
+    "schema": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "url"
+      ]
+    }
+  },
+  "required": [
+    "provider",
+    "urls",
+    "input",
+    "results",
+    "schema"
+  ]
+}

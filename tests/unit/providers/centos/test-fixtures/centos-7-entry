@@ -12,7 +12,7 @@
       <metadata>
         <title>RHSA-0000-0000: htdig bug fix update (None)</title>
         <affected family="unix">
-          <platform>Red Hat Enterprise Linux 3</platform>
+          <platform>Red Hat Enterprise Linux 7</platform>
         </affected>
         <reference ref_id="RHSA-0000-0000" ref_url="https://access.redhat.com/errata/RHSA-0000-0000" source="RHSA"/>
         <reference ref_id="CVE-2000-1191" ref_url="https://access.redhat.com/security/cve/CVE-2000-1191" source="CVE"/>
@@ -27,18 +27,18 @@
           <bugzilla href="https://bugzilla.redhat.com/133840" id="133840">htdig will not run</bugzilla>
           <bugzilla href="https://bugzilla.redhat.com/218715" id="218715">CVE-2000-1191 htdig configuration file path disclosure flaw</bugzilla>
           <affected_cpe_list>
-            <cpe>cpe:/o:redhat:enterprise_linux:3</cpe>
-            <cpe>cpe:/o:redhat:enterprise_linux:3::ws</cpe>
-            <cpe>cpe:/o:redhat:enterprise_linux:3::es</cpe>
-            <cpe>cpe:/o:redhat:enterprise_linux:3::as</cpe>
-            <cpe>cpe:/o:redhat:enterprise_linux:3::desktop</cpe>
+            <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+            <cpe>cpe:/o:redhat:enterprise_linux:7::ws</cpe>
+            <cpe>cpe:/o:redhat:enterprise_linux:7::es</cpe>
+            <cpe>cpe:/o:redhat:enterprise_linux:7::as</cpe>
+            <cpe>cpe:/o:redhat:enterprise_linux:7::desktop</cpe>
           </affected_cpe_list>
         </advisory>
       </metadata>
       <criteria operator="OR">
         <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20070026004"/>
         <criteria operator="AND">
-          <criterion comment="Red Hat Enterprise Linux 3 is installed" test_ref="oval:com.redhat.rhba:tst:20070026003"/>
+          <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20070026003"/>
           <criterion comment="htdig is earlier than 2:3.1.6-7.el3" test_ref="oval:com.redhat.rhba:tst:20070026001"/>
           <criterion comment="htdig is signed with Red Hat master key" test_ref="oval:com.redhat.rhba:tst:20070026002"/>
         </criteria>

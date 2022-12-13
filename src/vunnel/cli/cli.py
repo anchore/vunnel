@@ -19,20 +19,15 @@ def cli(ctx, verbose: bool, config_path: str):
     # TODO: config parsing
     ctx.obj = config.load(path=config_path)
 
-    log_level = "INFO"
+    log_level = ctx.obj.log.level.upper()
     if verbose == 1:
         log_level = "DEBUG"
     elif verbose >= 2:
         log_level = "TRACE"
 
-    TRACE_LEVEL_NUM = 9
-    logging.addLevelName(TRACE_LEVEL_NUM, "TRACE")
-
-    def trace(self, message, *args, **kws):
-        if self.isEnabledFor(TRACE_LEVEL_NUM):
-            self._log(TRACE_LEVEL_NUM, message, args, **kws)  # pylint: disable=protected-access
-
-    logging.Logger.trace = trace
+    log_format = "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s"
+    if ctx.obj.log.slim:
+        log_format = "%(log_color)s [%(levelname)s] %(message)s"
 
     logging.config.dictConfig(
         {
@@ -41,7 +36,7 @@ def cli(ctx, verbose: bool, config_path: str):
                 "standard": {
                     "()": "colorlog.ColoredFormatter",  # colored output
                     # [%(module)s.%(funcName)s]
-                    "format": "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s",
+                    "format": log_format,
                     "datefmt": "%Y-%m-%d %H:%M:%S",
                     "log_colors": {
                         "TRACE": "purple",
@@ -82,7 +77,6 @@ def show_config(cfg: config.Application):
         def increase_indent(self, flow=False, indentless=False):
             return super().increase_indent(flow, False)
 
-    print()
     cfg_dict = dataclasses.asdict(cfg)
     print(yaml.dump(cfg_dict, Dumper=IndentDumper, default_flow_style=False))
 
@@ -93,7 +87,7 @@ def show_config(cfg: config.Application):
 def run_provider(cfg: config.Application, provider_name: str):
     logging.info(f"running {provider_name} provider")
 
-    provider = providers.create(provider_name, cfg.root, config=cfg.provider.get(provider_name))
+    provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
     provider.populate()
 
 

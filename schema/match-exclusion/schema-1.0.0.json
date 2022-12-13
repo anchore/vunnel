@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "match-exclusions",
+  "description": "records to exclude matches on vulnerability records downstream in grype",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "constraints": {
+      "type": "array",
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "ecosystem_constraints": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "language": {
+                      "type": "string"
+                    },
+                    "package_constraints": {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "package_name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "package_name"
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "language",
+                    "package_constraints"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "ecosystem_constraints"
+          ]
+        }
+      ]
+    },
+    "justification": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "constraints",
+    "justification"
+  ]
+}
