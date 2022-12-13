@@ -14,16 +14,25 @@ class OnErrorPolicy(str, enum.Enum):
     SKIP = "skip"
     RETRY = "retry"
 
+    def __repr__(self):
+        return self.value
+
 
 class InputStatePolicy(str, enum.Enum):
     KEEP = "keep"
     DELETE = "delete"
+
+    def __repr__(self):
+        return self.value
 
 
 class ResultStatePolicy(str, enum.Enum):
     KEEP = "keep"
     DELETE = "delete"
     DELETE_BEFORE_WRITE = "delete-before-write"  # treat like "KEEP" in error cases
+
+    def __repr__(self):
+        return self.value
 
 
 @dataclass
@@ -57,10 +66,14 @@ class RuntimeConfig:
         if not isinstance(self.existing_results, ResultStatePolicy):
             self.existing_results = ResultStatePolicy(self.existing_results)
 
+    @property
+    def skip_if_exists(self):
+        return self.existing_input == InputStatePolicy.KEEP
+
 
 class Provider(abc.ABC):
     def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):
-        self.root = root
+        self._root = root
         self.logger = logging.getLogger(self.name)
         self.urls = []
         self.runtime_cfg = runtime_cfg
@@ -75,7 +88,7 @@ class Provider(abc.ABC):
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
 
     def populate(self):
-        self.logger.debug(f"using {self.workspace} as workspace root")
+        self.logger.debug(f"using {self.root} as workspace root")
 
         if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:
             self._clear_results()
@@ -150,21 +163,21 @@ class Provider(abc.ABC):
     def _catalog_workspace(self, urls: list[str]):
         state = workspace.WorkspaceState.from_fs(provider=self.name, urls=urls, input=self.input, results=self.results)
 
-        metadata_path = state.write(self.workspace)
+        metadata_path = state.write(self.root)
 
         self.logger.debug(msg=f"wrote workspace state to {metadata_path}")
 
     @property
-    def workspace(self):
-        return f"{self.root}/{self.name}"
+    def root(self):
+        return f"{self._root}/{self.name}"
 
     @property
     def input(self):
-        return f"{self.workspace}/input"
+        return f"{self.root}/input"
 
     @property
     def results(self):
-        return f"{self.workspace}/results"
+        return f"{self.root}/results"
 
     def __repr__(self):
         extra = []
@@ -175,10 +188,11 @@ class Provider(abc.ABC):
             prefix = ", "
         return f"Provider(name={self.name}, input={self.input}{prefix}{', '.join(extra)})"
 
-    def results_writer(self):
+    def results_writer(self, **kwargs):
         return result.Writer(
             prefix=self.name,
             result_dir=self.results,
             logger=self.logger,
             clear_results_before_writing=self.runtime_cfg.existing_results == ResultStatePolicy.DELETE_BEFORE_WRITE,
+            **kwargs,
         )

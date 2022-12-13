@@ -131,7 +131,7 @@ def _process_definition(def_element, vuln_dict, config):
         ns_name = config.ns_format.format(re.search(config.platform_version_pattern, platform_element.text).group(1))
 
         v["Vulnerability"]["NamespaceName"] = ns_name
-        v["Vulnerability"]["Severity"] = severity
+        v["Vulnerability"]["Severity"] = severity or ""
         v["Vulnerability"]["Metadata"] = (
             {"Issued": issued, "Updated": updated, "RefId": ref_id} if updated else {"Issued": issued, "RefId": ref_id}
         )

@@ -31,16 +31,27 @@ class FileState:
 
 
 @dataclass(frozen=True)
+class Input:
+    files: list[FileState]
+    timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
+
+
+@dataclass(frozen=True)
+class Results:
+    files: list[FileState]
+    timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
+
+
+@dataclass(frozen=True)
 class WorkspaceState:
     provider: str
     # the list of files should be:
     # - relative to the root
     # - be sorted by path
     urls: list[str]
-    input: list[FileState]
-    results: list[FileState]
+    input: Input
+    results: Results
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderWorkspaceStateSchema)
-    timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
 
     @staticmethod
     def from_fs(
@@ -49,8 +60,8 @@ class WorkspaceState:
         return WorkspaceState(
             provider=provider,
             urls=urls,
-            input=file_state_listing(input),
-            results=file_state_listing(results),
+            input=Input(files=file_state_listing(input)),
+            results=Results(files=file_state_listing(results)),
         )
 
     def write(self, root: str) -> str:

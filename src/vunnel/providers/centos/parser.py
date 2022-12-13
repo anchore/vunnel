@@ -103,7 +103,7 @@ class Parser(object):
     def _download(self, skip_if_exists=False):
 
         if skip_if_exists and os.path.exists(self.xml_file_path):
-            self.logger.warn("'skip_if_exists' flag enabled and found {}. Skipping download".format(self.xml_file_path))
+            self.logger.debug("'skip_if_exists' flag enabled and found {}. Skipping download".format(self.xml_file_path))
         else:
             download = True
 

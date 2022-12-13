@@ -212,6 +212,21 @@ perf = ["ipython"]
 testing = ["flake8 (<5)", "flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)", "pytest-perf (>=0.9.2)"]
 
 [[package]]
+name = "importlib-resources"
+version = "5.10.1"
+description = "Read resources from Python packages"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+zipp = {version = ">=3.1.0", markers = "python_version < \"3.10\""}
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)"]
+testing = ["flake8 (<5)", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)"]
+
+[[package]]
 name = "iniconfig"
 version = "1.1.1"
 description = "iniconfig: brain-dead simple config-ini parsing"
@@ -232,6 +247,26 @@ colors = ["colorama (>=0.4.3,<0.5.0)"]
 pipfile_deprecated_finder = ["pipreqs", "requirementslib"]
 plugins = ["setuptools"]
 requirements_deprecated_finder = ["pip-api", "pipreqs"]
+
+[[package]]
+name = "jsonschema"
+version = "4.17.3"
+description = "An implementation of JSON Schema validation for Python"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+attrs = ">=17.4.0"
+importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
+importlib-resources = {version = ">=1.4.0", markers = "python_version < \"3.9\""}
+pkgutil-resolve-name = {version = ">=1.3.10", markers = "python_version < \"3.9\""}
+pyrsistent = ">=0.14.0,<0.17.0 || >0.17.0,<0.17.1 || >0.17.1,<0.17.2 || >0.17.2"
+typing-extensions = {version = "*", markers = "python_version < \"3.8\""}
+
+[package.extras]
+format = ["fqdn", "idna", "isoduration", "jsonpointer (>1.13)", "rfc3339-validator", "rfc3987", "uri-template", "webcolors (>=1.11)"]
+format-nongpl = ["fqdn", "idna", "isoduration", "jsonpointer (>1.13)", "rfc3339-validator", "rfc3986-validator (>0.1.0)", "uri-template", "webcolors (>=1.11)"]
 
 [[package]]
 name = "lazy-object-proxy"
@@ -286,6 +321,14 @@ description = "Utility library for gitignore style pattern matching of file path
 category = "dev"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "pkgutil_resolve_name"
+version = "1.3.10"
+description = "Resolve a name to an object."
+category = "dev"
+optional = false
+python-versions = ">=3.6"
 
 [[package]]
 name = "platformdirs"
@@ -380,6 +423,14 @@ python-versions = ">=3.6.8"
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyrsistent"
+version = "0.19.2"
+description = "Persistent/Functional/Immutable data structures"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
 
 [[package]]
 name = "pytest"
@@ -582,7 +633,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.2,<4.0"
-content-hash = "bd7351e988519135133b5cc23b2fe016b77c35049911e0bdefb167335c53d99c"
+content-hash = "9c8374824590e1607f0f9d6b86f68c0a1ffe9370c0079c9e8db94a43e5dc8f50"
 
 [metadata.files]
 astroid = [
@@ -736,6 +787,10 @@ importlib-metadata = [
     {file = "importlib_metadata-5.1.0-py3-none-any.whl", hash = "sha256:d84d17e21670ec07990e1044a99efe8d615d860fd176fc29ef5c306068fda313"},
     {file = "importlib_metadata-5.1.0.tar.gz", hash = "sha256:d5059f9f1e8e41f80e9c56c2ee58811450c31984dfa625329ffd7c0dad88a73b"},
 ]
+importlib-resources = [
+    {file = "importlib_resources-5.10.1-py3-none-any.whl", hash = "sha256:c09b067d82e72c66f4f8eb12332f5efbebc9b007c0b6c40818108c9870adc363"},
+    {file = "importlib_resources-5.10.1.tar.gz", hash = "sha256:32bb095bda29741f6ef0e5278c42df98d135391bee5f932841efc0041f748dc3"},
+]
 iniconfig = [
     {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
     {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
@@ -743,6 +798,10 @@ iniconfig = [
 isort = [
     {file = "isort-5.10.1-py3-none-any.whl", hash = "sha256:6f62d78e2f89b4500b080fe3a81690850cd254227f27f75c3a0c491a1f351ba7"},
     {file = "isort-5.10.1.tar.gz", hash = "sha256:e8443a5e7a020e9d7f97f1d7d9cd17c88bcb3bc7e218bf9cf5095fe550be2951"},
+]
+jsonschema = [
+    {file = "jsonschema-4.17.3-py3-none-any.whl", hash = "sha256:a870ad254da1a8ca84b6a2905cac29d265f805acc57af304784962a2aa6508f6"},
+    {file = "jsonschema-4.17.3.tar.gz", hash = "sha256:0f864437ab8b6076ba6707453ef8f98a6a0d512a80e93f8abdb676f737ecb60d"},
 ]
 lazy-object-proxy = [
     {file = "lazy-object-proxy-1.8.0.tar.gz", hash = "sha256:c219a00245af0f6fa4e95901ed28044544f50152840c5b6a3e7b2568db34d156"},
@@ -785,6 +844,10 @@ pathspec = [
     {file = "pathspec-0.10.2-py3-none-any.whl", hash = "sha256:88c2606f2c1e818b978540f73ecc908e13999c6c3a383daf3705652ae79807a5"},
     {file = "pathspec-0.10.2.tar.gz", hash = "sha256:8f6bf73e5758fd365ef5d58ce09ac7c27d2833a8d7da51712eac6e27e35141b0"},
 ]
+pkgutil_resolve_name = [
+    {file = "pkgutil_resolve_name-1.3.10-py3-none-any.whl", hash = "sha256:ca27cc078d25c5ad71a9de0a7a330146c4e014c2462d9af19c6b828280649c5e"},
+    {file = "pkgutil_resolve_name-1.3.10.tar.gz", hash = "sha256:357d6c9e6a755653cfd78893817c0853af365dd51ec97f3d358a819373bbd174"},
+]
 platformdirs = [
     {file = "platformdirs-2.5.4-py3-none-any.whl", hash = "sha256:af0276409f9a02373d540bf8480021a048711d572745aef4b7842dad245eba10"},
     {file = "platformdirs-2.5.4.tar.gz", hash = "sha256:1006647646d80f16130f052404c6b901e80ee4ed6bef6792e1f238a8969106f7"},
@@ -812,6 +875,30 @@ pylint = [
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
+]
+pyrsistent = [
+    {file = "pyrsistent-0.19.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d6982b5a0237e1b7d876b60265564648a69b14017f3b5f908c5be2de3f9abb7a"},
+    {file = "pyrsistent-0.19.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:187d5730b0507d9285a96fca9716310d572e5464cadd19f22b63a6976254d77a"},
+    {file = "pyrsistent-0.19.2-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:055ab45d5911d7cae397dc418808d8802fb95262751872c841c170b0dbf51eed"},
+    {file = "pyrsistent-0.19.2-cp310-cp310-win32.whl", hash = "sha256:456cb30ca8bff00596519f2c53e42c245c09e1a4543945703acd4312949bfd41"},
+    {file = "pyrsistent-0.19.2-cp310-cp310-win_amd64.whl", hash = "sha256:b39725209e06759217d1ac5fcdb510e98670af9e37223985f330b611f62e7425"},
+    {file = "pyrsistent-0.19.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:2aede922a488861de0ad00c7630a6e2d57e8023e4be72d9d7147a9fcd2d30712"},
+    {file = "pyrsistent-0.19.2-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:879b4c2f4d41585c42df4d7654ddffff1239dc4065bc88b745f0341828b83e78"},
+    {file = "pyrsistent-0.19.2-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c43bec251bbd10e3cb58ced80609c5c1eb238da9ca78b964aea410fb820d00d6"},
+    {file = "pyrsistent-0.19.2-cp37-cp37m-win32.whl", hash = "sha256:d690b18ac4b3e3cab73b0b7aa7dbe65978a172ff94970ff98d82f2031f8971c2"},
+    {file = "pyrsistent-0.19.2-cp37-cp37m-win_amd64.whl", hash = "sha256:3ba4134a3ff0fc7ad225b6b457d1309f4698108fb6b35532d015dca8f5abed73"},
+    {file = "pyrsistent-0.19.2-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:a178209e2df710e3f142cbd05313ba0c5ebed0a55d78d9945ac7a4e09d923308"},
+    {file = "pyrsistent-0.19.2-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e371b844cec09d8dc424d940e54bba8f67a03ebea20ff7b7b0d56f526c71d584"},
+    {file = "pyrsistent-0.19.2-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:111156137b2e71f3a9936baf27cb322e8024dac3dc54ec7fb9f0bcf3249e68bb"},
+    {file = "pyrsistent-0.19.2-cp38-cp38-win32.whl", hash = "sha256:e5d8f84d81e3729c3b506657dddfe46e8ba9c330bf1858ee33108f8bb2adb38a"},
+    {file = "pyrsistent-0.19.2-cp38-cp38-win_amd64.whl", hash = "sha256:9cd3e9978d12b5d99cbdc727a3022da0430ad007dacf33d0bf554b96427f33ab"},
+    {file = "pyrsistent-0.19.2-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:f1258f4e6c42ad0b20f9cfcc3ada5bd6b83374516cd01c0960e3cb75fdca6770"},
+    {file = "pyrsistent-0.19.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:21455e2b16000440e896ab99e8304617151981ed40c29e9507ef1c2e4314ee95"},
+    {file = "pyrsistent-0.19.2-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:bfd880614c6237243ff53a0539f1cb26987a6dc8ac6e66e0c5a40617296a045e"},
+    {file = "pyrsistent-0.19.2-cp39-cp39-win32.whl", hash = "sha256:71d332b0320642b3261e9fee47ab9e65872c2bd90260e5d225dabeed93cbd42b"},
+    {file = "pyrsistent-0.19.2-cp39-cp39-win_amd64.whl", hash = "sha256:dec3eac7549869365fe263831f576c8457f6c833937c68542d08fde73457d291"},
+    {file = "pyrsistent-0.19.2-py3-none-any.whl", hash = "sha256:ea6b79a02a28550c98b6ca9c35b9f492beaa54d7c5c9e9949555893c8a9234d0"},
+    {file = "pyrsistent-0.19.2.tar.gz", hash = "sha256:bfa0351be89c9fcbcb8c9879b826f4353be10f58f8a677efab0c017bf7137ec2"},
 ]
 pytest = [
     {file = "pytest-7.2.0-py3-none-any.whl", hash = "sha256:892f933d339f068883b6fd5a459f03d85bfcb355e4981e146d2c7616c21fef71"},

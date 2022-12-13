@@ -31,7 +31,7 @@ class Writer:
         self,
         prefix: str,
         result_dir: str,
-        batch_size: int = 25,
+        batch_size: int = 100,
         logger: Any = None,
         skip_duplicates: bool = False,
         clear_results_before_writing: bool = False,

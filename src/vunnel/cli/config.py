@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field, fields
 from typing import Any, Optional
 
@@ -23,8 +24,15 @@ class Providers:
 
 
 @dataclass
+class Log:
+    slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default=False) == "true"
+    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
+
+
+@dataclass
 class Application:
     root: str = "./data"
+    log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
 
 

@@ -20,26 +20,33 @@ class Provider(provider.Provider):
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
+        self.logger.debug(f"config: {self.config}")
 
-    def update(self) -> list[str]:
-        parser = Parser(
+        self.schema = schema.OSSchema()
+        self.parser = Parser(
             workspace=self.input,
             config=centos_config,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
+
+    def update(self) -> list[str]:
         # { (CVE, namespace): {...data...}" }
-        vuln_dict = parser.get(skip_if_exists=self.config.runtime.existing_input == provider.InputStatePolicy.KEEP)
+        vuln_dict = self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists)
 
         self.logger.info(f"processed {len(vuln_dict)} entries")
 
         with self.results_writer() as writer:
             for (vuln_id, namespace), (_, record) in vuln_dict.items():
-                if namespace.lower() not in self.config.skip_namespaces and vuln_id.lower().startswith("rhsa"):
+
+                is_valid = vuln_id.lower().startswith("rhsa")
+                should_skip = namespace.lower() in self.config.skip_namespaces
+
+                if is_valid and not should_skip:
                     writer.write(
                         identifier=f"{namespace}-{vuln_id}".lower(),
-                        schema=schema.OSSchema(),
+                        schema=self.schema,
                         payload=record,
                     )
 
-        return parser.urls
+        return self.parser.urls

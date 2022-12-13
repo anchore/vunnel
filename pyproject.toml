@@ -30,6 +30,7 @@ black = "^22.10.0"
 isort = "^5.10.1"
 autoflake = "^2.0.0"
 pylint = "^2.15.7"
+jsonschema = "^4.17.3"
 
 [build-system]
 requires = ["poetry-core"]
