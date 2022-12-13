@@ -1,50 +1,82 @@
 import abc
-import datetime
-import hashlib
-import json
+import enum
 import logging
 import os
 import shutil
-from dataclasses import asdict, dataclass
+import time
+from dataclasses import dataclass, field
 
-import rfc3339
-
-METADATA_FILENAME = "metadata.json"
-
-
-class DTEncoder(json.JSONEncoder):
-    def default(self, o):
-        # if passed in object is datetime object
-        # convert it to a string
-        if isinstance(o, datetime.datetime):
-            return rfc3339.rfc3339(o)
-        # otherwise use the default behavior
-        return json.JSONEncoder.default(self, o)
+from . import result, workspace
 
 
-@dataclass(frozen=True)
-class FileState:
-    path: str
-    digest: str
-    # timestamp: datetime.datetime
+class OnErrorPolicy(str, enum.Enum):
+    FAIL = "fail"
+    SKIP = "skip"
+    RETRY = "retry"
+
+    def __repr__(self):
+        return self.value
 
 
-@dataclass(frozen=True)
-class State:
-    root: str
-    # the list of files should be:
-    # - relative to the root
-    # - be sorted by path
-    urls: list[str]
-    workspace: list[FileState]
-    results: list[FileState]
+class InputStatePolicy(str, enum.Enum):
+    KEEP = "keep"
+    DELETE = "delete"
+
+    def __repr__(self):
+        return self.value
+
+
+class ResultStatePolicy(str, enum.Enum):
+    KEEP = "keep"
+    DELETE = "delete"
+    DELETE_BEFORE_WRITE = "delete-before-write"  # treat like "KEEP" in error cases
+
+    def __repr__(self):
+        return self.value
+
+
+@dataclass
+class OnErrorConfig:
+    policy: OnErrorPolicy = OnErrorPolicy.FAIL
+    retry_count: int = 3
+    retry_delay: int = 5
+    input: InputStatePolicy = InputStatePolicy.KEEP
+    results: ResultStatePolicy = ResultStatePolicy.KEEP
+
+    def __post_init__(self):
+
+        if not isinstance(self.policy, OnErrorPolicy):
+            self.policy = OnErrorPolicy(self.policy)
+        if not isinstance(self.input, InputStatePolicy):
+            self.input = InputStatePolicy(self.input)
+        if not isinstance(self.results, ResultStatePolicy):
+            self.results = ResultStatePolicy(self.results)
+
+
+@dataclass
+class RuntimeConfig:
+    on_error: OnErrorConfig = field(default_factory=OnErrorConfig)  # TODO: hook this up and enforce
+    existing_input: InputStatePolicy = InputStatePolicy.DELETE
+    existing_results: ResultStatePolicy = ResultStatePolicy.DELETE_BEFORE_WRITE
+
+    def __post_init__(self):
+
+        if not isinstance(self.existing_input, InputStatePolicy):
+            self.existing_input = InputStatePolicy(self.existing_input)
+        if not isinstance(self.existing_results, ResultStatePolicy):
+            self.existing_results = ResultStatePolicy(self.existing_results)
+
+    @property
+    def skip_if_exists(self):
+        return self.existing_input == InputStatePolicy.KEEP
 
 
 class Provider(abc.ABC):
-    def __init__(self, root: str):
+    def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):
         self._root = root
         self.logger = logging.getLogger(self.name)
         self.urls = []
+        self.runtime_cfg = runtime_cfg
 
     @property
     @abc.abstractstaticmethod
@@ -56,42 +88,82 @@ class Provider(abc.ABC):
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
 
     def populate(self):
-        self.logger.info(f"using {self.workspace} as workspace")
-        self.clear_results()
-        self.create_workspace()
-        urls = self.update()
+        self.logger.debug(f"using {self.root} as workspace root")
+
+        if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:
+            self._clear_results()
+
+        if self.runtime_cfg.existing_input == InputStatePolicy.DELETE:
+            self._clear_input()
+
+        self._create_workspace()
+        try:
+            urls = self.update()
+        except Exception as e:  # pylint: disable=broad-except
+            self._on_error(e)
         self._catalog_workspace(urls=urls)
 
-    def create_workspace(self):
-        if not os.path.exists(self.workspace):
+    def _on_error(self, e: Exception):
+        self.logger.error(f"error during update: {e}")
+
+        # manage state
+        self._on_error_handle_state()
+
+        # manage event
+        if self.runtime_cfg.on_error.policy == OnErrorPolicy.FAIL:
+            raise e
+
+        if self.runtime_cfg.on_error.policy == OnErrorPolicy.SKIP:
+            return
+
+        if self.runtime_cfg.on_error.policy == OnErrorPolicy.RETRY:
+            attempt = 2
+            last_exception = e
+            while attempt <= self.runtime_cfg.on_error.retry_count:
+                self.logger.info(f"retrying after error: {e}")
+                time.sleep(self.runtime_cfg.on_error.retry_delay)
+                try:
+                    self.update()
+                    last_exception = None
+                    break
+                except Exception as ex:  # pylint: disable=broad-except
+                    self.logger.error(f"error during update (attempt {attempt}): {e}")
+                    self._on_error_handle_state()
+                    last_exception = ex
+                    attempt += 1
+
+            if last_exception:
+                raise last_exception
+
+    def _on_error_handle_state(self):
+        if self.runtime_cfg.on_error.input == InputStatePolicy.DELETE:
+            self._clear_input()
+        if self.runtime_cfg.on_error.results == ResultStatePolicy.DELETE:
+            self._clear_results()
+
+    def _create_workspace(self):
+        if not os.path.exists(self.input):
             self.logger.debug(f"creating workspace for {self.name!r}")
-            os.makedirs(self.workspace)
+            os.makedirs(self.input)
         else:
             self.logger.debug(f"using existing workspace for {self.name!r}")
         if not os.path.exists(self.results):
             os.makedirs(self.results)
 
-    def clear(self):
-        self.clear_workspace()
-        self.clear_results()
-
-    def clear_results(self):
+    def _clear_results(self):
         if os.path.exists(self.results):
             self.logger.debug("clearing existing results")
             shutil.rmtree(self.results)
 
-    def clear_workspace(self):
-        if os.path.exists(self.workspace):
+    def _clear_input(self):
+        if os.path.exists(self.input):
             self.logger.debug("clearing existing workspace")
-            shutil.rmtree(self.workspace)
+            shutil.rmtree(self.input)
 
     def _catalog_workspace(self, urls: list[str]):
-        metadata_path = os.path.join(self.root, METADATA_FILENAME)
+        state = workspace.WorkspaceState.from_fs(provider=self.name, urls=urls, input=self.input, results=self.results)
 
-        state = State(root=self.root, urls=urls, workspace=file_listing(self.workspace), results=file_listing(self.results))
-
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(asdict(state), f, cls=DTEncoder, indent=2)
+        metadata_path = state.write(self.root)
 
         self.logger.debug(msg=f"wrote workspace state to {metadata_path}")
 
@@ -100,7 +172,7 @@ class Provider(abc.ABC):
         return f"{self._root}/{self.name}"
 
     @property
-    def workspace(self):
+    def input(self):
         return f"{self.root}/input"
 
     @property
@@ -114,27 +186,13 @@ class Provider(abc.ABC):
             extra.append(f"config={self.config}")  # pylint: disable=no-member
         if extra:
             prefix = ", "
-        return f"Provider(name={self.name}, workspace={self.workspace}{prefix}{', '.join(extra)})"
+        return f"Provider(name={self.name}, input={self.input}{prefix}{', '.join(extra)})"
 
-
-def file_digest(path: str):
-    sha256_hash = hashlib.sha256()
-    with open(path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
-    return "sha256:" + sha256_hash.hexdigest()
-
-
-def file_listing(path: str):
-    listing = []
-    for root, dirs, files in os.walk(path):  # pylint: disable=unused-variable
-        for file in files:
-            full_path = os.path.join(root, file)
-            listing.append(
-                FileState(
-                    path=file,
-                    digest=file_digest(full_path),
-                    # timestamp=datetime.datetime.fromtimestamp(os.path.getmtime(full_path))
-                )
-            )
-    return listing
+    def results_writer(self, **kwargs):
+        return result.Writer(
+            prefix=self.name,
+            result_dir=self.results,
+            logger=self.logger,
+            clear_results_before_writing=self.runtime_cfg.existing_results == ResultStatePolicy.DELETE_BEFORE_WRITE,
+            **kwargs,
+        )

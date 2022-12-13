@@ -1,13 +1,67 @@
+import json
 import os
+import subprocess
 
+import jsonschema
 import pytest
 
 
+class Workspace:
+    def __init__(self, root: str, name: str):
+        self.root = root
+        self.name = name
+
+    def result_files(self):
+        results = []
+        for f in os.listdir(self.root / self.name / "results"):
+            results.append(self.root / self.name / "results" / f)
+        return results
+
+    def num_result_entries(self):
+        count = 0
+        for result_file in self.result_files():
+            with open(result_file) as f:
+                envelope = json.load(f)
+                count += len(envelope["items"])
+        return count
+
+    def result_schemas_valid(self, require_entries: bool = True) -> bool:
+        entries_validated = 0
+        for result_file in self.result_files():
+            with open(result_file) as f:
+                envelope = json.load(f)
+                schema_url = envelope["schema"]
+
+                schema_dict = load_json_schema(get_schema_repo_path(schema_url))
+                for entry in envelope["items"]:
+                    jsonschema.validate(instance=entry, schema=schema_dict)
+                    entries_validated += 1
+
+        if require_entries and entries_validated == 0:
+            raise ValueError("no entries were validated")
+
+        return True
+
+
+def load_json_schema(path: str) -> dict:
+    with open(path) as f:
+        return json.load(f)
+
+
+def get_schema_repo_path(url: str):
+    # e.g. https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/nvd/schema-{version}.json
+    relative_path = url.removeprefix("https://raw.githubusercontent.com/anchore/vunnel/main/")
+    if relative_path == url:
+        raise ValueError(f"URL {url!r} is not a valid schema URL")
+    return os.path.join(git_root(), relative_path)
+
+
 class Helpers:
-    def __init__(self, request):
+    def __init__(self, request, tmpdir):
         # current information about the running test
         # docs: https://docs.pytest.org/en/6.2.x/reference.html#std-fixture-request
         self.request = request
+        self.tmpdir = tmpdir
 
     def local_dir(self, path: str):
         """
@@ -28,10 +82,25 @@ class Helpers:
         parent = os.path.realpath(os.path.dirname(current_test_filepath))
         return os.path.join(parent, path)
 
+    def provider_workspace(self, name: str) -> Workspace:
+        root = self.tmpdir / "provider"
+        os.makedirs(root / name / "input")
+        os.makedirs(root / name / "results")
+        return Workspace(root, name)
+
 
 @pytest.fixture
-def helpers(request):
+def helpers(request, tmpdir):
     """
     Returns a common set of helper functions for tests.
     """
-    return Helpers(request)
+    return Helpers(request, tmpdir)
+
+
+def git_root() -> str:
+    return (
+        subprocess.Popen(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE)
+        .communicate()[0]
+        .rstrip()
+        .decode("utf-8")
+    )

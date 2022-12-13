@@ -329,10 +329,10 @@ class NVDCPEDictionaryUtils:
         """
         try:
             decompressor = zlib.decompressobj(zlib.MAX_WBITS | 16)
-            logging.info("Downloading cpe dictionary from {}".format(NVDCPEDictionaryUtils._cpe_url_))
+            logging.info("downloading CPE dictionary from {}".format(NVDCPEDictionaryUtils._cpe_url_))
             r = requests.get(NVDCPEDictionaryUtils._cpe_url_, stream=True, timeout=download_timeout)
             if r.status_code == 200:
-                logging.debug("Saving content to: {}".format(xml_file_path))
+                logging.debug("saving content to: {}".format(xml_file_path))
                 with open(xml_file_path, "wb") as fp:
                     for chunk in r.iter_content(chunk_size=1024):
                         ungzbuf = decompressor.decompress(chunk)
@@ -342,7 +342,7 @@ class NVDCPEDictionaryUtils:
 
             return xml_file_path
         except:
-            logging.exception("Error downloading NVD CPE v2.3 dictionary")
+            logging.exception("error downloading NVD CPE v2.3 dictionary")
             raise
 
     @staticmethod
@@ -353,7 +353,7 @@ class NVDCPEDictionaryUtils:
         :param file_path: path object to cpe dictionary xml file
         :return:
         """
-        logging.debug("Loading cpe dictionary from {}".format(file_path))
+        logging.debug("loading CPE dictionary from {}".format(file_path))
         st = time.time()
         hmap = dict()
 
@@ -393,7 +393,7 @@ class NVDCPEDictionaryUtils:
                     cpe22_uri = None
                     cpe23_fs = None
 
-        logging.debug("cpe dictionary contains {} vendor keys. load took {} seconds".format(len(hmap), (time.time() - st)))
+        logging.debug("CPE dictionary contains {} vendor keys (load took {} seconds)".format(len(hmap), (time.time() - st)))
         return hmap
 
     @staticmethod
@@ -437,13 +437,13 @@ class NVDCPEDictionaryUtils:
             include_end = True  # include the ending as no end version supplied
 
         if not start_ver and not end_ver:  # bail out if both start and end are invalid
-            logging.warning("Start and end versions are invalid, skipping cpe dictionary lookup for {}".format(cpe_dict))
+            logging.warning("start and end versions are invalid, skipping CPE dictionary lookup for {}".format(cpe_dict))
             return cpe_list
 
         # start and end versions are the same but at least one is excluded
         if start_ver == end_ver and (not include_start or not include_end):
             logging.warning(
-                "Start and end versions are the same but at least one of them is excluded. Skipping cpe dictionary lookup"
+                "start and end versions are the same but at least one of them is excluded. Skipping CPE dictionary lookup"
             )
             return cpe_list  # bail out without any matches
 
@@ -548,7 +548,7 @@ class NVDCPEDictionaryUtils:
         return cpe_list
 
 
-class NVDDataProvider:
+class Parser:
     _url_format_ = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{}.json.gz"
     _meta_url_format_ = "https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-{}.meta"
     _download_timeout_ = 125
@@ -588,7 +588,9 @@ class NVDDataProvider:
         self._urls.add(meta_url)
 
         if skip_if_exists and os.path.exists(json_file_path) and os.path.exists(csum_file_path):
-            self.logger.debug("skip_if_exists flag enabled and found source under {}. Skipping download".format(json_file_path))
+            self.logger.warning(
+                "'skip_if_exists' flag enabled and found source under {}. Skipping download".format(json_file_path)
+            )
         else:
             do_fetch = True
 
@@ -600,7 +602,7 @@ class NVDDataProvider:
                 with open(csum_file_path, "r") as f:
                     stored_csum = f.readline()
 
-                self.logger.debug("Downloading content check sum from: {}".format(url))
+                self.logger.debug("downloading content checksum from: {}".format(url))
                 r = requests.get(meta_url, timeout=self.download_timeout)
                 if r.status_code == 200:
                     for line in r.text.splitlines():
@@ -610,7 +612,7 @@ class NVDDataProvider:
                             break
                 else:
                     self.logger.warn(
-                        "Ignoring checksum comparison due to {} HTTP error downloading metadata from {}".format(
+                        "ignoring checksum comparison due to {} HTTP error downloading metadata from {}".format(
                             meta_url, r.status_code
                         )
                     )
@@ -624,24 +626,24 @@ class NVDDataProvider:
                 try:
                     sha256csum = hashlib.sha256()
                     decompressor = zlib.decompressobj(zlib.MAX_WBITS | 16)
-                    self.logger.info("Downloading nvd content from {}".format(url))
+                    self.logger.info("downloading NVD content from {}".format(url))
                     r = requests.get(url, stream=True, timeout=self.download_timeout)
                     if r.status_code == 200:
-                        self.logger.debug("Saving content to: {}".format(json_file_path))
+                        self.logger.debug("saving content to: {}".format(json_file_path))
                         with open(json_file_path, "wb") as fp:
                             for chunk in r.iter_content(chunk_size=1024):
                                 ungzbuf = decompressor.decompress(chunk)
                                 fp.write(ungzbuf)
                                 sha256csum.update(ungzbuf)
 
-                        self.logger.debug("Saving checksum to: {}".format(csum_file_path))
+                        self.logger.debug("saving checksum to: {}".format(csum_file_path))
                         check_sum = str(sha256csum.hexdigest()).upper()
                         with open(csum_file_path, "w") as fp:
                             fp.write("sha256:{}".format(check_sum))
                     else:
-                        raise Exception("Downloading {} failed with {} HTTP error".format(url, r.status_code))
+                        raise Exception("downloading {} failed with {} HTTP error".format(url, r.status_code))
                 except:
-                    self.logger.exception("Error downloading nvd data")
+                    self.logger.exception("error downloading NVD data")
                     raise
 
         return json_file_path, csum_file_path
@@ -731,9 +733,7 @@ class NVDDataProvider:
                             base_cpe = CPE.from_cpe23_fs(cpe23_fs)
 
                             if not (base_cpe.vendor, base_cpe.product) in affected_tuple_set:
-                                affected_versions = NVDDataProvider._get_affected_versions(
-                                    vendor_data, base_cpe.vendor, base_cpe.product
-                                )
+                                affected_versions = self._get_affected_versions(vendor_data, base_cpe.vendor, base_cpe.product)
 
                                 for aver in affected_versions:
                                     aver_cpe = base_cpe.copy()
@@ -750,13 +750,13 @@ class NVDDataProvider:
                         self.logger.warn("found a cpe22uri {}".format(cpe_obj))
                         # cpe_set.add(cpe_obj['cpe22Uri'])
                     else:
-                        self.logger.warn("No CPE string in {}".format(cpe_obj))
+                        self.logger.warn("no CPE string in {}".format(cpe_obj))
 
                 else:
                     # logger.warn('Found a not-vulnerable cpe, ignoring')
                     pass
             except:
-                self.logger.exception("Failed to process cpe_match object: {}".format(cpe_obj))
+                self.logger.exception("failed to process cpe_match object: {}".format(cpe_obj))
 
     def _parse_cvss_v3(self, baseMetricV3):
         """
@@ -1036,6 +1036,8 @@ class NVDDataProvider:
 
     def _process_cve_item(self, item, hmap):
         cve_id = item.get("cve", {}).get("CVE_data_meta", {}).get("ID", None)
+        self.logger.trace(f"processing {cve_id}")
+
         vendor_data = item.get("cve", {}).get("affects", {}).get("vendor", {}).get("vendor_data", [])
         cpe_set = set()
         affected_tuple_set = set()
@@ -1044,8 +1046,8 @@ class NVDDataProvider:
         # summary = None
 
         # make up the vulnerable-software-list
-        for node in item.get("configurations", {}).get("nodes", []):
-            self._get_cpes_from_node(node, vendor_data, cpe_set, affected_tuple_set, hmap)
+        # for node in item.get("configurations", {}).get("nodes", []):
+        #     self._get_cpes_from_node(node, vendor_data, cpe_set, affected_tuple_set, hmap)
 
         # free the memory occupied by affected tuple set0
         affected_tuple_set.clear()
@@ -1083,15 +1085,15 @@ class NVDDataProvider:
         :param file_path: string representing path to json file
         :return:
         """
-        self.logger.debug("Normalizing data from: {}".format(file_path))
+        self.logger.debug("normalizing data from: {}".format(file_path))
 
         with open(file_path, "rb") as f:
-            events = map(NVDDataProvider._floater, ijpython.parse(f))
+            events = map(self._floater, ijpython.parse(f))
             for item in ijcommon.items(events, "CVE_Items.item"):
                 try:
                     yield self._process_cve_item(item, hmap)
                 except:
-                    self.logger.exception("Failed to process CVE_Items.item")
+                    self.logger.exception("failed to process CVE_Items.item")
                     continue
 
     def _load_from_cache(self, year, skip_if_exists=False):
@@ -1099,7 +1101,7 @@ class NVDDataProvider:
         normalized_dir_path = os.path.join(self.workspace, self._normalized_dir_)
         if not os.path.exists(normalized_dir_path):
             self.logger.debug(
-                "Initializing normalized workspace directory for {}/{} driver at {}".format(
+                "initializing normalized workspace directory for {}/{} driver at {}".format(
                     feedtype, namespace, normalized_dir_path
                 )
             )
@@ -1122,17 +1124,19 @@ class NVDDataProvider:
             use_cache = d_csum == n_csum
 
         if use_cache:
-            self.logger.debug("Cache hit for normalized data, loading from: {}".format(n_json_file_path))
+            self.logger.debug("cache hit for normalized data, loading from: {}".format(n_json_file_path))
             with open(n_json_file_path, "rb") as f:
-                events = map(NVDDataProvider._floater, ijpython.parse(f))
+                events = map(self._floater, ijpython.parse(f))
                 for item in ijcommon.items(events, "normalized_data.item"):
                     try:
-                        yield item["id"], item["payload"]
+                        cve_id = item["id"]
+                        self.logger.trace(f"read cached entry for {cve_id}")
+                        yield cve_id, item["payload"]
                     except:
-                        logging.exception("Failed to process normalized_data.item")
+                        self.logger.exception("failed to process normalized_data.item")
                         continue
         else:
-            self.logger.debug("Cache missed for normalized data")
+            self.logger.debug("cache missed for normalized data")
             hmap = self._get_cpe_dictionary()
 
             n_data = []
@@ -1142,12 +1146,12 @@ class NVDDataProvider:
                 n_data.append({"id": cve_id, "payload": cve})
                 yield cve_id, cve
 
-            self.logger.debug("Caching normalized data to: {}".format(n_json_file_path))
+            self.logger.debug("caching normalized data to: {}".format(n_json_file_path))
             with open(n_json_file_path, "w") as np:
                 json.dump({"generated_at": ts, "normalized_data": n_data}, np)
             del n_data[:]  # clear it
 
-            self.logger.debug("Writing normalized data checksum to: {}".format(n_csum_file_path))
+            self.logger.debug("writing normalized data checksum to: {}".format(n_csum_file_path))
             with open(d_csum_file_path, "r") as dp, open(n_csum_file_path, "w") as np:
                 d_csum = dp.readline()
                 np.write(d_csum)
@@ -1163,7 +1167,7 @@ class NVDDataProvider:
 
     def _free_cpe_dictionary(self):
         # free up the memory held by this giant dictionary
-        self.logger.debug("Freeing cpe dictionary")
+        self.logger.debug("freeing cpe dictionary")
         if self.hmap:
             self.hmap.clear()
             del self.hmap
@@ -1177,4 +1181,4 @@ class NVDDataProvider:
             try:
                 self._free_cpe_dictionary()
             except Exception as e:
-                self.logger.debug("Ignoring error clearing cpe dictionary. {}".format(e))
+                self.logger.debug("ignoring error clearing cpe dictionary. {}".format(e))

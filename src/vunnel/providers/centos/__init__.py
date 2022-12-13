@@ -1,53 +1,52 @@
-import json
-import os
 from dataclasses import dataclass, field
 
-from vunnel import provider
+from vunnel import provider, schema
 
-from .data import CentOSDataProvider, centos_config
+from .parser import Parser, centos_config
 
 
-@dataclass(frozen=True)
+@dataclass
 class Config:
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
+    )
     skip_namespaces: list[str] = field(default_factory=lambda: ["centos:3", "centos:4"])
     request_timeout: int = 125
-    use_existing_data: bool = True
 
 
 class Provider(provider.Provider):
     name = "centos"
 
     def __init__(self, root: str, config: Config):
-        super().__init__(root)
+        super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
+        self.logger.debug(f"config: {self.config}")
 
-    def update(self) -> list[str]:
-        data_provider = CentOSDataProvider(
-            workspace=self.workspace,
+        self.schema = schema.OSSchema()
+        self.parser = Parser(
+            workspace=self.input,
             config=centos_config,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
+
+    def update(self) -> list[str]:
         # { (CVE, namespace): {...data...}" }
-        vuln_dict = data_provider.get(skip_if_exists=self.config.use_existing_data)
+        vuln_dict = self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists)
 
         self.logger.info(f"processed {len(vuln_dict)} entries")
 
-        files = set()
-        for key, value in vuln_dict.items():
-            if key[1] not in self.config.skip_namespaces and key[0].lower().startswith("rhsa"):
-                el = {"key": key[0], "namespace": key[1], "payload": value[1]}
-                filename = os.path.join(self.results, f"{key[0].lower()}.json")
+        with self.results_writer() as writer:
+            for (vuln_id, namespace), (_, record) in vuln_dict.items():
 
-                # TODO(ALEX): we should put this back in
-                # if filename in files:
-                #     raise RuntimeError(f"filename {filename!r} already processed")
+                is_valid = vuln_id.lower().startswith("rhsa")
+                should_skip = namespace.lower() in self.config.skip_namespaces
 
-                with open(filename, "w", encoding="utf-8") as f:
-                    self.logger.trace(f"writing {filename}")
-                    json.dump(el, f)
-                files.add(filename)
+                if is_valid and not should_skip:
+                    writer.write(
+                        identifier=f"{namespace}-{vuln_id}".lower(),
+                        schema=self.schema,
+                        payload=record,
+                    )
 
-        self.logger.info(f"wrote {len(files)} entries")
-
-        return data_provider.urls
+        return self.parser.urls

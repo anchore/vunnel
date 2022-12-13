@@ -9,13 +9,7 @@ from typing import List
 
 import requests
 
-# from anchore_enterprise.services.feeds.drivers import common
 from vunnel.utils.oval_parser import Config, parse
-
-# import logging as logger
-
-
-# from anchore_enterprise.services.feeds.drivers.oval_parser import Config, parse
 
 namespace = "centos"
 feedtype = "vulnerabilities"
@@ -65,7 +59,7 @@ requests_timeout = 125
 driver_workspace = None
 
 
-class CentOSDataProvider(object):
+class Parser(object):
     _url_ = "https://www.redhat.com/security/data/oval/com.redhat.rhsa-all.xml.bz2"
     _meta_url_ = "https://www.redhat.com/security/data/oval/PULP_MANIFEST"
     _sha_line_regex_ = re.compile(r"com.redhat.rhsa-all.xml,([^,]+),.*")
@@ -109,7 +103,7 @@ class CentOSDataProvider(object):
     def _download(self, skip_if_exists=False):
 
         if skip_if_exists and os.path.exists(self.xml_file_path):
-            self.logger.warn("skip_if_exists flag enabled and found {}. Skipping download".format(self.xml_file_path))
+            self.logger.debug("'skip_if_exists' flag enabled and found {}. Skipping download".format(self.xml_file_path))
         else:
             download = True
 
@@ -157,77 +151,12 @@ class CentOSDataProvider(object):
 
         return None
 
+    def parse(self):
+        # normalize and return results
+        return parse(self.xml_file_path, self.config)
+
     def get(self, skip_if_exists=False):
         # download
         self._download(skip_if_exists=skip_if_exists)
 
-        # normalize and return results
-        return parse(self.xml_file_path, self.config)
-
-
-# def refresh(skip_if_exists=False):
-#     global namespace, driver_workspace, requests_timeout, ns_blacklist, centos_config
-
-#     data_provider = CentOSDataProvider(
-#         workspace=driver_workspace,
-#         config=centos_config,
-#         download_timeout=requests_timeout,
-#     )
-#     vuln_dict = data_provider.get(skip_if_exists=skip_if_exists)
-
-#     for key, value in vuln_dict.items():
-#         if key[1] not in ns_blacklist and key[0].lower().startswith("rhsa"):
-#             el = {"key": key[0], "namespace": key[1], "payload": value[1]}
-#             yield el
-
-
-# def fetch(**kwargs):
-#     task_id = None
-#     skip_if_exists = False
-#     previous_state = None
-#     config = None
-#     if kwargs:
-#         task_id = kwargs.pop("task_id", None)
-#         skip_if_exists = kwargs.pop("skip_if_exists", False)
-#         previous_state = kwargs.pop("previous_state", None)
-#         config = kwargs.pop("config", None)
-
-#     logger.debug(
-#         "{} driver invoked with task_id: {}, skip_if_exists: {}, previous_state: {}, config: {}".format(
-#             namespace, task_id, skip_if_exists, previous_state, config
-#         )
-#     )
-
-#     # setup workspace
-#     global driver_workspace
-#     driver_workspace = common.init_driver_workspace(namespace)
-
-#     if config and config.get("requests_timeout", None):
-#         global requests_timeout
-#         try:
-#             requests_timeout = int(config.get("requests_timeout"))
-#             logger.debug(
-#                 "Updated connect and read timeout for use with requests library to {} seconds".format(
-#                     requests_timeout
-#                 )
-#             )
-#         except:
-#             pass
-
-#     if (
-#         config
-#         and config.get("blacklist", None)
-#         and isinstance(config.get("blacklist"), list)
-#     ):
-#         global ns_blacklist
-#         try:
-#             ns_blacklist = list(set(ns_blacklist).union(set(config.get("blacklist"))))
-#             logger.info(
-#                 "Merged configured blacklisted releases into default. New centos blacklist is: {}".format(
-#                     ns_blacklist
-#                 )
-#             )
-#         except:
-#             pass
-
-#     return refresh(skip_if_exists=skip_if_exists), None
+        return self.parse()
