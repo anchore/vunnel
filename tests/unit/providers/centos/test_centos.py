@@ -61,9 +61,9 @@ from vunnel.utils.oval_parser import parse
 def test_parser(tmpdir, helpers, mock_data_path, full_entry):
     mock_data_path = helpers.local_dir(mock_data_path)
 
-    provider = Parser(workspace=tmpdir)
-    shutil.copy(mock_data_path, provider.xml_file_path)
-    vuln_dict = provider.parse()
+    parser = Parser(workspace=tmpdir)
+    shutil.copy(mock_data_path, parser.xml_file_path)
+    vuln_dict = parser.parse()
 
     assert vuln_dict is not None
     _, (_, vuln) = vuln_dict.popitem()
