@@ -1,0 +1,215 @@
+{
+  "prototypejs": {
+    "CVE-2008-7220": {
+      "scope": "remote",
+      "debianbug": 555217,
+      "description": "Unspecified vulnerability in Prototype JavaScript framework (prototypejs) before 1.6.0.2 allows attackers to make \"cross-site ajax requests\" via unknown vectors.",
+      "releases": {
+        "stretch": {
+          "status": "resolved",
+          "repositories": {
+            "stretch": "1.7.1-3"
+          },
+          "fixed_version": "1.6.0.2-1",
+          "urgency": "high**"
+        },
+        "jessie": {
+          "status": "resolved",
+          "repositories": {
+            "jessie": "1.7.1-3"
+          },
+          "fixed_version": "1.6.0.2-1",
+          "urgency": "high**"
+        },
+        "buster": {
+          "status": "resolved",
+          "repositories": {
+            "buster": "1.7.1-3"
+          },
+          "fixed_version": "1.6.0.2-1",
+          "urgency": "high**"
+        },
+        "sid": {
+          "status": "resolved",
+          "repositories": {
+            "sid": "1.7.1-3"
+          },
+          "fixed_version": "1.6.0.2-1",
+          "urgency": "high**"
+        }
+      }
+    },
+    "CVE-2007-2383": {
+      "scope": "remote",
+      "debianbug": 555217,
+      "description": "The Prototype (prototypejs) framework before 1.5.1 RC3 exchanges data using JavaScript Object Notation (JSON) without an associated protection scheme, which allows remote attackers to obtain the data via a web page that retrieves the data through a URL in the SRC attribute of a SCRIPT element and captures the data using other JavaScript code, aka \"JavaScript Hijacking.\"",
+      "releases": {
+        "stretch": {
+          "status": "resolved",
+          "repositories": {
+            "stretch": "1.7.1-3"
+          },
+          "fixed_version": "0",
+          "urgency": "unimportant"
+        },
+        "jessie": {
+          "status": "resolved",
+          "repositories": {
+            "jessie": "1.7.1-3"
+          },
+          "fixed_version": "0",
+          "urgency": "unimportant"
+        },
+        "buster": {
+          "status": "resolved",
+          "repositories": {
+            "buster": "1.7.1-3"
+          },
+          "fixed_version": "0",
+          "urgency": "unimportant"
+        },
+        "sid": {
+          "status": "resolved",
+          "repositories": {
+            "sid": "1.7.1-3"
+          },
+          "fixed_version": "0",
+          "urgency": "unimportant"
+        }
+      }
+    }
+  },
+  "txt2man": {
+    "CVE-2013-1444": {
+      "scope": "local",
+      "debianbug": 724614,
+      "description": "A certain Debian patch for txt2man 1.5.5, as used in txt2man 1.5.5-2, 1.5.5-4, and others, allows local users to overwrite arbitrary files via a symlink attack on /tmp/2222.",
+      "releases": {
+        "stretch": {
+          "status": "resolved",
+          "repositories": {
+            "stretch": "1.6.0-1"
+          },
+          "fixed_version": "1.5.5-4.1",
+          "urgency": "low**"
+        },
+        "jessie": {
+          "status": "resolved",
+          "repositories": {
+            "jessie": "1.5.5-4.1"
+          },
+          "fixed_version": "1.5.5-4.1",
+          "urgency": "low**"
+        },
+        "buster": {
+          "status": "resolved",
+          "repositories": {
+            "buster": "1.6.0-3"
+          },
+          "fixed_version": "1.5.5-4.1",
+          "urgency": "low**"
+        },
+        "sid": {
+          "status": "resolved",
+          "repositories": {
+            "sid": "1.6.0-3"
+          },
+          "fixed_version": "1.5.5-4.1",
+          "urgency": "low**"
+        }
+      }
+    }
+  },
+  "backupninja": {
+    "CVE-2005-3111": {
+      "scope": "local",
+      "description": "The handler code for backupninja 0.8 and earlier creates temporary files with predictable filenames, which allows local users to modify arbitrary files via a symlink attack.",
+      "releases": {
+        "stretch": {
+          "status": "resolved",
+          "repositories": {
+            "stretch": "1.0.1-2"
+          },
+          "fixed_version": "0.8-2",
+          "urgency": "medium"
+        },
+        "jessie": {
+          "status": "resolved",
+          "repositories": {
+            "jessie": "1.0.1-2"
+          },
+          "fixed_version": "0.8-2",
+          "urgency": "medium"
+        },
+        "buster": {
+          "status": "resolved",
+          "repositories": {
+            "buster": "1.1.0-2"
+          },
+          "fixed_version": "0.8-2",
+          "urgency": "medium"
+        },
+        "sid": {
+          "status": "resolved",
+          "repositories": {
+            "sid": "1.1.0-2"
+          },
+          "fixed_version": "0.8-2",
+          "urgency": "medium"
+        }
+      }
+    }
+  },
+  "chromium": {
+    "CVE-2022-0456": {
+      "releases": {
+        "bookworm": {
+          "status": "resolved",
+          "repositories": {
+            "bookworm": "98.0.4758.102-1"
+          },
+          "fixed_version": "98.0.4758.80-1",
+          "urgency": "not yet assigned"
+        },
+        "bullseye": {
+          "status": "resolved",
+          "repositories": {
+            "bullseye": "90.0.4430.212-1",
+            "bullseye-security": "98.0.4758.102-1~deb11u1"
+          },
+          "fixed_version": "98.0.4758.80-1~deb11u1",
+          "urgency": "not yet assigned"
+        },
+        "buster": {
+          "status": "open",
+          "repositories": {
+            "buster": "89.0.4389.114-1~deb10u1",
+            "buster-security": "90.0.4430.212-1~deb10u1"
+          },
+          "urgency": "end-of-life"
+        },
+        "sid": {
+          "status": "resolved",
+          "repositories": {
+            "sid": "99.0.4844.51-1"
+          },
+          "fixed_version": "98.0.4758.80-1",
+          "urgency": "not yet assigned"
+        },
+        "stretch": {
+          "status": "open",
+          "repositories": {
+            "stretch": "73.0.3683.75-1~deb9u1",
+            "stretch-security": "73.0.3683.75-1~deb9u1"
+          },
+          "urgency": "end-of-life"
+        }
+      }
+    }
+  },
+  "chromium-browser": {
+    "CVE-2022-0358": {
+      "releases": []
+    }
+  }
+}

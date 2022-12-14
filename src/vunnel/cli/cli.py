@@ -93,8 +93,8 @@ def run_provider(cfg: config.Application, provider_name: str):
 
 @cli.command(name="clear", help="clear provider state")
 @click.argument("provider_name", metavar="PROVIDER")
-@click.option("--input", "-i", "_input", default=False, help="clear only the input state")
-@click.option("--result", "-r", default=False, help="clear only the result state")
+@click.option("--input", "-i", "_input", is_flag=True, help="clear only the input state")
+@click.option("--result", "-r", is_flag=True, help="clear only the result state")
 @click.pass_obj
 def clear_provider(cfg: config.Application, provider_name: str, _input: bool, result: bool):
     logging.info(f"clearing {provider_name} provider state")
@@ -105,7 +105,7 @@ def clear_provider(cfg: config.Application, provider_name: str, _input: bool, re
     elif _input:
         provider.clear_input()
     elif result:
-        provider.clear_result()
+        provider.clear_results()
 
 
 @cli.command(name="status", help="describe current provider state")
