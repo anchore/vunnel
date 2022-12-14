@@ -1,0 +1,22 @@
+[01 Aug 2002] DSA-141 mpack - buffer overflow
+        {CVE-2002-1425}
+        [woody] - mpack 1.5-7woody2
+[05 Aug 2002] DSA-140 libpng - buffer overflow
+        {CVE-2002-0660 CVE-2002-0728}
+        [woody] - libpng 1.0.12-3.woody.2
+        [woody] - libpng3 1.2.1-1.1.woody.2
+[01 Aug 2002] DSA-139 super - format string vulnerability
+        {CVE-2002-0817}
+        [woody] - super 3.16.1-1.2
+[01 Aug 2002] DSA-138 gallery - remote exploit
+        {CVE-2002-1412}
+        [woody] - gallery 1.2.5-7
+[16 Dec 2013] DSA-2819-1 iceape - several
+[22 Apr 2014] DSA-2808-2 openjpeg - regression update
+        [squeeze] - openjpeg 1.3+dfsg-4+squeeze3
+        [wheezy] - openjpeg 1.3+dfsg-4.8
+[07 Jun 2015] DSA-3281-1 Debian Security Team PGP/GPG key change notice
+[18 Apr 2018] DSA-4205-1 jessie end-of-life
+        NOTE: end of security support for jessie
+[18 Oct 2018] DSA-4323-1 drupal7 - security update
+        [stretch] - drupal7 7.52-2+deb9u5

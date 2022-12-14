@@ -62,7 +62,7 @@ class Provider(provider.Provider):
                     vuln_id = advisory["ghsaId"]
 
                     writer.write(
-                        identifier=f"{namespace}-{vuln_id}".lower(),
+                        identifier=f"{namespace}-{ecosystem}-{vuln_id}".lower(),
                         schema=self.schema,
                         payload={"Vulnerability": {}, "Advisory": dict(advisory)},
                     )
