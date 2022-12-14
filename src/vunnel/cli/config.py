@@ -10,6 +10,7 @@ from vunnel import providers, utils
 @dataclass
 class Providers:
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
+    amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
     centos: providers.centos.Config = field(default_factory=providers.centos.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)

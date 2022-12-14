@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Amazon Linux AMI Security Bulletins</title>
+    <description>Amazon Linux AMI Security Bulletins</description>
+    <link>https://alas.aws.amazon.com</link>
+    <language>en-us</language>
+    <ttl>35</ttl>
+
+    <item>
+        <title>ALAS-2018-939 (critical): kernel</title>
+        <description>
+            CVE-2017-5715, CVE-2017-5754
+        </description>
+        <pubDate>Thu, 11 Jan 2018 21:05:00 GMT</pubDate>
+        <lastBuildDate>Tue, 16 Jan 2018 01:28:00 GMT</lastBuildDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-939.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-939.html</link>
+    </item>
+
+</channel>
+</rss>
