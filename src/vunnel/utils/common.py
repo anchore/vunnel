@@ -3,8 +3,6 @@ from dataclasses import asdict, dataclass, field
 from operator import itemgetter
 from typing import Any
 
-import logger
-
 severity_order = {
     "Unknown": 0,
     "Negligible": 1,
