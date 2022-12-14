@@ -103,7 +103,8 @@ class Writer:
 
         with open(filepath, "w", encoding="utf-8") as f:
             self.logger.trace(f"writing {len(entries)} entries to {filepath!r}")
-            json.dump(asdict(envelope), f, indent=1)
+            payload = asdict(envelope)
+            json.dump(payload, f, indent=1)
             self.written.extend(identifiers)
 
         self.batch += 1

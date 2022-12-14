@@ -9,6 +9,7 @@ import rfc3339
 import xxhash
 
 from vunnel import schema as schemaDef
+from vunnel import utils
 
 STATE_FILENAME = "state.json"
 
@@ -23,34 +24,28 @@ class DTEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-@dataclass(frozen=True)
+@dataclass
 class FileState:
     path: str
     digests: list[str]
     modified: datetime.datetime
 
 
-@dataclass(frozen=True)
-class Input:
+@dataclass
+class FileListing:
     files: list[FileState]
     timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
 
 
-@dataclass(frozen=True)
-class Results:
-    files: list[FileState]
-    timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
-
-
-@dataclass(frozen=True)
+@dataclass
 class WorkspaceState:
     provider: str
     # the list of files should be:
     # - relative to the root
     # - be sorted by path
     urls: list[str]
-    input: Input
-    results: Results
+    input: FileListing
+    results: FileListing
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderWorkspaceStateSchema)
 
     @staticmethod
@@ -60,9 +55,15 @@ class WorkspaceState:
         return WorkspaceState(
             provider=provider,
             urls=urls,
-            input=Input(files=file_state_listing(input)),
-            results=Results(files=file_state_listing(results)),
+            input=file_state_listing(input),
+            results=file_state_listing(results),
         )
+
+    @staticmethod
+    def read(root: str) -> "WorkspaceState":
+        metadata_path = os.path.join(root, STATE_FILENAME)
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            return utils.dataclass_from_dict(WorkspaceState, json.load(f))
 
     def write(self, root: str) -> str:
         metadata_path = os.path.join(root, STATE_FILENAME)
@@ -94,16 +95,18 @@ def file_digests(path: str) -> list[str]:
     ]
 
 
-def file_state_listing(path: str):
+def file_state_listing(path: str) -> FileListing:
     listing = []
+    latest_modified = None
     for root, dirs, files in os.walk(path):  # pylint: disable=unused-variable
         for file in sorted(files):
             full_path = os.path.join(root, file)
-            listing.append(
-                FileState(
-                    path=file,
-                    digests=file_digests(full_path),
-                    modified=datetime.datetime.fromtimestamp(os.path.getmtime(full_path)).astimezone(datetime.timezone.utc),
-                )
+            fs = FileState(
+                path=file,
+                digests=file_digests(full_path),
+                modified=datetime.datetime.fromtimestamp(os.path.getmtime(full_path)).astimezone(datetime.timezone.utc),
             )
-    return listing
+            listing.append(fs)
+            if not latest_modified or fs.modified > latest_modified:
+                latest_modified = fs.modified
+    return FileListing(files=listing, timestamp=latest_modified)
