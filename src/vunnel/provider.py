@@ -5,6 +5,7 @@ import os
 import shutil
 import time
 from dataclasses import dataclass, field
+from typing import Optional
 
 from . import result, workspace
 
@@ -55,7 +56,7 @@ class OnErrorConfig:
 
 @dataclass
 class RuntimeConfig:
-    on_error: OnErrorConfig = field(default_factory=OnErrorConfig)  # TODO: hook this up and enforce
+    on_error: OnErrorConfig = field(default_factory=OnErrorConfig)
     existing_input: InputStatePolicy = InputStatePolicy.DELETE
     existing_results: ResultStatePolicy = ResultStatePolicy.DELETE_BEFORE_WRITE
 
@@ -91,10 +92,10 @@ class Provider(abc.ABC):
         self.logger.debug(f"using {self.root} as workspace root")
 
         if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:
-            self._clear_results()
+            self.clear_results()
 
         if self.runtime_cfg.existing_input == InputStatePolicy.DELETE:
-            self._clear_input()
+            self.clear_input()
 
         self._create_workspace()
         try:
@@ -137,9 +138,9 @@ class Provider(abc.ABC):
 
     def _on_error_handle_state(self):
         if self.runtime_cfg.on_error.input == InputStatePolicy.DELETE:
-            self._clear_input()
+            self.clear_input()
         if self.runtime_cfg.on_error.results == ResultStatePolicy.DELETE:
-            self._clear_results()
+            self.clear_results()
 
     def _create_workspace(self):
         if not os.path.exists(self.input):
@@ -150,22 +151,41 @@ class Provider(abc.ABC):
         if not os.path.exists(self.results):
             os.makedirs(self.results)
 
-    def _clear_results(self):
+    def clear(self):
+        self.clear_input()
+        self.clear_results()
+
+    def clear_results(self):
         if os.path.exists(self.results):
             self.logger.debug("clearing existing results")
             shutil.rmtree(self.results)
 
-    def _clear_input(self):
+        current_state = workspace.WorkspaceState.read(root=self.root)
+        current_state.results = workspace.FileListing(files=[])
+        current_state.write(self.root)
+
+    def clear_input(self):
         if os.path.exists(self.input):
             self.logger.debug("clearing existing workspace")
             shutil.rmtree(self.input)
 
+        current_state = workspace.WorkspaceState.read(root=self.root)
+        current_state.input = workspace.FileListing(files=[])
+        current_state.write(self.root)
+
     def _catalog_workspace(self, urls: list[str]):
+        if not urls:
+            current_state = workspace.WorkspaceState.read(root=self.root)
+            urls = current_state.urls
+
         state = workspace.WorkspaceState.from_fs(provider=self.name, urls=urls, input=self.input, results=self.results)
 
         metadata_path = state.write(self.root)
 
         self.logger.debug(msg=f"wrote workspace state to {metadata_path}")
+
+    def current_state(self) -> Optional[workspace.WorkspaceState]:
+        return workspace.WorkspaceState.read(self.root)
 
     @property
     def root(self):

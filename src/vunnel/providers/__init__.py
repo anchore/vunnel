@@ -1,9 +1,10 @@
-from vunnel.providers import alpine, centos, nvd
+from vunnel.providers import alpine, centos, github, nvd
 
 _providers = {
     alpine.Provider.name: alpine.Provider,
     centos.Provider.name: centos.Provider,
     nvd.Provider.name: nvd.Provider,
+    github.Provider.name: github.Provider,
 }
 
 

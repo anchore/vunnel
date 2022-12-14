@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import yaml
 
-from vunnel import providers
+from vunnel import providers, utils
 
 
 @dataclass
@@ -12,6 +12,7 @@ class Providers:
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     centos: providers.centos.Config = field(default_factory=providers.centos.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
+    github: providers.github.Config = field(default_factory=providers.github.Config)
 
     def get(self, name: str) -> Optional[Any]:
         for f in fields(Providers):
@@ -50,20 +51,11 @@ def yaml_decoder(data) -> dict[Any, Any]:
     return clean_dict_keys(yaml.load(data, yaml.CSafeLoader))
 
 
-def dataclass_from_dict(cls, d):
-    try:
-        fieldtypes = {f.name: f.type for f in fields(cls)}
-        return cls(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
-    except TypeError:
-        pass
-    return d
-
-
 def load(path: str = ".vunnel.yaml") -> Application:  # pylint: disable=unused-argument
     try:
         with open(path, encoding="utf-8") as f:
             app_object = yaml.safe_load(f.read())
-            cfg = dataclass_from_dict(Application, app_object)
+            cfg = utils.dataclass_from_dict(Application, app_object)
             if cfg is None:
                 raise FileNotFoundError("parsed empty config")
     except FileNotFoundError:

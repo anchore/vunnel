@@ -72,7 +72,7 @@ class Parser(object):
         self.download_timeout = download_timeout
         self.xml_file_path = os.path.join(workspace, self._xml_file_)
         self.xml_sha_file_path = os.path.join(workspace, self._xml_sha_file_)
-        if logger == None:
+        if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
