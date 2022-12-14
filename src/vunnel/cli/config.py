@@ -9,6 +9,7 @@ from vunnel import providers
 
 @dataclass
 class Providers:
+    alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     centos: providers.centos.Config = field(default_factory=providers.centos.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
 
