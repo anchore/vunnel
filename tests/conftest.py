@@ -11,10 +11,18 @@ class Workspace:
         self.root = root
         self.name = name
 
+    @property
+    def input_dir(self):
+        return self.root / self.name / "input"
+
+    @property
+    def results_dir(self):
+        return self.root / self.name / "results"
+
     def result_files(self):
         results = []
-        for f in os.listdir(self.root / self.name / "results"):
-            results.append(self.root / self.name / "results" / f)
+        for f in os.listdir(self.results_dir):
+            results.append(self.results_dir / f)
         return results
 
     def num_result_entries(self):

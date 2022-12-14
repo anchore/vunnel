@@ -149,6 +149,16 @@ def node():
     }
 
 
+@pytest.fixture
+def fake_get_query(monkeypatch):
+    def apply(return_values):
+        responses = Capture(return_values=return_values)
+        monkeypatch.setattr(parser, "get_query", responses)
+        return responses
+
+    return apply
+
+
 class TestNodeParser:
     def test_no_such_attribute(self, node):
         result = parser.NodeParser(node).parse()
@@ -276,16 +286,6 @@ class Capture(object):
             return self.always_returns
         if self.return_values:
             return self.return_values.pop()
-
-
-@pytest.fixture
-def fake_get_query(monkeypatch):
-    def apply(return_values):
-        responses = Capture(return_values=return_values)
-        monkeypatch.setattr(parser, "get_query", responses)
-        return responses
-
-    return apply
 
 
 class TestGetNestedVulnerabilities:

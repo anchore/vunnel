@@ -43,7 +43,7 @@ class Provider(provider.Provider):
             workspace=self.input,
             token=config.token,
             api_url=config.api_url,
-            download_timeout=self.config.request_timeout,
+            download_timeout=config.request_timeout,
             logger=self.logger,
         )
 

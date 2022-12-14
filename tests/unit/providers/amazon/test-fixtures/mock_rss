@@ -1,0 +1,982 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Amazon Linux AMI Security Bulletins</title>
+    <description>Amazon Linux AMI Security Bulletins</description>
+    <link>https://alas.aws.amazon.com</link>
+    <language>en-us</language>
+    <ttl>35</ttl>
+
+    <item>
+        <title>ALAS-2018-1106 (medium): 389-ds-base</title>
+        <description>
+            CVE-2018-14648
+        </description>
+        <pubDate>Thu, 15 Nov 2018 00:10:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1106.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1106.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1105 (important): tomcat</title>
+        <description>
+            CVE-2018-1336
+        </description>
+        <pubDate>Thu, 08 Nov 2018 23:44:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1105.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1105.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1104 (medium): mod_http2</title>
+        <description>
+            CVE-2018-11763
+        </description>
+        <pubDate>Thu, 08 Nov 2018 23:43:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1104.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1104.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1103 (important): spamassassin</title>
+        <description>
+            CVE-2017-15705, CVE-2018-11781
+        </description>
+        <pubDate>Thu, 08 Nov 2018 23:42:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1103.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1103.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1102 (medium): openssl</title>
+        <description>
+            CVE-2018-0495, CVE-2017-3735, CVE-2018-0732, CVE-2018-0739
+        </description>
+        <pubDate>Thu, 08 Nov 2018 23:41:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1102.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1102.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1100 (medium): kernel</title>
+        <description>
+            CVE-2018-18021, CVE-2018-17972
+        </description>
+        <pubDate>Thu, 08 Nov 2018 23:39:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1100.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1100.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1097 (critical): java-1.8.0-openjdk</title>
+        <description>
+            CVE-2018-3149, CVE-2018-3136, CVE-2018-3139, CVE-2018-3180, CVE-2018-3169, CVE-2018-3214, CVE-2018-3183
+        </description>
+        <pubDate>Thu, 25 Oct 2018 23:24:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1097.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1097.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1096 (medium): flatpak</title>
+        <description>
+            CVE-2018-6560
+        </description>
+        <pubDate>Thu, 25 Oct 2018 23:04:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1096.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1096.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1095 (medium): nss</title>
+        <description>
+            CVE-2018-12384
+        </description>
+        <pubDate>Thu, 25 Oct 2018 23:04:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1095.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1095.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1094 (medium): 389-ds-base</title>
+        <description>
+            CVE-2018-10850, CVE-2018-14624, CVE-2018-10935, CVE-2018-14638
+        </description>
+        <pubDate>Thu, 25 Oct 2018 23:04:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1094.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1094.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1093 (important): git</title>
+        <description>
+            CVE-2018-17456
+        </description>
+        <pubDate>Thu, 25 Oct 2018 23:24:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1093.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1093.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1089 (medium): zsh</title>
+        <description>
+            CVE-2018-13259, CVE-2018-0502
+        </description>
+        <pubDate>Wed, 10 Oct 2018 00:14:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1089.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1089.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1088 (important): ghostscript</title>
+        <description>
+            CVE-2018-16539, CVE-2018-16802, CVE-2018-16511, CVE-2018-15908, CVE-2018-15909, CVE-2018-16509, CVE-2018-16513, CVE-2018-15911, CVE-2018-15910, CVE-2018-16541, CVE-2018-16540, CVE-2018-16542, CVE-2018-11645, CVE-2018-16585
+        </description>
+        <pubDate>Wed, 10 Oct 2018 00:13:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1088.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1088.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1087 (important): kernel</title>
+        <description>
+            CVE-2018-14634
+        </description>
+        <pubDate>Wed, 10 Oct 2018 00:08:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1087.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1087.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1086 (important): kernel</title>
+        <description>
+            CVE-2018-16658, CVE-2018-14633, CVE-2018-17182
+        </description>
+        <pubDate>Wed, 10 Oct 2018 00:05:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1086.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1086.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1082 (important): bind</title>
+        <description>
+            CVE-2018-5740
+        </description>
+        <pubDate>Tue, 25 Sep 2018 17:49:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1082.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1082.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1080 (important): postgresql</title>
+        <description>
+            CVE-2018-10915
+        </description>
+        <pubDate>Tue, 25 Sep 2018 17:48:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1080.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1080.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1078 (medium): mariadb</title>
+        <description>
+            CVE-2017-10379, CVE-2017-10378, CVE-2017-10268, CVE-2017-3651, CVE-2017-3653, CVE-2017-3641, CVE-2018-2665, CVE-2018-2819, CVE-2017-3636, CVE-2018-2622, CVE-2018-2817, CVE-2018-2640, CVE-2018-2771, CVE-2018-2813, CVE-2018-2761, CVE-2018-2562, CVE-2018-2767, CVE-2018-2755, CVE-2017-10384, CVE-2018-2668, CVE-2018-2781
+        </description>
+        <pubDate>Sat, 15 Sep 2018 04:12:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1078.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1078.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1077 (important): mutt</title>
+        <description>
+            CVE-2018-14357, CVE-2018-14354, CVE-2018-14362
+        </description>
+        <pubDate>Sat, 15 Sep 2018 03:55:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1077.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1077.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1076 (low): policycoreutils</title>
+        <description>
+            CVE-2018-1063
+        </description>
+        <pubDate>Sat, 15 Sep 2018 03:54:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1076.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1076.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1075 (low): openssh</title>
+        <description>
+            CVE-2018-15473
+        </description>
+        <pubDate>Tue, 25 Sep 2018 17:48:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1075.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1075.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1073 (important): qemu-kvm</title>
+        <description>
+            CVE-2018-11806, CVE-2018-7550
+        </description>
+        <pubDate>Sat, 15 Sep 2018 03:53:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1073.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1073.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1064 (medium): java-1.7.0-openjdk</title>
+        <description>
+            CVE-2018-2952
+        </description>
+        <pubDate>Tue, 21 Aug 2018 23:39:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1064.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1064.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1063 (important): yum-utils</title>
+        <description>
+            CVE-2018-10897
+        </description>
+        <pubDate>Tue, 21 Aug 2018 23:39:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1063.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1063.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1062 (medium): httpd</title>
+        <description>
+            CVE-2018-8011
+        </description>
+        <pubDate>Tue, 21 Aug 2018 23:38:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1062.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1062.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1061 (critical): thunderbird</title>
+        <description>
+            CVE-2018-5188, CVE-2018-12366, CVE-2018-12365, CVE-2018-12364, CVE-2018-12363, CVE-2018-12362, CVE-2018-12360, CVE-2018-12372, CVE-2018-12373, CVE-2018-12374, CVE-2018-12359
+        </description>
+        <pubDate>Tue, 21 Aug 2018 23:38:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1061.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1061.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1060 (important): openslp</title>
+        <description>
+            CVE-2017-17833
+        </description>
+        <pubDate>Tue, 21 Aug 2018 23:34:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1060.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1060.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1058 (critical): kernel</title>
+        <description>
+            CVE-2018-3615, CVE-2018-5391, CVE-2018-3620, CVE-2018-3646
+        </description>
+        <pubDate>Tue, 14 Aug 2018 17:54:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1058.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1058.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1054 (medium): java-1.8.0-openjdk</title>
+        <description>
+            CVE-2018-2952
+        </description>
+        <pubDate>Thu, 09 Aug 2018 22:16:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1054.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1054.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1053 (low): ncurses</title>
+        <description>
+            CVE-2018-10754
+        </description>
+        <pubDate>Thu, 09 Aug 2018 22:15:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1053.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1053.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1052 (medium): curl</title>
+        <description>
+            CVE-2018-0500
+        </description>
+        <pubDate>Thu, 09 Aug 2018 22:15:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1052.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1052.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1051 (low): kernel</title>
+        <description>
+            CVE-2018-13093, CVE-2018-13094
+        </description>
+        <pubDate>Mon, 06 Aug 2018 18:37:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1051.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1051.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1050 (critical): kernel</title>
+        <description>
+            CVE-2018-5390
+        </description>
+        <pubDate>Mon, 06 Aug 2018 19:11:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1050.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1050.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1049 (important): libvirt</title>
+        <description>
+            CVE-2018-5748, CVE-2018-1064, CVE-2018-3639
+        </description>
+        <pubDate>Tue, 24 Jul 2018 21:23:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1049.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1049.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1048 (medium): glibc</title>
+        <description>
+            CVE-2018-11236, CVE-2017-15670, CVE-2017-15804, CVE-2017-18269
+        </description>
+        <pubDate>Wed, 08 Aug 2018 16:57:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1048.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1048.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1046 (medium): kernel</title>
+        <description>
+            CVE-2018-11412
+        </description>
+        <pubDate>Tue, 24 Jul 2018 21:23:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1046.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1046.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1045 (important): gnupg2</title>
+        <description>
+            CVE-2018-12020
+        </description>
+        <pubDate>Thu, 09 Aug 2018 23:13:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1045.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1045.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1044 (medium): kernel</title>
+        <description>
+            CVE-2018-12232
+        </description>
+        <pubDate>Thu, 05 Jul 2018 21:44:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1044.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1044.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1043 (important): plexus-archiver</title>
+        <description>
+            CVE-2018-1002200
+        </description>
+        <pubDate>Tue, 24 Jul 2018 21:16:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1043.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1043.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1042 (low): openssh</title>
+        <description>
+            CVE-2017-15906
+        </description>
+        <pubDate>Tue, 24 Jul 2018 21:14:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1042.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1042.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1041 (important): xmlrpc</title>
+        <description>
+            CVE-2016-5003
+        </description>
+        <pubDate>Tue, 24 Jul 2018 21:13:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1041.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1041.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1039 (important): java-1.8.0-openjdk</title>
+        <description>
+            CVE-2018-3639
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:11:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1039.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1039.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1038 (important): kernel</title>
+        <description>
+            CVE-2018-1120, CVE-2018-3639, CVE-2018-3693
+        </description>
+        <pubDate>Sat, 15 Sep 2018 03:47:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1038.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1038.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1037 (important): java-1.7.0-openjdk</title>
+        <description>
+            CVE-2018-3639
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:10:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1037.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1037.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1036 (important): 389-ds-base</title>
+        <description>
+            CVE-2018-1089
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:09:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1036.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1036.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1035 (important): git</title>
+        <description>
+            CVE-2018-11235, CVE-2018-11233
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:09:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1035.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1035.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1034 (important): qemu-kvm</title>
+        <description>
+            CVE-2017-15268, CVE-2018-5683, CVE-2018-3639, CVE-2017-13711, CVE-2017-15124, CVE-2018-7858, CVE-2017-13672
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:08:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1034.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1034.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1033 (important): libvirt</title>
+        <description>
+            CVE-2018-3639
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:08:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1033.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1033.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1032 (critical): thunderbird</title>
+        <description>
+            CVE-2018-5159, CVE-2018-5161, CVE-2018-5162, CVE-2018-5170, CVE-2018-5168, CVE-2018-5150, CVE-2018-5184, CVE-2018-5185, CVE-2018-5155, CVE-2018-5154, CVE-2018-5178, CVE-2018-5183
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:07:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1032.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1032.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1031 (important): procps-ng</title>
+        <description>
+            CVE-2018-1124, CVE-2018-1126
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:05:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1031.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1031.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1030 (low): xdg-user-dirs</title>
+        <description>
+            CVE-2017-15131
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:03:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1030.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1030.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1029 (important): curl</title>
+        <description>
+            CVE-2018-1000301, CVE-2018-1000300
+        </description>
+        <pubDate>Mon, 11 Jun 2018 22:03:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1029.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1029.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1023 (important): kernel</title>
+        <description>
+            CVE-2018-1087, CVE-2018-1000199, CVE-2017-16939, CVE-2018-1068, CVE-2018-1108, CVE-2018-8897, CVE-2018-1091
+        </description>
+        <pubDate>Tue, 29 May 2018 23:20:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1023.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1023.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1022 (medium): ghostscript</title>
+        <description>
+            CVE-2018-10194
+        </description>
+        <pubDate>Tue, 29 May 2018 23:19:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1022.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1022.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1021 (critical): dhcp</title>
+        <description>
+            CVE-2018-1111
+        </description>
+        <pubDate>Tue, 29 May 2018 23:19:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1021.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1021.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1020 (medium): nghttp2</title>
+        <description>
+            CVE-2018-1000168
+        </description>
+        <pubDate>Tue, 29 May 2018 23:17:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1020.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1020.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1015 (low): libvpx</title>
+        <description>
+            CVE-2017-13194
+        </description>
+        <pubDate>Fri, 11 May 2018 00:01:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1015.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1015.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1014 (important): corosync</title>
+        <description>
+            CVE-2018-1084
+        </description>
+        <pubDate>Fri, 11 May 2018 00:00:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1014.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1014.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1013 (medium): zsh</title>
+        <description>
+            CVE-2018-1083, CVE-2018-1100, CVE-2018-1071
+        </description>
+        <pubDate>Thu, 10 May 2018 23:59:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1013.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1013.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1012 (medium): libvncserver</title>
+        <description>
+            CVE-2018-7225
+        </description>
+        <pubDate>Thu, 10 May 2018 23:57:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1012.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1012.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1011 (medium): golang</title>
+        <description>
+            CVE-2018-6574, CVE-2017-15041, CVE-2017-15042
+        </description>
+        <pubDate>Thu, 10 May 2018 23:56:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1011.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1011.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1010 (medium): krb5</title>
+        <description>
+            CVE-2017-11368, CVE-2017-7562
+        </description>
+        <pubDate>Thu, 10 May 2018 23:50:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1010.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1010.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1009 (medium): ntp</title>
+        <description>
+            CVE-2016-7426, CVE-2016-9311, CVE-2016-9310, CVE-2017-6464, CVE-2017-6462, CVE-2016-7429, CVE-2017-6463, CVE-2016-7433
+        </description>
+        <pubDate>Thu, 10 May 2018 23:49:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1009.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1009.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1008 (important): patch</title>
+        <description>
+            CVE-2018-1000156
+        </description>
+        <pubDate>Thu, 10 May 2018 23:49:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1008.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1008.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1007 (critical): java-1.7.0-openjdk</title>
+        <description>
+            CVE-2018-2790, CVE-2018-2796, CVE-2018-2797, CVE-2018-2794, CVE-2018-2795, CVE-2018-2815, CVE-2018-2814, CVE-2018-2798, CVE-2018-2799, CVE-2018-2800
+        </description>
+        <pubDate>Thu, 10 May 2018 23:49:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1007.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1007.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1006 (medium): PackageKit</title>
+        <description>
+            CVE-2018-1106
+        </description>
+        <pubDate>Thu, 26 Apr 2018 22:42:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1006.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1006.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1005 (important): pcs</title>
+        <description>
+            CVE-2018-1000119, CVE-2018-1079, CVE-2018-1086
+        </description>
+        <pubDate>Thu, 26 Apr 2018 22:41:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1005.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1005.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1004 (medium): openssl</title>
+        <description>
+            CVE-2018-0737, CVE-2017-3738, CVE-2017-3736, CVE-2017-3737
+        </description>
+        <pubDate>Thu, 26 Apr 2018 22:38:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1004.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1004.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-1002 (critical): java-1.8.0-openjdk</title>
+        <description>
+            CVE-2018-2790, CVE-2018-2796, CVE-2018-2797, CVE-2018-2794, CVE-2018-2795, CVE-2018-2815, CVE-2018-2814, CVE-2018-2798, CVE-2018-2799, CVE-2018-2800
+        </description>
+        <pubDate>Thu, 26 Apr 2018 22:32:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-1002.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-1002.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-999 (important): slf4j</title>
+        <description>
+            CVE-2018-8088
+        </description>
+        <pubDate>Thu, 19 Apr 2018 22:45:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-999.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-999.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-998 (critical): librelp</title>
+        <description>
+            CVE-2018-1000140
+        </description>
+        <pubDate>Thu, 19 Apr 2018 22:44:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-998.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-998.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-996 (medium): stunnel, amazon-efs-utils</title>
+        <description>
+
+        </description>
+        <pubDate>Fri, 20 Apr 2018 00:19:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-996.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-996.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-995 (medium): curl</title>
+        <description>
+            CVE-2018-1000121, CVE-2018-1000120, CVE-2018-1000122
+        </description>
+        <pubDate>Thu, 19 Apr 2018 22:42:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-995.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-995.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-994 (important): kernel</title>
+        <description>
+            CVE-2018-1068, CVE-2017-13215, CVE-2018-10901, CVE-2018-10675, CVE-2018-7995
+        </description>
+        <pubDate>Sat, 15 Sep 2018 03:51:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-994.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-994.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-992 (medium): glibc</title>
+        <description>
+            CVE-2018-6485, CVE-2018-6551
+        </description>
+        <pubDate>Thu, 05 Apr 2018 23:26:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-992.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-992.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-987 (medium): mod_wsgi</title>
+        <description>
+            CVE-2014-8583
+        </description>
+        <pubDate>Thu, 05 Apr 2018 23:25:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-987.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-987.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-986 (low): zsh</title>
+        <description>
+            CVE-2018-7548, CVE-2018-7549, CVE-2017-18205, CVE-2017-18206
+        </description>
+        <pubDate>Thu, 05 Apr 2018 23:25:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-986.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-986.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-985 (medium): mailman</title>
+        <description>
+            CVE-2018-5950
+        </description>
+        <pubDate>Thu, 05 Apr 2018 23:23:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-985.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-985.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-984 (important): dhcp</title>
+        <description>
+            CVE-2018-5733, CVE-2018-5732
+        </description>
+        <pubDate>Thu, 05 Apr 2018 23:23:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-984.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-984.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-983 (medium): ruby</title>
+        <description>
+            CVE-2018-1000073, CVE-2017-17790, CVE-2018-1000077, CVE-2018-1000076, CVE-2018-1000075, CVE-2018-1000074, CVE-2018-1000079, CVE-2018-1000078
+        </description>
+        <pubDate>Thu, 05 Apr 2018 23:22:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-983.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-983.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-981 (critical): libvorbis</title>
+        <description>
+            CVE-2018-5146
+        </description>
+        <pubDate>Mon, 26 Mar 2018 22:10:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-981.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-981.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-980 (important): 389-ds-base</title>
+        <description>
+            CVE-2017-15135, CVE-2018-1054
+        </description>
+        <pubDate>Mon, 26 Mar 2018 22:10:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-980.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-980.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-971 (important): kernel</title>
+        <description>
+            CVE-2018-1068
+        </description>
+        <pubDate>Fri, 16 Mar 2018 22:56:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-971.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-971.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-964 (medium): memcached</title>
+        <description>
+            CVE-2018-1000115
+        </description>
+        <pubDate>Tue, 29 May 2018 23:20:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-964.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-964.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-963 (medium): dhcp</title>
+        <description>
+            CVE-2017-3144
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:24:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-963.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-963.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-962 (important): linux-firmware</title>
+        <description>
+            CVE-2017-5715
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:23:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-962.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-962.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-961 (medium): systemd</title>
+        <description>
+            CVE-2018-1049
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:22:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-961.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-961.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-960 (medium): nautilus</title>
+        <description>
+            CVE-2017-14604
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:22:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-960.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-960.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-956 (important): kernel</title>
+        <description>
+            CVE-2018-5750, CVE-2017-17741, CVE-2017-5753, CVE-2018-5344, CVE-2018-1000028, CVE-2017-1000405
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:21:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-956.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-956.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-955 (important): 389-ds-base</title>
+        <description>
+            CVE-2017-15134
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:18:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-955.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-955.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-954 (important): bind</title>
+        <description>
+            CVE-2017-3145
+        </description>
+        <pubDate>Wed, 21 Feb 2018 21:18:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-954.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-954.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-953 (important): microcode_ctl</title>
+        <description>
+            CVE-2017-5715
+        </description>
+        <pubDate>Thu, 08 Feb 2018 21:50:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-953.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-953.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-952 (important): libvirt</title>
+        <description>
+            CVE-2017-5715
+        </description>
+        <pubDate>Thu, 08 Feb 2018 21:49:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-952.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-952.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-951 (important): curl</title>
+        <description>
+            CVE-2018-1000007, CVE-2018-1000005
+        </description>
+        <pubDate>Thu, 05 Apr 2018 17:04:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-951.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-951.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-949 (important): java-1.8.0-openjdk</title>
+        <description>
+            CVE-2018-2677, CVE-2018-2599, CVE-2018-2603, CVE-2018-2579, CVE-2018-2678, CVE-2018-2634, CVE-2018-2582, CVE-2018-2602, CVE-2018-2629, CVE-2018-2618, CVE-2018-2633, CVE-2018-2588, CVE-2018-2641, CVE-2018-2637, CVE-2018-2663
+        </description>
+        <pubDate>Thu, 08 Feb 2018 21:45:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-949.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-949.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-942 (important): qemu-kvm</title>
+        <description>
+            CVE-2017-5715
+        </description>
+        <pubDate>Thu, 08 Feb 2018 21:46:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-942.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-942.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2018-939 (critical): kernel</title>
+        <description>
+            CVE-2017-5754,
+                CVE-2017-5715
+        </description>
+        <pubDate>Tue, 16 Jan 2018 01:28:00 GMT</pubDate>
+        <guid>https://alas.aws.amazon.com/AL2/ALAS-2018-939.html</guid>
+        <link>https://alas.aws.amazon.com/AL2/ALAS-2018-939.html</link>
+    </item>
+
+</channel>
+</rss>

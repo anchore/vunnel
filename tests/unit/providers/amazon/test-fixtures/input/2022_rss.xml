@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Amazon Linux 2022 Security Bulletins</title>
+    <description>Amazon Linux 2022 Security Bulletins</description>
+    <link>https://alas.aws.amazon.com</link>
+    <language>en-us</language>
+    <ttl>35</ttl>
+
+    <item>
+        <title>ALAS-2021-001 (medium): vim</title>
+        <description>
+            CVE-2021-3778, CVE-2021-3796, CVE-2021-3872, CVE-2021-3875
+        </description>
+        <pubDate>Tue, 26 Oct 2021 02:25:00 GMT</pubDate>
+        <lastBuildDate>Wed, 27 Oct 2021 00:24:00 GMT</lastBuildDate>
+        <guid>https://alas.aws.amazon.com/AL2022/ALAS-2021-001.html</guid>
+        <link>https://alas.aws.amazon.com/AL2022/ALAS-2021-001.html</link>
+    </item>
+
+</channel>
+</rss>
