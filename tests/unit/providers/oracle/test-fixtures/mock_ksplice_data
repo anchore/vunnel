@@ -1,0 +1,235 @@
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:oval-def="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:red-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+<generator>
+<oval:product_name>Oracle Errata System</oval:product_name>
+<oval:product_version>Oracle Linux</oval:product_version>
+<oval:schema_version>5.3</oval:schema_version>
+<oval:timestamp>2021-09-09T12:49:02</oval:timestamp>
+</generator>
+<definitions>
+<definition id="oval:com.oracle.elsa:def:20219151" version="501" class="patch">
+<metadata>
+<title> ELSA-2021-9151: openssl security update (IMPORTANT) </title>
+<affected family="unix">
+<platform>Oracle Linux 8</platform>
+</affected>
+<reference source="elsa" ref_id="ELSA-2021-9151" ref_url="https://linux.oracle.com/errata/ELSA-2021-9151.html"/>
+<reference source="CVE" ref_id="CVE-2021-3449" ref_url="https://linux.oracle.com/cve/CVE-2021-3449.html"/>
+<reference source="CVE" ref_id="CVE-2021-3450" ref_url="https://linux.oracle.com/cve/CVE-2021-3450.html"/>
+<description> [1.1.1g-15] - version bump [1.1.1g-14] - CVE-2021-3450 openssl: CA certificate check bypass with X509_V_FLAG_X509_STRICT [1.1.1g-13] - Fix CVE-2021-3449 NULL pointer deref in signature_algorithms processing </description>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   advisory details   ~~~~~~~~~~~~~~~~~~~
+ -->
+<advisory>
+<severity>IMPORTANT</severity>
+<rights>Copyright 2021 Oracle, Inc.</rights>
+<issued date="2021-04-01"/>
+<cve href="https://linux.oracle.com/cve/CVE-2021-3449.html">CVE-2021-3449</cve>
+<cve href="https://linux.oracle.com/cve/CVE-2021-3450.html">CVE-2021-3450</cve>
+</advisory>
+</metadata>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151001" comment="Oracle Linux 8 is installed"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151002" comment="Oracle Linux arch is aarch64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151003" comment="openssl is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151004" comment="openssl is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151005" comment="openssl is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151006" comment="openssl-debugsource is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151007" comment="openssl-debugsource is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151008" comment="openssl-debugsource is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151009" comment="openssl-devel is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151010" comment="openssl-devel is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151011" comment="openssl-devel is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151012" comment="openssl-libs is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151013" comment="openssl-libs is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151014" comment="openssl-libs is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151015" comment="openssl-perl is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151016" comment="openssl-perl is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151017" comment="openssl-perl is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151018" comment="openssl-static is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151019" comment="openssl-static is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151020" comment="openssl-static is ksplice-based"/>
+</criteria>
+</criteria>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151021" comment="Oracle Linux arch is x86_64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151003" comment="openssl is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151004" comment="openssl is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151005" comment="openssl is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151009" comment="openssl-devel is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151010" comment="openssl-devel is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151011" comment="openssl-devel is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151012" comment="openssl-libs is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151013" comment="openssl-libs is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151014" comment="openssl-libs is ksplice-based"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151015" comment="openssl-perl is earlier than 2:1.1.1g-15.ksplice1.el8_3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151016" comment="openssl-perl is signed with the Oracle Linux 8 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20219151017" comment="openssl-perl is ksplice-based"/>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</definition>
+</definitions>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~~   rpminfo tests   ~~~~~~~~~~~~~~~~~~~~~
+ -->
+<tests>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151001" version="501" comment="Oracle Linux 8 is installed" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151001"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151003"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151002" version="501" comment="Oracle Linux arch is aarch64" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151001"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151004"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151003" version="501" comment="openssl is earlier than 2:1.1.1g-15.ksplice1.el8_3" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151002"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151005"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151004" version="501" comment="openssl is signed with the Oracle Linux 8 key" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151002"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151001"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151005" version="501" comment="openssl is ksplice-based" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151002"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151002"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151006" version="501" comment="openssl-debugsource is earlier than 2:1.1.1g-15.ksplice1.el8_3" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151003"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151005"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151007" version="501" comment="openssl-debugsource is signed with the Oracle Linux 8 key" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151003"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151001"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151008" version="501" comment="openssl-debugsource is ksplice-based" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151003"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151002"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151009" version="501" comment="openssl-devel is earlier than 2:1.1.1g-15.ksplice1.el8_3" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151004"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151005"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151010" version="501" comment="openssl-devel is signed with the Oracle Linux 8 key" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151004"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151001"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151011" version="501" comment="openssl-devel is ksplice-based" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151004"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151002"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151012" version="501" comment="openssl-libs is earlier than 2:1.1.1g-15.ksplice1.el8_3" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151005"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151005"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151013" version="501" comment="openssl-libs is signed with the Oracle Linux 8 key" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151005"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151001"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151014" version="501" comment="openssl-libs is ksplice-based" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151005"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151002"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151015" version="501" comment="openssl-perl is earlier than 2:1.1.1g-15.ksplice1.el8_3" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151006"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151005"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151016" version="501" comment="openssl-perl is signed with the Oracle Linux 8 key" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151006"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151001"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151017" version="501" comment="openssl-perl is ksplice-based" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151006"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151002"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151018" version="501" comment="openssl-static is earlier than 2:1.1.1g-15.ksplice1.el8_3" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151007"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151005"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151019" version="501" comment="openssl-static is signed with the Oracle Linux 8 key" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151007"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151001"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151020" version="501" comment="openssl-static is ksplice-based" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151007"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151002"/>
+</rpminfo_test>
+<rpminfo_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:tst:20219151021" version="501" comment="Oracle Linux arch is x86_64" check="at least one">
+<object object_ref="oval:com.oracle.elsa:obj:20219151001"/>
+<state state_ref="oval:com.oracle.elsa:ste:20219151006"/>
+</rpminfo_test>
+</tests>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   rpminfo objects   ~~~~~~~~~~~~~~~~~~~~
+ -->
+<objects>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151001" version="501">
+<name>oraclelinux-release</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151003" version="501">
+<name>openssl-debugsource</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151002" version="501">
+<name>openssl</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151004" version="501">
+<name>openssl-devel</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151006" version="501">
+<name>openssl-perl</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151007" version="501">
+<name>openssl-static</name>
+</rpminfo_object>
+<rpminfo_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:obj:20219151005" version="501">
+<name>openssl-libs</name>
+</rpminfo_object>
+</objects>
+<states>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   rpminfo states   ~~~~~~~~~~~~~~~~~~~~~
+ -->
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:20219151001" version="501">
+<signature_keyid operation="equals">82562ea9ad986da3</signature_keyid>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:20219151002" version="501">
+<release operation="pattern match">ksplice</release>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:20219151003" version="501">
+<version operation="pattern match">^8</version>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:20219151004" version="501">
+<arch operation="pattern match">aarch64</arch>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:20219151005" version="501">
+<evr datatype="evr_string" operation="less than">2:1.1.1g-15.ksplice1.el8_3</evr>
+</rpminfo_state>
+<rpminfo_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" id="oval:com.oracle.elsa:ste:20219151006" version="501">
+<arch operation="pattern match">x86_64</arch>
+</rpminfo_state>
+</states>
+</oval_definitions>

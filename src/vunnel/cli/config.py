@@ -13,8 +13,9 @@ class Providers:
     amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
     centos: providers.centos.Config = field(default_factory=providers.centos.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
-    nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
+    nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
+    oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
 
     def get(self, name: str) -> Optional[Any]:
         for f in fields(Providers):
