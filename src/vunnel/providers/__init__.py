@@ -1,12 +1,13 @@
-from vunnel.providers import alpine, amazon, centos, debian, github, nvd
+from vunnel.providers import alpine, amazon, centos, debian, github, nvd, oracle
 
 _providers = {
     alpine.Provider.name: alpine.Provider,
     amazon.Provider.name: amazon.Provider,
     centos.Provider.name: centos.Provider,
     debian.Provider.name: debian.Provider,
-    nvd.Provider.name: nvd.Provider,
     github.Provider.name: github.Provider,
+    nvd.Provider.name: nvd.Provider,
+    oracle.Provider.name: oracle.Provider,
 }
 
 
