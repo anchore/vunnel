@@ -16,6 +16,7 @@ class Providers:
     github: providers.github.Config = field(default_factory=providers.github.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
+    rhel: providers.rhel.Config = field(default_factory=providers.rhel.Config)
 
     def get(self, name: str) -> Optional[Any]:
         for f in fields(Providers):
