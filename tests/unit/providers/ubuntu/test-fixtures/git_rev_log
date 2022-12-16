@@ -1,0 +1,70 @@
+e061c9cee652f3347d679ca00b9e9c6c6033994e update/retire oxide-qt which is eol. Update chromium-browser boiler
+R092    active/CVE-2017-15386   retired/CVE-2017-15386
+345fc246b38cb7ffae3e3faff368fbe1de45c6fc boilerplate and active cves: move from devel to release state
+M       active/CVE-2017-15386
+9fb14c9c98f6701dcdc860355f83f8cea0ad0222 ran sync-from-eol on artful
+A       active/CVE-2017-15386
+b7065b2ae4b61a8d8fe2d8b5242aff7ea6426d21 Remove Wily (EOL) from boilerplates
+D       active/CVE-2017-15386
+2ab08fe597f4b56d4c505773061e1951f04c04cf update tree for bionic release
+M       active/CVE-2017-15386
+0059baff393020a6272adef1ddcd579b91b84e4f refresh; chromium-browser jenkins libv8-3.14 mbedtls mr myrepos oxide-qt polarssl
+M       active/CVE-2017-15386
+c1dfef873cbc9d089ccefe890dfc645efebedc8c retired zesty
+M       active/CVE-2017-15386
+8845fdd4ec5f551f20f3d74528f9954486ecfa09 oxide-qt: pulled from bionic (LP: #1688395)
+M       active/CVE-2017-15386
+7c53b57d6916b89338b1f30f23c3ab47c95b09ee - researched libxml2 CVE - updated chromium-browser CVEs
+M       active/CVE-2017-15386
+fec6a993b1d0a7c42cda1925165f922d4dfe9bc4 perform release cycle on artful
+M       active/CVE-2017-15386
+eb10f42bc38d0fc4bc823472999ad4e129c0ae4b process_cves run - openjdk, chromium-browser
+C056    active/00boilerplate.chromium-browser   active/CVE-2017-15386
+a3623be422ea31efe76d7693a9df6e2d3fb21e4d remove vivid/UC15 from boilerplates
+M       active/00boilerplate.chromium-browser
+be1dfb2bf5d0e5f601b03d8624d723d45aaf771b clean up boilerplates - removed old unneeded boilerplates - removed old DNE segments from boilerplates - changed all 'needed' to 'needs-triage' - added new xorg HWE packages
+M       active/00boilerplate.chromium-browser
+7c3ca25c0f2775be7a84b8969c8511e4796c178b yakkety is now EoL
+M       active/00boilerplate.chromium-browser
+9ada93ea773e18687ea643866810c26dd801cdd9 Remove vivid/stable-phone-overlay from boilerplates
+M       active/00boilerplate.chromium-browser
+fac4dd52528a667c5f5b1b6daa2ed2291e0ad137 Mark boilerplate tasks for unsupported ESM packages as DNE
+M       active/00boilerplate.chromium-browser
+b34d899485e649973b3b50098cde02b8f61e8482 Move precise tasks to precise/esm tasks in the  boilerplates
+M       active/00boilerplate.chromium-browser
+e668ae189577c941baddec295007b30aea9d2a8c ran process_cves Mon
+M       active/00boilerplate.chromium-browser
+65054000f5b4f33dc9fe12f72780dae2226541db ran process_cves
+M       active/00boilerplate.chromium-browser
+170c630cc0cf1e0ddd5fc2735f5c99df83ade3c9 performed new release checklist for zesty/17.04
+M       active/00boilerplate.chromium-browser
+327acee399294698d08a214c8124f27f2e3b8eb9 Release cycle process for Yakkety
+M       active/00boilerplate.chromium-browser
+4e5507e89f90041b0ad191d5fce90223a675c2bd performed release checklist for Xenial
+M       active/00boilerplate.chromium-browser
+4f9d8ee5ecb657d35671348f846e0f9759a1492f - researched openssl CVE - removed vivid from boilerplates - added webkit2gtk to webkit boilerplate - added samba boilerplate - added new xorg HWE to boilerplates
+M       active/00boilerplate.chromium-browser
+7d7350019176a670a4f29048e22b4d15da5d2d68 update boilerplate for overlay ppas
+M       active/00boilerplate.chromium-browser
+71da89762aa81b7c96530607fbc69bb065a38f26 mark chromium-browser on precise as ignored
+M       active/00boilerplate.chromium-browser
+1a40dcd6552e487f6043e914b0c3ce5b992b86c7 performed release checklist for Wily
+M       active/00boilerplate.chromium-browser
+18ad678780817b19eb687eeec9d13e35fa526596 retire utopic from boilerplates
+M       active/00boilerplate.chromium-browser
+1698cc1115e89fb9700002b1c2297486f664993f remove lucid from boilerplates; remove sections with only DNEs; fix some sections to report proper DNE; remove some boilerplates when they only referred to one package after the previous edits
+M       active/00boilerplate.chromium-browser
+9e2546208372368ab4e7fabf262e906e46dfeed0 performed release checklist
+M       active/00boilerplate.chromium-browser
+f2cba1d4ff77cd2545b4fa572ffff8b01a908fc9 chromium-browser lasso linux oxide-qt python-django xen xen-3.3
+M       active/00boilerplate.chromium-browser
+738fe5c146d803b00139eb7d8e5d73811e9aee62 chromium-browser libv8-3.14 nvidia-graphics-drivers nvidia-graphics-drivers-173 nvidia-graphics-drivers-173-updates nvidia-graphics-drivers-180 nvidia-graphics-drivers-304 nvidia-graphics-drivers-304-updates nvidia-graphics-drivers-310-updates nvidia-graphics-drivers-319 nvidia-graphics-drivers-319-updates nvidia-graphics-drivers-331 nvidia-graphics-drivers-331-updates nvidia-graphics-drivers-96 nvidia-graphics-drivers-96-updates nvidia-graphics-drivers-experimental-304 nvidia-graphics-drivers-experimental-310 nvidia-graphics-drivers-tegra nvidia-graphics-drivers-updates oxide-qt
+M       active/00boilerplate.chromium-browser
+88b51bc8f5718c53bde41f148895c0938bde11b7 partially revert 8756, which appeared to accidentally delete 00boilerplate and 10autotriage files
+A       active/00boilerplate.chromium-browser
+5b9e6afa08c58bc0f2610fcd5a6c322525bb929e Publish kernel USNs 2415-1..2421-1
+D       active/00boilerplate.chromium-browser
+20a264686be7d3dda8b17f74254d70b02215d455 utopic released
+M       active/00boilerplate.chromium-browser
+ab6d1f60426345eebe71f5125d2ca3a96acfcab1 active/00boilerplate.chromium-browser: revert previous commit
+M       active/00boilerplate.chromium-browser
