@@ -17,6 +17,7 @@ class Providers:
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
     rhel: providers.rhel.Config = field(default_factory=providers.rhel.Config)
+    sles: providers.sles.Config = field(default_factory=providers.sles.Config)
 
     def get(self, name: str) -> Optional[Any]:
         for f in fields(Providers):
@@ -31,7 +32,7 @@ class Providers:
 
 @dataclass
 class Log:
-    slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default=False) == "true"
+    slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
     level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
 
 
