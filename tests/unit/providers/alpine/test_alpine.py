@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 
 import pytest
 
@@ -113,48 +112,46 @@ class TestAlpineProvider:
     def test_release_regex(self, release, expected):
         assert bool(Parser._release_regex_.match(release)) == expected
 
-    def test_load(self, mock_raw_data):
-        with tempfile.TemporaryDirectory() as tdir:
-            provider = Parser(workspace=tdir)
-            a = os.path.join(provider.secdb_dir_path, "v0.0")
-            os.makedirs(a, exist_ok=True)
-            b = os.path.join(a, "main.yaml")
-            with open(b, "w") as fp:
-                fp.write(mock_raw_data)
+    def test_load(self, mock_raw_data, tmpdir):
+        provider = Parser(workspace=tmpdir)
+        a = os.path.join(provider.secdb_dir_path, "v0.0")
+        os.makedirs(a, exist_ok=True)
+        b = os.path.join(a, "main.yaml")
+        with open(b, "w") as fp:
+            fp.write(mock_raw_data)
 
-            counter = 0
-            for release, dbtype_data_dict in provider._load():
-                counter += 1
-                print("got secdb data for release {}, db types: {}".format(release, list(dbtype_data_dict.keys())))
-                assert release == "0.0"
-                assert isinstance(dbtype_data_dict, dict)
-                assert list(dbtype_data_dict.keys()) == ["main"]
-                assert all("packages" in x for x in dbtype_data_dict.values())
+        counter = 0
+        for release, dbtype_data_dict in provider._load():
+            counter += 1
+            print("got secdb data for release {}, db types: {}".format(release, list(dbtype_data_dict.keys())))
+            assert release == "0.0"
+            assert isinstance(dbtype_data_dict, dict)
+            assert list(dbtype_data_dict.keys()) == ["main"]
+            assert all("packages" in x for x in dbtype_data_dict.values())
 
-            assert counter == 1
+        assert counter == 1
 
-    def test_normalize(self, mock_parsed_data):
-        with tempfile.TemporaryDirectory() as tdir:
-            provider = Parser(workspace=tdir)
-            release = mock_parsed_data[0]
-            dbtype_data_dict = mock_parsed_data[1]
+    def test_normalize(self, mock_parsed_data, tmpdir):
+        provider = Parser(workspace=tmpdir)
+        release = mock_parsed_data[0]
+        dbtype_data_dict = mock_parsed_data[1]
 
-            vuln_records = provider._normalize(release, dbtype_data_dict)
-            assert len(vuln_records) > 0
-            assert all(map(lambda x: "Vulnerability" in x, vuln_records.values()))
-            assert sorted(list(vuln_records.keys())) == sorted(
-                [
-                    "CVE-2017-3167",
-                    "CVE-2017-3169",
-                    "CVE-2017-7659",
-                    "CVE-2017-7668",
-                    "CVE-2017-7679",
-                    "CVE-2017-9789",
-                    "CVE-2017-9798",
-                    "CVE-2017-7555",
-                    "CVE-2016-9401",
-                ]
-            )
+        vuln_records = provider._normalize(release, dbtype_data_dict)
+        assert len(vuln_records) > 0
+        assert all(map(lambda x: "Vulnerability" in x, vuln_records.values()))
+        assert sorted(list(vuln_records.keys())) == sorted(
+            [
+                "CVE-2017-3167",
+                "CVE-2017-3169",
+                "CVE-2017-7659",
+                "CVE-2017-7668",
+                "CVE-2017-7679",
+                "CVE-2017-9789",
+                "CVE-2017-9798",
+                "CVE-2017-7555",
+                "CVE-2016-9401",
+            ]
+        )
 
     @pytest.mark.parametrize(
         "content,expected",
