@@ -1,0 +1,19 @@
+62187d18d026f17e05af808d95a8c85b7211dda2 kernel/CVE-2018-14625: add fix ref
+A       active/CVE-2018-14625
+eaf213c7cb9118a9bfb59e9b4b736d2d99808ae8 CVEs retriage
+M       active/CVE-2013-7447
+D       ignored/CVE-2017-14650
+A       retired/CVE-2017-14650
+c182f8269c5bad4201eea14cc185b8ba080374b2 Release synced fixes for ufraw CVE-2018-19655
+M       active/CVE-2018-19655
+D       retired/CVE-2017-16882
+A       ignored/CVE-2017-16882
+93c48181efd3a9f220b56715f68a550664425540 CVEs retriage
+A       ignored/CVE-2016-8641
+D       retired/CVE-2016-8641
+78d22044df36a623b2513bf0e6eaf419c25aed50 Daily re-triage of Universe CVEs
+D       active/CVE-2017-14650
+D       active/CVE-2017-16882
+M       active/CVE-2017-9773
+A       retired/CVE-2017-16882
+A       ignored/CVE-2017-14650
