@@ -18,6 +18,7 @@ class Providers:
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
     rhel: providers.rhel.Config = field(default_factory=providers.rhel.Config)
     sles: providers.sles.Config = field(default_factory=providers.sles.Config)
+    ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
 
     def get(self, name: str) -> Optional[Any]:
