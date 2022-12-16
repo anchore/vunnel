@@ -13,10 +13,6 @@ from vunnel.utils.oval_parser import Config, parse
 
 namespace = "centos"
 feedtype = "vulnerabilities"
-# purge_unreported = True
-
-# namespaces to skip
-ns_blacklist = ["centos:3", "centos:4"]
 
 # One time initialization of driver specific configuration
 centos_config = Config()
