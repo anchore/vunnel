@@ -160,23 +160,31 @@ class Provider(abc.ABC):
             self.logger.debug("clearing existing results")
             shutil.rmtree(self.results)
 
-        current_state = workspace.WorkspaceState.read(root=self.root)
-        current_state.results = workspace.FileListing(files=[])
-        current_state.write(self.root)
+        try:
+            current_state = workspace.WorkspaceState.read(root=self.root)
+            current_state.results = workspace.FileListing(files=[])
+            current_state.write(self.root)
+        except FileNotFoundError:
+            pass
 
     def clear_input(self):
         if os.path.exists(self.input):
             self.logger.debug("clearing existing workspace")
             shutil.rmtree(self.input)
 
-        current_state = workspace.WorkspaceState.read(root=self.root)
-        current_state.input = workspace.FileListing(files=[])
-        current_state.write(self.root)
+        try:
+            current_state = workspace.WorkspaceState.read(root=self.root)
+            current_state.input = workspace.FileListing(files=[])
+            current_state.write(self.root)
+        except FileNotFoundError:
+            pass
 
     def _catalog_workspace(self, urls: list[str]):
         if not urls:
             current_state = workspace.WorkspaceState.read(root=self.root)
             urls = current_state.urls
+
+        self.logger.info(msg="cataloging workspace state")
 
         state = workspace.WorkspaceState.from_fs(provider=self.name, urls=urls, input=self.input, results=self.results)
 
