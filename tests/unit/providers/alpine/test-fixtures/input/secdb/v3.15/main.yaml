@@ -1,0 +1,53 @@
+apkurl: '{{urlprefix}}/{{distroversion}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk'
+archs:
+- aarch64
+- armhf
+- armv7
+- ppc64le
+- s390x
+- x86
+- x86_64
+reponame: main
+urlprefix: https://dl-cdn.alpinelinux.org/alpine
+distroversion: v3.15
+packages:
+- pkg:
+    name: xz
+    secfixes:
+      5.2.5-r1:
+      - CVE-2022-1271
+- pkg:
+    name: zeromq
+    secfixes:
+      4.3.1-r0:
+      - CVE-2019-6250
+      4.3.2-r0:
+      - CVE-2019-13132
+      4.3.3-r0:
+      - CVE-2020-15166
+- pkg:
+    name: zlib
+    secfixes:
+      1.2.12-r0:
+      - CVE-2018-25032
+      1.2.12-r2:
+      - CVE-2022-37434
+- pkg:
+    name: zsh
+    secfixes:
+      5.4.2-r1:
+      - CVE-2018-1083
+      - CVE-2018-1071
+      5.8-r0:
+      - CVE-2019-20044
+      5.8.1-r0:
+      - CVE-2021-45444
+- pkg:
+    name: zstd
+    secfixes:
+      1.3.8-r0:
+      - CVE-2019-11922
+      1.4.1-r0:
+      - CVE-2021-24031
+      1.4.9-r0:
+      - CVE-2021-24032

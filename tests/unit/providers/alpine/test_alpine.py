@@ -1,9 +1,10 @@
 import os
+import shutil
 import tempfile
 
 import pytest
 
-from vunnel.providers import alpine
+from vunnel.providers.alpine import Config, Provider, parser
 from vunnel.providers.alpine.parser import Parser, SecdbLandingParser
 
 
@@ -186,3 +187,25 @@ class TestAlpineProvider:
     )
     def test_link_finder_regex(self, content, expected):
         assert Parser._link_finder_regex_.findall(content) == expected
+
+
+@pytest.fixture
+def disable_get_requests(monkeypatch):
+    def disabled(*args, **kwargs):
+        raise RuntimeError("requests disabled but HTTP GET attempted")
+
+    monkeypatch.setattr(parser.requests, "get", disabled)
+
+
+def test_provider_schema(helpers, disable_get_requests):
+    workspace = helpers.provider_workspace(name=Provider.name)
+
+    provider = Provider(root=workspace.root, config=Config())
+
+    mock_data_path = helpers.local_dir("test-fixtures/input")
+    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
+
+    provider.update()
+
+    assert 16 == workspace.num_result_entries()
+    assert workspace.result_schemas_valid(require_entries=True)

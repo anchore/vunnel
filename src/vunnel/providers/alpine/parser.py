@@ -215,7 +215,7 @@ class Parser:
                                 vuln_record["Vulnerability"]["Name"] = str(vid)
                                 vuln_record["Vulnerability"]["NamespaceName"] = namespace + ":" + str(release)
                                 vuln_record["Vulnerability"]["Link"] = "http://cve.mitre.org/cgi-bin/cvename.cgi?name=" + str(vid)
-                                vuln_record["Vulnerability"]["Severity"] = None
+                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
 
                                 # lookup nvd record only when creating the vulnerability, no point looking it up every time
                                 # nvd_severity = None
