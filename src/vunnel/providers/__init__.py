@@ -1,4 +1,4 @@
-from vunnel.providers import alpine, amazon, centos, debian, github, nvd, oracle, rhel
+from vunnel.providers import alpine, amazon, centos, debian, github, nvd, oracle, rhel, sles
 
 _providers = {
     alpine.Provider.name: alpine.Provider,
@@ -9,6 +9,7 @@ _providers = {
     nvd.Provider.name: nvd.Provider,
     oracle.Provider.name: oracle.Provider,
     rhel.Provider.name: rhel.Provider,
+    sles.Provider.name: sles.Provider,
 }
 
 

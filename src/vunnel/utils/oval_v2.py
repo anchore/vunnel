@@ -262,7 +262,7 @@ class TestParser(OVALElementParser):
                 elif child_tag == "state":
                     version_id = child.attrib["state_ref"]
         except Exception:
-            logger.exception("Ignoring error parsing test xml element")
+            logger.exception("ignoring error parsing test xml element")
             identity = artifact_id = version_id = None
 
         if identity and artifact_id and version_id:
@@ -299,7 +299,7 @@ class ArtifactParser(OVALElementParser):
                     name = child.text
                     break
         except Exception:
-            logger.exception("Ignoring error parsing object xml element")
+            logger.exception("ignoring error parsing object xml element")
             identity = name = None
 
         if identity and name:
@@ -341,7 +341,7 @@ class VersionParser(OVALElementParser):
                     value = child.text
                     break
         except Exception:
-            logger.exception("Ignoring error parsing state xml element")
+            logger.exception("ignoring error parsing state xml element")
             identity = op = value = None
 
         if identity and op and value:
@@ -411,7 +411,7 @@ def iter_parse_vulnerability_file(
     """
     logger = logging.getLogger("oval-v2-parser")
 
-    logger.debug("parsing {}".format(oval_file_path))
+    logger.info(f"parsing {oval_file_path}")
     parsed_dict = defaultdict(dict)
 
     if os.path.exists(oval_file_path):
@@ -434,10 +434,10 @@ def iter_parse_vulnerability_file(
                         if result:
                             parsed_dict[oval_element][result.identity] = result
                         else:
-                            logger.warn("Unable not parse %s element", oval_element.value)
+                            logger.warn("unable to parse %s element", repr(oval_element.value))
                     else:
                         logger.warn(
-                            "No parser found for oval element %s, skipping",
+                            "no parser found for oval element %s, skipping",
                             oval_element,
                         )
                 # else:
