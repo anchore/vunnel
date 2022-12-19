@@ -14,13 +14,11 @@ class Config:
     )
     request_timeout: int = 125
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.distro_map = {str(k).lower(): str(v).lower() for k, v in self.distro_map.items()}
 
 
 class Provider(provider.Provider):
-    name = "debian"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -34,6 +32,10 @@ class Provider(provider.Provider):
             distro_map=self.config.distro_map,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "debian"
 
     def update(self) -> list[str]:
 

@@ -4,11 +4,12 @@ import os
 import random
 import shutil
 import time
+from typing import Any, Callable
 
 
-def retry_with_backoff(retries=10, backoff_in_seconds=1):
-    def rwb(f):
-        def wrapper(*args, **kwargs):
+def retry_with_backoff(retries: int = 10, backoff_in_seconds: int = 1) -> Callable[[Any], Any]:
+    def rwb(f: Callable[[Any], Any]) -> Callable[[Any], Any]:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             logger = logging.getLogger("utils:retry-with-backoff")
             attempt = 0
             while attempt < retries:
@@ -29,7 +30,7 @@ def retry_with_backoff(retries=10, backoff_in_seconds=1):
     return rwb
 
 
-def silent_remove(path, tree=False):
+def silent_remove(path: str, tree: bool = False) -> None:
     try:
         if tree:
             shutil.rmtree(path)

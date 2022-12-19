@@ -1,10 +1,9 @@
 """
 RPM utilities with no binary dependencies on rpm or rpmUtil.
-
 """
 
 
-def parse_version(rpm_version):
+def parse_version(rpm_version: str) -> list[str]:
     """
     Return a tuple from the given version string.
 
@@ -14,7 +13,7 @@ def parse_version(rpm_version):
     return rpm_version.split("-")
 
 
-def split_rpm_filename(rpm_filename):
+def split_rpm_filename(rpm_filename: str) -> tuple[str | None, str, str, str | None, str]:
     """
     Parse the components of an rpm filename and return them as a tuple: (name, version, release, epoch, arch)
 
@@ -49,7 +48,7 @@ def split_rpm_filename(rpm_filename):
     return name, version, release, epoch, arch
 
 
-def split_fullversion(version):
+def split_fullversion(version: str) -> tuple[str | None, str | None, str | None]:
     """
     Splits version string into a tuple (epoch, version, release). Inbound version string is specific to anchore engine's
     implementation of versions and may not compliant with the rpm spec.
@@ -74,22 +73,22 @@ def split_fullversion(version):
 
     if len(epoch_comp) == 1:
         epoch = None
-        version = epoch_comp[0]
+        discovered_version = epoch_comp[0]
     elif len(epoch_comp) > 1:
         epoch = epoch_comp[0]
-        version = epoch_comp[1]
+        discovered_version = epoch_comp[1]
     else:
         epoch = None
-        version = None
+        discovered_version = None
 
     return (
         epoch,
-        version,
+        discovered_version,
         release,
     )
 
 
-def compare_versions(ver_a, ver_b):
+def compare_versions(ver_a: str, ver_b: str) -> int:
     """
     Compare pkg and versions using anchore engine rules.
     Follows standard __cmp__ semantics of -1 iff a < b, 0 iff a == b, 1 iff a > b
@@ -107,7 +106,7 @@ def compare_versions(ver_a, ver_b):
     return compare_labels((e1, v1, r1), (e2, v2, r2))
 
 
-def compare_labels(evr_1, evr_2):
+def compare_labels(evr_1: tuple[str | None, str | None, str | None], evr_2: tuple[str | None, str | None, str | None]) -> int:
     """
     Compare the EVR label tuples (epoch, version, release).
 
@@ -133,7 +132,7 @@ def compare_labels(evr_1, evr_2):
 
 
 # noqa
-def rpm_ver_cmp(a, b):
+def rpm_ver_cmp(a: str | None, b: str | None) -> int:
     """
     A translation of the RPM lib's C code for version compare rpmvercmp in lib/rpmvercmp.c into pure python with
     no external
@@ -186,24 +185,24 @@ def rpm_ver_cmp(a, b):
         if l_b == b_seg:
             return 1 if is_num else -1
 
-        a_seg = "".join(a_seg)
-        b_seg = "".join(b_seg)
+        a_seg_str = "".join(a_seg)
+        b_seg_str = "".join(b_seg)
 
         if is_num:
             # Strip leading zeros since this is a numeric comparison
-            a_seg = a_seg.lstrip("0")
-            b_seg = b_seg.lstrip("0")
+            a_seg_str = a_seg_str.lstrip("0")
+            b_seg_str = b_seg_str.lstrip("0")
 
             # whichever number has more digits wins
-            if len(a_seg) > len(b_seg):
+            if len(a_seg_str) > len(b_seg_str):
                 return 1
-            elif len(a_seg) < len(b_seg):
+            elif len(a_seg_str) < len(b_seg_str):
                 return -1
 
         # String compare of the segments, covers both numeric and non since they are same length if numeric
-        if a_seg > b_seg:
+        if a_seg_str > b_seg_str:
             return 1
-        elif a_seg < b_seg:
+        elif a_seg_str < b_seg_str:
             return -1
 
     # this catches the case where all numeric and alpha segments have
@@ -220,7 +219,7 @@ def rpm_ver_cmp(a, b):
     return 1
 
 
-def greedy_find_block(list_str, expected_digit=None):
+def greedy_find_block(list_str: list[str], expected_digit: bool | None = None) -> tuple[bool, list[str]]:
     """
     Scan the string and return the substring, index, and type of the next block.
     A block is defined as a contiguous set of numeric or alpha characters. The point at which the string
@@ -238,7 +237,7 @@ def greedy_find_block(list_str, expected_digit=None):
         # An explicit type request and the head of this string doesn't match, so return the other type and an empty list
         return expected_digit, []
 
-    result = []
+    result: list[str] = []
     while list_str and chr_type == list_str[0].isdigit():
         result += list_str.pop(0)
 

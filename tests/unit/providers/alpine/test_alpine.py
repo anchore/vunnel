@@ -197,7 +197,7 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests):
-    workspace = helpers.provider_workspace(name=Provider.name)
+    workspace = helpers.provider_workspace(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

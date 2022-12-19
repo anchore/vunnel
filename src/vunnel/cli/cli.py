@@ -12,7 +12,7 @@ from vunnel.cli import config
 @click.option("--config", "-c", "config_path", default=".vunnel.yaml", help="override config path")
 @click.group(help="Tool for pulling and parsing vulnerability data for use with grype-db.")
 @click.pass_context
-def cli(ctx, verbose: bool, config_path: str):
+def cli(ctx, verbose: bool, config_path: str) -> None:  # type: ignore
     # noqa
     import logging.config
 
@@ -69,12 +69,12 @@ def cli(ctx, verbose: bool, config_path: str):
 
 @cli.command(name="config", help="show the application config")
 @click.pass_obj
-def show_config(cfg: config.Application):
+def show_config(cfg: config.Application) -> None:
     logging.info("showing application config")
 
     # noqa
     class IndentDumper(yaml.Dumper):
-        def increase_indent(self, flow=False, indentless=False):
+        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
             return super().increase_indent(flow, False)
 
     cfg_dict = dataclasses.asdict(cfg)
@@ -84,7 +84,7 @@ def show_config(cfg: config.Application):
 @cli.command(name="run", help="run a vulnerability provider")
 @click.argument("provider_name", metavar="PROVIDER")
 @click.pass_obj
-def run_provider(cfg: config.Application, provider_name: str):
+def run_provider(cfg: config.Application, provider_name: str) -> None:
     logging.info(f"running {provider_name} provider")
 
     provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
@@ -96,7 +96,7 @@ def run_provider(cfg: config.Application, provider_name: str):
 @click.option("--input", "-i", "_input", is_flag=True, help="clear only the input state")
 @click.option("--result", "-r", is_flag=True, help="clear only the result state")
 @click.pass_obj
-def clear_provider(cfg: config.Application, provider_name: str, _input: bool, result: bool):
+def clear_provider(cfg: config.Application, provider_name: str, _input: bool, result: bool) -> None:
     logging.info(f"clearing {provider_name} provider state")
 
     provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
@@ -111,21 +111,25 @@ def clear_provider(cfg: config.Application, provider_name: str, _input: bool, re
 @cli.command(name="status", help="describe current provider state")
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1)
 @click.pass_obj
-def status_provider(cfg: config.Application, provider_names: str):
+def status_provider(cfg: config.Application, provider_names: str) -> None:
     if not provider_names:
         selected_names = providers.names()
     else:
-        selected_names = provider_names
+        # not about type ignore: click assumes with nargs=-1 that all types are surrounded by a list collection
+        selected_names = provider_names  # type: ignore
 
     for name in selected_names:
         provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
         try:
             state = provider.current_state()
+            if not state:
+                raise FileNotFoundError("no state found")
+
             tmpl = f""" • {name!r} provider
     ├── Inputs:  {len(state.input.files)} files
     │            {state.input.timestamp}
     └── Results: {len(state.results.files)} files
-                 {state.results.timestamp}
+                {state.results.timestamp}
 """
             print(tmpl)
         except FileNotFoundError:
@@ -137,6 +141,6 @@ def status_provider(cfg: config.Application, provider_names: str):
 
 @cli.command(name="list", help="list available providers")
 @click.pass_obj
-def list_providers(cfg: config.Application):  # noqa
+def list_providers(cfg: config.Application) -> None:
     for p in providers.names():
         print(p)

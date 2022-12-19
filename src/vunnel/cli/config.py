@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, field, fields
-from typing import Any, Optional
+from typing import Any
 
 import dacite
 import yaml
@@ -22,7 +22,7 @@ class Providers:
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
 
-    def get(self, name: str) -> Optional[Any]:
+    def get(self, name: str) -> Any | None:
         for f in fields(Providers):
             if self._normalize_name(f.name) == self._normalize_name(name):
                 return getattr(self, f.name)
@@ -38,7 +38,7 @@ class Log:
     slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
     level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.level = self.level.upper()
 
 

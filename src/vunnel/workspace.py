@@ -15,7 +15,7 @@ STATE_FILENAME = "state.json"
 
 
 class DTEncoder(json.JSONEncoder):
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         # if passed in object is datetime object
         # convert it to a string
         if isinstance(o, datetime.datetime):
@@ -34,7 +34,7 @@ class FileState:
 @dataclass
 class FileListing:
     files: list[FileState]
-    timestamp: datetime.datetime = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
+    timestamp: datetime.datetime | None = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
 
 
 @dataclass
@@ -61,12 +61,19 @@ class WorkspaceState:
     def read(root: str) -> "WorkspaceState":
         metadata_path = os.path.join(root, STATE_FILENAME)
 
-        def datetime_hook(t):
+        def datetime_hook(t: str) -> datetime.datetime:
             return datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S%z")
 
         with open(metadata_path, "r", encoding="utf-8") as f:
             return dacite.from_dict(
-                WorkspaceState, json.load(f), config=dacite.Config(type_hooks={datetime.datetime: datetime_hook})
+                WorkspaceState,
+                json.load(f),
+                config=dacite.Config(
+                    type_hooks={
+                        datetime.datetime: datetime_hook,
+                        datetime.datetime | None: datetime_hook,  # type: ignore
+                    },
+                ),
             )
 
     def write(self, root: str) -> str:

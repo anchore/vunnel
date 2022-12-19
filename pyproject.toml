@@ -41,6 +41,8 @@ pytest-picked = "^0.4.6"
 flake8 = "^6.0.0"
 Flake8-pyproject = "^1.2.2"
 bandit = "^1.7.4"
+mypy = "^0.991"
+types-PyYAML = "^6.0.12.2"
 
 [build-system]
 requires = ["poetry-core"]
@@ -89,22 +91,42 @@ disable = [
 # allow for a wide-birth
 max-line-length = "150"
 
-# TODO: add tox support https://github.com/tox-dev/tox/issues/814 & https://tox.readthedocs.io/en/latest/example/basic.html#pyproject-toml-tox-legacy-ini
+[tool.mypy]
+follow_imports = "silent"
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+check_untyped_defs = true
+no_implicit_reexport = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = '''(?x)(
+    ^src/vunnel/providers/alpine/parser\.py$      # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/amazon/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/centos/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/debian/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/github/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/nvd/parser\.py$       # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/oracle/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/rhel/parser\.py$      # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/sles/parser\.py$      # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/wolfi/parser\.py$     # ported from enterprise, never had type hints
+    | ^src/vunnel/utils/oval_v2.py$               # ported from enterprise, never had type hints
+    | ^src/vunnel/utils/oval_parser.py$           # ported from enterprise, never had type hints
+    | ^src/vunnel/utils/fdb.py$                   # ported from enterprise, never had type hints
+    | ^src/vunnel/utils/vulnerability.py$         # ported from enterprise, never had type hints
+    | ^tests/.*$     # any tests
+)'''
 
-# TODO: port this section to "tool.mypy" when supported
-[mypy]
-check_untyped_defs = 0
-ignore_missing_imports = 1
-ignore_errors = 0
-strict_optional = 0
-warn_unused_ignores = 1
-warn_redundant_casts = 1
-warn_unused_configs = 1
+[[tool.mypy.overrides]]
+# https://github.com/konradhalas/dacite/issues/133
+module = "dacite"
+implicit_reexport = true
 
 [tool.black]
 line-length = 130
 exclude = '''
-
 (
   /(
       \.eggs         # exclude a few common directories in the

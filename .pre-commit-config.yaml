@@ -39,14 +39,16 @@ repos:
     - id: check-case-conflict
       stages:
         - push
+
   # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
   - repo: local
     hooks:
       - id: system
         name: black
-        entry: poetry run black . --line-length 130
+        entry: poetry run black .
         pass_filenames: false
         language: system
+
   - repo: local
     hooks:
       - id: system
@@ -54,6 +56,7 @@ repos:
         entry: poetry run isort .
         pass_filenames: false
         language: system
+
   - repo: local
     hooks:
       - id: system
@@ -61,6 +64,7 @@ repos:
         entry: poetry run bandit -r -v -c 'pyproject.toml' src/vunnel
         pass_filenames: false
         language: system
+
   - repo: local
     hooks:
       - id: system
@@ -68,11 +72,11 @@ repos:
         entry: poetry run flake8 src/vunnel
         pass_filenames: false
         language: system
-  # # add this back once we're not prototyping anymore
-  # - repo: local
-  #   hooks:
-  #     - id: system
-  #       name: mypy
-  #       entry: poetry run mypy --config-file ./pyproject.toml src/vunnel
-  #       pass_filenames: false
-  #       language: system
+
+  - repo: local
+    hooks:
+      - id: system
+        name: mypy
+        entry: poetry run mypy --config-file ./pyproject.toml src/vunnel
+        pass_filenames: false
+        language: system

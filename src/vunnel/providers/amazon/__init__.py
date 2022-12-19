@@ -14,13 +14,11 @@ class Config:
     )
     request_timeout: int = 125
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.security_advisories = {str(k).lower(): str(v).lower() for k, v in self.security_advisories.items()}
 
 
 class Provider(provider.Provider):
-    name = "amazon"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -34,6 +32,10 @@ class Provider(provider.Provider):
             download_timeout=config.request_timeout,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "amazon"
 
     def update(self) -> list[str]:
         with self.results_writer() as writer:

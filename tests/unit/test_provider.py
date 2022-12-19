@@ -13,14 +13,16 @@ def assert_path(path: str, exists: bool = True):
 
 
 class DummyProvider(provider.Provider):
-    name = "dummy"
-
     def __init__(self, errors: int = 0, create_files=True, **kwargs):
         super().__init__(**kwargs)
         self.errors = errors
         self.count = 0
         self.config = {}
         self.create_files = create_files
+
+    @classmethod
+    def name(cls) -> str:
+        return "dummy"
 
     @property
     def input_file(self):

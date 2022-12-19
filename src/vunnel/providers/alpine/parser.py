@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 from html.parser import HTMLParser
-from typing import List, Optional
+from typing import List
 
 import requests
 import yaml
@@ -47,9 +47,7 @@ class Parser:
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
 
-    def __init__(
-        self, workspace: str, logger: Optional[logging.Logger] = None, download_timeout: int = 125, url: Optional[str] = None
-    ):
+    def __init__(self, workspace: str, logger: logging.Logger | None = None, download_timeout: int = 125, url: str | None = None):
         self.workspace = workspace
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
