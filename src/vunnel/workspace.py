@@ -49,9 +49,7 @@ class WorkspaceState:
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderWorkspaceStateSchema)
 
     @staticmethod
-    def from_fs(
-        provider: str, input: str, results: str, urls: list[str]  # pylint: disable=redefined-builtin
-    ) -> "WorkspaceState":
+    def from_fs(provider: str, input: str, results: str, urls: list[str]) -> "WorkspaceState":  # noqa
         return WorkspaceState(
             provider=provider,
             urls=urls,
@@ -104,7 +102,7 @@ def file_digests(path: str) -> list[str]:
 def file_state_listing(path: str) -> FileListing:
     listing = []
     latest_modified = None
-    for root, dirs, files in os.walk(path):  # pylint: disable=unused-variable
+    for root, dirs, files in os.walk(path):  # noqa
         for file in sorted(files):
             full_path = os.path.join(root, file)
             fs = FileState(

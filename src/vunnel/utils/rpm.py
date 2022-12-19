@@ -54,7 +54,8 @@ def split_fullversion(version):
     Splits version string into a tuple (epoch, version, release). Inbound version string is specific to anchore engine's
     implementation of versions and may not compliant with the rpm spec.
 
-    Use this function for splitting versions already processed by anchore engine. For parsing info from rpm file name, use split_rpm_filename()
+    Use this function for splitting versions already processed by anchore engine.
+    For parsing info from rpm file name, use split_rpm_filename()
 
     '2.27-34.base.el7' -> (null, '2.27', '34.base.el7')
     '1:2.27-34.base.el7' -> ('1', '2.27', '34.base.el7')
@@ -90,7 +91,8 @@ def split_fullversion(version):
 
 def compare_versions(ver_a, ver_b):
     """
-    Compare pkg and versions using anchore engine rules. Follows standard __cmp__ semantics of -1 iff a < b, 0 iff a == b, 1 iff a > b
+    Compare pkg and versions using anchore engine rules.
+    Follows standard __cmp__ semantics of -1 iff a < b, 0 iff a == b, 1 iff a > b
 
     :param ver_a:
     :param ver_b:
@@ -130,7 +132,7 @@ def compare_labels(evr_1, evr_2):
     return rpm_ver_cmp(rel_1, rel_2)
 
 
-# pylint: disable=no-else-return,too-many-return-statements,too-many-branches,unused-variable
+# noqa
 def rpm_ver_cmp(a, b):
     """
     A translation of the RPM lib's C code for version compare rpmvercmp in lib/rpmvercmp.c into pure python with

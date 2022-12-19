@@ -1,8 +1,8 @@
 import enum
 import re
 import tempfile
-import xml.etree.ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import pytest
 
 from vunnel.utils.oval_v2 import (
@@ -19,7 +19,8 @@ from vunnel.utils.oval_v2 import (
     iter_parse_vulnerability_file,
 )
 
-# in order to avoid pytest to collect this class as a test (e.g. "PytestCollectionWarning: cannot collect test class 'Test' because it has a __init__ constructor")
+# in order to avoid pytest to collect this class as a test
+# (e.g. "PytestCollectionWarning: cannot collect test class 'Test' because it has a __init__ constructor")
 Test.__test__ = False
 TestParser.__test__ = False
 
@@ -40,14 +41,14 @@ class TestTestParser:
         "element",
         [
             pytest.param(
-                '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'
+                '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
                 + '<object object_ref="oval:org.opensuse.security:obj:2009042619"/>'
                 + '<state state_ref="oval:org.opensuse.security:ste:2009061809"/>'
                 + "</rpminfo_test>",
                 id="with-namespace",
             ),
             pytest.param(
-                '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one">'
+                '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one">'  # noqa: E501
                 + '<object object_ref="oval:org.opensuse.security:obj:2009042619"/>'
                 + '<state state_ref="oval:org.opensuse.security:ste:2009061809"/>'
                 + "</rpminfo_test>",
@@ -84,7 +85,7 @@ class TestArtifactParser:
         "element",
         [
             pytest.param(
-                '<rpminfo_object id="oval:org.opensuse.security:obj:2009041419" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'
+                '<rpminfo_object id="oval:org.opensuse.security:obj:2009041419" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
                 + "<name>policycoreutils-python</name>"
                 + "</rpminfo_object>",
                 id="with-namespace",
@@ -112,7 +113,7 @@ class TestArtifactParser:
             pytest.param(ET.fromstring('<rpminfo_state id="dummy"/>'), id="not-artifact"),
             pytest.param(
                 ET.fromstring(
-                    '<rpminfo_object id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'
+                    '<rpminfo_object id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'  # noqa: E501
                 ),
                 id="invalid-artifact",
             ),
@@ -127,7 +128,7 @@ class TestVersionParser:
         "element, identity, op, value",
         [
             pytest.param(
-                '<rpminfo_state id="oval:org.opensuse.security:ste:2009079458" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'
+                '<rpminfo_state id="oval:org.opensuse.security:ste:2009079458" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
                 + '<version operation="equals">0</version>'
                 + "</rpminfo_state>",
                 "oval:org.opensuse.security:ste:2009079458",
@@ -136,7 +137,7 @@ class TestVersionParser:
                 id="version-with-namespace",
             ),
             pytest.param(
-                '<rpminfo_state id="oval:org.opensuse.security:ste:2009111500" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'
+                '<rpminfo_state id="oval:org.opensuse.security:ste:2009111500" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
                 + '<evr datatype="evr_string" operation="less than">0:1.15.2-4.25</evr>'
                 + '<arch datatype="string" operation="pattern match">(noarch)</arch>'
                 + "</rpminfo_state>",
@@ -181,7 +182,7 @@ class TestVersionParser:
             pytest.param(ET.fromstring('<rpminfo_test id="dummy"/>'), id="not-version"),
             pytest.param(
                 ET.fromstring(
-                    '<rpminfo_state id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'
+                    '<rpminfo_state id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'  # noqa: E501
                 ),
                 id="invalid-version",
             ),
@@ -412,7 +413,7 @@ class TestIterParse:
         "content, tag, parser_fn, expected",
         [
             pytest.param(
-                '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'
+                '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
                 + '<object object_ref="oval:org.opensuse.security:obj:2009042619"/>'
                 + '<state state_ref="oval:org.opensuse.security:ste:2009061809"/>'
                 + "</rpminfo_test>",

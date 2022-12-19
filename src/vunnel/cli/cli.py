@@ -13,7 +13,7 @@ from vunnel.cli import config
 @click.group(help="Tool for pulling and parsing vulnerability data for use with grype-db.")
 @click.pass_context
 def cli(ctx, verbose: bool, config_path: str):
-    # pylint: disable=redefined-outer-name, import-outside-toplevel
+    # noqa
     import logging.config
 
     # TODO: config parsing
@@ -72,7 +72,7 @@ def cli(ctx, verbose: bool, config_path: str):
 def show_config(cfg: config.Application):
     logging.info("showing application config")
 
-    # pylint: disable=too-many-ancestors
+    # noqa
     class IndentDumper(yaml.Dumper):
         def increase_indent(self, flow=False, indentless=False):
             return super().increase_indent(flow, False)
@@ -137,6 +137,6 @@ def status_provider(cfg: config.Application, provider_names: str):
 
 @cli.command(name="list", help="list available providers")
 @click.pass_obj
-def list_providers(cfg: config.Application):  # pylint: disable=unused-argument
+def list_providers(cfg: config.Application):  # noqa
     for p in providers.names():
         print(p)

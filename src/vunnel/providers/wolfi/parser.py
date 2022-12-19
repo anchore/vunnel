@@ -63,7 +63,7 @@ class Parser:
                                 fp.write(chunk)
                     else:
                         r.raise_for_status()
-                except:  # pylint: disable=bare-except
+                except:  # noqa
                     self.logger.exception(f"ignoring error processing secdb for {t}")
 
     def _load(self):
@@ -91,7 +91,7 @@ class Parser:
             self.logger.exception("failed to load Wolfi sec db data")
             raise
 
-    # pylint: disable=too-many-locals,too-many-nested-blocks,too-many-branches
+    # noqa
     def _normalize(self, release, dbtype_data_dict):
         """
         Normalize all the sec db entries into vulnerability payload records

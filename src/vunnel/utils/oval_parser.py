@@ -1,10 +1,11 @@
-# pylint: skip-file
+# flake8: noqa
 
 import copy
 import logging
 import os
 import re
-import xml.etree.ElementTree as ET
+
+import defusedxml.ElementTree as ET
 
 from vunnel.utils.vulnerability import vulnerability_element
 
@@ -181,7 +182,7 @@ def _process_criteria(element_a, oval_ns, config):
     :param oval_ns: namespace URL of the oval
     :return:
     """
-    logger = logging.getLogger("oval-parser")
+    # logger = logging.getLogger("oval-parser")
 
     criteria_element = element_a.find(config.criteria_xpath_query.format(oval_ns))
     groups = []

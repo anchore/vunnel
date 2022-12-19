@@ -49,7 +49,7 @@ class Application:
     providers: Providers = field(default_factory=Providers)
 
 
-def load(path: str = ".vunnel.yaml") -> Application:  # pylint: disable=unused-argument
+def load(path: str = ".vunnel.yaml") -> Application:  # noqa
     try:
         with open(path, encoding="utf-8") as f:
             app_object = yaml.safe_load(f.read())

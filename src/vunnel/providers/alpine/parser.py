@@ -1,4 +1,4 @@
-# pylint: skip-file
+# flake8: noqa
 
 import copy
 import logging
@@ -72,13 +72,10 @@ class Parser:
         :return:
         """
         # remove old source directory since its no longer used
-        try:
-            if os.path.exists(self.source_dir_path):
-                shutil.rmtree(self.source_dir_path)
-            if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
-                os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
-        except:
-            pass
+        if os.path.exists(self.source_dir_path):
+            shutil.rmtree(self.source_dir_path)
+        if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
+            os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
 
         if skip_if_exists and os.path.exists(self.secdb_dir_path):
             self.logger.warning(

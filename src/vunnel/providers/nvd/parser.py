@@ -1,4 +1,4 @@
-# pylint: skip-file
+# flake8: noqa
 
 import datetime
 import hashlib
@@ -7,12 +7,12 @@ import logging
 import os
 import re
 import time
-import xml.etree.ElementTree as ET
 import zlib
 from collections import namedtuple
 from decimal import Decimal
 from typing import List
 
+import defusedxml.ElementTree as ET
 import requests
 from ijson import common as ijcommon
 from ijson.backends import python as ijpython
@@ -110,7 +110,7 @@ class CPE:
         return other and self == other
 
     def __repr__(self):
-        # pylint: disable=line-too-long
+        # noqa
         return f"CPE: part={self.part}, vendor={self.vendor}, product={self.product}, version={self.version}, update={self.update}, edition={self.edition}, language={self.language}, sw_edition={self.sw_edition}, target_sw={self.target_sw}, target_hw={self.target_hw}, other={self.other}"
 
     def copy(self):
@@ -387,7 +387,7 @@ class NVDCPEDictionaryUtils:
                     hmap[cpe23_obj.vendor][cpe23_obj.product].append(
                         CPETuple(cpe22_uri=cpe22_uri, cpe23_fs=cpe23_fs, cpe_obj=cpe23_obj)
                     )
-                except:
+                except:  # nosec
                     pass
                 finally:
                     cpe22_uri = None

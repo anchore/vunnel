@@ -96,8 +96,6 @@ def test_provider_clear_input(dummy_provider):
     subject = dummy_provider()
     original_state = workspace.WorkspaceState.read(root=subject.root)
 
-    existing_results = os.listdir(subject.results)
-
     # clear the input
     subject.clear_input()
 
@@ -116,8 +114,6 @@ def test_provider_clear_input(dummy_provider):
 def test_provider_clear_results(dummy_provider):
     subject = dummy_provider()
     original_state = workspace.WorkspaceState.read(root=subject.root)
-
-    existing_results = os.listdir(subject.results)
 
     # clear the results
     subject.clear_results()

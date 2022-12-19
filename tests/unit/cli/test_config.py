@@ -1,5 +1,3 @@
-import pytest
-
 from vunnel import provider, providers
 from vunnel.cli import config
 

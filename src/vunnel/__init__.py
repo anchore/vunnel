@@ -7,7 +7,7 @@ def patch_logger():
 
     def trace(self, message, *args, **kws):
         if self.isEnabledFor(TRACE_LEVEL_NUM):
-            self._log(TRACE_LEVEL_NUM, message, args, **kws)  # pylint: disable=protected-access
+            self._log(TRACE_LEVEL_NUM, message, args, **kws)  # noqa
 
     logging.Logger.trace = trace
 

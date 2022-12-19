@@ -1,4 +1,4 @@
-# pylint: skip-file
+# flake8: noqa
 
 """
 A generic framework for parsing an OVAL xml file. Design is based on separate collections/sections in an OVAL schema.
@@ -10,7 +10,7 @@ import enum
 import logging
 import os
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # nosec (this is only used to get the definition for Element, which is not in defusedxml)
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass

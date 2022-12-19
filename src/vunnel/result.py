@@ -27,7 +27,7 @@ class Writer:
     written: list[str]
     batch: int
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(  # noqa
         self,
         prefix: str,
         result_dir: str,
@@ -76,7 +76,7 @@ class Writer:
 
     def _write_batch(self):
         for schema, entries in self.state.items():
-            batch, self.state[schema] = entries[: self.batch_size], entries[self.batch_size :]
+            batch, self.state[schema] = entries[: self.batch_size], entries[self.batch_size :]  # noqa: E203
             self._write_entries(schema, batch)
 
     def _write_remaining(self):

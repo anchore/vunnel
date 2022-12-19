@@ -102,7 +102,7 @@ class Provider(abc.ABC):
         try:
             urls = self.update()
             self._catalog_workspace(urls=urls)
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:  # noqa
             urls = self._on_error(e)
 
     def _on_error(self, e: Exception):
@@ -129,7 +129,7 @@ class Provider(abc.ABC):
                     self._catalog_workspace(urls=urls)
                     last_exception = None
                     break
-                except Exception as ex:  # pylint: disable=broad-except
+                except Exception as ex:  # noqa
                     self.logger.error(f"error during update (attempt {attempt}): {e}")
                     self._on_error_handle_state()
                     last_exception = ex
@@ -225,7 +225,7 @@ class Provider(abc.ABC):
         extra = []
         prefix = ""
         if getattr(self, "config"):
-            extra.append(f"config={self.config}")  # pylint: disable=no-member
+            extra.append(f"config={self.config}")  # noqa
         if extra:
             prefix = ", "
         return f"Provider(name={self.name}, input={self.input}{prefix}{', '.join(extra)})"

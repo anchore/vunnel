@@ -1,8 +1,6 @@
-import os
 import shutil
 
 import pytest
-import requests
 
 from vunnel.providers.amazon import Config, Provider, parser
 

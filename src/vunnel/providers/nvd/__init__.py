@@ -3,7 +3,7 @@ from typing import Optional
 
 from vunnel import provider, schema
 
-from .parser import Parser, namespace
+from .parser import Parser
 
 
 @dataclass(frozen=True)

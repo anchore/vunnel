@@ -1,7 +1,7 @@
 import os
 import shutil
-import xml.etree.ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import pytest
 
 from vunnel.providers.sles import Config, Provider, parser
@@ -23,6 +23,8 @@ from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerabi
 
 
 class TestSLESVulnerabilityParser:
+
+    # flake8: noqa: E501
     @pytest.fixture
     def valid_element(self):
         def generate(with_namespace):
@@ -96,7 +98,7 @@ class TestSLESVulnerabilityParser:
         assert result.severity == "High"
         assert (
             result.description
-            == "BPF JIT compilers in the Linux kernel through 5.11.12 have incorrect computation of branch displacements, allowing them to execute arbitrary code within the kernel context. This affects arch/x86/net/bpf_jit_comp.c and arch/x86/net/bpf_jit_comp32.c."
+            == "BPF JIT compilers in the Linux kernel through 5.11.12 have incorrect computation of branch displacements, allowing them to execute arbitrary code within the kernel context. This affects arch/x86/net/bpf_jit_comp.c and arch/x86/net/bpf_jit_comp32.c."  # noqa: E501
         )
         assert result.link == "https://www.suse.com/security/cve/CVE-2021-29154"
         assert result.cvss_v3_vectors == ["CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"]
@@ -124,7 +126,7 @@ class TestSLESParser:
             Vulnerability(
                 Name="CVE-2021-29154",
                 NamespaceName="sles:15",
-                Description="BPF JIT compilers in the Linux kernel through 5.11.12 have incorrect computation of branch displacements, allowing them to execute arbitrary code within the kernel context. This affects arch/x86/net/bpf_jit_comp.c and arch/x86/net/bpf_jit_comp32.c.",
+                Description="BPF JIT compilers in the Linux kernel through 5.11.12 have incorrect computation of branch displacements, allowing them to execute arbitrary code within the kernel context. This affects arch/x86/net/bpf_jit_comp.c and arch/x86/net/bpf_jit_comp32.c.",  # noqa: E501
                 Severity="High",
                 Link="https://www.suse.com/security/cve/CVE-2021-29154",
                 CVSS=[
@@ -153,7 +155,7 @@ class TestSLESParser:
             Vulnerability(
                 Name="CVE-2021-29154",
                 NamespaceName="sles:15.1",
-                Description="BPF JIT compilers in the Linux kernel through 5.11.12 have incorrect computation of branch displacements, allowing them to execute arbitrary code within the kernel context. This affects arch/x86/net/bpf_jit_comp.c and arch/x86/net/bpf_jit_comp32.c.",
+                Description="BPF JIT compilers in the Linux kernel through 5.11.12 have incorrect computation of branch displacements, allowing them to execute arbitrary code within the kernel context. This affects arch/x86/net/bpf_jit_comp.c and arch/x86/net/bpf_jit_comp32.c.",  # noqa: E501
                 Severity="High",
                 Link="https://www.suse.com/security/cve/CVE-2021-29154",
                 CVSS=[

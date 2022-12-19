@@ -48,7 +48,7 @@ class TestAlpineProvider:
                   - CVE-2016-9401
         """
 
-        return "apkurl: '{{urlprefix}}/{{distroversion}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk'\narchs:\n- x86_64\n- x86\n- armhf\ndistroversion: v0.0\npackages:\n- pkg:\n    name: apache2\n    secfixes:\n      2.4.26-r0:\n      - CVE-2017-3167\n      - CVE-2017-3169\n      - CVE-2017-7659\n      - CVE-2017-7668\n      - CVE-2017-7679\n      2.4.27-r0:\n      - CVE-2017-9789\n      2.4.27-r1:\n      - CVE-2017-9798\n- pkg:\n    name: augeas\n    secfixes:\n      1.4.0-r5:\n      - CVE-2017-7555\n- pkg:\n    name: bash\n    secfixes:\n      4.3.42-r5:\n      - CVE-2016-9401\nreponame: main\nurlprefix: http://dl-cdn.alpinelinux.org/alpine\n"
+        return "apkurl: '{{urlprefix}}/{{distroversion}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk'\narchs:\n- x86_64\n- x86\n- armhf\ndistroversion: v0.0\npackages:\n- pkg:\n    name: apache2\n    secfixes:\n      2.4.26-r0:\n      - CVE-2017-3167\n      - CVE-2017-3169\n      - CVE-2017-7659\n      - CVE-2017-7668\n      - CVE-2017-7679\n      2.4.27-r0:\n      - CVE-2017-9789\n      2.4.27-r1:\n      - CVE-2017-9798\n- pkg:\n    name: augeas\n    secfixes:\n      1.4.0-r5:\n      - CVE-2017-7555\n- pkg:\n    name: bash\n    secfixes:\n      4.3.42-r5:\n      - CVE-2016-9401\nreponame: main\nurlprefix: http://dl-cdn.alpinelinux.org/alpine\n"  # noqa: E501
 
     @pytest.fixture
     def mock_parsed_data(self):
@@ -157,7 +157,7 @@ class TestAlpineProvider:
         "content,expected",
         [
             pytest.param(
-                '<html>\r\n<head><title>Index of /</title></head>\r\n<body>\r\n<h1>Index of /</h1><hr><pre><a href="../">../</a>\r\n<a href="v3.10/">v3.10/</a> 11-Jun-2020 20:17 -\r\n<a href="v3.11/">v3.11/</a> 11-Jun-2020 18:12 -\r\n</pre><hr></body>\r\n</html>\r\n',
+                '<html>\r\n<head><title>Index of /</title></head>\r\n<body>\r\n<h1>Index of /</h1><hr><pre><a href="../">../</a>\r\n<a href="v3.10/">v3.10/</a> 11-Jun-2020 20:17 -\r\n<a href="v3.11/">v3.11/</a> 11-Jun-2020 18:12 -\r\n</pre><hr></body>\r\n</html>\r\n',  # noqa: E501
                 ["v3.10/", "v3.11/"],
                 id="with-content",
             ),
@@ -175,7 +175,7 @@ class TestAlpineProvider:
         "content,expected",
         [
             pytest.param(
-                '<html>\r\n<head><title>Index of /</title></head>\r\n<body>\r\n<h1>Index of /</h1><hr><pre><a href="../">../</a>\r\n<a href="v3.10/">v3.10/</a> 11-Jun-2020 20:17 -\r\n<a href="v3.11/">v3.11/</a> 11-Jun-2020 18:12 -\r\n</pre><hr></body>\r\n</html>\r\n',
+                '<html>\r\n<head><title>Index of /</title></head>\r\n<body>\r\n<h1>Index of /</h1><hr><pre><a href="../">../</a>\r\n<a href="v3.10/">v3.10/</a> 11-Jun-2020 20:17 -\r\n<a href="v3.11/">v3.11/</a> 11-Jun-2020 18:12 -\r\n</pre><hr></body>\r\n</html>\r\n',  # noqa: E501
                 ["v3.10/", "v3.11/"],
                 id="with-content",
             ),
