@@ -12,7 +12,7 @@ from vunnel.providers import (
     rhel,
     sles,
     ubuntu,
-    wolfi
+    wolfi,
 )
 
 _providers = {

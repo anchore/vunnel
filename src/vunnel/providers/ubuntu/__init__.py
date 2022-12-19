@@ -16,8 +16,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-    name = "ubuntu"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -31,6 +29,10 @@ class Provider(provider.Provider):
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "ubuntu"
 
     def update(self) -> list[str]:
 
