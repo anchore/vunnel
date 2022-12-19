@@ -16,11 +16,11 @@ class Config:
     )
     request_timeout: int = 125
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.token.startswith("env:"):
             self.token = os.environ.get(self.token[4:], "")
 
-    def __str__(self):
+    def __str__(self) -> str:
         # sanitize secrets from any output
         tok_value = self.token
         str_value = super().__str__()
@@ -30,8 +30,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-    name = "github"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -46,6 +44,10 @@ class Provider(provider.Provider):
             download_timeout=config.request_timeout,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "github"
 
     def update(self) -> list[str]:
 

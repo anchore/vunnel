@@ -18,6 +18,9 @@ repos:
     - id: check-yaml
       stages:
         - push
+    - id: check-json
+      stages:
+        - push
     - id: end-of-file-fixer
       stages:
         - push
@@ -30,14 +33,22 @@ repos:
     - id: debug-statements
       stages:
         - push
+    - id: check-ast
+      stages:
+        - push
+    - id: check-case-conflict
+      stages:
+        - push
+
   # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
   - repo: local
     hooks:
       - id: system
         name: black
-        entry: poetry run black . --line-length 130
+        entry: poetry run black .
         pass_filenames: false
         language: system
+
   - repo: local
     hooks:
       - id: system
@@ -45,34 +56,27 @@ repos:
         entry: poetry run isort .
         pass_filenames: false
         language: system
+
   - repo: local
     hooks:
       - id: system
-        name: autoflake
-        # this doesn't play nice with __init__ imports
-        # --remove-all-unused-imports --remove-unused-variable
-        entry: poetry run autoflake --in-place -r src/vunnel
+        name: bandit
+        entry: poetry run bandit -r -v -c 'pyproject.toml' src/vunnel
         pass_filenames: false
         language: system
+
   - repo: local
     hooks:
       - id: system
-        name: pylint
-        entry: poetry run pylint src/vunnel
+        name: flake8
+        entry: poetry run flake8 src/vunnel
         pass_filenames: false
         language: system
-  # # add this back once we're not prototyping anymore
-  # - repo: local
-  #   hooks:
-  #     - id: system
-  #       name: mypy
-  #       entry: poetry run mypy --config-file ./pyproject.toml src/vunnel
-  #       pass_filenames: false
-  #       language: system
-  # - repo: local
-  #   hooks:
-  #     - id: system
-  #       name: tox
-  #       entry: poetry run tox
-  #       pass_filenames: false
-  #       language: system
+
+  - repo: local
+    hooks:
+      - id: system
+        name: mypy
+        entry: poetry run mypy --config-file ./pyproject.toml src/vunnel
+        pass_filenames: false
+        language: system

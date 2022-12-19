@@ -1,4 +1,4 @@
-# pylint: disable=line-too-long,too-many-locals,broad-except,bare-except
+# flake8: noqa
 import logging
 import os
 import re
@@ -12,7 +12,6 @@ from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
 from vunnel import utils
-from vunnel.utils.common import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     Impact,
@@ -25,6 +24,7 @@ from vunnel.utils.oval_v2 import (
     VulnerabilityParser,
     iter_parse_vulnerability_file,
 )
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 
 namespace = "sles"
 
@@ -233,7 +233,7 @@ class Parser:
         if not vulnerabilities_dict or not tests_dict or not artifacts_dict or not versions_dict:
             return results
 
-        for identity, vulnerability_obj in vulnerabilities_dict.items():  # pylint: disable=unused-variable
+        for identity, vulnerability_obj in vulnerabilities_dict.items():  # noqa
             # version->release->feed map
             version_release_feed = defaultdict()
 

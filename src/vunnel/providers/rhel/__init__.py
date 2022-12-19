@@ -17,8 +17,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-    name = "rhel"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -34,6 +32,10 @@ class Provider(provider.Provider):
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "rhel"
 
     def update(self) -> list[str]:
 

@@ -89,7 +89,8 @@ class Parser:
         # normalize and return results
         raw_results = parse(path, config)
 
-        # TODO: remove this filtering once Grype and GrypeDB support the types of version checks necessary to correctly match these.
+        # TODO: remove this filtering once Grype and GrypeDB support the types of version checks necessary
+        # to correctly match these.
         # NOTE: Grype and GrypeDB need to identify both a version range AND a specific release version check.
         # See:https://github.com/anchore/anchore-engine/issues/1237 for details and links.
         # This approach is the minimally risk since it only impacts this driver and only ksplice-based packages.
@@ -119,7 +120,7 @@ class KspliceFilterer:
         :param version:
         :return:
         """
-        epoch, version, release = rpm.split_fullversion(version)  # pylint: disable=unused-variable
+        epoch, version, release = rpm.split_fullversion(version)  # noqa
         return cls.ksplice_regex.match(release) is not None
 
     def filter(self, vuln_dict: dict) -> dict:
@@ -135,10 +136,10 @@ class KspliceFilterer:
         TODO: this eventually should be removed once support for handling complex version constraints is supported in the feed
         data model and in Grype. See https://github.com/anchore/anchore-engine/issues/1237 for FP description
 
-        :param vuln_dict: dictionary of vulnerabilities where key is distro and version and value is the list of vulns for that version
+        :param vuln_dict: dict of vulns where key is distro and version and value is the list of vulns for that version
         :return:
         """
-        for version, vuln in vuln_dict.values():  # pylint: disable=unused-variable
+        for version, vuln in vuln_dict.values():  # noqa
             fixes = vuln.get("Vulnerability", {}).get("FixedIn", [])
             if fixes:
                 pre_filter_fix_count = len(fixes)

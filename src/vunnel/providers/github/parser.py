@@ -46,7 +46,7 @@ class Parser:
         download_timeout=125,
         api_url="https://api.github.com/graphql",
         logger=None,
-    ):  # pylint: disable=too-many-arguments
+    ):  # noqa
         self.db = db.connection(workspace, serializer="json")
         self.download_timeout = download_timeout
         self.api_url = api_url
@@ -216,7 +216,7 @@ def get_advisory(ghsaId, data):
     return {}
 
 
-def get_vulnerabilities(token, ghsaId, timestamp, vuln_cursor, parent_cursor):  # pylint: disable=too-many-arguments
+def get_vulnerabilities(token, ghsaId, timestamp, vuln_cursor, parent_cursor):  # noqa
     """
     In the improbable case that an Advisory is associated with more than 100
     (Github's GraphQL limit) these will need to get fetched until the cursor is
@@ -309,7 +309,7 @@ def needs_subquery(data):
     return False
 
 
-# pylint: disable=consider-using-f-string
+# noqa
 def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     """
     The cursor needs to be the `endCursor` for the last successful query. The
@@ -373,7 +373,8 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     If trying to get a single GHSA, the `securityAdvisories` field needs to be updated
     with and identifier, to::
 
-        securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, first: 10, identifier: {type: GHSA, value: "GHSA-pp7h-53gx-mx7r"}) {
+      securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, first: 10,
+        identifier: {type: GHSA, value: "GHSA-pp7h-53gx-mx7r"}) {
     """
     query_func = "securityAdvisories(orderBy: {field: %s, direction: ASC}, "
     updatedSince = ""

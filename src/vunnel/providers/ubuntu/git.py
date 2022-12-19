@@ -1,11 +1,11 @@
-# pylint: skip-file
+# flake8: noqa
 
 import copy
 import logging
 import os
 import re
 import shutil
-import subprocess
+import subprocess  # nosec
 import tempfile
 from collections import namedtuple
 
@@ -103,7 +103,7 @@ class GitWrapper(object):
         try:
             try:
                 GitWrapper._exec_cmd(self._check_out_cmd_, cwd=self.dest)
-            except:
+            except:  # nosec
                 pass
             out = GitWrapper._exec_cmd(self._pull_ff_only_cmd_, cwd=self.dest)
             logger.debug("Synced with upstream git repo, output: {}".format(out.decode()))
@@ -380,9 +380,9 @@ class GitWrapper(object):
         try:
             logger.debug("Executing: {}".format(cmd))
             if "stdout" in kwargs:
-                return subprocess.check_call(cmd, *args, **kwargs)
+                return subprocess.check_call(cmd, *args, **kwargs)  # nosec
             else:
-                return subprocess.check_output(cmd, *args, **kwargs)
+                return subprocess.check_output(cmd, *args, **kwargs)  # nosec
         except Exception as e:
             logger.exception("Error executing command: {}".format(cmd))
             raise e

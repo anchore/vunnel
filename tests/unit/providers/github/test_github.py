@@ -372,7 +372,7 @@ class TestParser:
 
 def test_provider_schema(helpers, fake_get_query, advisories):
     fake_get_query([advisories(), advisories(has_next_page=True)])
-    workspace = helpers.provider_workspace(name=Provider.name)
+    workspace = helpers.provider_workspace(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config(token="secret", api_url="https://localhost"))
     provider.update()

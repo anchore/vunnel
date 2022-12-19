@@ -39,11 +39,11 @@ jobs:
 
       - name: Install dependencies and package
         run: poetry install
-        if: steps.cache.outputs.cache-hit != 'true'
+        # though we have a cache, let poetry validate its valid
+        # if: steps.cache.outputs.cache-hit != 'true'
 
       - name: Run static analysis
         run: make static-analysis
 
       - name: Run unit tests
-        run: |
-          poetry run pytest
+        run: make unit

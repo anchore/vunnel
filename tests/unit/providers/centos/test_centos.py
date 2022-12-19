@@ -1,12 +1,9 @@
-import os
 import shutil
-from distutils import dir_util
 
 import pytest
 
 from vunnel.providers import centos
 from vunnel.providers.centos.parser import Parser
-from vunnel.utils.oval_parser import parse
 
 
 @pytest.mark.parametrize(
@@ -79,12 +76,12 @@ def test_parser(tmpdir, helpers, mock_data_path, full_entry):
     ],
 )
 def test_provider_schema(helpers, mock_data_path, expected_written_entries):
-    workspace = helpers.provider_workspace(name=centos.Provider.name)
+    workspace = helpers.provider_workspace(name=centos.Provider.name())
     mock_data_path = helpers.local_dir(mock_data_path)
 
     provider = centos.Provider(root=workspace.root, config=centos.Config())
     shutil.copy(mock_data_path, provider.parser.xml_file_path)
-    vuln_dict = provider.update()
+    provider.update()
 
     assert expected_written_entries == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=expected_written_entries > 0)

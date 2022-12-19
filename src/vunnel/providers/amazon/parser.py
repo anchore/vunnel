@@ -1,10 +1,10 @@
 import logging
 import os
 import re
-import xml.etree.ElementTree as ET
 from collections import namedtuple
 from html.parser import HTMLParser
 
+import defusedxml.ElementTree as ET
 import requests
 
 from vunnel.utils import rpm
@@ -120,7 +120,7 @@ class Parser:
         if not pkg.endswith(".rpm"):
             pkg = pkg + ".rpm"
 
-        name, version, release, epoch, arch = rpm.split_rpm_filename(pkg)  # pylint: disable=unused-variable
+        name, version, release, epoch, arch = rpm.split_rpm_filename(pkg)  # noqa
 
         if release:
             return AlasFixedIn(pkg=name, ver=(version + "-" + release))

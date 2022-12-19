@@ -1,4 +1,4 @@
-# pylint: skip-file
+# flake8: noqa
 
 import bz2
 import hashlib
@@ -104,16 +104,13 @@ class Parser(object):
             download = True
 
             if os.path.exists(self.xml_file_path) and os.path.exists(self.xml_sha_file_path):
-                try:
-                    with open(self.xml_sha_file_path, "r") as fp:
-                        previous = fp.read()
-                        previous = previous.strip()
+                with open(self.xml_sha_file_path, "r") as fp:
+                    previous = fp.read()
+                    previous = previous.strip()
 
-                    latest = self._get_sha256()
-                    self.logger.debug("previous sha256: {}, latest sha256: {}".format(previous, latest))
-                    download = previous.lower() != latest.lower()
-                except:
-                    pass
+                latest = self._get_sha256()
+                self.logger.debug("previous sha256: {}, latest sha256: {}".format(previous, latest))
+                download = previous.lower() != latest.lower()
 
             if download:
                 try:

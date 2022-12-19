@@ -1,10 +1,11 @@
 import os
 from dataclasses import dataclass, field, fields
-from typing import Any, Optional
+from typing import Any
 
+import dacite
 import yaml
 
-from vunnel import providers, utils
+from vunnel import provider, providers
 
 
 @dataclass
@@ -21,7 +22,7 @@ class Providers:
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
 
-    def get(self, name: str) -> Optional[Any]:
+    def get(self, name: str) -> Any | None:
         for f in fields(Providers):
             if self._normalize_name(f.name) == self._normalize_name(name):
                 return getattr(self, f.name)
@@ -37,6 +38,9 @@ class Log:
     slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
     level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
 
+    def __post_init__(self) -> None:
+        self.level = self.level.upper()
+
 
 @dataclass
 class Application:
@@ -45,24 +49,24 @@ class Application:
     providers: Providers = field(default_factory=Providers)
 
 
-def clean_dict_keys(d):
-    new = {}
-    for k, v in d.items():
-        if isinstance(v, dict):
-            v = clean_dict_keys(v)
-        new[k.replace("-", "_")] = v
-    return new
-
-
-def yaml_decoder(data) -> dict[Any, Any]:
-    return clean_dict_keys(yaml.load(data, yaml.CSafeLoader))
-
-
-def load(path: str = ".vunnel.yaml") -> Application:  # pylint: disable=unused-argument
+def load(path: str = ".vunnel.yaml") -> Application:  # noqa
     try:
         with open(path, encoding="utf-8") as f:
             app_object = yaml.safe_load(f.read())
-            cfg = utils.dataclass_from_dict(Application, app_object)
+            cfg = dacite.from_dict(
+                Application,
+                app_object,
+                config=dacite.Config(
+                    cast=[
+                        provider.OnErrorAction,
+                        provider.InputStatePolicy,
+                        provider.ResultStatePolicy,
+                    ],
+                    # type_hooks={
+                    #
+                    # }
+                ),
+            )
             if cfg is None:
                 raise FileNotFoundError("parsed empty config")
     except FileNotFoundError:

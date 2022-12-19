@@ -1,4 +1,4 @@
-# pylint: skip-file
+# flake8: noqa
 
 import copy
 import logging
@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 from html.parser import HTMLParser
-from typing import List, Optional
+from typing import List
 
 import requests
 import yaml
@@ -47,9 +47,7 @@ class Parser:
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
 
-    def __init__(
-        self, workspace: str, logger: Optional[logging.Logger] = None, download_timeout: int = 125, url: Optional[str] = None
-    ):
+    def __init__(self, workspace: str, logger: logging.Logger | None = None, download_timeout: int = 125, url: str | None = None):
         self.workspace = workspace
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
@@ -72,13 +70,10 @@ class Parser:
         :return:
         """
         # remove old source directory since its no longer used
-        try:
-            if os.path.exists(self.source_dir_path):
-                shutil.rmtree(self.source_dir_path)
-            if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
-                os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
-        except:
-            pass
+        if os.path.exists(self.source_dir_path):
+            shutil.rmtree(self.source_dir_path)
+        if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
+            os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
 
         if skip_if_exists and os.path.exists(self.secdb_dir_path):
             self.logger.warning(

@@ -1,4 +1,4 @@
-# pylint: disable=line-too-long,broad-except,too-many-nested-blocks,too-many-arguments,bare-except,too-many-locals,too-many-statements,too-many-branches
+# flake8: noqa
 import concurrent.futures
 import copy
 import json
@@ -18,8 +18,8 @@ from dateutil import parser as dt_parser
 from vunnel import utils
 from vunnel.providers import centos
 from vunnel.utils import rpm
-from vunnel.utils.common import vulnerability_element
 from vunnel.utils.oval_parser import Config
+from vunnel.utils.vulnerability import vulnerability_element
 
 namespace = "rhel"
 
@@ -122,18 +122,12 @@ class Parser:
         except Exception as e:
             self.logger.error(f"error downloading and saving {cve_id} to fs: {e}")
             # self.logger.debug(f"reset fs state for {cve_id}")
-            try:
-                os.remove(min_cve_file)
-            except:
-                pass
-            try:
-                os.remove(full_cve_file)
-            except:
-                pass
+            utils.silent_remove(min_cve_file)
+            utils.silent_remove(full_cve_file)
             raise  # raise the original exception
 
     # TODO: ALEX, should skip_if_exists be hooked up here? (currently unused)
-    def _sync_cves(self, skip_if_exists=False, do_full_sync=True):  # pylint: disable=unused-argument
+    def _sync_cves(self, skip_if_exists=False, do_full_sync=True):  # noqa
         """
         Download minimal or summary cve and compare it to persisted state on disk. If no persisted state is found or a
         a change is detected, full cve is downloaded
@@ -177,18 +171,12 @@ class Parser:
             self.logger.info("incremental sync triggered, computing and downloading updated CVEs")
 
         # clean up old source dir if its around
-        try:
-            source_cve_dir = os.path.join(self.cve_dir_path, self.__source_dir_name__)
-            if os.path.exists(source_cve_dir):
-                shutil.rmtree(source_cve_dir)
-            file_name = os.path.join(self.cve_dir_path, self.__last_synced_filename__)
-            if os.path.exists(file_name):
-                os.remove(file_name)
-            file_name = os.path.join(self.cve_dir_path, self.__cve_download_error_filename__)
-            if os.path.exists(file_name):
-                os.remove(file_name)
-        except Exception:
-            pass
+        utils.silent_remove(
+            os.path.join(self.cve_dir_path, self.__source_dir_name__),
+            tree=True,
+        )
+        utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
+        utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             download_count = 0
@@ -574,7 +562,7 @@ class Parser:
                 del platform_packages
                 del final_ar_objs
                 del all_ar_objs
-            except Exception:
+            except Exception:  # nosec
                 pass
 
         return fixed_ins

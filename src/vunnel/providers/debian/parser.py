@@ -7,7 +7,7 @@ from collections import namedtuple
 
 import requests
 
-from vunnel.utils import common  # , nvd # TODO: replace nvd severity
+from vunnel.utils import vulnerability
 
 namespace = "debian"
 
@@ -20,7 +20,8 @@ requests_timeout = 125
 # driver workspace
 driver_workspace = None
 
-# Only releases presenting this mapping will be output by the driver, maintain it with new releases. Can also be extended via configuration
+# Only releases presenting this mapping will be output by the driver, maintain it with new releases.
+# Can also be extended via configuration
 debian_distro_map = {
     "trixie": "13",
     "bookworm": "12",
@@ -133,7 +134,7 @@ class Parser:
 
         return ns_cve_dsalist
 
-    # pylint: disable=too-many-locals,inconsistent-return-statements
+    # noqa
     def _parse_dsa_record(self, dsa_lines):
         """
 
@@ -192,7 +193,7 @@ class Parser:
                     continue
 
             return dsa
-        except Exception:  # pylint: disable=broad-except
+        except Exception:  # noqa
             self.logger.exception("failed to parse dsa record")
 
     def _get_dsa_map(self):
@@ -263,7 +264,7 @@ class Parser:
 
         return ns_cve_dsalist
 
-    # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
+    # noqa
     def _normalize_json(self, ns_cve_dsalist=None):
         adv_mets = {}
         # all_matched_dsas = set()
@@ -329,7 +330,7 @@ class Parser:
 
                             if vid not in vuln_records[relno]:
                                 # create a new record
-                                vuln_records[relno][vid] = copy.deepcopy(common.vulnerability_element)
+                                vuln_records[relno][vid] = copy.deepcopy(vulnerability.vulnerability_element)
                                 vuln_record = vuln_records[relno][vid]
 
                                 # populate the static information about the new vuln record
@@ -367,7 +368,8 @@ class Parser:
 
                             if (
                                 sev
-                                and common.severity_order[sev] > common.severity_order[vuln_record["Vulnerability"]["Severity"]]
+                                and vulnerability.severity_order[sev]
+                                > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]
                             ):
                                 vuln_record["Vulnerability"]["Severity"] = sev
 
@@ -448,7 +450,7 @@ class Parser:
 
                             # retlists[relno].append(final_record)
 
-                    except Exception:  # pylint: disable=broad-except
+                    except Exception:  # noqa
                         self.logger.exception(f"ignoring error parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
 
         self.logger.debug(f"metrics for advisory information: {json.dumps(adv_mets)}")

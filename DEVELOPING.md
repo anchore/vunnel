@@ -42,8 +42,7 @@ make
 Or run them individually:
 ```bash
 make static-analysis
-make unit
-make cli
+make test
 ```
 
 If you want to see all of the things you can do:

@@ -8,7 +8,7 @@ import re
 import requests
 
 from vunnel import utils
-from vunnel.utils import common
+from vunnel.utils import vulnerability
 
 namespace = "wolfi"
 
@@ -63,7 +63,7 @@ class Parser:
                                 fp.write(chunk)
                     else:
                         r.raise_for_status()
-                except:  # pylint: disable=bare-except
+                except:  # noqa
                     self.logger.exception(f"ignoring error processing secdb for {t}")
 
     def _load(self):
@@ -91,7 +91,7 @@ class Parser:
             self.logger.exception("failed to load Wolfi sec db data")
             raise
 
-    # pylint: disable=too-many-locals,too-many-nested-blocks,too-many-branches
+    # noqa
     def _normalize(self, release, dbtype_data_dict):
         """
         Normalize all the sec db entries into vulnerability payload records
@@ -128,7 +128,7 @@ class Parser:
 
                         if vid not in vuln_dict:
                             # create a new record
-                            vuln_dict[vid] = copy.deepcopy(common.vulnerability_element)
+                            vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
                             vuln_record = vuln_dict[vid]
 
                             # populate the static information about the new vuln record

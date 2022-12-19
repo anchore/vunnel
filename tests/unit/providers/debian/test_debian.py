@@ -1,4 +1,3 @@
-import os
 import shutil
 
 import pytest
@@ -53,7 +52,7 @@ class TestParser:
         shutil.copy(mock_data_path, subject.dsa_file_path)
 
         dsa_map = subject._get_dsa_map()
-        dsas = {dsa["id"] for dsa_collection in dsa_map.values() for dsa in (dsa_collection.cves + dsa_collection.nocves)}
+        # dsas = {dsa["id"] for dsa_collection in dsa_map.values() for dsa in (dsa_collection.cves + dsa_collection.nocves)}
         # print("")
         # print("Total number of dsas: {}".format(len(dsas)))
 
@@ -93,7 +92,7 @@ class TestParser:
 
 
 def test_provider_schema(helpers, disable_get_requests):
-    workspace = helpers.provider_workspace(name=Provider.name)
+    workspace = helpers.provider_workspace(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

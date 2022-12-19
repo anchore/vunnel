@@ -8,6 +8,7 @@ from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
 
 
 class TestParser:
+    # flake8: noqa: E501
     @pytest.fixture
     def mock_cve(self):
         return {
@@ -68,6 +69,7 @@ class TestParser:
             "name": "CVE-2019-9755",
         }
 
+    # noqa: E501
     @pytest.fixture
     def mock_rhsa_dict(self):
         return {
@@ -105,6 +107,7 @@ class TestParser:
             )
         }
 
+    # flake8: noqa: E501
     @pytest.fixture
     def mock_rhsa_dict_2(self):
         return {
@@ -148,6 +151,7 @@ class TestParser:
             ),
         }
 
+    # flake8: noqa: E501
     @pytest.fixture
     def mock_cve_partial_fix(self):
         return {
@@ -650,7 +654,7 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
-    workspace = helpers.provider_workspace(name=Provider.name)
+    workspace = helpers.provider_workspace(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

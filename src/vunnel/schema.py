@@ -31,7 +31,7 @@ def MatchExclusionSchema(version: str = MATCH_EXCLUSION_SCHEMA_VERSION) -> Schem
 def GithubSecurityAdvisorySchema(version: str = GITHUB_SECURITY_ADVISORY_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
-        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-{version}.json",
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-{version}.json",  # noqa: E501
     )
 
 
