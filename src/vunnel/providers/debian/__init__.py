@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any
 
 from vunnel import provider, schema
 
@@ -7,16 +8,17 @@ from .parser import Parser, debian_distro_map, namespace
 
 @dataclass
 class Config:
-    distro_map: dict[str, str] = field(default_factory=lambda: debian_distro_map)
+    distro_map: dict[str, Any] = field(default_factory=lambda: debian_distro_map)
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
     )
     request_timeout: int = 125
 
+    def __post_init__(self) -> None:
+        self.distro_map = {str(k).lower(): str(v).lower() for k, v in self.distro_map.items()}
+
 
 class Provider(provider.Provider):
-    name = "debian"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -30,6 +32,10 @@ class Provider(provider.Provider):
             distro_map=self.config.distro_map,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "debian"
 
     def update(self) -> list[str]:
 

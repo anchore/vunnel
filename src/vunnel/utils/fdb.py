@@ -1,4 +1,4 @@
-# pylint: skip-file
+# noqa
 
 """
 A file-based database, requires a writeable directory (path), which is usually

@@ -14,8 +14,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-    name = "oracle"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -29,6 +27,10 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "oracle"
 
     def update(self) -> list[str]:
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any
 
 from vunnel import provider, schema
 
@@ -11,12 +12,13 @@ class Config:
         default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
     )
     request_timeout: int = 125
-    allow_versions: list[str] = field(default_factory=lambda: ["11", "12", "15"])  # corresponds to major versions
+    allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15])  # corresponds to major versions
+
+    def __post_init__(self) -> None:
+        self.allow_versions = [str(v).lower() for v in self.allow_versions]
 
 
 class Provider(provider.Provider):
-    name = "sles"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -30,6 +32,10 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "sles"
 
     def update(self) -> list[str]:
 

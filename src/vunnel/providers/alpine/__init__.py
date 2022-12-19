@@ -14,8 +14,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-    name: str = "alpine"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
@@ -27,6 +25,10 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
+
+    @classmethod
+    def name(cls) -> str:
+        return "alpine"
 
     def update(self) -> list[str]:
         vuln_dict = self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists)

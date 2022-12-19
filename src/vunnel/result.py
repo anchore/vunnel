@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from dataclasses import asdict, dataclass
+from types import TracebackType
 from typing import Any
 
 from .schema import Schema
@@ -23,11 +24,11 @@ class Entry:
 
 
 class Writer:
-    state: dict[str, Entry]
+    state: dict[str, list[Entry]]
     written: list[str]
     batch: int
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(  # noqa
         self,
         prefix: str,
         result_dir: str,
@@ -49,17 +50,22 @@ class Writer:
         self.written = []
         self.batch = 0
 
-    def __enter__(self):
+    def __enter__(self) -> "Writer":
         return self
 
-    def __exit__(self, ty, value, traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self._write_remaining()
         self.logger.info(f"wrote {len(self)} entries")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.written)
 
-    def write(self, identifier: str, schema: Schema, payload: Any):
+    def write(self, identifier: str, schema: Schema, payload: Any) -> None:
         if not self.skip_duplicates and identifier in self.written:
             self.logger.warning(f"{identifier!r} already written (skipping)")
             return
@@ -74,22 +80,19 @@ class Writer:
             if len(entries) >= self.batch_size:
                 self._write_batch()
 
-    def _write_batch(self):
-        if len(self) == 0 and self.clear_results_before_writing:
-            self.logger.debug("clearing existing results")
-            shutil.rmtree(self.result_dir)
-            os.makedirs(self.result_dir)
-
+    def _write_batch(self) -> None:
         for schema, entries in self.state.items():
-            batch, self.state[schema] = entries[: self.batch_size], entries[self.batch_size :]
+            batch, self.state[schema] = entries[: self.batch_size], entries[self.batch_size :]  # noqa: E203
             self._write_entries(schema, batch)
 
-    def _write_remaining(self):
+    def _write_remaining(self) -> None:
         for schema, entries in self.state.items():
             self._write_entries(schema, entries)
         self.state.clear()
 
-    def _write_entries(self, schema: str, entries: list[Entry]):
+    def _write_entries(self, schema: str, entries: list[Entry]) -> None:
+        self._clear_existing_results()
+
         if len(entries) == 0:
             return
 
@@ -108,3 +111,9 @@ class Writer:
             self.written.extend(identifiers)
 
         self.batch += 1
+
+    def _clear_existing_results(self) -> None:
+        if len(self) == 0 and self.clear_results_before_writing:
+            self.logger.debug("clearing existing results")
+            shutil.rmtree(self.result_dir)
+            os.makedirs(self.result_dir)

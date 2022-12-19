@@ -1,9 +1,8 @@
 from dataclasses import dataclass, field
-from typing import Optional
 
 from vunnel import provider, schema
 
-from .parser import Parser, namespace
+from .parser import Parser
 
 
 @dataclass(frozen=True)
@@ -13,15 +12,17 @@ class Config:
     )
     request_timeout: int = 125
     start_year: int = 2002
-    end_year: Optional[int] = None
+    end_year: int | None = None
 
 
 class Provider(provider.Provider):
-    name = "nvd"
-
     def __init__(self, root: str, config: Config):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
+
+    @classmethod
+    def name(cls) -> str:
+        return "nvd"
 
     def update(self) -> list[str]:
         parser = Parser(
