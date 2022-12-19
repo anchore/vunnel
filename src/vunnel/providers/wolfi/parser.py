@@ -8,7 +8,7 @@ import re
 import requests
 
 from vunnel import utils
-from vunnel.utils import common
+from vunnel.utils import vulnerability
 
 namespace = "wolfi"
 
@@ -128,7 +128,7 @@ class Parser:
 
                         if vid not in vuln_dict:
                             # create a new record
-                            vuln_dict[vid] = copy.deepcopy(common.vulnerability_element)
+                            vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
                             vuln_record = vuln_dict[vid]
 
                             # populate the static information about the new vuln record

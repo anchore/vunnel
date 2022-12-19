@@ -23,6 +23,7 @@ ijson = "^3.1.4"
 xxhash = "^3.1.0"
 cvss = "^2.5"
 python-dateutil = "^2.8.2"
+dacite = "^1.6.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
@@ -34,6 +35,10 @@ autoflake = "^2.0.0"
 pylint = "^2.15.7"
 jsonschema = "^4.17.3"
 pytest-unordered = "^0.5.2"
+pytest-sugar = "^0.9.6"
+pytest-clarity = "^1.0.1"
+pytest-cov = "^4.0.0"
+pytest-picked = "^0.4.6"
 
 [build-system]
 requires = ["poetry-core"]
@@ -93,3 +98,9 @@ strict_optional = 0
 warn_unused_ignores = 1
 warn_redundant_casts = 1
 warn_unused_configs = 1
+
+[tool.coverage.run]
+omit = [".*", "*/site-packages/*", "*/venv/*", "tests/*", "*/cli/*"]
+
+[tool.coverage.report]
+fail_under = 65

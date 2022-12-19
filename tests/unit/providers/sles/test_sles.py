@@ -11,7 +11,6 @@ from vunnel.providers.sles.parser import (
     SLESOVALVulnerability,
     SLESVulnerabilityParser,
 )
-from vunnel.utils.common import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     OVALElementEnum,
@@ -20,6 +19,7 @@ from vunnel.utils.oval_v2 import (
     VersionParser,
     iter_parse_vulnerability_file,
 )
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 
 
 class TestSLESVulnerabilityParser:

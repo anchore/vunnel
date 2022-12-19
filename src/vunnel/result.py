@@ -75,11 +75,6 @@ class Writer:
                 self._write_batch()
 
     def _write_batch(self):
-        if len(self) == 0 and self.clear_results_before_writing:
-            self.logger.debug("clearing existing results")
-            shutil.rmtree(self.result_dir)
-            os.makedirs(self.result_dir)
-
         for schema, entries in self.state.items():
             batch, self.state[schema] = entries[: self.batch_size], entries[self.batch_size :]
             self._write_entries(schema, batch)
@@ -90,6 +85,8 @@ class Writer:
         self.state.clear()
 
     def _write_entries(self, schema: str, entries: list[Entry]):
+        self._clear_existing_results()
+
         if len(entries) == 0:
             return
 
@@ -108,3 +105,9 @@ class Writer:
             self.written.extend(identifiers)
 
         self.batch += 1
+
+    def _clear_existing_results(self):
+        if len(self) == 0 and self.clear_results_before_writing:
+            self.logger.debug("clearing existing results")
+            shutil.rmtree(self.result_dir)
+            os.makedirs(self.result_dir)

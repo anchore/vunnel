@@ -1,0 +1,59 @@
+root: "/tmp/all-the-dataz"
+log:
+  level: trace
+  slim: true
+providers:
+  alpine:
+    request_timeout: 20
+    runtime: &runtime
+      on_error:
+        action: skip
+        retry_count: 9
+        retry_delay: 12
+        input: delete
+        results: delete
+      existing_results: keep
+      existing_input: keep
+  amazon:
+    runtime: *runtime
+    request_timeout: 20
+    security_advisories:
+      42: "https://alas.aws.amazon.com/AL2/alas-42.rss"
+  centos:
+    runtime: *runtime
+    request_timeout: 20
+    skip_namespaces:
+      - centos:8
+  debian:
+    runtime: *runtime
+    request_timeout: 20
+    distro_map:
+      jinx: 87
+  github:
+    runtime: *runtime
+    request_timeout: 20
+    api_url: https://api.gitlab.com/graphql
+    token: env:SOMETHING_MADE_UP
+  nvd:
+    runtime: *runtime
+    request_timeout: 20
+    start_year: 1987
+    end_year: 2002
+  oracle:
+    runtime: *runtime
+    request_timeout: 20
+  rhel:
+    runtime: *runtime
+    request_timeout: 20
+    max_workers: 7
+    full_sync_interval: 22
+    skip_namespaces:
+      - rhel:8
+  sles:
+    runtime: *runtime
+    request_timeout: 20
+    allow_versions:
+      - 13
+  wolfi:
+    runtime: *runtime
+    request_timeout: 20

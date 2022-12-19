@@ -12,7 +12,6 @@ from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
 from vunnel import utils
-from vunnel.utils.common import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     Impact,
@@ -25,6 +24,7 @@ from vunnel.utils.oval_v2 import (
     VulnerabilityParser,
     iter_parse_vulnerability_file,
 )
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 
 namespace = "sles"
 

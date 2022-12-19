@@ -5,11 +5,11 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+import dacite
 import rfc3339
 import xxhash
 
 from vunnel import schema as schemaDef
-from vunnel import utils
 
 STATE_FILENAME = "state.json"
 
@@ -62,8 +62,14 @@ class WorkspaceState:
     @staticmethod
     def read(root: str) -> "WorkspaceState":
         metadata_path = os.path.join(root, STATE_FILENAME)
+
+        def datetime_hook(t):
+            return datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S%z")
+
         with open(metadata_path, "r", encoding="utf-8") as f:
-            return utils.dataclass_from_dict(WorkspaceState, json.load(f))
+            return dacite.from_dict(
+                WorkspaceState, json.load(f), config=dacite.Config(type_hooks={datetime.datetime: datetime_hook})
+            )
 
     def write(self, root: str) -> str:
         metadata_path = os.path.join(root, STATE_FILENAME)

@@ -18,8 +18,8 @@ from dateutil import parser as dt_parser
 from vunnel import utils
 from vunnel.providers import centos
 from vunnel.utils import rpm
-from vunnel.utils.common import vulnerability_element
 from vunnel.utils.oval_parser import Config
+from vunnel.utils.vulnerability import vulnerability_element
 
 namespace = "rhel"
 

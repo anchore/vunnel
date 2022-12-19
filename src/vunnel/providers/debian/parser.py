@@ -7,7 +7,7 @@ from collections import namedtuple
 
 import requests
 
-from vunnel.utils import common  # , nvd # TODO: replace nvd severity
+from vunnel.utils import vulnerability
 
 namespace = "debian"
 
@@ -329,7 +329,7 @@ class Parser:
 
                             if vid not in vuln_records[relno]:
                                 # create a new record
-                                vuln_records[relno][vid] = copy.deepcopy(common.vulnerability_element)
+                                vuln_records[relno][vid] = copy.deepcopy(vulnerability.vulnerability_element)
                                 vuln_record = vuln_records[relno][vid]
 
                                 # populate the static information about the new vuln record
@@ -367,7 +367,8 @@ class Parser:
 
                             if (
                                 sev
-                                and common.severity_order[sev] > common.severity_order[vuln_record["Vulnerability"]["Severity"]]
+                                and vulnerability.severity_order[sev]
+                                > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]
                             ):
                                 vuln_record["Vulnerability"]["Severity"] = sev
 

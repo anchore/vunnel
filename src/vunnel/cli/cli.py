@@ -19,7 +19,7 @@ def cli(ctx, verbose: bool, config_path: str):
     # TODO: config parsing
     ctx.obj = config.load(path=config_path)
 
-    log_level = ctx.obj.log.level.upper()
+    log_level = ctx.obj.log.level
     if verbose == 1:
         log_level = "DEBUG"
     elif verbose >= 2:

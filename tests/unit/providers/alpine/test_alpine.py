@@ -156,13 +156,14 @@ class TestAlpineProvider:
     @pytest.mark.parametrize(
         "content,expected",
         [
-            (
+            pytest.param(
                 '<html>\r\n<head><title>Index of /</title></head>\r\n<body>\r\n<h1>Index of /</h1><hr><pre><a href="../">../</a>\r\n<a href="v3.10/">v3.10/</a> 11-Jun-2020 20:17 -\r\n<a href="v3.11/">v3.11/</a> 11-Jun-2020 18:12 -\r\n</pre><hr></body>\r\n</html>\r\n',
                 ["v3.10/", "v3.11/"],
+                id="with-content",
             ),
-            ('<a href=".">.</a>', []),
-            ('<a href="../">../</a>', []),
-            ('<a href="foo/">foo/</a>', ["foo/"]),
+            pytest.param('<a href=".">.</a>', [], id="href-."),
+            pytest.param('<a href="../">../</a>', [], id="href-../"),
+            pytest.param('<a href="foo/">foo/</a>', ["foo/"], id="href-foo/"),
         ],
     )
     def test_secdb_landing_parser(self, content, expected):
@@ -173,13 +174,14 @@ class TestAlpineProvider:
     @pytest.mark.parametrize(
         "content,expected",
         [
-            (
+            pytest.param(
                 '<html>\r\n<head><title>Index of /</title></head>\r\n<body>\r\n<h1>Index of /</h1><hr><pre><a href="../">../</a>\r\n<a href="v3.10/">v3.10/</a> 11-Jun-2020 20:17 -\r\n<a href="v3.11/">v3.11/</a> 11-Jun-2020 18:12 -\r\n</pre><hr></body>\r\n</html>\r\n',
                 ["v3.10/", "v3.11/"],
+                id="with-content",
             ),
-            ('<a href=".">.</a>', []),
-            ('<a href=    "../"   >../</a>', []),
-            ('<a href=  "foo/" >foo/</a>', ["foo/"]),
+            pytest.param('<a href=".">.</a>', [], id="href-."),
+            pytest.param('<a href=    "../"   >../</a>', [], id="href-../+space"),
+            pytest.param('<a href=  "foo/" >foo/</a>', ["foo/"], id="href-foo/+space"),
         ],
     )
     def test_link_finder_regex(self, content, expected):

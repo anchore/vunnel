@@ -1,16 +1,6 @@
 import logging
 import random
 import time
-from dataclasses import fields
-
-
-def dataclass_from_dict(cls, d):
-    try:
-        fieldtypes = {f.name: f.type for f in fields(cls)}
-        return cls(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
-    except TypeError:
-        pass
-    return d
 
 
 def retry_with_backoff(retries=10, backoff_in_seconds=1):

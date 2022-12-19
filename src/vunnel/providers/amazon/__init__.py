@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any
 
 from vunnel import provider, schema
 
@@ -7,11 +8,14 @@ from .parser import Parser, amazon_security_advisories
 
 @dataclass
 class Config:
-    security_advisories: dict[str, str] = field(default_factory=lambda: amazon_security_advisories)
+    security_advisories: dict[Any, str] = field(default_factory=lambda: amazon_security_advisories)
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
     )
     request_timeout: int = 125
+
+    def __post_init__(self):
+        self.security_advisories = {str(k).lower(): str(v).lower() for k, v in self.security_advisories.items()}
 
 
 class Provider(provider.Provider):

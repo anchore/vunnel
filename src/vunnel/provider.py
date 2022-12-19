@@ -10,7 +10,7 @@ from typing import Optional
 from . import result, workspace
 
 
-class OnErrorPolicy(str, enum.Enum):
+class OnErrorAction(str, enum.Enum):
     FAIL = "fail"
     SKIP = "skip"
     RETRY = "retry"
@@ -38,7 +38,7 @@ class ResultStatePolicy(str, enum.Enum):
 
 @dataclass
 class OnErrorConfig:
-    policy: OnErrorPolicy = OnErrorPolicy.FAIL
+    action: OnErrorAction = OnErrorAction.FAIL
     retry_count: int = 3
     retry_delay: int = 5
     input: InputStatePolicy = InputStatePolicy.KEEP
@@ -46,8 +46,8 @@ class OnErrorConfig:
 
     def __post_init__(self):
 
-        if not isinstance(self.policy, OnErrorPolicy):
-            self.policy = OnErrorPolicy(self.policy)
+        if not isinstance(self.action, OnErrorAction):
+            self.action = OnErrorAction(self.action)
         if not isinstance(self.input, InputStatePolicy):
             self.input = InputStatePolicy(self.input)
         if not isinstance(self.results, ResultStatePolicy):
@@ -98,33 +98,35 @@ class Provider(abc.ABC):
             self.clear_input()
 
         self._create_workspace()
+        urls = None
         try:
             urls = self.update()
+            self._catalog_workspace(urls=urls)
         except Exception as e:  # pylint: disable=broad-except
-            self._on_error(e)
-        self._catalog_workspace(urls=urls)
+            urls = self._on_error(e)
 
     def _on_error(self, e: Exception):
         self.logger.error(f"error during update: {e}")
 
         # manage state
-        self._on_error_handle_state()
+        urls = self._on_error_handle_state()
 
         # manage event
-        if self.runtime_cfg.on_error.policy == OnErrorPolicy.FAIL:
+        if self.runtime_cfg.on_error.action == OnErrorAction.FAIL:
             raise e
 
-        if self.runtime_cfg.on_error.policy == OnErrorPolicy.SKIP:
-            return
+        if self.runtime_cfg.on_error.action == OnErrorAction.SKIP:
+            return urls
 
-        if self.runtime_cfg.on_error.policy == OnErrorPolicy.RETRY:
-            attempt = 2
+        if self.runtime_cfg.on_error.action == OnErrorAction.RETRY:
+            attempt = 1
             last_exception = e
             while attempt <= self.runtime_cfg.on_error.retry_count:
                 self.logger.info(f"retrying after error: {e}")
                 time.sleep(self.runtime_cfg.on_error.retry_delay)
                 try:
-                    self.update()
+                    urls = self.update()
+                    self._catalog_workspace(urls=urls)
                     last_exception = None
                     break
                 except Exception as ex:  # pylint: disable=broad-except
@@ -136,11 +138,20 @@ class Provider(abc.ABC):
             if last_exception:
                 raise last_exception
 
+        return urls
+
     def _on_error_handle_state(self):
         if self.runtime_cfg.on_error.input == InputStatePolicy.DELETE:
             self.clear_input()
         if self.runtime_cfg.on_error.results == ResultStatePolicy.DELETE:
             self.clear_results()
+
+        try:
+            current_state = workspace.WorkspaceState.read(root=self.root)
+            return current_state.urls
+        except FileNotFoundError:
+            pass
+        return []
 
     def _create_workspace(self):
         if not os.path.exists(self.input):
@@ -181,8 +192,11 @@ class Provider(abc.ABC):
 
     def _catalog_workspace(self, urls: list[str]):
         if not urls:
-            current_state = workspace.WorkspaceState.read(root=self.root)
-            urls = current_state.urls
+            try:
+                current_state = workspace.WorkspaceState.read(root=self.root)
+                urls = current_state.urls
+            except FileNotFoundError:
+                urls = []
 
         self.logger.info(msg="cataloging workspace state")
 
