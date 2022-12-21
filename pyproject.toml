@@ -23,8 +23,8 @@ ijson = "^3.1.4"
 xxhash = "^3.1.0"
 cvss = "^2.5"
 python-dateutil = "^2.8.2"
-dacite = "^1.6.0"
 defusedxml = "^0.7.1"
+dataclass-wizard = "^0.22.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
@@ -57,6 +57,7 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 100
+skip_gitignore = true
 
 [tool.pylint.messages_control]
 disable = [
@@ -121,11 +122,6 @@ exclude = '''(?x)(
     | ^tests/.*$     # any tests
 )'''
 
-[[tool.mypy.overrides]]
-# https://github.com/konradhalas/dacite/issues/133
-module = "dacite"
-implicit_reexport = true
-
 [tool.black]
 line-length = 130
 exclude = '''
@@ -141,6 +137,8 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | data
+    | backup
   )/
 )
 '''

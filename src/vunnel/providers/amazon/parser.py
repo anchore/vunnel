@@ -261,7 +261,13 @@ def map_to_vulnerability(version, alas, fixed_in):
     v.NamespaceName = namespace + ":" + version
     v.Description = ""
     v.Severity = severity_map.get(alas.sev, "Unknown")
-    v.Metadata = {"CVE": alas.cves if alas.cves else []}
+    v.Metadata = {
+        "CVE": [],
+    }
+
+    if alas.cves:
+        v.Metadata["CVE"] = [{"Name": cve} for cve in alas.cves]
+
     v.Link = alas.url
     for item in fixed_in:
         f = FixedIn()

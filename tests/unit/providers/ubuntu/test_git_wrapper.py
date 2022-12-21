@@ -129,7 +129,9 @@ class TestGitWrapper(unittest.TestCase):
         with open(self._git_change_log_file_, "r") as f:
             git_commit_log = f.read()
 
-        commits = GitWrapper._parse_log(git_commit_log)
+        wrapper = GitWrapper(self._workspace_, self._workspace_)
+
+        commits = wrapper._parse_log(git_commit_log)
 
         self.assertEqual(len(commits), len(self._commit_changes_))
 
@@ -143,9 +145,11 @@ class TestGitWrapper(unittest.TestCase):
         with open(self._git_change_log_file_, "r") as f:
             git_commit_log = f.read()
 
-        commits = GitWrapper._parse_log(git_commit_log)
+        wrapper = GitWrapper(self._workspace_, self._workspace_)
 
-        modified, removed = GitWrapper._compute_change_set(commits)
+        commits = wrapper._parse_log(git_commit_log)
+
+        modified, removed = wrapper._compute_change_set(commits)
 
         self.assertEqual(modified, self._overall_changes_["modified"])
         self.assertEqual(removed, self._overall_changes_["removed"])
@@ -156,7 +160,9 @@ class TestGitWrapper(unittest.TestCase):
         with open(self._git_rev_log_file_, "r") as f:
             git_rev_log = f.read()
 
-        revs = GitWrapper._parse_revision_history(self._rev_log_cve_, git_rev_log)
+        wrapper = GitWrapper(self._workspace_, self._workspace_)
+
+        revs = wrapper._parse_revision_history(self._rev_log_cve_, git_rev_log)
 
         self.assertEqual(len(revs), len(self._revisions_))
 

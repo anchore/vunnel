@@ -76,8 +76,8 @@ class Parser:
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
 
         if skip_if_exists and os.path.exists(self.secdb_dir_path):
-            self.logger.warning(
-                "skip_if_exists flag enabled and found source under {}. Skipping download".format(self.secdb_dir_path)
+            self.logger.debug(
+                "'skip_if_exists' flag enabled and found source under {}. Skipping download".format(self.secdb_dir_path)
             )
         else:
             links = []
@@ -85,7 +85,7 @@ class Parser:
                 if not os.path.exists(self.secdb_dir_path):
                     os.makedirs(self.secdb_dir_path, exist_ok=True)
 
-                self.logger.info("Downloading alpine secdb metadata from: {}".format(self.metadata_url))
+                self.logger.info("downloading alpine secdb metadata from: {}".format(self.metadata_url))
                 r = requests.get(self.metadata_url, timeout=self.download_timeout)
                 if r.status_code == 200:
                     try:
@@ -94,21 +94,21 @@ class Parser:
                         parser.feed(r.text)
                         links = parser.links
                     except:
-                        self.logger.warning("Unable to html parse secdb landing page content for links")
+                        self.logger.warning("unable to html parse secdb landing page content for links")
 
                     if not links:
-                        self.logger.debug("String parsing secdb landing page content for links")
+                        self.logger.debug("string parsing secdb landing page content for links")
                         links = re.findall(self._link_finder_regex_, r.text)
                 else:
                     r.raise_for_status()
             except Exception:
-                self.logger.exception("Error downloading or parsing alpine secdb metadata")
+                self.logger.exception("error downloading or parsing alpine secdb metadata")
                 raise
 
             if links:
-                self.logger.debug("Found release specific secdb links: {}".format(links))
+                self.logger.debug("found release specific secdb links: {}".format(links))
             else:
-                raise Exception("Unable to find release specific secdb links")
+                raise Exception("unable to find release specific secdb links")
 
             for link in links:
                 if link not in ignore_links:
@@ -130,7 +130,7 @@ class Parser:
                             else:
                                 r.raise_for_status()
                     except:
-                        self.logger.exception("Ignoring error processing secdb for {}".format(link))
+                        self.logger.exception("ignoring error processing secdb for {}".format(link))
 
     def _load(self):
         """
@@ -156,7 +156,7 @@ class Parser:
                         for dbtype in self._db_types:
                             secdb_yaml_path = os.path.join(self.secdb_dir_path, f, "{}.yaml".format(dbtype))
                             if os.path.exists(secdb_yaml_path):
-                                self.logger.debug("Loading secdb data from: {}".format(secdb_yaml_path))
+                                self.logger.debug("loading secdb data from: {}".format(secdb_yaml_path))
                                 with open(secdb_yaml_path, "r") as FH:
                                     yaml_data = yaml.safe_load(FH)
                                     dbtype_data_dict[dbtype] = yaml_data
@@ -180,7 +180,7 @@ class Parser:
         vuln_dict = {}
 
         for dbtype, data in dbtype_data_dict.items():
-            self.logger.debug("Normalizing {}:{}".format(release, dbtype))
+            self.logger.info("processing {}:{}".format(release, dbtype))
 
             if data["packages"]:
                 for el in data["packages"]:
@@ -251,6 +251,5 @@ class Parser:
         self._download(skip_if_exists)
 
         for release, dbtype_data_dict in self._load():
-            print(release)
             # normalize the loaded data
             yield release, self._normalize(release, dbtype_data_dict)

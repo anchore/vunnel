@@ -13,6 +13,7 @@ class Config:
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=lambda: {})
     enable_rev_history: bool = True
+    max_workers: int = 5
 
 
 class Provider(provider.Provider):
@@ -28,6 +29,7 @@ class Provider(provider.Provider):
             logger=self.logger,
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,
+            max_workers=self.config.max_workers,
         )
 
     @classmethod
@@ -41,7 +43,7 @@ class Provider(provider.Provider):
                 writer.write(
                     identifier=f"{namespace}-{vuln_id}".lower(),
                     schema=self.schema,
-                    payload=record,
+                    payload={"Vulnerability": record},
                 )
 
         return self.parser.urls

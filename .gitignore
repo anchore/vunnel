@@ -1,5 +1,6 @@
 .vunnel.yaml
-./data/
+/data/
+/backup/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
