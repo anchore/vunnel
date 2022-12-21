@@ -163,15 +163,19 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "dacite"
-version = "1.6.0"
-description = "Simple creation of data classes from dictionaries."
+name = "dataclass-wizard"
+version = "0.22.2"
+description = "Marshal dataclasses to/from JSON. Use field properties with initial values. Construct a dataclass schema with JSON input."
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = "*"
+
+[package.dependencies]
+typing-extensions = {version = ">=3.7.4.2", markers = "python_version <= \"3.9\""}
 
 [package.extras]
-dev = ["black", "coveralls", "mypy", "pylint", "pytest (>=5)", "pytest-cov"]
+timedelta = ["pytimeparse (>=1.1.7)"]
+yaml = ["PyYAML (>=5.3)"]
 
 [[package]]
 name = "defusedxml"
@@ -768,7 +772,7 @@ python-versions = "*"
 name = "typing-extensions"
 version = "4.4.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -825,7 +829,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "9dbaaf7d6f2b85ee34d97b6436d82019c58f6544196d1e5753dc66aca1b380b2"
+content-hash = "b68a490fc1b02dc6a29a1f3bc9fcaa7511e5cf157405782226bba819c622a236"
 
 [metadata.files]
 attrs = [
@@ -943,9 +947,9 @@ cvss = [
     {file = "cvss-2.5-py2.py3-none-any.whl", hash = "sha256:c1a48f8a6024642b986c51182a79d7aa2c05d1d75c57ad3496b9ab0451a8e89a"},
     {file = "cvss-2.5.tar.gz", hash = "sha256:63f648cffb2647498cf28646a7004fe0f48872c9ba7d8653bebd710409f8ba0e"},
 ]
-dacite = [
-    {file = "dacite-1.6.0-py3-none-any.whl", hash = "sha256:4331535f7aabb505c732fa4c3c094313fc0a1d5ea19907bf4726a7819a68b93f"},
-    {file = "dacite-1.6.0.tar.gz", hash = "sha256:d48125ed0a0352d3de9f493bf980038088f45f3f9d7498f090b50a847daaa6df"},
+dataclass-wizard = [
+    {file = "dataclass-wizard-0.22.2.tar.gz", hash = "sha256:211f842e5e9a8ace50ba891ef428cd78c82579fb98024f80f3e630ca8d1946f6"},
+    {file = "dataclass_wizard-0.22.2-py2.py3-none-any.whl", hash = "sha256:49be36ecc64bc5a1e9a35a6bad1d71d33b6b9b06877404931a17c6a3a6dfbb10"},
 ]
 defusedxml = [
     {file = "defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61"},

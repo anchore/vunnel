@@ -27,7 +27,7 @@ def cli(ctx, verbose: bool, config_path: str) -> None:  # type: ignore
 
     log_format = "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s"
     if ctx.obj.log.slim:
-        log_format = "%(log_color)s [%(levelname)s] %(message)s"
+        log_format = "%(log_color)s %(message)s"
 
     logging.config.dictConfig(
         {
@@ -129,7 +129,7 @@ def status_provider(cfg: config.Application, provider_names: str) -> None:
     ├── Inputs:  {len(state.input.files)} files
     │            {state.input.timestamp}
     └── Results: {len(state.results.files)} files
-                {state.results.timestamp}
+                 {state.results.timestamp}
 """
             print(tmpl)
         except FileNotFoundError:

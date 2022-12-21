@@ -2,10 +2,10 @@ import os
 from dataclasses import dataclass, field, fields
 from typing import Any
 
-import dacite
 import yaml
+from dataclass_wizard import fromdict
 
-from vunnel import provider, providers
+from vunnel import providers
 
 
 @dataclass
@@ -53,19 +53,9 @@ def load(path: str = ".vunnel.yaml") -> Application:  # noqa
     try:
         with open(path, encoding="utf-8") as f:
             app_object = yaml.safe_load(f.read())
-            cfg = dacite.from_dict(
+            cfg = fromdict(
                 Application,
                 app_object,
-                config=dacite.Config(
-                    cast=[
-                        provider.OnErrorAction,
-                        provider.InputStatePolicy,
-                        provider.ResultStatePolicy,
-                    ],
-                    # type_hooks={
-                    #
-                    # }
-                ),
             )
             if cfg is None:
                 raise FileNotFoundError("parsed empty config")

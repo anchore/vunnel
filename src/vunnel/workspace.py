@@ -5,9 +5,9 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-import dacite
 import rfc3339
 import xxhash
+from dataclass_wizard import fromdict
 
 from vunnel import schema as schemaDef
 
@@ -65,15 +65,9 @@ class WorkspaceState:
             return datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S%z")
 
         with open(metadata_path, "r", encoding="utf-8") as f:
-            return dacite.from_dict(
+            return fromdict(
                 WorkspaceState,
                 json.load(f),
-                config=dacite.Config(
-                    type_hooks={
-                        datetime.datetime: datetime_hook,
-                        datetime.datetime | None: datetime_hook,  # type: ignore
-                    },
-                ),
             )
 
     def write(self, root: str) -> str:

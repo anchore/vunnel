@@ -1,10 +1,12 @@
 # flake8: noqa
 
+import concurrent.futures
 import copy
 import enum
 import json
 import logging
 import os
+import queue
 import re
 import time
 from collections import namedtuple
@@ -446,7 +448,7 @@ def map_parsed(parsed_cve, logger=None):
     # Map keyed by namespace name
     vulns = {}
     if not (parsed_cve.get("Candidate") or parsed_cve.get("Name")):
-        logger.error("Could not find a Candidate or Name for parsed cve: {}".format(parsed_cve))
+        logger.error("could not find a Candidate or Name for parsed cve: {}".format(parsed_cve))
         return []
 
     for p in parsed_cve.get("patches"):
@@ -483,7 +485,7 @@ def map_parsed(parsed_cve, logger=None):
                 pkg.Version = p.get("version")
                 if pkg.Version is None:
                     logger.warn(
-                        'Found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(
+                        'found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(
                             r.Name, r.NamespaceName, pkg.Name
                         )
                     )
@@ -614,27 +616,21 @@ class Parser:
         logger: Optional[logging.Logger] = None,
         additional_versions: Optional[dict[str, str]] = None,
         enable_rev_history: bool = True,
+        max_workers: int = 5,
     ):
         self.vc_workspace = os.path.join(workspace, self._vc_working_dir)
         self.norm_workspace = os.path.join(workspace, self._normalized_cve_dir)
-        self.git_wrapper = GitWrapper(source=self._git_src, checkout_dest=self.vc_workspace)
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self.urls = [self._git_https]
 
+        self.git_wrapper = GitWrapper(source=self._git_src, checkout_dest=self.vc_workspace, logger=logger)
+
         if additional_versions:
             ubuntu_version_names.update(additional_versions)
         self.enable_rev_history = enable_rev_history
-
-    def _get_git_repo(self):
-        self.logger.debug("Checking for git repository")
-        if not GitWrapper.check(self.vc_workspace):
-            self.logger.info("Initializing git repository from {}".format(self._git_src))
-            self.git_wrapper.init_repo(force=True)
-        else:
-            self.logger.info("Found git repository and pulling updates")
-            self.git_wrapper.sync_with_upstream()
+        self._max_workers = max_workers
 
     def fetch(self, skip_if_exists=False):
         # setup merged workspace
@@ -642,7 +638,7 @@ class Parser:
             os.makedirs(self.norm_workspace)
 
         # sync git repo
-        self._get_git_repo()
+        self.git_wrapper.init_repo()
 
         # get the last processed revision if available and the current latest revision
         last_rev = self._load_last_processed_rev()
@@ -654,7 +650,7 @@ class Parser:
         self._save_last_processed_rev(current_rev)
 
         # load merged state and map it to vulnerabilities
-        self.logger.debug("Loading processed CVE content and transforming into to vulnerabilities")
+        self.logger.debug("loading processed CVE content and transforming into to vulnerabilities")
 
         for merged_cve in self._merged_cve_iterator():
             for v in map_parsed(merged_cve, self.logger):
@@ -662,43 +658,82 @@ class Parser:
 
     def _process_data(self, vc_dir, to_rev, from_rev=None):
         self.logger.debug(
-            "Processing data from git repository: {}, from revision: {}, to revision: {}".format(vc_dir, from_rev, to_rev)
+            "processing data from git repository: {}, from revision: {}, to revision: {}".format(vc_dir, from_rev, to_rev)
         )
 
         # gather a list of changed files if the last repo revision processed is available
         updated_paths = []
         deleted_ids = []
         if from_rev and to_rev and from_rev != to_rev:
-            self.logger.debug("Fetching changes to CVEs between revisions {} and {}".format(from_rev, to_rev))
+            self.logger.debug("fetching changes to CVEs between revisions {} and {}".format(from_rev, to_rev))
             modified, removed = self.git_wrapper.get_merged_change_set(from_rev=from_rev, to_rev=to_rev)
             updated_paths = list(modified.values()) if modified else []
             deleted_ids = list(removed.keys()) if removed else []
-            self.logger.debug("Detected {} CVE updates (add/modify/rename)".format(len(updated_paths)))
-            self.logger.debug("Detected {} CVE deletions".format(len(deleted_ids)))
+            self.logger.debug("detected {} CVE updates (add/modify/rename)".format(len(updated_paths)))
+            self.logger.debug("detected {} CVE deletions".format(len(deleted_ids)))
 
         # Load cves from active and retired directories and spool merged state to disk
-        for d in [self._active_cve_dir, self._retired_cve_dir]:
-            cve_dir = os.path.join(vc_dir, d)
-            for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(cve_dir)):
-                f = os.path.join(cve_dir, cve_id)
-                cve_rel_path = "/".join([d, cve_id])
+        # note: this is an IO bound operation, so a thread pool will suffice for now
+        # but look to a process pool if this becomes a bottleneck
+        proc_exception = None
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_workers) as executor:
 
-                if cve_rel_path in updated_paths:
-                    # merge cves updated since last revision or all if the last processed revision is not available
-                    self.logger.debug("CVE updated since last run, processing {}".format(cve_rel_path))
-                    merged_cve = self._merge_cve(cve_id, cve_rel_path, f, to_rev)
-                elif not self._merged_cve_exists(cve_id):
-                    # merge may be required since the saved state is not found
-                    self.logger.debug("CVE merged state not found, processing {}".format(cve_rel_path))
-                    merged_cve = self._merge_cve(cve_id, cve_rel_path, f, to_rev)
-                else:
-                    # merge may be required if new distros were added
-                    merged_cve = self._reprocess_merged_cve(cve_id, cve_rel_path)
+            def worker(fn, cve_id, *args, **kwargs):
+                try:
+                    return fn(cve_id, *args, **kwargs)
+                except:
+                    self.logger.exception("error processing {}".format(cve_id))
+                    raise
+
+            futures = []
+
+            for d in [self._active_cve_dir, self._retired_cve_dir]:
+                cve_dir = os.path.join(vc_dir, d)
+                for cve_id in sorted(filter(lambda x: _cve_filename_regex.match(x), os.listdir(cve_dir))):
+                    f = os.path.join(cve_dir, cve_id)
+                    cve_rel_path = "/".join([d, cve_id])
+
+                    future = executor.submit(worker, self._process_cve, cve_id, cve_rel_path, f, to_rev, updated_paths)
+                    futures.append(future)
+
+            # wait for all the futures to complete
+            done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
+
+            if len(done) > 0 and len(done) != len(futures):
+                future = done.pop()
+                proc_exception = future.exception()
+                if proc_exception:
+                    self.logger.error(f"one task failed with: {proc_exception} (shutting down)")
+
+                    # cancel any scheduled tasks
+                    for future in futures:
+                        future.cancel()
+
+        if proc_exception:
+            raise proc_exception
 
         # Remove merged state of deleted cves
         for cve_id in deleted_ids:
             self.logger.debug("{} is no longer relevant, deleting merged CVE state if any".format(cve_id))
             self._delete_merged_cve(cve_id)
+
+    def _process_cve(self, cve_id, cve_rel_path, f, to_rev, updated_paths):
+        if cve_rel_path in updated_paths:
+            # merge cves updated since last revision or all if the last processed revision is not available
+            # self.logger.debug("CVE updated since last run, processing {}".format(cve_rel_path))
+
+            return self._merge_cve(cve_id, cve_rel_path, f, to_rev)
+
+        if not self._merged_cve_exists(cve_id):
+            # merge may be required since the saved state is not found
+            # self.logger.debug("CVE merged state not found, processing {}".format(cve_rel_path))
+
+            return self._merge_cve(cve_id, cve_rel_path, f, to_rev)
+
+        # merge may be required if new distros were added
+        # self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
+
+        return self._reprocess_merged_cve(cve_id, cve_rel_path)
 
     def _load_last_processed_rev(self):
         last_processed_rev_path = os.path.join(self.norm_workspace, self._last_processed_rev_file_git)
@@ -752,11 +787,12 @@ class Parser:
         :param cve_rel_path:
         :return:
         """
+        self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
 
         saved_state = self._load_merged_cve(cve_id)
 
         if not saved_state:
-            self.logger.warn("No saved state fround for {}".format(cve_id))
+            self.logger.warning("no saved state fround for {}".format(cve_id))
             return
 
         # reprocess only ignored patches
@@ -764,11 +800,11 @@ class Parser:
 
         # Found patches that can be merged and or can't be resolved from the saved state, could be a new namespace
         if merged_patches or to_be_merged_map:
-            self.logger.debug("Found unresolved patches in previously merged state, could be a new distro")
+            self.logger.debug("found unresolved patches in previously merged state, could be a new distro")
             # Process revision history for eol-ed packages that need to be merged
             if to_be_merged_map:
                 if self.enable_rev_history:
-                    self.logger.debug("Attempting to resolve patches using reivsion history for {}".format(cve_rel_path))
+                    self.logger.debug("attempting to resolve patches using revision history for {}".format(cve_rel_path))
                     (resolved_patches, pending_dpt_list, cve_latest_rev,) = self._resolve_patches_using_history(
                         cve_id=cve_id,
                         cve_rel_path=cve_rel_path,
@@ -778,7 +814,7 @@ class Parser:
                     merged_patches.extend(resolved_patches)
                     if pending_dpt_list:
                         self.logger.debug(
-                            "Exhausted all revisions for {} but could not resolve patches: {}".format(
+                            "exhausted all revisions for {} but could not resolve patches: {}".format(
                                 cve_rel_path,
                                 [to_be_merged_map[x] for x in pending_dpt_list],
                             )
@@ -791,7 +827,7 @@ class Parser:
                     if cve_latest_rev:
                         saved_state[self._last_processed_rev_key_git] = cve_latest_rev
                 else:
-                    self.logger.debug("Revision history processing is disabled. Merging unresolved patches as they are")
+                    self.logger.debug("revision history processing is disabled. Merging unresolved patches as they are")
                     merged_patches.extend(to_be_merged_map.values())
 
             # pulling this outside of the revision history block for fixing ENTERPRISE-195. saved state should be updated if there are mergeable or to-be-merged packages
@@ -847,7 +883,7 @@ class Parser:
         :param repo_current_rev:
         :return:
         """
-        self.logger.debug("Parsing cve file: {}".format(cve_abs_path))
+        self.logger.debug("merging CVE {}".format(cve_rel_path))
 
         with open(cve_abs_path) as cve_file:
             raw_content = cve_file.readlines()
@@ -875,7 +911,7 @@ class Parser:
                 merged_patches.extend(resolved_patches)
                 if pending_dpt_list:
                     self.logger.debug(
-                        "Exhausted all revisions for {} but could not resolve patches: {}".format(
+                        "exhausted all revisions for {} but could not resolve patches: {}".format(
                             cve_rel_path,
                             [to_be_merged_map[x] for x in pending_dpt_list],
                         )
@@ -887,7 +923,7 @@ class Parser:
 
             else:  # merge with saved state if any
                 if saved_cve:
-                    self.logger.debug("Revision history processing is disabled. Resolving patches using saved cve state")
+                    self.logger.debug("revision history processing is disabled. Resolving patches using saved cve state")
                     rev_matched_map = filter_merged_patches(saved_cve, list(to_be_merged_map.keys()))
                     # merge resolved and unresolved patches
                     merged_patches.extend(list(rev_matched_map.values()))
@@ -896,7 +932,7 @@ class Parser:
                     rev_matched_map.clear()
                 else:
                     self.logger.debug(
-                        "Revision history processing is disabled and no saved state found. Skipping patch resolution"
+                        "revision history processing is disabled and no saved state found. Skipping patch resolution"
                     )
                     merged_patches.extend(list(to_be_merged_map.values()))
 
@@ -921,7 +957,7 @@ class Parser:
         saved_state=None,
     ):
         t = time.time()
-        self.logger.debug("Processing cve revision history for: {}".format(cve_rel_path))
+        self.logger.debug("processing CVE revision history for: {}".format(cve_rel_path))
 
         # setup metrics
         metrics = {
@@ -985,11 +1021,11 @@ class Parser:
                 del rev_raw_content[:]
         else:
             # no revs for processing
-            self.logger.debug("No previous revisions found")
+            self.logger.debug("no previous revisions found")
 
         # then merge with saved state if there are things that still need to be merged. This is a one time thing to short circuit fetching revs
         if pending_dpt_list and saved_state:
-            self.logger.debug("Resolving patches using saved cve state before processing any more revisions")
+            self.logger.debug("resolving patches using saved cve state before processing any more revisions")
             rev_matched_map = filter_merged_patches(saved_state, pending_dpt_list)
             resolved_patches.extend(list(rev_matched_map.values()))
             pending_dpt_list = [x for x in pending_dpt_list if x not in rev_matched_map]
@@ -1002,7 +1038,7 @@ class Parser:
             # So continue with process revision: fetch content, parse, filter patches that need to be merged and so on
             if pending_dpt_list:
                 # fetch the entire revision history for this file, needed for computing the merge
-                self.logger.debug("Unresolved patches found even after merge with saved state, walking entire revision history")
+                self.logger.debug("unresolved patches found even after merge with saved state, walking entire revision history")
                 all_revs = self.git_wrapper.get_revision_history(cve_id, cve_rel_path, None)
                 before_revs = all_revs[len(since_revs) :] if since_revs else all_revs
 
@@ -1042,7 +1078,7 @@ class Parser:
                 self.logger.debug("Merge with saved state resolved all relevant patches")
 
         metrics["time_elapsed"] = int((time.time() - t) * 1000) / float(1000)
-        self.logger.debug("Metrics from processing revision history for {}: {}".format(cve_rel_path, metrics))
+        self.logger.trace("metrics from processing revision history for {}: {}".format(cve_rel_path, metrics))
 
         return resolved_patches, pending_dpt_list, cve_latest_rev
 
