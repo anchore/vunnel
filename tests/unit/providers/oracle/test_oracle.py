@@ -3,6 +3,7 @@ import shutil
 import pytest
 from pytest_unordered import unordered
 
+from vunnel import workspace
 from vunnel.providers.oracle import Config, Provider, parser
 
 
@@ -206,7 +207,7 @@ from vunnel.providers.oracle import Config, Provider, parser
     ],
 )
 def test_parse(tmpdir, helpers, input_file, expected):
-    subject = parser.Parser(workspace=tmpdir)
+    subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
 
     mock_data_path = helpers.local_dir(input_file)
 
@@ -348,7 +349,7 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests):
-    workspace = helpers.provider_workspace(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

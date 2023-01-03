@@ -40,41 +40,55 @@ repos:
       stages:
         - push
 
+  # note: this seems to work more reliably in a workflow with the pre-commit hook directly than managed with poetry
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.3.1
+    hooks:
+    - id: pyupgrade
+
   # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
   - repo: local
     hooks:
+
+      # note: this is used in lieu of autopep8 and yapf
       - id: system
         name: black
         entry: poetry run black src tests
         pass_filenames: false
         language: system
 
-  - repo: local
-    hooks:
+      - id: system
+        name: unimport
+        entry: poetry run unimport -c pyproject.toml
+        pass_filenames: false
+        language: system
+
+      - id: system
+        name: autoflake
+        entry: poetry run autoflake --in-place -r src/vunnel
+        pass_filenames: false
+        language: system
+
       - id: system
         name: isort
         entry: poetry run isort tests src --filter-files
         pass_filenames: false
         language: system
         files: \.py$
-  - repo: local
-    hooks:
+
       - id: system
         name: bandit
         entry: poetry run bandit -r -v -c 'pyproject.toml' src/vunnel
         pass_filenames: false
         language: system
 
-  - repo: local
-    hooks:
+      # note: flake8 is a metalinter combinding Pyflakes, pycodestyle, and mccabe
       - id: system
         name: flake8
         entry: poetry run flake8 src/vunnel
         pass_filenames: false
         language: system
 
-  - repo: local
-    hooks:
       - id: system
         name: mypy
         entry: poetry run mypy --config-file ./pyproject.toml src/vunnel

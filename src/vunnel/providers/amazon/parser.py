@@ -7,6 +7,7 @@ from html.parser import HTMLParser
 import defusedxml.ElementTree as ET
 import requests
 
+from vunnel import utils
 from vunnel.utils import rpm
 
 namespace = "amzn"
@@ -44,6 +45,7 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
+    @utils.retry_with_backoff()
     def _download_rss(self, rss_url, rss_file, skip_if_exists=False):
         if skip_if_exists and os.path.exists(rss_file):
             self.logger.debug(f"'skip_if_exists' flag enabled and found {rss_file}. Skipping download")
@@ -92,10 +94,11 @@ class Parser:
 
         return alas_summaries
 
+    @utils.retry_with_backoff()
     def _get_alas_html(self, alas_url, alas_file, skip_if_exists=True):
         if skip_if_exists and os.path.exists(alas_file):  # read alas from disk if its available
             self.logger.debug(f"loading ALAS from {alas_file}")
-            with open(alas_file, "r", encoding="utf-8") as fp:
+            with open(alas_file, encoding="utf-8") as fp:
                 content = fp.read()
             return content
 
@@ -128,8 +131,8 @@ class Parser:
 
     def get(self, skip_if_exists=False):
         for version, url in self.version_url_map.items():
-            rss_file = os.path.join(self.workspace, self._rss_file_name_.format(version))
-            html_dir = os.path.join(self.workspace, self._html_dir_name_.format(version))
+            rss_file = os.path.join(self.workspace.input_path, self._rss_file_name_.format(version))
+            html_dir = os.path.join(self.workspace.input_path, self._html_dir_name_.format(version))
 
             self._download_rss(url, rss_file, skip_if_exists)
 
@@ -162,7 +165,7 @@ class JsonifierMixin:
     def json(self):
         jsonified = {}
         for k, v in vars(self).items():
-            if not k[0] == "_":
+            if k[0] != "_":
                 if isinstance(v, (list, set)):
                     jsonified[k] = [x.json() if hasattr(x, "json") and callable(x.json) else x for x in v]
                 elif isinstance(v, dict):

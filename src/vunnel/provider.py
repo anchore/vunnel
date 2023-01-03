@@ -1,8 +1,6 @@
 import abc
 import enum
 import logging
-import os
-import shutil
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -57,8 +55,8 @@ class OnErrorConfig:
 @dataclass
 class RuntimeConfig:
     on_error: OnErrorConfig = field(default_factory=OnErrorConfig)
-    existing_input: InputStatePolicy = InputStatePolicy.DELETE
-    existing_results: ResultStatePolicy = ResultStatePolicy.DELETE_BEFORE_WRITE
+    existing_input: InputStatePolicy = InputStatePolicy.KEEP
+    existing_results: ResultStatePolicy = ResultStatePolicy.KEEP
 
     def __post_init__(self) -> None:
 
@@ -73,50 +71,59 @@ class RuntimeConfig:
 
 
 class Provider(abc.ABC):
-    def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):
-        self._root = root
+    def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):  # noqa: B008
         self.logger = logging.getLogger(self.name())
+        self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
         self.urls: list[str] = []
         self.runtime_cfg = runtime_cfg
 
     @classmethod
     @abc.abstractmethod
     def name(cls) -> str:
+        # note: wrapping [abstractmethod -> classmethod -> property] is no longer supported in
+        # python 3.11 (deprecated due to undefined behavior) for this reason a simple classmethod
+        # is used instead of a property
         raise NotImplementedError("'name()' must be implemented")
 
     @abc.abstractmethod
-    def update(self) -> list[str]:
+    def update(self) -> tuple[list[str], int]:
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
+        raise NotImplementedError("'update()' must be implemented")
+
+    def _update(self) -> None:
+        urls, count = self.update()
+        if count > 0:
+            self.workspace.record_state(urls=urls)
+        else:
+            self.logger.debug("skipping recording of workspace state (no new results found)")
 
     def populate(self) -> None:
-        self.logger.debug(f"using {self.root} as workspace root")
+        self.logger.debug(f"using {self.workspace.path!r} as workspace")
 
         if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:
-            self.clear_results()
+            self.workspace.clear_results()
 
         if self.runtime_cfg.existing_input == InputStatePolicy.DELETE:
-            self.clear_input()
+            self.workspace.clear_input()
 
-        self._create_workspace()
-        urls = None
+        self.workspace.create()
         try:
-            urls = self.update()
-            self._catalog_workspace(urls=urls)
+            self._update()
         except Exception as e:  # noqa
-            urls = self._on_error(e)
+            self._on_error(e)
 
-    def _on_error(self, e: Exception) -> list[str]:
+    def _on_error(self, e: Exception) -> None:
         self.logger.error(f"error during update: {e}")
 
         # manage state
-        urls = self._on_error_handle_state()
+        self._on_error_handle_state()
 
         # manage event
         if self.runtime_cfg.on_error.action == OnErrorAction.FAIL:
             raise e
 
         if self.runtime_cfg.on_error.action == OnErrorAction.SKIP:
-            return urls
+            return
 
         if self.runtime_cfg.on_error.action == OnErrorAction.RETRY:
             attempt = 1
@@ -125,8 +132,7 @@ class Provider(abc.ABC):
                 self.logger.info(f"retrying after error: {e}")
                 time.sleep(self.runtime_cfg.on_error.retry_delay)
                 try:
-                    urls = self.update()
-                    self._catalog_workspace(urls=urls)
+                    self._update()
                     last_exception = None
                     break
                 except Exception as ex:  # noqa
@@ -138,102 +144,24 @@ class Provider(abc.ABC):
             if last_exception:
                 raise last_exception
 
-        return urls
-
-    def _on_error_handle_state(self) -> list[str]:
+    def _on_error_handle_state(self) -> None:
         if self.runtime_cfg.on_error.input == InputStatePolicy.DELETE:
-            self.clear_input()
+            self.workspace.clear_input()
         if self.runtime_cfg.on_error.results == ResultStatePolicy.DELETE:
-            self.clear_results()
-
-        try:
-            current_state = workspace.WorkspaceState.read(root=self.root)
-            return current_state.urls
-        except FileNotFoundError:
-            pass
-        return []
-
-    def _create_workspace(self) -> None:
-        if not os.path.exists(self.input):
-            self.logger.debug(f"creating workspace for {self.name()!r}")
-            os.makedirs(self.input)
-        else:
-            self.logger.debug(f"using existing workspace for {self.name()!r}")
-        if not os.path.exists(self.results):
-            os.makedirs(self.results)
-
-    def clear(self) -> None:
-        self.clear_input()
-        self.clear_results()
-
-    def clear_results(self) -> None:
-        if os.path.exists(self.results):
-            self.logger.debug("clearing existing results")
-            shutil.rmtree(self.results)
-
-        try:
-            current_state = workspace.WorkspaceState.read(root=self.root)
-            current_state.results = workspace.FileListing(files=[])
-            current_state.write(self.root)
-        except FileNotFoundError:
-            pass
-
-    def clear_input(self) -> None:
-        if os.path.exists(self.input):
-            self.logger.debug("clearing existing workspace")
-            shutil.rmtree(self.input)
-
-        try:
-            current_state = workspace.WorkspaceState.read(root=self.root)
-            current_state.input = workspace.FileListing(files=[])
-            current_state.write(self.root)
-        except FileNotFoundError:
-            pass
-
-    def _catalog_workspace(self, urls: list[str]) -> None:
-        if not urls:
-            try:
-                current_state = workspace.WorkspaceState.read(root=self.root)
-                urls = current_state.urls
-            except FileNotFoundError:
-                urls = []
-
-        self.logger.info(msg="cataloging workspace state")
-
-        state = workspace.WorkspaceState.from_fs(provider=self.name(), urls=urls, input=self.input, results=self.results)
-
-        metadata_path = state.write(self.root)
-
-        self.logger.debug(msg=f"wrote workspace state to {metadata_path}")
-
-    def current_state(self) -> workspace.WorkspaceState | None:
-        return workspace.WorkspaceState.read(self.root)
-
-    @property
-    def root(self) -> str:
-        return f"{self._root}/{self.name()}"
-
-    @property
-    def input(self) -> str:
-        return f"{self.root}/input"
-
-    @property
-    def results(self) -> str:
-        return f"{self.root}/results"
+            self.workspace.clear_results()
 
     def __repr__(self) -> str:
         extra = []
         prefix = ""
-        if getattr(self, "config"):
+        if getattr(self, "config", None):
             extra.append(f"config={self.config}")  # type: ignore
         if extra:
             prefix = ", "
-        return f"Provider(name={self.name()}, input={self.input}{prefix}{', '.join(extra)})"
+        return f"Provider(name={self.name()}, input={self.workspace.input_path}{prefix}{', '.join(extra)})"
 
     def results_writer(self, **kwargs: Any) -> result.Writer:
         return result.Writer(
-            prefix=self.name(),
-            result_dir=self.results,
+            workspace=self.workspace,
             logger=self.logger,
             clear_results_before_writing=self.runtime_cfg.existing_results == ResultStatePolicy.DELETE_BEFORE_WRITE,
             **kwargs,

@@ -3,6 +3,7 @@ import shutil
 
 import pytest
 
+from vunnel import workspace
 from vunnel.providers.alpine import Config, Provider, parser
 from vunnel.providers.alpine.parser import Parser, SecdbLandingParser
 
@@ -113,7 +114,7 @@ class TestAlpineProvider:
         assert bool(Parser._release_regex_.match(release)) == expected
 
     def test_load(self, mock_raw_data, tmpdir):
-        provider = Parser(workspace=tmpdir)
+        provider = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         a = os.path.join(provider.secdb_dir_path, "v0.0")
         os.makedirs(a, exist_ok=True)
         b = os.path.join(a, "main.yaml")
@@ -132,7 +133,7 @@ class TestAlpineProvider:
         assert counter == 1
 
     def test_normalize(self, mock_parsed_data, tmpdir):
-        provider = Parser(workspace=tmpdir)
+        provider = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         release = mock_parsed_data[0]
         dbtype_data_dict = mock_parsed_data[1]
 
@@ -197,7 +198,7 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests):
-    workspace = helpers.provider_workspace(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

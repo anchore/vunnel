@@ -52,7 +52,7 @@ class Parser:
     logger = logging.getLogger("sles-parser")
 
     def __init__(self, workspace, allow_versions, download_timeout=125, logger=None):
-        self.oval_dir_path = os.path.join(workspace, self.__source_dir_path__, self.__oval_dir_path__)
+        self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
         self.download_timeout = download_timeout
         self.urls = []

@@ -92,20 +92,21 @@ def run_provider(cfg: config.Application, provider_name: str) -> None:
 
 
 @cli.command(name="clear", help="clear provider state")
-@click.argument("provider_name", metavar="PROVIDER")
+@click.argument("provider_names", metavar="PROVIDER", nargs=-1)
 @click.option("--input", "-i", "_input", is_flag=True, help="clear only the input state")
 @click.option("--result", "-r", is_flag=True, help="clear only the result state")
 @click.pass_obj
-def clear_provider(cfg: config.Application, provider_name: str, _input: bool, result: bool) -> None:
-    logging.info(f"clearing {provider_name} provider state")
+def clear_provider(cfg: config.Application, provider_names: str, _input: bool, result: bool) -> None:
+    for provider_name in provider_names:
+        logging.info(f"clearing {provider_name} provider state")
 
-    provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
-    if not _input and not result:
-        provider.clear()
-    elif _input:
-        provider.clear_input()
-    elif result:
-        provider.clear_results()
+        provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
+        if not _input and not result:
+            provider.workspace.clear()
+        elif _input:
+            provider.workspace.clear_input()
+        elif result:
+            provider.workspace.clear_results()
 
 
 @cli.command(name="status", help="describe current provider state")
@@ -121,15 +122,13 @@ def status_provider(cfg: config.Application, provider_names: str) -> None:
     for name in selected_names:
         provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
         try:
-            state = provider.current_state()
+            state = provider.workspace.state()
             if not state:
                 raise FileNotFoundError("no state found")
 
             tmpl = f""" • {name!r} provider
-    ├── Inputs:  {len(state.input.files)} files
-    │            {state.input.timestamp}
-    └── Results: {len(state.results.files)} files
-                 {state.results.timestamp}
+    └── {len(list(state.result_files()))} files
+        {state.timestamp}
 """
             print(tmpl)
         except FileNotFoundError:

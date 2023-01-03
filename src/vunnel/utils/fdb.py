@@ -28,7 +28,7 @@ class FileBasedDatabase:
         how a `.get()` would work in a dictionary.
         """
         if not name.endswith(self.serializer.ext):
-            name = "%s%s" % (name, self.serializer.ext)
+            name = "{}{}".format(name, self.serializer.ext)
         if self.files == []:
             self._update_file_cache()
         if name in self.files:
@@ -42,7 +42,7 @@ class FileBasedDatabase:
         the file exists or not, the serializer should be able to write to it.
         """
         if not name.endswith(self.serializer.ext):
-            name = "%s%s" % (name, self.serializer.ext)
+            name = "{}{}".format(name, self.serializer.ext)
         path = os.path.join(self.directory_path, name)
         return self.serializer(path)
 
@@ -87,7 +87,7 @@ class JSONSerializer:
         self.data = {}
 
     def load(self):
-        with open(self.path, "r") as fp:
+        with open(self.path) as fp:
             self.data = json.load(fp)
         return self.data
 
@@ -112,7 +112,7 @@ class RawSerializer:
         self.data = None
 
     def load(self):
-        with open(self.path, "r") as fp:
+        with open(self.path) as fp:
             self.data = fp.read()
         return self.data
 

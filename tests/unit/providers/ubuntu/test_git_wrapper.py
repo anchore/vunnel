@@ -126,7 +126,7 @@ class TestGitWrapper(unittest.TestCase):
         shutil.rmtree(cls._workspace_)
 
     def test_parse_log(self):
-        with open(self._git_change_log_file_, "r") as f:
+        with open(self._git_change_log_file_) as f:
             git_commit_log = f.read()
 
         wrapper = GitWrapper(self._workspace_, self._workspace_)
@@ -142,7 +142,7 @@ class TestGitWrapper(unittest.TestCase):
             print(got)
 
     def test_compute_change_set(self):
-        with open(self._git_change_log_file_, "r") as f:
+        with open(self._git_change_log_file_) as f:
             git_commit_log = f.read()
 
         wrapper = GitWrapper(self._workspace_, self._workspace_)
@@ -157,7 +157,7 @@ class TestGitWrapper(unittest.TestCase):
         print("Removed: {}".format(removed))
 
     def test_parse_revision_history(self):
-        with open(self._git_rev_log_file_, "r") as f:
+        with open(self._git_rev_log_file_) as f:
             git_rev_log = f.read()
 
         wrapper = GitWrapper(self._workspace_, self._workspace_)
@@ -173,7 +173,7 @@ class TestGitWrapper(unittest.TestCase):
             print(got)
 
     def test_error_parse_revision_history(self):
-        with open(self._git_rev_log_file_, "r") as f:
+        with open(self._git_rev_log_file_) as f:
             git_rev_log = f.read()
 
         lines = [item.strip() for item in git_rev_log.splitlines() if item.strip()]

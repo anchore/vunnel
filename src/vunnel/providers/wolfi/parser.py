@@ -19,9 +19,8 @@ class Parser:
     _db_types = ["os"]
 
     def __init__(self, workspace, download_timeout=125, url=None, logger=None):
-        self.workspace = workspace
         self.download_timeout = download_timeout
-        self.secdb_dir_path = os.path.join(workspace, self._secdb_dir_)
+        self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/") if url else Parser._url_
         self.urls = []
 
@@ -81,7 +80,7 @@ class Parser:
 
                     if os.path.exists(s):
                         self.logger.debug(f"loading secdb data from: {s}")
-                        with open(s, "r", encoding="utf-8") as fh:
+                        with open(s, encoding="utf-8") as fh:
                             dbtype_data_dict[dbtype] = json.load(fh)
 
                 yield "rolling", dbtype_data_dict
@@ -157,11 +156,12 @@ class Parser:
                             vuln_record = vuln_dict[vid]
 
                         # SET UP fixedins
-                        fixed_el = {}
-                        fixed_el["VersionFormat"] = "apk"
-                        fixed_el["NamespaceName"] = namespace + ":" + str(release)
-                        fixed_el["Name"] = pkg
-                        fixed_el["Version"] = pkg_version
+                        fixed_el = {
+                            "Name": pkg,
+                            "Version": pkg_version,
+                            "VersionFormat": "apk",
+                            "NamespaceName": namespace + ":" + str(release),
+                        }
 
                         vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
