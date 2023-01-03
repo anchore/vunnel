@@ -3,6 +3,7 @@ import shutil
 
 import pytest
 
+from vunnel import workspace
 from vunnel.providers.rhel import Config, Provider, parser
 from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
 
@@ -206,7 +207,7 @@ class TestParser:
         }
 
     def test_parse_affected_releases_0(self, mock_cve, tmpdir):
-        driver = Parser(workspace=tmpdir)
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = dict()
 
         results = driver._parse_affected_release(mock_cve.get("name"), mock_cve)
@@ -430,7 +431,7 @@ class TestParser:
         ],
     )
     def test_parse_affected_releases(self, tmpdir, affected_releases, fixed_ins, mock_rhsa_dict_2):
-        driver = Parser(workspace=tmpdir)
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = mock_rhsa_dict_2
 
         results = driver._parse_affected_release(affected_releases.get("name"), affected_releases)
@@ -440,7 +441,7 @@ class TestParser:
         assert results == fixed_ins
 
     def test_parse_package_state(self, tmpdir, mock_cve):
-        driver = Parser(workspace=tmpdir)
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         results = driver._parse_package_state(mock_cve.get("name"), mock_cve)
 
         assert results and isinstance(results, list) and len(results) == 1
@@ -451,7 +452,7 @@ class TestParser:
         assert fixed_in.advisory.wont_fix is True
 
     def test_parse_cve(self, tmpdir, mock_cve):
-        driver = Parser(workspace=tmpdir)
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = dict()
 
         results = driver._parse_cve(mock_cve.get("name"), mock_cve)
@@ -462,7 +463,7 @@ class TestParser:
         assert all(payload.get("Severity") == "Low" for payload in payloads)
 
     def test_parse_cve_partial_fix(self, tmpdir, mock_cve_partial_fix):
-        driver = Parser(workspace=tmpdir)
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = dict()
 
         results = driver._parse_cve(mock_cve_partial_fix.get("name"), mock_cve_partial_fix)
@@ -484,7 +485,7 @@ class TestParser:
         ],
     )
     def test_fetch_rhsa_fix_version(self, tmpdir, mock_rhsa_dict, test_id, test_p, test_pkg, expected):
-        driver = Parser(workspace=tmpdir)
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = mock_rhsa_dict
 
         assert driver._fetch_rhsa_fix_version(test_id, test_p, test_pkg) == expected
@@ -654,14 +655,18 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
-    workspace = helpers.provider_workspace(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 
-    def mock_sync_cves(self, *args, **kwargs):
+    def mock_sync_cves(*args, **kwargs):
         return os.path.join(provider.parser.cve_dir_path, provider.parser.__full_dir_name__)
 
+    def mock_init_rhsa_data(*args, **kwargs):
+        return {}
+
     monkeypatch.setattr(provider.parser, "_sync_cves", mock_sync_cves)
+    monkeypatch.setattr(provider.parser, "_init_rhsa_data", mock_init_rhsa_data)
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
     shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)

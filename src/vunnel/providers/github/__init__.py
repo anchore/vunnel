@@ -4,16 +4,14 @@ from dataclasses import dataclass, field
 
 from vunnel import provider, schema
 
-from .parser import Parser, namespace
+from .parser import Parser
 
 
 @dataclass
 class Config:
     token: str = "env:GITHUB_TOKEN"
     api_url: str = "https://api.github.com/graphql"
-    runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
-    )
+    runtime: provider.RuntimeConfig = field(default_factory=provider.RuntimeConfig)
     request_timeout: int = 125
 
     def __post_init__(self) -> None:
@@ -38,7 +36,7 @@ class Provider(provider.Provider):
 
         self.schema = schema.GithubSecurityAdvisorySchema()
         self.parser = Parser(
-            workspace=self.input,
+            workspace=self.workspace,
             token=config.token,
             api_url=config.api_url,
             download_timeout=config.request_timeout,
@@ -49,8 +47,8 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "github"
 
-    def update(self) -> list[str]:
-
+    def update(self) -> tuple[list[str], int]:
+        namespace = "github"
         with self.results_writer() as writer:
             for advisory in self.parser.get():
                 all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
@@ -63,10 +61,14 @@ class Provider(provider.Provider):
 
                     vuln_id = advisory["ghsaId"]
 
+                    namespace = namespace.lower()
+                    ecosystem = ecosystem.lower()
+                    vuln_id = vuln_id.lower()
+
                     writer.write(
-                        identifier=f"{namespace}-{ecosystem}-{vuln_id}".lower(),
+                        identifier=os.path.join(f"{namespace}:{ecosystem}", vuln_id),
                         schema=self.schema,
                         payload={"Vulnerability": {}, "Advisory": dict(advisory)},
                     )
 
-        return [self.parser.api_url]
+        return [self.parser.api_url], len(writer)

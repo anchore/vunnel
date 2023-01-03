@@ -2,13 +2,14 @@ import shutil
 
 import pytest
 
+from vunnel import workspace
 from vunnel.providers.amazon import Config, Provider, parser
 
 
 class TestParser:
     def test_rss_parsing(self, tmpdir, helpers):
         mock_data_path = helpers.local_dir("test-fixtures/mock_rss")
-        p = parser.Parser(workspace=tmpdir)
+        p = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         summaries = p._parse_rss(mock_data_path)
 
         assert isinstance(summaries, list)
@@ -45,7 +46,7 @@ class TestParser:
         ]
 
         mock_data_path = helpers.local_dir("test-fixtures/mock_html")
-        with open(mock_data_path, "r") as fp:
+        with open(mock_data_path) as fp:
             html_content = fp.read()
 
         p = parser.PackagesHTMLParser()
@@ -82,7 +83,7 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests):
-    workspace = helpers.provider_workspace(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

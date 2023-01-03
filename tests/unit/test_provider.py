@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -26,16 +27,10 @@ class DummyProvider(provider.Provider):
 
     @property
     def input_file(self):
-        return f"{self.input}/dummy-input-1.json"
-
-    def assert_input_file(self, exists: bool = True):
-        assert_path(self.input_file, exists)
-
-    def assert_result_file(self, exists: bool = True):
-        assert_path(os.path.join(self.results, "dummy-00000.json"), exists)
+        return f"{self.workspace.input_path}/dummy-input-1.json"
 
     def assert_state_file(self, exists: bool = True):
-        assert_path(os.path.join(self.root, "state.json"), exists)
+        assert_path(os.path.join(self.workspace.path, "state.json"), exists)
 
     def update(self):
         self.count += 1
@@ -55,19 +50,7 @@ class DummyProvider(provider.Provider):
                     payload={"Vulnerability": {"dummy": "result"}},
                 )
 
-        return ["http://localhost:8000/dummy-input-1.json"]
-
-
-@pytest.fixture
-def dummy_file():
-    def apply(d: str):
-        prefix = str(uuid.uuid4())[:8]
-        path = f"{d}/random-{prefix}.json"
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"prefix": prefix}, f)
-        return path
-
-    return apply
+        return ["http://localhost:8000/dummy-input-1.json"], 1
 
 
 @pytest.fixture
@@ -84,84 +67,31 @@ def dummy_provider(tmpdir):
 
             # check that the input and results are populated
             assert os.path.exists(subject.input_file)
-            existing_results = os.listdir(subject.results)
+            existing_results = os.listdir(subject.workspace.results_path)
             assert len(existing_results) > 0
         else:
-            subject._create_workspace()
+            subject.workspace.create()
 
         return subject
 
     return apply
 
 
-def test_provider_clear_input(dummy_provider):
-    subject = dummy_provider()
-    original_state = workspace.WorkspaceState.read(root=subject.root)
-
-    # clear the input
-    subject.clear_input()
-
-    subject.assert_input_file(exists=False)
-    subject.assert_result_file(exists=True)
-
-    # ensure the URLs are still populated
-    new_state = workspace.WorkspaceState.read(root=subject.root)
-    assert original_state.urls == new_state.urls
-    assert len(original_state.urls) > 0
-
-    # ensure the results file listing is cleared
-    assert len(new_state.input.files) == 0
-
-
-def test_provider_clear_results(dummy_provider):
-    subject = dummy_provider()
-    original_state = workspace.WorkspaceState.read(root=subject.root)
-
-    # clear the results
-    subject.clear_results()
-
-    subject.assert_input_file(exists=True)
-    subject.assert_result_file(exists=False)
-
-    # ensure the URLs are still populated
-    new_state = workspace.WorkspaceState.read(root=subject.root)
-    assert original_state.urls == new_state.urls
-    assert len(original_state.urls) > 0
-
-    # ensure the results file listing is cleared
-    assert len(new_state.results.files) == 0
-
-
-def test_provider_clear(dummy_provider):
-    subject = dummy_provider()
-
-    # clear the provider
-    subject.clear()
-
-    subject.assert_input_file(exists=False)
-    subject.assert_result_file(exists=False)
-
-
-def test_clear_existing_state(dummy_provider, dummy_file):
+def test_clear_existing_state(dummy_provider):
     policy = provider.RuntimeConfig(
         existing_input=provider.InputStatePolicy.DELETE,
         existing_results=provider.ResultStatePolicy.DELETE,
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy)
-
-    dummy_input_path = dummy_file(subject.input)
-    dummy_results_path = dummy_file(subject.results)
-
-    # check that the input and results are populated
-    assert os.path.exists(dummy_input_path)
-    assert os.path.exists(dummy_results_path)
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
 
     subject.populate()
 
-    # check that existing results no longer exist
-    assert not os.path.exists(dummy_input_path)
-    assert not os.path.exists(dummy_results_path)
+    assert subject.workspace.clear_input.call_count == 1
+    assert subject.workspace.clear_results.call_count == 1
 
 
 def test_keep_existing_state(dummy_provider, dummy_file):
@@ -171,19 +101,14 @@ def test_keep_existing_state(dummy_provider, dummy_file):
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy)
-
-    dummy_input_path = dummy_file(subject.input)
-    dummy_results_path = dummy_file(subject.results)
-
-    # check that the input and results are populated
-    assert os.path.exists(dummy_input_path)
-    assert os.path.exists(dummy_results_path)
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
 
     subject.populate()
 
-    # check that existing results still exist
-    assert os.path.exists(dummy_input_path)
-    assert os.path.exists(dummy_results_path)
+    assert subject.workspace.clear_input.call_count == 0
+    assert subject.workspace.clear_results.call_count == 0
 
 
 def test_keep_existing_state_until_write(dummy_provider, dummy_file):
@@ -192,24 +117,18 @@ def test_keep_existing_state_until_write(dummy_provider, dummy_file):
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy, errors=1)
-
-    dummy_input_path = dummy_file(subject.input)
-    dummy_results_path = dummy_file(subject.results)
-
-    # check that the input and results are populated
-    assert os.path.exists(dummy_input_path)
-    assert os.path.exists(dummy_results_path)
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
 
     with pytest.raises(RuntimeError):
         subject.populate()
 
-    assert not os.path.exists(dummy_input_path)  # should be deleted
-    assert os.path.exists(dummy_results_path)  # should still exist
+    assert subject.workspace.clear_results.call_count == 0
 
     # successful
     subject.populate()
 
-    assert not os.path.exists(dummy_results_path)  # should now be deleted
+    assert subject.workspace.clear_results.call_count == 1
 
 
 def test_fail_on_failure(dummy_provider, dummy_file):
@@ -224,19 +143,15 @@ def test_fail_on_failure(dummy_provider, dummy_file):
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy, errors=1)
-
-    dummy_input_path = dummy_file(subject.input)
-    dummy_results_path = dummy_file(subject.results)
-
-    # check that the input and results are populated
-    assert_path(dummy_input_path, exists=True)
-    assert_path(dummy_results_path, exists=True)
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
 
     with pytest.raises(RuntimeError):
         subject.populate()
 
-    assert_path(dummy_input_path, exists=True)
-    assert_path(dummy_results_path, exists=True)
+    assert subject.workspace.clear_input.call_count == 0
+    assert subject.workspace.clear_results.call_count == 0
 
     subject.assert_state_file(exists=False)
 
@@ -253,19 +168,15 @@ def test_clear_state_on_failure(dummy_provider, dummy_file):
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy, errors=1)
-
-    dummy_input_path = dummy_file(subject.input)
-    dummy_results_path = dummy_file(subject.results)
-
-    # check that the input and results are populated
-    assert_path(dummy_input_path, exists=True)
-    assert_path(dummy_results_path, exists=True)
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
 
     with pytest.raises(RuntimeError):
         subject.populate()
 
-    assert_path(dummy_input_path, exists=False)
-    assert_path(dummy_results_path, exists=False)
+    assert subject.workspace.clear_input.call_count == 1
+    assert subject.workspace.clear_results.call_count == 1
 
     subject.assert_state_file(exists=False)
 
@@ -282,14 +193,14 @@ def test_keep_state_on_multiple_failures(dummy_provider, dummy_file, tmpdir):
     )
 
     subject = dummy_provider(use_dir=tmpdir)  # create state file and workspace with input and results
-    assert_dummy_workspace_state(subject)
+    assert_dummy_workspace_state(subject.workspace)
 
     subject = dummy_provider(use_dir=tmpdir, populate=False, runtime_cfg=policy, errors=1)
 
     with pytest.raises(RuntimeError):
         subject.populate()
 
-    assert_dummy_workspace_state(subject)
+    assert_dummy_workspace_state(subject.workspace)
 
 
 def test_skip_on_failure(dummy_provider, dummy_file):
@@ -304,18 +215,14 @@ def test_skip_on_failure(dummy_provider, dummy_file):
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy, errors=1)
-
-    dummy_input_path = dummy_file(subject.input)
-    dummy_results_path = dummy_file(subject.results)
-
-    # check that the input and results are populated
-    assert_path(dummy_input_path, exists=True)
-    assert_path(dummy_results_path, exists=True)
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
 
     subject.populate()
 
-    assert_path(dummy_input_path, exists=False)
-    assert_path(dummy_results_path, exists=False)
+    assert subject.workspace.clear_input.call_count == 1
+    assert subject.workspace.clear_results.call_count == 1
 
     subject.assert_state_file(exists=False)
 
@@ -334,7 +241,7 @@ def test_retry_on_failure(dummy_provider, dummy_file):
     subject.populate()
 
     assert subject.count == 2
-    assert_dummy_workspace_state(subject)
+    assert_dummy_workspace_state(subject.workspace)
 
 
 def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
@@ -356,86 +263,22 @@ def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
     subject.assert_state_file(exists=False)
 
 
-def test_catalog_workspace(dummy_provider):
-    subject = dummy_provider()
-    assert_dummy_workspace_state(subject)
+def assert_dummy_workspace_state(ws):
+    current_state = workspace.State.read(root=ws.path)
 
+    # ignore timestamp (make certain it exists)
+    assert current_state.timestamp is not None
+    current_state.timestamp = None
 
-def assert_dummy_workspace_state(subject, has_input=True, has_results=True):
-    current_state, dummy_ts = read_workspace_state(subject)
-
-    expected_state = workspace.WorkspaceState(
+    expected_state = workspace.State(
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
-        input=workspace.FileListing(
-            files=[
-                workspace.FileState(
-                    path="dummy-input-1.json",
-                    digests=[
-                        "xxh64:f907da5a37987674",
-                        "sha256:2fa8fd006977f562942a7e0582bcdde36ebca8e284230d601bd14e78234a1bfa",
-                    ],
-                    modified=dummy_ts,
-                ),
-            ],
-            timestamp=dummy_ts,
-        ),
-        results=workspace.FileListing(
-            files=[
-                workspace.FileState(
-                    path="dummy-00000.json",
-                    digests=[
-                        "xxh64:dc7f0c9c83aab9b0",
-                        "sha256:7a556fcc7a307cc5a896ef7ef1827a82298546c62e8c76706adf6561bb5e1dc1",
-                    ],
-                    modified=dummy_ts,
-                )
-            ],
-            timestamp=dummy_ts,
-        ),
+        listing=workspace.File(digest="1e119ae45b38b28f", algorithm="xxh64", path="checksums"),
+        timestamp=None,
         schema=schema.Schema(
             version="1.0.0",
             url="https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json",
         ),
     )
 
-    if not has_input:
-        expected_state.input.files = []
-        expected_state.input.timestamp = None
-
-    if not has_results:
-        expected_state.results.files = []
-        expected_state.results.timestamp = None
-
     assert current_state == expected_state
-
-
-def read_workspace_state(subject: provider.Provider) -> workspace.WorkspaceState:
-
-    current_state = workspace.WorkspaceState.read(root=subject.root)
-
-    dummy_ts = datetime.strptime("2022-12-16T20:51:59+00:00", "%Y-%m-%dT%H:%M:%S%z")
-
-    # check that current input and result timestamps that conform to RFC3339
-    def validate_ts(ts: datetime):
-        assert ts
-        assert ts.tzinfo is not None
-
-    if current_state.input.timestamp:
-        validate_ts(current_state.input.timestamp)
-        current_state.input.timestamp = dummy_ts
-
-    if current_state.results.timestamp:
-        validate_ts(current_state.results.timestamp)
-        current_state.results.timestamp = dummy_ts
-
-    # validate all file listing timestamps
-    for file in current_state.input.files:
-        validate_ts(file.modified)
-        file.modified = dummy_ts
-
-    for file in current_state.results.files:
-        validate_ts(file.modified)
-        file.modified = dummy_ts
-
-    return current_state, dummy_ts

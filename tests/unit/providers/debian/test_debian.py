@@ -2,6 +2,7 @@ import shutil
 
 import pytest
 
+from vunnel import workspace
 from vunnel.providers.debian import Config, Provider, parser
 
 
@@ -18,7 +19,7 @@ class TestParser:
     _sample_json_data_ = "test-fixtures/input/debian.json"
 
     def test_normalize_dsa_list(self, tmpdir, helpers, disable_get_requests):
-        subject = parser.Parser(workspace=tmpdir)
+        subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
 
         mock_data_path = helpers.local_dir(self._sample_dsa_data_)
         shutil.copy(mock_data_path, subject.dsa_file_path)
@@ -46,7 +47,7 @@ class TestParser:
             # print("")
 
     def test_get_dsa_map(self, tmpdir, helpers, disable_get_requests):
-        subject = parser.Parser(workspace=tmpdir)
+        subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
 
         mock_data_path = helpers.local_dir(self._sample_dsa_data_)
         shutil.copy(mock_data_path, subject.dsa_file_path)
@@ -68,7 +69,7 @@ class TestParser:
         assert 1 == len(no_cve_dsas)
 
     def test_normalize_json(self, tmpdir, helpers, disable_get_requests):
-        subject = parser.Parser(workspace=tmpdir)
+        subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
 
         dsa_mock_data_path = helpers.local_dir(self._sample_dsa_data_)
         json_mock_data_path = helpers.local_dir(self._sample_json_data_)
@@ -92,7 +93,7 @@ class TestParser:
 
 
 def test_provider_schema(helpers, disable_get_requests):
-    workspace = helpers.provider_workspace(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config())
 

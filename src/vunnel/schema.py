@@ -14,7 +14,7 @@ class Schema:
     url: str
 
 
-def ProviderWorkspaceStateSchema(version: str = PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION) -> Schema:
+def ProviderStateSchema(version: str = PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-{version}.json",

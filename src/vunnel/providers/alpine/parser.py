@@ -11,6 +11,7 @@ from typing import List
 import requests
 import yaml
 
+from vunnel import workspace
 from vunnel.utils.vulnerability import vulnerability_element
 
 namespace = "alpine"
@@ -30,7 +31,7 @@ class SecdbLandingParser(HTMLParser):
 
     def __init__(self):
         self.links = []
-        super(SecdbLandingParser, self).__init__()
+        super().__init__()
 
     def handle_starttag(self, tag, attrs):
         for attr, value in attrs:
@@ -47,13 +48,18 @@ class Parser:
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
 
-    def __init__(self, workspace: str, logger: logging.Logger | None = None, download_timeout: int = 125, url: str | None = None):
-        self.workspace = workspace
+    def __init__(
+        self,
+        workspace: workspace.Workspace,
+        logger: logging.Logger | None = None,
+        download_timeout: int = 125,
+        url: str | None = None,
+    ):
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
-            workspace, self._secdb_dir_, "alpine-secdb-master"
+            workspace.input_path, self._secdb_dir_, "alpine-secdb-master"
         )  # no longer used except for cleanup, leaving it here for backwards compatibility
-        self.secdb_dir_path = os.path.join(workspace, self._secdb_dir_)
+        self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/") if url else Parser._url_
         if logger is None:
             logger = logging.getLogger(self.__class__.__name__)
@@ -140,7 +146,7 @@ class Parser:
         # parse and transform the yaml
         try:
             if os.path.exists(self.secdb_dir_path):
-                for f in os.listdir(self.secdb_dir_path):
+                for f in sorted(os.listdir(self.secdb_dir_path)):
                     release = None
 
                     if f == "edge":
@@ -157,7 +163,7 @@ class Parser:
                             secdb_yaml_path = os.path.join(self.secdb_dir_path, f, "{}.yaml".format(dbtype))
                             if os.path.exists(secdb_yaml_path):
                                 self.logger.debug("loading secdb data from: {}".format(secdb_yaml_path))
-                                with open(secdb_yaml_path, "r") as FH:
+                                with open(secdb_yaml_path) as FH:
                                     yaml_data = yaml.safe_load(FH)
                                     dbtype_data_dict[dbtype] = yaml_data
 

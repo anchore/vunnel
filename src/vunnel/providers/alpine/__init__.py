@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 
 from vunnel import provider, schema
@@ -8,7 +9,7 @@ from .parser import Parser
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
+        default_factory=lambda: provider.RuntimeConfig(existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE)
     )
     request_timeout: int = 125
 
@@ -21,7 +22,7 @@ class Provider(provider.Provider):
 
         self.schema = schema.OSSchema()
         self.parser = Parser(
-            workspace=self.input,
+            workspace=self.workspace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
@@ -30,16 +31,18 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "alpine"
 
-    def update(self) -> list[str]:
-        vuln_dict = self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists)
+    def update(self) -> tuple[list[str], int]:
 
-        with self.results_writer(batch_size=500) as writer:
-            for (namespace), (v) in vuln_dict:
-                for vuln_id, record in v.items():
+        with self.results_writer() as writer:
+            # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+            for namespace, vulns in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+                namespace = namespace.lower()
+                for vuln_id, record in vulns.items():
+                    vuln_id = vuln_id.lower()
                     writer.write(
-                        identifier=f"{namespace}-{vuln_id}".lower(),
+                        identifier=os.path.join(namespace, vuln_id),
                         schema=self.schema,
                         payload=record,
                     )
 
-        return self.parser.urls
+        return self.parser.urls, len(writer)

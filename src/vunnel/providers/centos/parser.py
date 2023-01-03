@@ -9,6 +9,7 @@ from typing import List
 
 import requests
 
+from vunnel import utils
 from vunnel.utils.oval_parser import Config, parse
 
 namespace = "centos"
@@ -55,7 +56,7 @@ requests_timeout = 125
 driver_workspace = None
 
 
-class Parser(object):
+class Parser:
     _url_ = "https://www.redhat.com/security/data/oval/com.redhat.rhsa-all.xml.bz2"
     _meta_url_ = "https://www.redhat.com/security/data/oval/PULP_MANIFEST"
     _sha_line_regex_ = re.compile(r"com.redhat.rhsa-all.xml,([^,]+),.*")
@@ -63,11 +64,10 @@ class Parser(object):
     _xml_sha_file_ = "com.redhat.rhsa-all.xml.sha256sum"
 
     def __init__(self, workspace, logger=None, config=None, download_timeout=125):
-        self.workspace = workspace
         self.config = config if config else centos_config
         self.download_timeout = download_timeout
-        self.xml_file_path = os.path.join(workspace, self._xml_file_)
-        self.xml_sha_file_path = os.path.join(workspace, self._xml_sha_file_)
+        self.xml_file_path = os.path.join(workspace.input_path, self._xml_file_)
+        self.xml_sha_file_path = os.path.join(workspace.input_path, self._xml_sha_file_)
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
@@ -96,6 +96,7 @@ class Parser(object):
         except:
             raise Exception("Error fetching/processing sha256")
 
+    @utils.retry_with_backoff()
     def _download(self, skip_if_exists=False):
 
         if skip_if_exists and os.path.exists(self.xml_file_path):
@@ -104,7 +105,7 @@ class Parser(object):
             download = True
 
             if os.path.exists(self.xml_file_path) and os.path.exists(self.xml_sha_file_path):
-                with open(self.xml_sha_file_path, "r") as fp:
+                with open(self.xml_sha_file_path) as fp:
                     previous = fp.read()
                     previous = previous.strip()
 
