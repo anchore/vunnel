@@ -7,18 +7,12 @@ from collections import namedtuple
 
 import requests
 
+from vunnel import utils
 from vunnel.utils import vulnerability
-
-namespace = "debian"
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
 
-# read and connect time out for requests.get
-requests_timeout = 125
-
-# driver workspace
-driver_workspace = None
 
 # Only releases presenting this mapping will be output by the driver, maintain it with new releases.
 # Can also be extended via configuration
@@ -53,14 +47,15 @@ class Parser:
         if not distro_map:
             distro_map = debian_distro_map
         self.debian_distro_map = distro_map
-        self.json_file_path = os.path.join(workspace, self._json_file_)
-        self.dsa_file_path = os.path.join(workspace, self._dsa_file_)
+        self.json_file_path = os.path.join(workspace.input_path, self._json_file_)
+        self.dsa_file_path = os.path.join(workspace.input_path, self._dsa_file_)
         self.urls = [self._json_url_, self._dsa_url_]
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
+    @utils.retry_with_backoff()
     def _download_json(self, skip_if_exists=False):
         """
         Downloads debian json file
@@ -84,6 +79,7 @@ class Parser:
                 self.logger.exception("Error downloading debian json file")
                 raise
 
+    @utils.retry_with_backoff()
     def _download_dsa(self, skip_if_exists=False):
         """
         Downloads debian dsa file
@@ -142,9 +138,10 @@ class Parser:
         :return:
         """
         try:
-            dsa = {}
-            dsa["cves"] = []
-            dsa["fixed_in"] = []
+            dsa = {
+                "cves": [],
+                "fixed_in": [],
+            }
             dsa_info_matched = False
             cve_list_matched = False
 
@@ -205,7 +202,7 @@ class Parser:
         if os.path.exists(self.dsa_file_path):
             dsa_map = {}
 
-            with open(self.dsa_file_path, "r", encoding="utf-8") as fp:
+            with open(self.dsa_file_path, encoding="utf-8") as fp:
                 dsa_rec = []
                 line = fp.readline()
                 while line:
@@ -279,7 +276,7 @@ class Parser:
         #         all_dsas |= set([dsa_tup.dsa for dsalist in cve_dsalist.values() for dsa_tup in dsalist])
 
         if os.path.exists(self.json_file_path):
-            with open(self.json_file_path, "r", encoding="utf-8") as FH:
+            with open(self.json_file_path, encoding="utf-8") as FH:
                 data = json.loads(FH.read())
         else:
             raise Exception(f"debian json source not found under {self.json_file_path}")
@@ -375,10 +372,12 @@ class Parser:
 
                             # add fixedIn
                             skip_fixedin = False
-                            fixed_el = {}
-                            fixed_el["VersionFormat"] = "dpkg"
-                            fixed_el["NamespaceName"] = "debian:" + str(relno)
-                            fixed_el["Name"] = pkg
+                            fixed_el = {
+                                "Name": pkg,
+                                "NamespaceName": "debian:" + str(relno),
+                                "VersionFormat": "dpkg",
+                            }
+
                             if "fixed_version" in distro_record:
                                 fixed_el["Version"] = distro_record["fixed_version"]
                                 if distro_record["fixed_version"] == "0":

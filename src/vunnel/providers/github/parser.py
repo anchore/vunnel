@@ -20,11 +20,8 @@ import os
 
 import requests
 
+from vunnel import utils
 from vunnel.utils import fdb as db
-
-namespace = "github"
-feedtype = "github"
-
 
 ecosystem_map = {
     "COMPOSER": "composer",
@@ -47,7 +44,7 @@ class Parser:
         api_url="https://api.github.com/graphql",
         logger=None,
     ):  # noqa
-        self.db = db.connection(workspace, serializer="json")
+        self.db = db.connection(workspace.input_path, serializer="json")
         self.download_timeout = download_timeout
         self.api_url = api_url
         self.token = token
@@ -187,6 +184,7 @@ class Parser:
         metadata.commit()
 
 
+@utils.retry_with_backoff()
 def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql"):
     logger = logging.getLogger("get-query")
 
@@ -396,46 +394,46 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     vulnerabilities = "%sfirst: 100, orderBy: {field: UPDATED_AT, direction: ASC}" % vuln_after
 
     query = """
-    {
-      %s {
-        nodes {
+    {{
+      {} {{
+        nodes {{
           ghsaId
           summary
           severity
-          identifiers {
+          identifiers {{
             type
             value
-          }
-          references {
+          }}
+          references {{
             url
-          }
-          vulnerabilities(%s) {
-            pageInfo {
+          }}
+          vulnerabilities({}) {{
+            pageInfo {{
               endCursor
               hasNextPage
-            }
-            nodes {
-              package {
+            }}
+            nodes {{
+              package {{
                 ecosystem
                 name
-              }
-              firstPatchedVersion {
+              }}
+              firstPatchedVersion {{
                 identifier
-              }
+              }}
               vulnerableVersionRange
-            }
-          }
+            }}
+          }}
           withdrawnAt
-        }
-        pageInfo {
+        }}
+        pageInfo {{
           endCursor
           hasNextPage
           hasPreviousPage
           startCursor
-        }
-      }
-    }
-    """ % (
+        }}
+      }}
+    }}
+    """.format(
         caller,
         vulnerabilities,
     )

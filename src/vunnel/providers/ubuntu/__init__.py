@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 
 from vunnel import provider, schema
@@ -25,7 +26,7 @@ class Provider(provider.Provider):
 
         self.schema = schema.OSSchema()
         self.parser = Parser(
-            workspace=self.input,
+            workspace=self.workspace,
             logger=self.logger,
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,
@@ -36,14 +37,16 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "ubuntu"
 
-    def update(self) -> list[str]:
+    def update(self) -> tuple[list[str], int]:
 
         with self.results_writer() as writer:
             for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+                namespace = namespace.lower()
+                vuln_id = vuln_id.lower()
                 writer.write(
-                    identifier=f"{namespace}-{vuln_id}".lower(),
+                    identifier=os.path.join(namespace, vuln_id),
                     schema=self.schema,
                     payload={"Vulnerability": record},
                 )
 
-        return self.parser.urls
+        return self.parser.urls, len(writer)

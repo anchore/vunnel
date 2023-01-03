@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import re
-import shutil
 from collections import namedtuple
 from datetime import datetime as dt
 from decimal import Decimal as D
@@ -47,8 +46,9 @@ class Parser:
     def __init__(
         self, workspace, download_timeout=None, max_workers=None, full_sync_interval=None, skip_namespaces=None, logger=None
     ):
-        self.cve_dir_path = os.path.join(workspace, self.__cve_dir_name__)
-        self.rhsa_dir_path = os.path.join(workspace, self.__rhsa_dir_name__)
+        self.workspace = workspace
+        self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
+        self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
         self.download_timeout = download_timeout if isinstance(download_timeout, int) else 125
         self.max_workers = max_workers if isinstance(max_workers, int) else 4
         self.full_sync_interval = full_sync_interval if isinstance(full_sync_interval, int) else 2
@@ -336,7 +336,8 @@ class Parser:
 
         # initialize provider
         rhsa_provider = centos.Parser(
-            workspace=os.path.join(self.rhsa_dir_path),
+            # workspace=os.path.join(self.rhsa_dir_path),
+            workspace=self.workspace,
             config=cc,
             download_timeout=self.download_timeout,
             logger=logging.getLogger("centos.Parser"),
@@ -776,7 +777,7 @@ class Parser:
         return results
 
     def _process_full_cve(self, cve_id, cve_file_path):
-        with open(cve_file_path, "r", encoding="utf-8") as fp:
+        with open(cve_file_path, encoding="utf-8") as fp:
             content = json.load(fp)
 
         return self._parse_cve(cve_id, content)
@@ -799,7 +800,7 @@ class Parser:
                         cve_id=cve_id,
                         cve_file_path=os.path.join(full_dir, cve_id),
                     ): cve_id
-                    for cve_id in os.listdir(full_dir)
+                    for cve_id in sorted(os.listdir(full_dir))
                 }
 
                 for future in concurrent.futures.as_completed(future_cve_dict):

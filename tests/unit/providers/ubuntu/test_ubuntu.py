@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import unittest
 
+from vunnel import workspace
 from vunnel.providers.ubuntu.parser import (
     Parser,
     check_merge,
@@ -390,9 +391,10 @@ class TestUbuntuParser:
             + new_distro_patches,
             "git_last_processed_rev": "40a85b5b23bd905f8d5c6791d3f61108406ec372",
         }
-        udp = Parser(workspace=tmpdir, additional_versions={"madeup": "00.00"}, enable_rev_history=False)
+        ws = workspace.Workspace(tmpdir, "test")
+        udp = Parser(workspace=ws, additional_versions={"madeup": "00.00"}, enable_rev_history=False)
 
-        os.mkdir(udp.norm_workspace)
+        os.makedirs(udp.norm_workspace, exist_ok=True)
 
         cve_id = "CVE-0000-0000"
         cvs_file = os.path.join(udp.norm_workspace, cve_id)

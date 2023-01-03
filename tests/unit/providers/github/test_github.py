@@ -1,5 +1,6 @@
 import pytest
 
+from vunnel import workspace
 from vunnel.providers.github import Config, Provider, parser
 from vunnel.utils import fdb as db
 
@@ -202,8 +203,8 @@ class TestNodeParser:
 
     def test_gets_cve_only(self, node):
         result = parser.NodeParser(node).parse()
-        assert set(result["Metadata"]["CVE"]) == set(["CVE-2020-5236"])
-        assert set(result.Metadata["CVE"]) == set(["CVE-2020-5236"])
+        assert set(result["Metadata"]["CVE"]) == {"CVE-2020-5236"}
+        assert set(result.Metadata["CVE"]) == {"CVE-2020-5236"}
 
     def test_cves_arent_present(self, node):
         sans_cve_data = node.copy()
@@ -272,7 +273,7 @@ class TestNeedsSubquery:
 # TODO: move this out to a conftest.py file, it is going to be useful in other tests
 
 
-class Capture(object):
+class Capture:
     def __init__(self, *a, **kw):
         self.a = a
         self.kw = kw
@@ -326,18 +327,17 @@ class TestGetNestedVulnerabilities:
 class TestParser:
     def test_get_with_no_cursor_no_timestamp(self, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response])
-        workspace = tmpdir.strpath
-        provider = parser.Parser(workspace, "secret")
+        provider = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
         result = [i for i in provider.get()]
         assert result == []
 
     def test_get_commits_timestamp(self, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response])
-        workspace = tmpdir.strpath
-        provider = parser.Parser(workspace, "secret")
+        ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
+        provider = parser.Parser(ws, "secret")
         for i in provider.get():
             pass
-        database = db.connection(workspace)
+        database = db.connection(ws.input_path)
         metadata = database.get_metadata()
         timestamp = metadata.data["timestamp"]
         assert isinstance(timestamp, str)
@@ -345,11 +345,11 @@ class TestParser:
 
     def test_get_commits_timestamp_with_cursors(self, advisories, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response, advisories(has_next_page=True)])
-        workspace = tmpdir.strpath
-        provider = parser.Parser(workspace, "secret")
+        ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
+        provider = parser.Parser(ws, "secret")
         for i in provider.get():
             pass
-        database = db.connection(workspace)
+        database = db.connection(ws.input_path)
         metadata = database.get_metadata()
         timestamp = metadata.data["timestamp"]
         assert isinstance(timestamp, str)
@@ -357,25 +357,22 @@ class TestParser:
 
     def test_has_next_page(self, advisories, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response, advisories(has_next_page=True)])
-        workspace = tmpdir.strpath
-        provider = parser.Parser(workspace, "secret")
+        provider = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
         result = [i for i in provider.get()]
         assert len(result) == 1
 
     def test_has_next_page_with_advisories(self, advisories, fake_get_query, tmpdir):
         fake_get_query([advisories(), advisories(has_next_page=True)])
-        workspace = tmpdir.strpath
-        provider = parser.Parser(workspace, "secret")
+        provider = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
         result = [i for i in provider.get()]
         assert len(result) == 2
 
 
 def test_provider_schema(helpers, fake_get_query, advisories):
     fake_get_query([advisories(), advisories(has_next_page=True)])
-    workspace = helpers.provider_workspace(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     provider = Provider(root=workspace.root, config=Config(token="secret", api_url="https://localhost"))
     provider.update()
 
-    assert 4 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)

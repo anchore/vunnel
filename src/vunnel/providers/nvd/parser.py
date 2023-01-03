@@ -251,7 +251,7 @@ class CPE:
         if element in ["*", "-", ""]:  # let these pass through as they are
             return element
         elif any(char in encode_dict for char in element):
-            new_element = str()
+            new_element = ""
             pos = 0
             while pos < len(element):
                 char = element[pos]
@@ -599,7 +599,7 @@ class Parser:
                 stored_csum = None
                 server_csum = None
 
-                with open(csum_file_path, "r") as f:
+                with open(csum_file_path) as f:
                     stored_csum = f.readline()
 
                 self.logger.debug("downloading content checksum from: {}".format(url))
@@ -1038,7 +1038,7 @@ class Parser:
         cve_id = item.get("cve", {}).get("CVE_data_meta", {}).get("ID", None)
         self.logger.trace(f"processing {cve_id}")
 
-        vendor_data = item.get("cve", {}).get("affects", {}).get("vendor", {}).get("vendor_data", [])
+        item.get("cve", {}).get("affects", {}).get("vendor", {}).get("vendor_data", [])
         cpe_set = set()
         affected_tuple_set = set()
         # cvss2 = {}
@@ -1117,7 +1117,7 @@ class Parser:
 
         # check for normalized data and if csums match
         if os.path.exists(n_json_file_path) and os.path.exists(n_csum_file_path) and os.path.exists(d_csum_file_path):
-            with open(d_csum_file_path, "r") as dp, open(n_csum_file_path, "r") as np:
+            with open(d_csum_file_path) as dp, open(n_csum_file_path) as np:
                 d_csum = dp.readline()
                 n_csum = np.readline()
 
@@ -1152,7 +1152,7 @@ class Parser:
             del n_data[:]  # clear it
 
             self.logger.debug("writing normalized data checksum to: {}".format(n_csum_file_path))
-            with open(d_csum_file_path, "r") as dp, open(n_csum_file_path, "w") as np:
+            with open(d_csum_file_path) as dp, open(n_csum_file_path, "w") as np:
                 d_csum = dp.readline()
                 np.write(d_csum)
 
@@ -1175,8 +1175,7 @@ class Parser:
     def get(self, skip_if_exists=False):
         try:
             for year in range(self.start_year, self.end_year + 1):
-                for cve_id, cve in self._load_from_cache(year, skip_if_exists):
-                    yield cve_id, cve
+                yield from self._load_from_cache(year, skip_if_exists)
         finally:
             try:
                 self._free_cpe_dictionary()

@@ -10,7 +10,7 @@ import defusedxml.ElementTree as ET
 from vunnel.utils.vulnerability import vulnerability_element
 
 
-class Config(object):
+class Config:
     """
     Capture regular expressions, xpath queries and other driver specific configuration
     in an instance of this class

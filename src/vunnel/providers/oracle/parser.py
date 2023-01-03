@@ -5,10 +5,9 @@ import re
 
 import requests
 
+from vunnel import utils
 from vunnel.utils import rpm
 from vunnel.utils.oval_parser import Config, parse
-
-namespace = "ol"
 
 # One time initialization of driver specific configuration
 ol_config = Config()
@@ -52,10 +51,9 @@ class Parser:
     _xml_file_ = "com.oracle.elsa-all.xml"
 
     def __init__(self, workspace, config=None, download_timeout=125, logger=None):
-        self.workspace = workspace
         self.config = config if config else ol_config
         self.download_timeout = download_timeout
-        self.xml_file_path = os.path.join(workspace, self._xml_file_)
+        self.xml_file_path = os.path.join(workspace.input_path, self._xml_file_)
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -65,6 +63,7 @@ class Parser:
     def urls(self):
         return [self._url_]
 
+    @utils.retry_with_backoff()
     def _download(self, skip_if_exists=False):
         if skip_if_exists and os.path.exists(self.xml_file_path):
             self.logger.debug(f"'skip_if_exists' flag enabled and found {self.xml_file_path}. Skipping download")

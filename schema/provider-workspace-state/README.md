@@ -1,8 +1,8 @@
-# `ProviderWorkspaceState` JSON Schema
+# `ProviderState` JSON Schema
 
 This schema governs the `state.json` file produced by each vulnerability data provider run, describing what input as needed for the run and what files were produced.
 
-See `src/vunnel.provider.WorkspaceState` for the root object that represents this schema.
+See `src/vunnel.provider.State` for the root object that represents this schema.
 
 ## Updating the schema
 

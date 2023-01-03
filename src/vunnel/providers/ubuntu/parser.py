@@ -6,7 +6,6 @@ import enum
 import json
 import logging
 import os
-import queue
 import re
 import time
 from collections import namedtuple
@@ -80,7 +79,7 @@ ubuntu_version_names = {
 driver_workspace = None
 
 
-class JsonifierMixin(object):
+class JsonifierMixin:
     def json(self):
         jsonified = {}
         for k, v in vars(self).items():
@@ -380,7 +379,7 @@ def parse_cve_file(content_lines):
     """
 
     parsed = {"patches": []}
-    count = len(content_lines)
+    len(content_lines)
 
     # Copy to avoid modifying the passed param directly since the parsing is greedy.
     lines = copy.deepcopy(content_lines)
@@ -553,7 +552,7 @@ def filter_merged_patches(cve_dict, dpt_list):
     return filtered_map
 
 
-class UbuntuCVEState(object):
+class UbuntuCVEState:
     """
     CVE state is a on-disk representation of the entire state and history of the cves from the bzr repo in a canonical form.
     Specifically: a json document of the data and a revision history tracking which revisions from the bzr repo have been processed.
@@ -574,7 +573,7 @@ class UbuntuCVEState(object):
             self.last_revision = 0
         else:
             with open(self.data_path) as f:
-                data = json.load(f)
+                json.load(f)
 
     def merge(self, cve_entry):
         """
@@ -618,8 +617,9 @@ class Parser:
         enable_rev_history: bool = True,
         max_workers: int = 5,
     ):
-        self.vc_workspace = os.path.join(workspace, self._vc_working_dir)
-        self.norm_workspace = os.path.join(workspace, self._normalized_cve_dir)
+        self.vc_workspace = os.path.join(workspace.input_path, self._vc_working_dir)
+        # TODO: tech debt: this should use the results workspace with the correct schema-aware envelope
+        self.norm_workspace = os.path.join(workspace.input_path, self._normalized_cve_dir)
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
@@ -653,8 +653,7 @@ class Parser:
         self.logger.debug("loading processed CVE content and transforming into to vulnerabilities")
 
         for merged_cve in self._merged_cve_iterator():
-            for v in map_parsed(merged_cve, self.logger):
-                yield v
+            yield from map_parsed(merged_cve, self.logger)
 
     def _process_data(self, vc_dir, to_rev, from_rev=None):
         self.logger.debug(
