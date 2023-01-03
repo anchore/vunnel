@@ -1,6 +1,8 @@
 .vunnel.yaml
 /data/
 /backup/
+.pytype/
+.wily/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
