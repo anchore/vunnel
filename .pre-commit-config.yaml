@@ -51,45 +51,45 @@ repos:
     hooks:
 
       # note: this is used in lieu of autopep8 and yapf
-      - id: system
+      - id: black
         name: black
         entry: poetry run black src tests
         pass_filenames: false
         language: system
 
-      - id: system
+      - id: unimport
         name: unimport
-        entry: poetry run unimport -c pyproject.toml
+        entry: poetry run unimport --gitignore -r src/ tests/
         pass_filenames: false
         language: system
 
-      - id: system
+      - id: autoflake
         name: autoflake
         entry: poetry run autoflake --in-place -r src/vunnel
         pass_filenames: false
         language: system
 
-      - id: system
+      - id: isort
         name: isort
         entry: poetry run isort tests src --filter-files
         pass_filenames: false
         language: system
         files: \.py$
 
-      - id: system
+      - id: bandit
         name: bandit
         entry: poetry run bandit -r -v -c 'pyproject.toml' src/vunnel
         pass_filenames: false
         language: system
 
-      # note: flake8 is a metalinter combinding Pyflakes, pycodestyle, and mccabe
-      - id: system
+      # note: flake8 is a metalinter combining Pyflakes, pycodestyle, and mccabe
+      - id: flake8
         name: flake8
         entry: poetry run flake8 src/vunnel
         pass_filenames: false
         language: system
 
-      - id: system
+      - id: mypy
         name: mypy
         entry: poetry run mypy --config-file ./pyproject.toml src/vunnel
         pass_filenames: false
