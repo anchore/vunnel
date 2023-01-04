@@ -28,6 +28,23 @@ def simple_mock(mocker):
 
 
 class TestAPI:
+    def test_cve_no_api_key(self, simple_mock, mocker):
+        mock, responses, subject = simple_mock
+        subject.api_key = None
+
+        with mock:
+            vulnerabilities = [v for v in subject.cve("CVE-2020-0000")]
+
+        assert vulnerabilities == responses
+        assert api.requests.get.call_args_list == [
+            mocker.call(
+                "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                params="cveId=CVE-2020-0000",
+                headers={"content-type": "application/json"},
+                timeout=1,
+            ),
+        ]
+
     def test_cve_single_cve(self, simple_mock, mocker):
         mock, responses, subject = simple_mock
 

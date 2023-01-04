@@ -104,8 +104,10 @@ class NvdAPI:
     ) -> Generator[dict[str, Any], Any, None]:
         headers = {
             "content-type": "application/json",
-            "apiKey": self.api_key,
         }
+
+        if self.api_key:
+            headers["apiKey"] = self.api_key
 
         self.logger.debug(f"{message}")
 
