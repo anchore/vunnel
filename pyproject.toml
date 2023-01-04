@@ -168,9 +168,3 @@ exclude_dirs = ["tests",]
 [tool.autoflake]
 # note: these options may not play nicely with __init__ imports
 remove-unused-variables = true
-
-[tool.unimport]
-sources = ["src/vunnel"]
-exclude = 'tests/'
-remove = true
-gitignore = true
