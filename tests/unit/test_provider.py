@@ -1,7 +1,5 @@
 import json
 import os
-import uuid
-from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest

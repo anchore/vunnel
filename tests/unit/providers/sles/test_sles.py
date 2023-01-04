@@ -1,4 +1,3 @@
-import os
 import shutil
 
 import defusedxml.ElementTree as ET

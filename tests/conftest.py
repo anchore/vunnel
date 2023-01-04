@@ -2,12 +2,9 @@ import json
 import os
 import subprocess
 import uuid
-from datetime import datetime
 
 import jsonschema
 import pytest
-
-from vunnel import provider, workspace
 
 
 class WorkspaceHelper:
