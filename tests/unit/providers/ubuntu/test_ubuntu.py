@@ -1,10 +1,16 @@
 import json
 import os
+import shlex
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 
+import pytest
+
 from vunnel import workspace
+from vunnel.providers import ubuntu
 from vunnel.providers.ubuntu.parser import (
     Parser,
     check_merge,
@@ -404,3 +410,97 @@ class TestUbuntuParser:
 
         result = udp._reprocess_merged_cve(cve_id, cvs_file)
         assert result.get("patches") == data.get("patches") + new_distro_patches
+
+
+@pytest.fixture
+def hydrate_git_repo(tmpdir, helpers):
+    def run(cmd, **kwargs):
+        subprocess.run(shlex.split(cmd), **kwargs, stderr=sys.stderr, stdout=sys.stdout)
+
+    def apply(export_path):
+        ws = workspace.Workspace(tmpdir, "ubuntu", create=True)
+        repo_path = os.path.join(ws.input_path, "ubuntu-cve-tracker")
+
+        shutil.rmtree(repo_path, ignore_errors=True)
+
+        run("git init ubuntu-cve-tracker --initial-branch=main", cwd=ws.input_path)
+
+        mock_data_path = helpers.local_dir(export_path)
+        run("git fast-import", stdin=open(mock_data_path), cwd=repo_path)
+        run("git checkout", cwd=repo_path)
+
+        return tmpdir
+
+    return apply
+
+
+@pytest.mark.parametrize(
+    "mock_data_path,expected_written_entries",
+    [
+        ("test-fixtures/repo-fast-export", 42),
+        # this is 6 records distributed across multiple distros:
+        # └── results
+        #     ├── ubuntu:14.04
+        #     │   ├── cve-2019-17185.json
+        #     │   ├── cve-2021-4204.json
+        #     │   ├── cve-2022-20566.json
+        #     │   ├── cve-2022-41859.json
+        #     │   ├── cve-2022-41860.json
+        #     │   └── cve-2022-41861.json
+        #     ├── ubuntu:16.04
+        #     │   ├── cve-2019-17185.json
+        #     │   ├── cve-2021-4204.json
+        #     │   ├── cve-2022-20566.json
+        #     │   ├── cve-2022-41859.json
+        #     │   ├── cve-2022-41860.json
+        #     │   └── cve-2022-41861.json
+        #     ├── ubuntu:18.04
+        #     │   ├── cve-2019-17185.json
+        #     │   ├── cve-2021-4204.json
+        #     │   ├── cve-2022-20566.json
+        #     │   ├── cve-2022-41859.json
+        #     │   ├── cve-2022-41860.json
+        #     │   └── cve-2022-41861.json
+        #     ├── ubuntu:19.10
+        #     │   └── cve-2019-17185.json
+        #     ├── ubuntu:20.04
+        #     │   ├── cve-2019-17185.json
+        #     │   ├── cve-2021-4204.json
+        #     │   ├── cve-2022-20566.json
+        #     │   ├── cve-2022-41859.json
+        #     │   ├── cve-2022-41860.json
+        #     │   └── cve-2022-41861.json
+        #     ├── ubuntu:20.10
+        #     │   └── cve-2019-17185.json
+        #     ├── ubuntu:21.04
+        #     │   ├── cve-2019-17185.json
+        #     │   └── cve-2021-4204.json
+        #     ├── ubuntu:21.10
+        #     │   ├── cve-2019-17185.json
+        #     │   └── cve-2021-4204.json
+        #     ├── ubuntu:22.04
+        #     │   ├── cve-2019-17185.json
+        #     │   ├── cve-2021-4204.json
+        #     │   ├── cve-2022-20566.json
+        #     │   ├── cve-2022-41859.json
+        #     │   ├── cve-2022-41860.json
+        #     │   └── cve-2022-41861.json
+        #     └── ubuntu:22.10
+        #         ├── cve-2019-17185.json
+        #         ├── cve-2021-4204.json
+        #         ├── cve-2022-20566.json
+        #         ├── cve-2022-41859.json
+        #         ├── cve-2022-41860.json
+        #         └── cve-2022-41861.json
+    ],
+)
+def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker):
+    path = hydrate_git_repo(mock_data_path)
+    provider = ubuntu.Provider(root=path, config=ubuntu.Config())
+    provider.parser.git_wrapper.init_repo = mocker.Mock()
+    provider.update()
+
+    ws = helpers.provider_workspace_helper("ubuntu", create=False)
+
+    assert expected_written_entries == ws.num_result_entries()
+    assert ws.result_schemas_valid(require_entries=expected_written_entries > 0)

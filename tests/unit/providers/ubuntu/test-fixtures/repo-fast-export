@@ -1,0 +1,2822 @@
+blob
+mark :1
+data 1603
+Candidate: CVE-2019-17185
+PublicDate: 2020-03-21 01:15:00 UTC
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-17185
+ https://github.com/FreeRADIUS/freeradius-server/commit/6b522f8780813726799e6b8cf0f1f8e0ce2c8ebf
+ https://freeradius.org/security/
+ https://github.com/FreeRADIUS/freeradius-server/releases/tag/release_3_0_20
+Description:
+ In FreeRADIUS 3.0.x before 3.0.20, the EAP-pwd module used a global OpenSSL
+ BN_CTX instance to handle all handshakes. This mean multiple threads use
+ the same BN_CTX instance concurrently, resulting in crashes when concurrent
+ EAP-pwd handshakes are initiated. This can be abused by an adversary as a
+ Denial-of-Service (DoS) attack.
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: low
+Discovered-by:
+Assigned-to: 0xnishit
+CVSS:
+ nvd: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H [7.5 HIGH]
+
+
+Patches_freeradius:
+upstream_freeradius: released (3.0.20+dfsg-1)
+precise/esm_freeradius: DNE
+trusty_freeradius: ignored (out of standard support)
+trusty/esm_freeradius: DNE
+xenial_freeradius: ignored (end of standard support, was needs-triage)
+esm-infra/xenial_freeradius: needs-triage
+bionic_freeradius: needs-triage
+eoan_freeradius: ignored (reached end-of-life)
+focal_freeradius: not-affected (3.0.20+dfsg-3build1)
+groovy_freeradius: not-affected (3.0.20+dfsg-3build1)
+hirsute_freeradius: not-affected (3.0.20+dfsg-3build1)
+impish_freeradius: not-affected (3.0.20+dfsg-3build1)
+jammy_freeradius: not-affected (3.0.20+dfsg-3build1)
+kinetic_freeradius: not-affected (3.0.20+dfsg-3build1)
+devel_freeradius: not-affected (3.0.20+dfsg-3build1)
+
+blob
+mark :2
+data 33267
+PublicDateAtUSN: 2022-01-11
+Candidate: CVE-2021-4204
+PublicDate: 2022-08-24 16:15:00 UTC
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-4204
+ https://ubuntu.com/security/notices/USN-5217-1
+ https://ubuntu.com/security/notices/USN-5218-1
+ https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/impish/commit/?id=53fb7741ff9d546174dbb585957b4f8b6afbdb83
+ https://ubuntu.com/security/notices/USN-5219-1
+Description:
+ An out-of-bounds (OOB) memory access flaw was found in the Linux kernel's
+ eBPF due to an Improper Input Validation. This flaw allows a local attacker
+ with a special privilege to crash the system or leak internal information.
+Ubuntu-Description:
+ It was discovered that the eBPF implementation in the Linux kernel did not
+ properly validate the memory size of certain ring buffer operation
+ arguments. A local attacker could use this to cause a denial of service
+ (system crash) or possibly execute arbitrary code.
+Notes:
+Mitigation:
+ Disable unprivileged ebpf with:
+    sudo sysctl kernel.unprivileged_bpf_disabled=1
+Bugs:
+ https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1956585
+Priority: high
+Discovered-by: tr3e wang
+Assigned-to:
+CVSS:
+ nvd: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:H [7.1 HIGH]
+
+
+Patches_linux:
+ break-fix: 457f44363a8894135c85b7a9afd2bd8196db24ab local-CVE-2021-4204-fix|64620e0a1e712a778095bd35cbb277dc2259281f
+ break-fix: 457f44363a8894135c85b7a9afd2bd8196db24ab local-CVE-2021-4204-fix|a672b2e36a648afb04ad3bda93b6bda947a479a5
+upstream_linux: needed
+trusty/esm_linux: not-affected (3.11.0-12.19)
+esm-infra/xenial_linux: not-affected (4.4.0-2.16)
+bionic_linux: not-affected (4.13.0-16.19)
+focal_linux: not-affected (5.4.0-9.12)
+hirsute_linux: released (5.11.0-46.51)
+impish_linux: released (5.13.0-25.26)
+jammy_linux: not-affected (5.15.0-18.18)
+kinetic_linux: not-affected (5.15.0-25.25)
+devel_linux: not-affected (5.15.0-25.25)
+
+Patches_linux-hwe:
+upstream_linux-hwe: needed
+trusty_linux-hwe: DNE
+trusty/esm_linux-hwe: DNE
+xenial_linux-hwe: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-hwe: not-affected (4.8.0-39.42~16.04.1)
+bionic_linux-hwe: ignored (replaced by linux-hwe-5.4)
+focal_linux-hwe: DNE
+hirsute_linux-hwe: DNE
+impish_linux-hwe: DNE
+jammy_linux-hwe: DNE
+kinetic_linux-hwe: DNE
+devel_linux-hwe: DNE
+
+Patches_linux-hwe-5.4:
+upstream_linux-hwe-5.4: needed
+trusty_linux-hwe-5.4: DNE
+trusty/esm_linux-hwe-5.4: DNE
+xenial_linux-hwe-5.4: DNE
+bionic_linux-hwe-5.4: not-affected (5.4.0-37.41~18.04.1)
+focal_linux-hwe-5.4: DNE
+hirsute_linux-hwe-5.4: DNE
+impish_linux-hwe-5.4: DNE
+jammy_linux-hwe-5.4: DNE
+kinetic_linux-hwe-5.4: DNE
+devel_linux-hwe-5.4: DNE
+
+Patches_linux-hwe-5.8:
+upstream_linux-hwe-5.8: needed
+trusty_linux-hwe-5.8: DNE
+trusty/esm_linux-hwe-5.8: DNE
+xenial_linux-hwe-5.8: DNE
+bionic_linux-hwe-5.8: DNE
+focal_linux-hwe-5.8: ignored (was needs-triage now end-of-life)
+hirsute_linux-hwe-5.8: DNE
+impish_linux-hwe-5.8: DNE
+jammy_linux-hwe-5.8: DNE
+kinetic_linux-hwe-5.8: DNE
+devel_linux-hwe-5.8: DNE
+
+Patches_linux-hwe-5.11:
+upstream_linux-hwe-5.11: needed
+trusty_linux-hwe-5.11: DNE
+trusty/esm_linux-hwe-5.11: DNE
+xenial_linux-hwe-5.11: DNE
+esm-infra/xenial_linux-hwe-5.11: DNE
+bionic_linux-hwe-5.11: DNE
+focal_linux-hwe-5.11: released (5.11.0-46.51~20.04.1)
+hirsute_linux-hwe-5.11: DNE
+impish_linux-hwe-5.11: DNE
+jammy_linux-hwe-5.11: DNE
+kinetic_linux-hwe-5.11: DNE
+devel_linux-hwe-5.11: DNE
+
+Patches_linux-hwe-edge:
+upstream_linux-hwe-edge: needed
+trusty_linux-hwe-edge: DNE
+trusty/esm_linux-hwe-edge: DNE
+xenial_linux-hwe-edge: ignored (superseded by linux-hwe)
+esm-infra/xenial_linux-hwe-edge: ignored (superseded by linux-hwe)
+bionic_linux-hwe-edge: ignored (superseded by linux-hwe-5.4)
+focal_linux-hwe-edge: DNE
+hirsute_linux-hwe-edge: DNE
+impish_linux-hwe-edge: DNE
+jammy_linux-hwe-edge: DNE
+kinetic_linux-hwe-edge: DNE
+devel_linux-hwe-edge: DNE
+
+Patches_linux-lts-xenial:
+upstream_linux-lts-xenial: needed
+trusty_linux-lts-xenial: ignored (out of standard support)
+trusty/esm_linux-lts-xenial: not-affected (4.4.0-13.29~14.04.1)
+xenial_linux-lts-xenial: DNE
+bionic_linux-lts-xenial: DNE
+focal_linux-lts-xenial: DNE
+hirsute_linux-lts-xenial: DNE
+impish_linux-lts-xenial: DNE
+jammy_linux-lts-xenial: DNE
+kinetic_linux-lts-xenial: DNE
+devel_linux-lts-xenial: DNE
+
+Patches_linux-kvm:
+upstream_linux-kvm: needed
+trusty_linux-kvm: DNE
+trusty/esm_linux-kvm: DNE
+xenial_linux-kvm: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-kvm: not-affected (4.4.0-1004.9)
+bionic_linux-kvm: not-affected (4.15.0-1002.2)
+focal_linux-kvm: not-affected (5.4.0-1004.4)
+hirsute_linux-kvm: released (5.11.0-1022.24)
+impish_linux-kvm: released (5.13.0-1008.8)
+jammy_linux-kvm: not-affected (5.15.0-1002.2)
+kinetic_linux-kvm: not-affected (5.15.0-1004.4)
+devel_linux-kvm: not-affected (5.15.0-1004.4)
+
+Patches_linux-aws:
+upstream_linux-aws: needed
+trusty_linux-aws: ignored (out of standard support)
+trusty/esm_linux-aws: not-affected (4.4.0-1002.2)
+xenial_linux-aws: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-aws: not-affected (4.4.0-1001.10)
+bionic_linux-aws: not-affected (4.15.0-1001.1)
+focal_linux-aws: not-affected (5.4.0-1005.5)
+hirsute_linux-aws: released (5.11.0-1025.27)
+impish_linux-aws: released (5.13.0-1009.10)
+jammy_linux-aws: not-affected (5.15.0-1002.4)
+kinetic_linux-aws: not-affected (5.15.0-1004.6)
+devel_linux-aws: not-affected (5.15.0-1004.6)
+
+Patches_linux-aws-5.0:
+upstream_linux-aws-5.0: needed
+trusty_linux-aws-5.0: DNE
+trusty/esm_linux-aws-5.0: DNE
+xenial_linux-aws-5.0: DNE
+bionic_linux-aws-5.0: ignored (superseded by linux-aws-5.3)
+focal_linux-aws-5.0: DNE
+hirsute_linux-aws-5.0: DNE
+impish_linux-aws-5.0: DNE
+jammy_linux-aws-5.0: DNE
+kinetic_linux-aws-5.0: DNE
+devel_linux-aws-5.0: DNE
+
+Patches_linux-aws-5.3:
+upstream_linux-aws-5.3: needed
+trusty_linux-aws-5.3: DNE
+trusty/esm_linux-aws-5.3: DNE
+xenial_linux-aws-5.3: DNE
+bionic_linux-aws-5.3: ignored (superseded by linux-aws-5.4)
+focal_linux-aws-5.3: DNE
+hirsute_linux-aws-5.3: DNE
+impish_linux-aws-5.3: DNE
+jammy_linux-aws-5.3: DNE
+kinetic_linux-aws-5.3: DNE
+devel_linux-aws-5.3: DNE
+
+Patches_linux-aws-5.4:
+upstream_linux-aws-5.4: needed
+trusty_linux-aws-5.4: DNE
+trusty/esm_linux-aws-5.4: DNE
+xenial_linux-aws-5.4: DNE
+bionic_linux-aws-5.4: not-affected (5.4.0-1018.18~18.04.1)
+focal_linux-aws-5.4: DNE
+hirsute_linux-aws-5.4: DNE
+impish_linux-aws-5.4: DNE
+jammy_linux-aws-5.4: DNE
+kinetic_linux-aws-5.4: DNE
+devel_linux-aws-5.4: DNE
+
+Patches_linux-aws-5.8:
+upstream_linux-aws-5.8: needed
+trusty_linux-aws-5.8: DNE
+trusty/esm_linux-aws-5.8: DNE
+xenial_linux-aws-5.8: DNE
+esm-infra/xenial_linux-aws-5.8: DNE
+bionic_linux-aws-5.8: DNE
+focal_linux-aws-5.8: ignored (was needs-triage now end-of-life)
+hirsute_linux-aws-5.8: DNE
+impish_linux-aws-5.8: DNE
+jammy_linux-aws-5.8: DNE
+kinetic_linux-aws-5.8: DNE
+devel_linux-aws-5.8: DNE
+
+Patches_linux-aws-5.11:
+upstream_linux-aws-5.11: needed
+trusty_linux-aws-5.11: DNE
+trusty/esm_linux-aws-5.11: DNE
+xenial_linux-aws-5.11: DNE
+esm-infra/xenial_linux-aws-5.11: DNE
+bionic_linux-aws-5.11: DNE
+focal_linux-aws-5.11: released (5.11.0-1025.27~20.04.1)
+hirsute_linux-aws-5.11: DNE
+impish_linux-aws-5.11: DNE
+jammy_linux-aws-5.11: DNE
+kinetic_linux-aws-5.11: DNE
+devel_linux-aws-5.11: DNE
+
+Patches_linux-aws-hwe:
+upstream_linux-aws-hwe: needed
+trusty_linux-aws-hwe: DNE
+trusty/esm_linux-aws-hwe: DNE
+xenial_linux-aws-hwe: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-aws-hwe: not-affected (4.15.0-1030.31~16.04.1)
+bionic_linux-aws-hwe: DNE
+focal_linux-aws-hwe: DNE
+hirsute_linux-aws-hwe: DNE
+impish_linux-aws-hwe: DNE
+jammy_linux-aws-hwe: DNE
+kinetic_linux-aws-hwe: DNE
+devel_linux-aws-hwe: DNE
+
+Patches_linux-azure:
+upstream_linux-azure: needed
+trusty_linux-azure: ignored (out of standard support)
+trusty/esm_linux-azure: not-affected (4.15.0-1023.24~14.04.1)
+xenial_linux-azure: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-azure: not-affected (4.11.0-1009.9)
+bionic_linux-azure: ignored (superseded by linux-azure-5.3)
+focal_linux-azure: not-affected (5.4.0-1006.6)
+hirsute_linux-azure: released (5.11.0-1025.27)
+impish_linux-azure: released (5.13.0-1010.11)
+jammy_linux-azure: not-affected (5.15.0-1001.2)
+kinetic_linux-azure: not-affected (5.15.0-1003.4)
+devel_linux-azure: not-affected (5.15.0-1003.4)
+
+Patches_linux-azure-4.15:
+upstream_linux-azure-4.15: needed
+trusty_linux-azure-4.15: DNE
+trusty/esm_linux-azure-4.15: DNE
+xenial_linux-azure-4.15: DNE
+bionic_linux-azure-4.15: not-affected (4.15.0-1082.92)
+focal_linux-azure-4.15: DNE
+hirsute_linux-azure-4.15: DNE
+impish_linux-azure-4.15: DNE
+jammy_linux-azure-4.15: DNE
+kinetic_linux-azure-4.15: DNE
+devel_linux-azure-4.15: DNE
+
+Patches_linux-azure-5.3:
+upstream_linux-azure-5.3: needed
+trusty_linux-azure-5.3: DNE
+trusty/esm_linux-azure-5.3: DNE
+xenial_linux-azure-5.3: DNE
+bionic_linux-azure-5.3: ignored (superseded by linux-azure-5.4)
+focal_linux-azure-5.3: DNE
+hirsute_linux-azure-5.3: DNE
+impish_linux-azure-5.3: DNE
+jammy_linux-azure-5.3: DNE
+kinetic_linux-azure-5.3: DNE
+devel_linux-azure-5.3: DNE
+
+Patches_linux-azure-5.4:
+upstream_linux-azure-5.4: needed
+trusty_linux-azure-5.4: DNE
+trusty/esm_linux-azure-5.4: DNE
+xenial_linux-azure-5.4: DNE
+bionic_linux-azure-5.4: not-affected (5.4.0-1020.20~18.04.1)
+focal_linux-azure-5.4: DNE
+hirsute_linux-azure-5.4: DNE
+impish_linux-azure-5.4: DNE
+jammy_linux-azure-5.4: DNE
+kinetic_linux-azure-5.4: DNE
+devel_linux-azure-5.4: DNE
+
+Patches_linux-azure-5.8:
+upstream_linux-azure-5.8: needed
+trusty_linux-azure-5.8: DNE
+trusty/esm_linux-azure-5.8: DNE
+xenial_linux-azure-5.8: DNE
+esm-infra/xenial_linux-azure-5.8: DNE
+bionic_linux-azure-5.8: DNE
+focal_linux-azure-5.8: ignored (was needs-triage now end-of-life)
+hirsute_linux-azure-5.8: DNE
+impish_linux-azure-5.8: DNE
+jammy_linux-azure-5.8: DNE
+kinetic_linux-azure-5.8: DNE
+devel_linux-azure-5.8: DNE
+
+Patches_linux-azure-5.11:
+upstream_linux-azure-5.11: needed
+trusty_linux-azure-5.11: DNE
+trusty/esm_linux-azure-5.11: DNE
+xenial_linux-azure-5.11: DNE
+esm-infra/xenial_linux-azure-5.11: DNE
+bionic_linux-azure-5.11: DNE
+focal_linux-azure-5.11: released (5.11.0-1025.27~20.04.1)
+hirsute_linux-azure-5.11: DNE
+impish_linux-azure-5.11: DNE
+jammy_linux-azure-5.11: DNE
+kinetic_linux-azure-5.11: DNE
+devel_linux-azure-5.11: DNE
+
+Patches_linux-bluefield:
+upstream_linux-bluefield: needed
+trusty_linux-bluefield: DNE
+trusty/esm_linux-bluefield: DNE
+xenial_linux-bluefield: DNE
+esm-infra/xenial_linux-bluefield: DNE
+bionic_linux-bluefield: DNE
+focal_linux-bluefield: not-affected (5.4.0-1007.10)
+hirsute_linux-bluefield: DNE
+impish_linux-bluefield: DNE
+jammy_linux-bluefield: DNE
+kinetic_linux-bluefield: DNE
+devel_linux-bluefield: DNE
+
+Patches_linux-dell300x:
+upstream_linux-dell300x: needed
+trusty_linux-dell300x: DNE
+trusty/esm_linux-dell300x: DNE
+xenial_linux-dell300x: DNE
+bionic_linux-dell300x: not-affected (4.15.0-1005.8)
+focal_linux-dell300x: DNE
+hirsute_linux-dell300x: DNE
+impish_linux-dell300x: DNE
+jammy_linux-dell300x: DNE
+kinetic_linux-dell300x: DNE
+devel_linux-dell300x: DNE
+
+Patches_linux-azure-edge:
+upstream_linux-azure-edge: needed
+trusty_linux-azure-edge: DNE
+trusty/esm_linux-azure-edge: DNE
+xenial_linux-azure-edge: DNE
+bionic_linux-azure-edge: ignored (superseded by linux-azure-5.3)
+focal_linux-azure-edge: DNE
+hirsute_linux-azure-edge: DNE
+impish_linux-azure-edge: DNE
+jammy_linux-azure-edge: DNE
+kinetic_linux-azure-edge: DNE
+devel_linux-azure-edge: DNE
+
+Patches_linux-gcp:
+upstream_linux-gcp: needed
+trusty_linux-gcp: DNE
+trusty/esm_linux-gcp: DNE
+xenial_linux-gcp: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-gcp: not-affected (4.10.0-1004.4)
+bionic_linux-gcp: ignored (superseded by linux-gcp-5.3)
+focal_linux-gcp: not-affected (5.4.0-1005.5)
+hirsute_linux-gcp: released (5.11.0-1026.29)
+impish_linux-gcp: released (5.13.0-1010.12)
+jammy_linux-gcp: not-affected (5.15.0-1001.3)
+kinetic_linux-gcp: not-affected (5.15.0-1003.6)
+devel_linux-gcp: not-affected (5.15.0-1003.6)
+
+Patches_linux-gcp-4.15:
+upstream_linux-gcp-4.15: needed
+trusty_linux-gcp-4.15: DNE
+trusty/esm_linux-gcp-4.15: DNE
+xenial_linux-gcp-4.15: DNE
+bionic_linux-gcp-4.15: not-affected (4.15.0-1071.81)
+focal_linux-gcp-4.15: DNE
+hirsute_linux-gcp-4.15: DNE
+impish_linux-gcp-4.15: DNE
+jammy_linux-gcp-4.15: DNE
+kinetic_linux-gcp-4.15: DNE
+devel_linux-gcp-4.15: DNE
+
+Patches_linux-gcp-5.3:
+upstream_linux-gcp-5.3: needed
+trusty_linux-gcp-5.3: DNE
+trusty/esm_linux-gcp-5.3: DNE
+xenial_linux-gcp-5.3: DNE
+bionic_linux-gcp-5.3: ignored (superseded by linux-gcp-5.4)
+focal_linux-gcp-5.3: DNE
+hirsute_linux-gcp-5.3: DNE
+impish_linux-gcp-5.3: DNE
+jammy_linux-gcp-5.3: DNE
+kinetic_linux-gcp-5.3: DNE
+devel_linux-gcp-5.3: DNE
+
+Patches_linux-gcp-5.4:
+upstream_linux-gcp-5.4: needed
+trusty_linux-gcp-5.4: DNE
+trusty/esm_linux-gcp-5.4: DNE
+xenial_linux-gcp-5.4: DNE
+bionic_linux-gcp-5.4: not-affected (5.4.0-1019.19~18.04.2)
+focal_linux-gcp-5.4: DNE
+hirsute_linux-gcp-5.4: DNE
+impish_linux-gcp-5.4: DNE
+jammy_linux-gcp-5.4: DNE
+kinetic_linux-gcp-5.4: DNE
+devel_linux-gcp-5.4: DNE
+
+Patches_linux-gcp-5.8:
+upstream_linux-gcp-5.8: needed
+trusty_linux-gcp-5.8: DNE
+trusty/esm_linux-gcp-5.8: DNE
+xenial_linux-gcp-5.8: DNE
+esm-infra/xenial_linux-gcp-5.8: DNE
+bionic_linux-gcp-5.8: DNE
+focal_linux-gcp-5.8: ignored (was needs-triage now end-of-life)
+hirsute_linux-gcp-5.8: DNE
+impish_linux-gcp-5.8: DNE
+jammy_linux-gcp-5.8: DNE
+kinetic_linux-gcp-5.8: DNE
+devel_linux-gcp-5.8: DNE
+
+Patches_linux-gcp-5.11:
+upstream_linux-gcp-5.11: needed
+trusty_linux-gcp-5.11: DNE
+trusty/esm_linux-gcp-5.11: DNE
+xenial_linux-gcp-5.11: DNE
+esm-infra/xenial_linux-gcp-5.11: DNE
+bionic_linux-gcp-5.11: DNE
+focal_linux-gcp-5.11: released (5.11.0-1026.29~20.04.1)
+hirsute_linux-gcp-5.11: DNE
+impish_linux-gcp-5.11: DNE
+jammy_linux-gcp-5.11: DNE
+kinetic_linux-gcp-5.11: DNE
+devel_linux-gcp-5.11: DNE
+
+Patches_linux-gke:
+upstream_linux-gke: needed
+trusty_linux-gke: DNE
+trusty/esm_linux-gke: DNE
+xenial_linux-gke: ignored (reached end of standard support)
+bionic_linux-gke: DNE
+focal_linux-gke: not-affected (5.4.0-1033.35)
+hirsute_linux-gke: DNE
+impish_linux-gke: DNE
+jammy_linux-gke: not-affected (5.15.0-1002.2)
+kinetic_linux-gke: DNE
+devel_linux-gke: DNE
+
+Patches_linux-gke-4.15:
+upstream_linux-gke-4.15: needed
+trusty_linux-gke-4.15: DNE
+trusty/esm_linux-gke-4.15: DNE
+xenial_linux-gke-4.15: DNE
+bionic_linux-gke-4.15: ignored (was needs-triage now end-of-life)
+focal_linux-gke-4.15: DNE
+hirsute_linux-gke-4.15: DNE
+impish_linux-gke-4.15: DNE
+jammy_linux-gke-4.15: DNE
+kinetic_linux-gke-4.15: DNE
+devel_linux-gke-4.15: DNE
+
+Patches_linux-gke-5.0:
+upstream_linux-gke-5.0: needed
+trusty_linux-gke-5.0: DNE
+trusty/esm_linux-gke-5.0: DNE
+xenial_linux-gke-5.0: DNE
+bionic_linux-gke-5.0: ignored (was needs-triage now end-of-life)
+focal_linux-gke-5.0: DNE
+hirsute_linux-gke-5.0: DNE
+impish_linux-gke-5.0: DNE
+jammy_linux-gke-5.0: DNE
+kinetic_linux-gke-5.0: DNE
+devel_linux-gke-5.0: DNE
+
+Patches_linux-gke-5.3:
+upstream_linux-gke-5.3: needed
+trusty_linux-gke-5.3: DNE
+trusty/esm_linux-gke-5.3: DNE
+xenial_linux-gke-5.3: DNE
+bionic_linux-gke-5.3: ignored (was needs-triage now end-of-life)
+focal_linux-gke-5.3: DNE
+hirsute_linux-gke-5.3: DNE
+impish_linux-gke-5.3: DNE
+jammy_linux-gke-5.3: DNE
+kinetic_linux-gke-5.3: DNE
+devel_linux-gke-5.3: DNE
+
+Patches_linux-gke-5.4:
+upstream_linux-gke-5.4: needed
+trusty_linux-gke-5.4: DNE
+trusty/esm_linux-gke-5.4: DNE
+xenial_linux-gke-5.4: DNE
+bionic_linux-gke-5.4: not-affected (5.4.0-1025.25~18.04.1)
+focal_linux-gke-5.4: DNE
+hirsute_linux-gke-5.4: DNE
+impish_linux-gke-5.4: DNE
+jammy_linux-gke-5.4: DNE
+kinetic_linux-gke-5.4: DNE
+devel_linux-gke-5.4: DNE
+
+Patches_linux-gkeop:
+upstream_linux-gkeop: needed
+trusty_linux-gkeop: DNE
+trusty/esm_linux-gkeop: DNE
+xenial_linux-gkeop: DNE
+bionic_linux-gkeop: DNE
+focal_linux-gkeop: not-affected (5.4.0-1008.9)
+hirsute_linux-gkeop: DNE
+impish_linux-gkeop: DNE
+jammy_linux-gkeop: needs-triage
+kinetic_linux-gkeop: DNE
+devel_linux-gkeop: DNE
+
+Patches_linux-gkeop-5.4:
+upstream_linux-gkeop-5.4: needed
+trusty_linux-gkeop-5.4: DNE
+trusty/esm_linux-gkeop-5.4: DNE
+xenial_linux-gkeop-5.4: DNE
+bionic_linux-gkeop-5.4: not-affected (5.4.0-1001.1)
+focal_linux-gkeop-5.4: DNE
+hirsute_linux-gkeop-5.4: DNE
+impish_linux-gkeop-5.4: DNE
+jammy_linux-gkeop-5.4: DNE
+kinetic_linux-gkeop-5.4: DNE
+devel_linux-gkeop-5.4: DNE
+
+Patches_linux-ibm:
+upstream_linux-ibm: needed
+trusty_linux-ibm: DNE
+trusty/esm_linux-ibm: DNE
+xenial_linux-ibm: DNE
+esm-infra/xenial_linux-ibm: DNE
+bionic_linux-ibm: DNE
+focal_linux-ibm: not-affected (5.4.0-1003.4)
+hirsute_linux-ibm: DNE
+impish_linux-ibm: DNE
+jammy_linux-ibm: not-affected (5.15.0-1002.2)
+kinetic_linux-ibm: not-affected (5.15.0-1002.2)
+devel_linux-ibm: not-affected (5.15.0-1002.2)
+
+Patches_linux-intel-5.13:
+upstream_linux-intel-5.13: needed
+trusty_linux-intel-5.13: DNE
+trusty/esm_linux-intel-5.13: DNE
+xenial_linux-intel-5.13: DNE
+bionic_linux-intel-5.13: DNE
+focal_linux-intel-5.13: ignored (was needs-triage now end-of-life)
+hirsute_linux-intel-5.13: DNE
+impish_linux-intel-5.13: DNE
+jammy_linux-intel-5.13: DNE
+kinetic_linux-intel-5.13: DNE
+devel_linux-intel-5.13: DNE
+
+Patches_linux-oracle:
+upstream_linux-oracle: needed
+trusty_linux-oracle: DNE
+trusty/esm_linux-oracle: DNE
+xenial_linux-oracle: ignored (was needs-triage now end-of-life)
+esm-infra/xenial_linux-oracle: not-affected (4.15.0-1007.9~16.04.1)
+bionic_linux-oracle: not-affected (4.15.0-1007.9)
+focal_linux-oracle: not-affected (5.4.0-1005.5)
+hirsute_linux-oracle: released (5.11.0-1025.27)
+impish_linux-oracle: released (5.13.0-1013.16)
+jammy_linux-oracle: not-affected (5.15.0-1001.3)
+kinetic_linux-oracle: not-affected (5.15.0-1002.4)
+devel_linux-oracle: not-affected (5.15.0-1002.4)
+
+Patches_linux-oracle-5.0:
+upstream_linux-oracle-5.0: needed
+trusty_linux-oracle-5.0: DNE
+trusty/esm_linux-oracle-5.0: DNE
+xenial_linux-oracle-5.0: DNE
+bionic_linux-oracle-5.0: ignored (superseded by linux-oracle-5.3)
+focal_linux-oracle-5.0: DNE
+hirsute_linux-oracle-5.0: DNE
+impish_linux-oracle-5.0: DNE
+jammy_linux-oracle-5.0: DNE
+kinetic_linux-oracle-5.0: DNE
+devel_linux-oracle-5.0: DNE
+
+Patches_linux-oracle-5.3:
+upstream_linux-oracle-5.3: needed
+trusty_linux-oracle-5.3: DNE
+trusty/esm_linux-oracle-5.3: DNE
+xenial_linux-oracle-5.3: DNE
+bionic_linux-oracle-5.3: ignored (superseded by linux-oracle-5.4)
+focal_linux-oracle-5.3: DNE
+hirsute_linux-oracle-5.3: DNE
+impish_linux-oracle-5.3: DNE
+jammy_linux-oracle-5.3: DNE
+kinetic_linux-oracle-5.3: DNE
+devel_linux-oracle-5.3: DNE
+
+Patches_linux-oracle-5.4:
+upstream_linux-oracle-5.4: needed
+trusty_linux-oracle-5.4: DNE
+trusty/esm_linux-oracle-5.4: DNE
+xenial_linux-oracle-5.4: DNE
+bionic_linux-oracle-5.4: not-affected (5.4.0-1019.19~18.04.1)
+focal_linux-oracle-5.4: DNE
+hirsute_linux-oracle-5.4: DNE
+impish_linux-oracle-5.4: DNE
+jammy_linux-oracle-5.4: DNE
+kinetic_linux-oracle-5.4: DNE
+devel_linux-oracle-5.4: DNE
+
+Patches_linux-oracle-5.8:
+upstream_linux-oracle-5.8: needed
+trusty_linux-oracle-5.8: DNE
+trusty/esm_linux-oracle-5.8: DNE
+xenial_linux-oracle-5.8: DNE
+esm-infra/xenial_linux-oracle-5.8: DNE
+bionic_linux-oracle-5.8: DNE
+focal_linux-oracle-5.8: ignored (was needs-triage now end-of-life)
+hirsute_linux-oracle-5.8: DNE
+impish_linux-oracle-5.8: DNE
+jammy_linux-oracle-5.8: DNE
+kinetic_linux-oracle-5.8: DNE
+devel_linux-oracle-5.8: DNE
+
+Patches_linux-oracle-5.11:
+upstream_linux-oracle-5.11: needed
+trusty_linux-oracle-5.11: DNE
+trusty/esm_linux-oracle-5.11: DNE
+xenial_linux-oracle-5.11: DNE
+esm-infra/xenial_linux-oracle-5.11: DNE
+bionic_linux-oracle-5.11: DNE
+focal_linux-oracle-5.11: released (5.11.0-1025.27~20.04.1)
+hirsute_linux-oracle-5.11: DNE
+impish_linux-oracle-5.11: DNE
+jammy_linux-oracle-5.11: DNE
+kinetic_linux-oracle-5.11: DNE
+devel_linux-oracle-5.11: DNE
+
+Patches_linux-oem:
+upstream_linux-oem: needed
+trusty_linux-oem: DNE
+trusty/esm_linux-oem: DNE
+xenial_linux-oem: ignored (superseded by linux-hwe)
+bionic_linux-oem: ignored (was needs-triage now end-of-life)
+focal_linux-oem: DNE
+hirsute_linux-oem: DNE
+impish_linux-oem: DNE
+jammy_linux-oem: DNE
+kinetic_linux-oem: DNE
+devel_linux-oem: DNE
+
+Patches_linux-oem-5.6:
+upstream_linux-oem-5.6: needed
+trusty_linux-oem-5.6: DNE
+trusty/esm_linux-oem-5.6: DNE
+xenial_linux-oem-5.6: DNE
+bionic_linux-oem-5.6: DNE
+focal_linux-oem-5.6: ignored (was needs-triage now end-of-life)
+hirsute_linux-oem-5.6: DNE
+impish_linux-oem-5.6: DNE
+jammy_linux-oem-5.6: DNE
+kinetic_linux-oem-5.6: DNE
+devel_linux-oem-5.6: DNE
+
+Patches_linux-oem-5.10:
+upstream_linux-oem-5.10: needed
+trusty_linux-oem-5.10: DNE
+trusty/esm_linux-oem-5.10: DNE
+xenial_linux-oem-5.10: DNE
+bionic_linux-oem-5.10: DNE
+focal_linux-oem-5.10: released (5.10.0-1055.58)
+hirsute_linux-oem-5.10: DNE
+impish_linux-oem-5.10: DNE
+jammy_linux-oem-5.10: DNE
+kinetic_linux-oem-5.10: DNE
+devel_linux-oem-5.10: DNE
+
+Patches_linux-oem-5.13:
+upstream_linux-oem-5.13: needed
+trusty_linux-oem-5.13: DNE
+trusty/esm_linux-oem-5.13: DNE
+xenial_linux-oem-5.13: DNE
+bionic_linux-oem-5.13: DNE
+focal_linux-oem-5.13: released (5.13.0-1026.32)
+hirsute_linux-oem-5.13: DNE
+impish_linux-oem-5.13: DNE
+jammy_linux-oem-5.13: DNE
+kinetic_linux-oem-5.13: DNE
+devel_linux-oem-5.13: DNE
+
+Patches_linux-oem-5.14:
+upstream_linux-oem-5.14: needed
+trusty_linux-oem-5.14: DNE
+trusty/esm_linux-oem-5.14: DNE
+xenial_linux-oem-5.14: DNE
+bionic_linux-oem-5.14: DNE
+focal_linux-oem-5.14: released (5.14.0-1018.19)
+hirsute_linux-oem-5.14: DNE
+impish_linux-oem-5.14: DNE
+jammy_linux-oem-5.14: DNE
+kinetic_linux-oem-5.14: DNE
+devel_linux-oem-5.14: DNE
+
+Patches_linux-oem-osp1:
+upstream_linux-oem-osp1: needed
+trusty_linux-oem-osp1: DNE
+trusty/esm_linux-oem-osp1: DNE
+xenial_linux-oem-osp1: DNE
+bionic_linux-oem-osp1: ignored (was needs-triage now end-of-life)
+focal_linux-oem-osp1: DNE
+hirsute_linux-oem-osp1: DNE
+impish_linux-oem-osp1: DNE
+jammy_linux-oem-osp1: DNE
+kinetic_linux-oem-osp1: DNE
+devel_linux-oem-osp1: DNE
+
+Patches_linux-raspi:
+upstream_linux-raspi: needed
+trusty_linux-raspi: DNE
+trusty/esm_linux-raspi: DNE
+xenial_linux-raspi: DNE
+bionic_linux-raspi: DNE
+focal_linux-raspi: not-affected (5.4.0-1007.7)
+hirsute_linux-raspi: released (5.11.0-1025.27)
+impish_linux-raspi: released (5.13.0-1013.15)
+jammy_linux-raspi: not-affected (5.15.0-1002.2)
+kinetic_linux-raspi: not-affected (5.15.0-1005.5)
+devel_linux-raspi: not-affected (5.15.0-1005.5)
+
+Patches_linux-raspi2:
+upstream_linux-raspi2: needed
+trusty_linux-raspi2: DNE
+trusty/esm_linux-raspi2: DNE
+xenial_linux-raspi2: ignored (was needs-triage now end-of-life)
+bionic_linux-raspi2: not-affected (4.13.0-1005.5)
+focal_linux-raspi2: ignored (replaced by linux-raspi)
+hirsute_linux-raspi2: DNE
+impish_linux-raspi2: DNE
+jammy_linux-raspi2: DNE
+kinetic_linux-raspi2: DNE
+devel_linux-raspi2: DNE
+
+Patches_linux-raspi2-5.3:
+upstream_linux-raspi2-5.3: needed
+trusty_linux-raspi2-5.3: DNE
+trusty/esm_linux-raspi2-5.3: DNE
+xenial_linux-raspi2-5.3: DNE
+bionic_linux-raspi2-5.3: ignored (was needs-triage now end-of-life)
+focal_linux-raspi2-5.3: DNE
+hirsute_linux-raspi2-5.3: DNE
+impish_linux-raspi2-5.3: DNE
+jammy_linux-raspi2-5.3: DNE
+kinetic_linux-raspi2-5.3: DNE
+devel_linux-raspi2-5.3: DNE
+
+Patches_linux-raspi-5.4:
+upstream_linux-raspi-5.4: needed
+trusty_linux-raspi-5.4: DNE
+trusty/esm_linux-raspi-5.4: DNE
+xenial_linux-raspi-5.4: DNE
+bionic_linux-raspi-5.4: not-affected (5.4.0-1013.13~18.04.1)
+focal_linux-raspi-5.4: DNE
+hirsute_linux-raspi-5.4: DNE
+impish_linux-raspi-5.4: DNE
+jammy_linux-raspi-5.4: DNE
+kinetic_linux-raspi-5.4: DNE
+devel_linux-raspi-5.4: DNE
+
+Patches_linux-riscv:
+upstream_linux-riscv: needed
+trusty_linux-riscv: DNE
+trusty/esm_linux-riscv: DNE
+xenial_linux-riscv: DNE
+bionic_linux-riscv: DNE
+focal_linux-riscv: ignored (superseded by linux-riscv-5.8)
+hirsute_linux-riscv: ignored (reached end-of-life)
+impish_linux-riscv: released (5.13.0-1008.8)
+jammy_linux-riscv: not-affected (5.15.0-1004.4)
+kinetic_linux-riscv: not-affected (5.15.0-1007.7)
+devel_linux-riscv: not-affected (5.15.0-1007.7)
+
+Patches_linux-riscv-5.8:
+upstream_linux-riscv-5.8: needed
+trusty_linux-riscv-5.8: DNE
+trusty/esm_linux-riscv-5.8: DNE
+xenial_linux-riscv-5.8: DNE
+esm-infra/xenial_linux-riscv-5.8: DNE
+bionic_linux-riscv-5.8: DNE
+focal_linux-riscv-5.8: ignored (was needs-triage now end-of-life)
+hirsute_linux-riscv-5.8: DNE
+impish_linux-riscv-5.8: DNE
+jammy_linux-riscv-5.8: DNE
+kinetic_linux-riscv-5.8: DNE
+devel_linux-riscv-5.8: DNE
+
+Patches_linux-riscv-5.11:
+upstream_linux-riscv-5.11: needed
+trusty_linux-riscv-5.11: DNE
+trusty/esm_linux-riscv-5.11: DNE
+xenial_linux-riscv-5.11: DNE
+esm-infra/xenial_linux-riscv-5.11: DNE
+bionic_linux-riscv-5.11: DNE
+focal_linux-riscv-5.11: released (5.11.0-1026.28~20.04.1)
+hirsute_linux-riscv-5.11: DNE
+impish_linux-riscv-5.11: DNE
+jammy_linux-riscv-5.11: DNE
+kinetic_linux-riscv-5.11: DNE
+devel_linux-riscv-5.11: DNE
+
+Patches_linux-snapdragon:
+upstream_linux-snapdragon: needed
+trusty_linux-snapdragon: DNE
+trusty/esm_linux-snapdragon: DNE
+xenial_linux-snapdragon: ignored (was needs-triage now end-of-life)
+bionic_linux-snapdragon: not-affected (4.4.0-1077.82)
+focal_linux-snapdragon: DNE
+hirsute_linux-snapdragon: DNE
+impish_linux-snapdragon: DNE
+jammy_linux-snapdragon: DNE
+kinetic_linux-snapdragon: DNE
+devel_linux-snapdragon: DNE
+
+Patches_linux-hwe-5.13:
+upstream_linux-hwe-5.13: needed
+trusty_linux-hwe-5.13: DNE
+trusty/esm_linux-hwe-5.13: DNE
+xenial_linux-hwe-5.13: DNE
+esm-infra/xenial_linux-hwe-5.13: DNE
+bionic_linux-hwe-5.13: DNE
+focal_linux-hwe-5.13: released (5.13.0-25.26~20.04.1)
+impish_linux-hwe-5.13: DNE
+jammy_linux-hwe-5.13: DNE
+kinetic_linux-hwe-5.13: DNE
+devel_linux-hwe-5.13: DNE
+
+Patches_linux-aws-5.13:
+upstream_linux-aws-5.13: needed
+trusty_linux-aws-5.13: DNE
+trusty/esm_linux-aws-5.13: DNE
+xenial_linux-aws-5.13: DNE
+esm-infra/xenial_linux-aws-5.13: DNE
+bionic_linux-aws-5.13: DNE
+focal_linux-aws-5.13: released (5.13.0-1011.12~20.04.1)
+impish_linux-aws-5.13: DNE
+jammy_linux-aws-5.13: DNE
+kinetic_linux-aws-5.13: DNE
+devel_linux-aws-5.13: DNE
+
+Patches_linux-fips:
+upstream_linux-fips: needed
+trusty_linux-fips: ignored (out of standard support)
+trusty/esm_linux-fips: DNE
+xenial_linux-fips: ignored (out of standard support)
+fips/xenial_linux-fips: needs-triage
+fips-updates/xenial_linux-fips: not-affected (4.4.0-1074.80)
+bionic_linux-fips: DNE
+fips/bionic_linux-fips: needs-triage
+fips-updates/bionic_linux-fips: needs-triage
+focal_linux-fips: DNE
+fips/focal_linux-fips: needs-triage
+fips-updates/focal_linux-fips: needs-triage
+hirsute_linux-fips: DNE
+impish_linux-fips: DNE
+jammy_linux-fips: DNE
+kinetic_linux-fips: DNE
+devel_linux-fips: DNE
+
+Patches_linux-oracle-5.13:
+upstream_linux-oracle-5.13: needed
+trusty_linux-oracle-5.13: DNE
+trusty/esm_linux-oracle-5.13: DNE
+xenial_linux-oracle-5.13: DNE
+esm-infra/xenial_linux-oracle-5.13: DNE
+bionic_linux-oracle-5.13: DNE
+focal_linux-oracle-5.13: released (5.13.0-1015.19~20.04.1)
+impish_linux-oracle-5.13: DNE
+jammy_linux-oracle-5.13: DNE
+kinetic_linux-oracle-5.13: DNE
+devel_linux-oracle-5.13: DNE
+
+Patches_linux-gcp-5.13:
+upstream_linux-gcp-5.13: needed
+trusty_linux-gcp-5.13: DNE
+trusty/esm_linux-gcp-5.13: DNE
+xenial_linux-gcp-5.13: DNE
+esm-infra/xenial_linux-gcp-5.13: DNE
+bionic_linux-gcp-5.13: DNE
+focal_linux-gcp-5.13: released (5.13.0-1012.15~20.04.1)
+impish_linux-gcp-5.13: DNE
+jammy_linux-gcp-5.13: DNE
+kinetic_linux-gcp-5.13: DNE
+devel_linux-gcp-5.13: DNE
+
+Patches_linux-ibm-5.4:
+upstream_linux-ibm-5.4: needed
+trusty_linux-ibm-5.4: DNE
+trusty/esm_linux-ibm-5.4: DNE
+xenial_linux-ibm-5.4: DNE
+esm-infra/xenial_linux-ibm-5.4: DNE
+bionic_linux-ibm-5.4: not-affected (5.4.0-1010.11~18.04.2)
+focal_linux-ibm-5.4: DNE
+impish_linux-ibm-5.4: DNE
+jammy_linux-ibm-5.4: DNE
+kinetic_linux-ibm-5.4: DNE
+devel_linux-ibm-5.4: DNE
+
+Patches_linux-azure-fde:
+upstream_linux-azure-fde: needed
+trusty_linux-azure-fde: DNE
+trusty/esm_linux-azure-fde: DNE
+xenial_linux-azure-fde: DNE
+esm-infra/xenial_linux-azure-fde: DNE
+bionic_linux-azure-fde: DNE
+focal_linux-azure-fde: not-affected (5.4.0-1063.66+cvm2.2)
+impish_linux-azure-fde: DNE
+jammy_linux-azure-fde: needs-triage
+kinetic_linux-azure-fde: DNE
+devel_linux-azure-fde: DNE
+
+Patches_linux-azure-5.13:
+upstream_linux-azure-5.13: needed
+trusty_linux-azure-5.13: DNE
+trusty/esm_linux-azure-5.13: DNE
+xenial_linux-azure-5.13: DNE
+esm-infra/xenial_linux-azure-5.13: DNE
+bionic_linux-azure-5.13: DNE
+focal_linux-azure-5.13: released (5.13.0-1012.14~20.04.1)
+impish_linux-azure-5.13: DNE
+jammy_linux-azure-5.13: DNE
+kinetic_linux-azure-5.13: DNE
+devel_linux-azure-5.13: DNE
+
+Patches_linux-lowlatency:
+upstream_linux-lowlatency: needed
+trusty_linux-lowlatency: DNE
+trusty/esm_linux-lowlatency: DNE
+xenial_linux-lowlatency: DNE
+esm-infra/xenial_linux-lowlatency: DNE
+bionic_linux-lowlatency: DNE
+focal_linux-lowlatency: DNE
+impish_linux-lowlatency: DNE
+jammy_linux-lowlatency: not-affected (5.15.0-22.22)
+kinetic_linux-lowlatency: not-affected (5.15.0-24.24)
+devel_linux-lowlatency: not-affected (5.15.0-24.24)
+
+Patches_linux-oem-5.17:
+upstream_linux-oem-5.17: needed
+trusty_linux-oem-5.17: DNE
+trusty/esm_linux-oem-5.17: DNE
+xenial_linux-oem-5.17: DNE
+esm-infra/xenial_linux-oem-5.17: DNE
+bionic_linux-oem-5.17: DNE
+focal_linux-oem-5.17: DNE
+impish_linux-oem-5.17: DNE
+jammy_linux-oem-5.17: not-affected (5.17.0-1003.3)
+kinetic_linux-oem-5.17: not-affected (5.17.0-1003.3)
+devel_linux-oem-5.17: not-affected (5.17.0-1003.3)
+
+Patches_linux-intel-iotg:
+upstream_linux-intel-iotg: needs-triage
+trusty_linux-intel-iotg: DNE
+trusty/esm_linux-intel-iotg: DNE
+xenial_linux-intel-iotg: DNE
+esm-infra/xenial_linux-intel-iotg: DNE
+bionic_linux-intel-iotg: DNE
+focal_linux-intel-iotg: DNE
+impish_linux-intel-iotg: DNE
+jammy_linux-intel-iotg: not-affected
+kinetic_linux-intel-iotg: DNE
+devel_linux-intel-iotg: DNE
+
+Patches_linux-intel-iotg-5.15:
+upstream_linux-intel-iotg-5.15: needs-triage
+trusty_linux-intel-iotg-5.15: DNE
+trusty/esm_linux-intel-iotg-5.15: DNE
+xenial_linux-intel-iotg-5.15: DNE
+esm-infra/xenial_linux-intel-iotg-5.15: DNE
+bionic_linux-intel-iotg-5.15: DNE
+focal_linux-intel-iotg-5.15: not-affected
+impish_linux-intel-iotg-5.15: DNE
+jammy_linux-intel-iotg-5.15: DNE
+kinetic_linux-intel-iotg-5.15: DNE
+devel_linux-intel-iotg-5.15: DNE
+
+Patches_linux-lowlatency-hwe-5.15:
+upstream_linux-lowlatency-hwe-5.15: needs-triage
+trusty_linux-lowlatency-hwe-5.15: DNE
+trusty/esm_linux-lowlatency-hwe-5.15: DNE
+xenial_linux-lowlatency-hwe-5.15: DNE
+esm-infra/xenial_linux-lowlatency-hwe-5.15: DNE
+bionic_linux-lowlatency-hwe-5.15: DNE
+focal_linux-lowlatency-hwe-5.15: not-affected
+jammy_linux-lowlatency-hwe-5.15: DNE
+kinetic_linux-lowlatency-hwe-5.15: DNE
+devel_linux-lowlatency-hwe-5.15: DNE
+
+Patches_linux-hwe-5.15:
+upstream_linux-hwe-5.15: needs-triage
+trusty_linux-hwe-5.15: DNE
+trusty/esm_linux-hwe-5.15: DNE
+xenial_linux-hwe-5.15: DNE
+esm-infra/xenial_linux-hwe-5.15: DNE
+bionic_linux-hwe-5.15: DNE
+focal_linux-hwe-5.15: not-affected
+jammy_linux-hwe-5.15: DNE
+kinetic_linux-hwe-5.15: DNE
+devel_linux-hwe-5.15: DNE
+
+Patches_linux-aws-5.15:
+upstream_linux-aws-5.15: needs-triage
+focal_linux-aws-5.15: not-affected
+trusty_linux-aws-5.15: DNE
+trusty/esm_linux-aws-5.15: DNE
+xenial_linux-aws-5.15: DNE
+esm-infra/xenial_linux-aws-5.15: DNE
+bionic_linux-aws-5.15: DNE
+jammy_linux-aws-5.15: DNE
+kinetic_linux-aws-5.15: DNE
+devel_linux-aws-5.15: DNE
+
+Patches_linux-gcp-5.15:
+upstream_linux-gcp-5.15: needs-triage
+trusty_linux-gcp-5.15: DNE
+trusty/esm_linux-gcp-5.15: DNE
+xenial_linux-gcp-5.15: DNE
+esm-infra/xenial_linux-gcp-5.15: DNE
+bionic_linux-gcp-5.15: DNE
+focal_linux-gcp-5.15: not-affected
+jammy_linux-gcp-5.15: DNE
+kinetic_linux-gcp-5.15: DNE
+devel_linux-gcp-5.15: DNE
+
+Patches_linux-gke-5.15:
+upstream_linux-gke-5.15: needs-triage
+trusty_linux-gke-5.15: DNE
+trusty/esm_linux-gke-5.15: DNE
+xenial_linux-gke-5.15: DNE
+esm-infra/xenial_linux-gke-5.15: DNE
+bionic_linux-gke-5.15: DNE
+focal_linux-gke-5.15: not-affected
+jammy_linux-gke-5.15: DNE
+kinetic_linux-gke-5.15: DNE
+devel_linux-gke-5.15: DNE
+
+Patches_linux-azure-5.15:
+upstream_linux-azure-5.15: needs-triage
+trusty_linux-azure-5.15: DNE
+trusty/esm_linux-azure-5.15: DNE
+xenial_linux-azure-5.15: DNE
+esm-infra/xenial_linux-azure-5.15: DNE
+bionic_linux-azure-5.15: DNE
+focal_linux-azure-5.15: not-affected
+jammy_linux-azure-5.15: DNE
+kinetic_linux-azure-5.15: DNE
+devel_linux-azure-5.15: DNE
+
+Patches_linux-oracle-5.15:
+upstream_linux-oracle-5.15: needs-triage
+trusty_linux-oracle-5.15: DNE
+trusty/esm_linux-oracle-5.15: DNE
+xenial_linux-oracle-5.15: DNE
+esm-infra/xenial_linux-oracle-5.15: DNE
+bionic_linux-oracle-5.15: DNE
+focal_linux-oracle-5.15: not-affected
+jammy_linux-oracle-5.15: DNE
+kinetic_linux-oracle-5.15: DNE
+devel_linux-oracle-5.15: DNE
+
+Patches_linux-azure-fde-5.15:
+upstream_linux-azure-fde-5.15: needs-triage
+trusty_linux-azure-fde-5.15: DNE
+trusty/esm_linux-azure-fde-5.15: DNE
+xenial_linux-azure-fde-5.15: DNE
+esm-infra/xenial_linux-azure-fde-5.15: DNE
+bionic_linux-azure-fde-5.15: DNE
+focal_linux-azure-fde-5.15: not-affected
+jammy_linux-azure-fde-5.15: DNE
+kinetic_linux-azure-fde-5.15: DNE
+devel_linux-azure-fde-5.15: DNE
+
+Patches_linux-oem-6.0:
+upstream_linux-oem-6.0: needs-triage
+trusty_linux-oem-6.0: DNE
+trusty/esm_linux-oem-6.0: DNE
+xenial_linux-oem-6.0: DNE
+esm-infra/xenial_linux-oem-6.0: DNE
+bionic_linux-oem-6.0: DNE
+focal_linux-oem-6.0: DNE
+jammy_linux-oem-6.0: needs-triage
+kinetic_linux-oem-6.0: DNE
+devel_linux-oem-6.0: DNE
+
+blob
+mark :3
+data 22583
+Candidate: CVE-2022-20566
+PublicDate: 2022-12-06
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-20566
+ https://git.kernel.org/linus/d0be8347c623e0ac4202a1d4e0373882821f56b0
+Description:
+ [Unknown description]
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: medium
+Discovered-by:
+Assigned-to:
+CVSS:
+ nvd: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H [7.8 HIGH]
+
+Patches_linux:
+ break-fix: - d0be8347c623e0ac4202a1d4e0373882821f56b0
+upstream_linux: released (5.18.16-1)
+esm-infra/xenial_linux: needs-triage
+trusty_linux: ignored (out of standard support)
+xenial_linux: ignored (out of standard support)
+bionic_linux: needs-triage
+focal_linux: needs-triage
+jammy_linux: needs-triage
+kinetic_linux: not-affected (5.19.0-26.27)
+trusty/esm_linux: not-affected
+devel_linux: not-affected
+
+Patches_linux-hwe:
+upstream_linux-hwe: needs-triage
+esm-infra/xenial_linux-hwe: needs-triage
+trusty_linux-hwe: DNE
+xenial_linux-hwe: ignored (end of standard support)
+bionic_linux-hwe: ignored (replaced by linux-hwe-5.4)
+focal_linux-hwe: DNE
+jammy_linux-hwe: DNE
+kinetic_linux-hwe: DNE
+
+Patches_linux-hwe-5.4:
+upstream_linux-hwe-5.4: needs-triage
+trusty_linux-hwe-5.4: DNE
+xenial_linux-hwe-5.4: DNE
+bionic_linux-hwe-5.4: needs-triage
+focal_linux-hwe-5.4: DNE
+jammy_linux-hwe-5.4: DNE
+kinetic_linux-hwe-5.4: DNE
+
+Patches_linux-hwe-5.8:
+upstream_linux-hwe-5.8: ignored (superseded by linux-hwe-5.11)
+trusty_linux-hwe-5.8: DNE
+xenial_linux-hwe-5.8: DNE
+bionic_linux-hwe-5.8: DNE
+focal_linux-hwe-5.8: ignored (superseded by linux-hwe-5.11)
+jammy_linux-hwe-5.8: DNE
+kinetic_linux-hwe-5.8: DNE
+
+Patches_linux-hwe-5.11:
+upstream_linux-hwe-5.11: ignored (superseded by linux-hwe-5.13)
+trusty_linux-hwe-5.11: DNE
+xenial_linux-hwe-5.11: DNE
+bionic_linux-hwe-5.11: DNE
+focal_linux-hwe-5.11: ignored (superseded by linux-hwe-5.13)
+jammy_linux-hwe-5.11: DNE
+kinetic_linux-hwe-5.11: DNE
+
+Patches_linux-hwe-5.13:
+upstream_linux-hwe-5.13: ignored (superseded by linux-hwe-5.15)
+trusty_linux-hwe-5.13: DNE
+xenial_linux-hwe-5.13: DNE
+bionic_linux-hwe-5.13: DNE
+focal_linux-hwe-5.13: ignored (superseded by linux-hwe-5.15)
+jammy_linux-hwe-5.13: DNE
+kinetic_linux-hwe-5.13: DNE
+
+Patches_linux-hwe-5.15:
+upstream_linux-hwe-5.15: needs-triage
+trusty_linux-hwe-5.15: DNE
+xenial_linux-hwe-5.15: DNE
+bionic_linux-hwe-5.15: DNE
+focal_linux-hwe-5.15: needs-triage
+jammy_linux-hwe-5.15: DNE
+kinetic_linux-hwe-5.15: DNE
+
+Patches_linux-hwe-edge:
+upstream_linux-hwe-edge: needs-triage
+esm-infra/xenial_linux-hwe-edge: ignored (superseded by linux-hwe)
+trusty_linux-hwe-edge: DNE
+xenial_linux-hwe-edge: ignored (superseded by linux-hwe)
+bionic_linux-hwe-edge: ignored (superseded by linux-hwe-5.4)
+focal_linux-hwe-edge: DNE
+jammy_linux-hwe-edge: DNE
+kinetic_linux-hwe-edge: DNE
+
+Patches_linux-lts-xenial:
+upstream_linux-lts-xenial: needs-triage
+trusty_linux-lts-xenial: ignored (out of standard support)
+xenial_linux-lts-xenial: DNE
+bionic_linux-lts-xenial: DNE
+focal_linux-lts-xenial: DNE
+jammy_linux-lts-xenial: DNE
+kinetic_linux-lts-xenial: DNE
+trusty/esm_linux-lts-xenial: needs-triage
+
+Patches_linux-kvm:
+upstream_linux-kvm: needs-triage
+esm-infra/xenial_linux-kvm: needs-triage
+trusty_linux-kvm: DNE
+xenial_linux-kvm: ignored (end of standard support)
+bionic_linux-kvm: needs-triage
+focal_linux-kvm: needs-triage
+jammy_linux-kvm: needs-triage
+kinetic_linux-kvm: needs-triage
+devel_linux-kvm: needs-triage
+
+Patches_linux-aws:
+upstream_linux-aws: needs-triage
+esm-infra/xenial_linux-aws: needs-triage
+trusty_linux-aws: ignored (out of standard support)
+xenial_linux-aws: ignored (end of standard support)
+bionic_linux-aws: needs-triage
+focal_linux-aws: needs-triage
+jammy_linux-aws: needs-triage
+kinetic_linux-aws: needs-triage
+trusty/esm_linux-aws: needs-triage
+devel_linux-aws: needs-triage
+
+Patches_linux-aws-5.0:
+upstream_linux-aws-5.0: needs-triage
+trusty_linux-aws-5.0: DNE
+xenial_linux-aws-5.0: DNE
+bionic_linux-aws-5.0: ignored (superseded by linux-aws-5.3)
+focal_linux-aws-5.0: DNE
+jammy_linux-aws-5.0: DNE
+kinetic_linux-aws-5.0: DNE
+
+Patches_linux-aws-5.3:
+upstream_linux-aws-5.3: ignored (superseded by linux-aws-5.4)
+trusty_linux-aws-5.3: DNE
+xenial_linux-aws-5.3: DNE
+bionic_linux-aws-5.3: ignored (superseded by linux-aws-5.4)
+focal_linux-aws-5.3: DNE
+jammy_linux-aws-5.3: DNE
+kinetic_linux-aws-5.3: DNE
+
+Patches_linux-aws-5.4:
+upstream_linux-aws-5.4: needs-triage
+trusty_linux-aws-5.4: DNE
+xenial_linux-aws-5.4: DNE
+bionic_linux-aws-5.4: needs-triage
+focal_linux-aws-5.4: DNE
+jammy_linux-aws-5.4: DNE
+kinetic_linux-aws-5.4: DNE
+
+Patches_linux-aws-5.8:
+upstream_linux-aws-5.8: ignored (superseded by linux-aws-5.11)
+trusty_linux-aws-5.8: DNE
+xenial_linux-aws-5.8: DNE
+bionic_linux-aws-5.8: DNE
+focal_linux-aws-5.8: ignored (superseded by linux-aws-5.11)
+jammy_linux-aws-5.8: DNE
+kinetic_linux-aws-5.8: DNE
+
+Patches_linux-aws-5.11:
+upstream_linux-aws-5.11: ignored (superseded by linux-aws-5.13)
+trusty_linux-aws-5.11: DNE
+xenial_linux-aws-5.11: DNE
+bionic_linux-aws-5.11: DNE
+focal_linux-aws-5.11: ignored (superseded by linux-aws-5.13)
+jammy_linux-aws-5.11: DNE
+kinetic_linux-aws-5.11: DNE
+
+Patches_linux-aws-5.13:
+upstream_linux-aws-5.13: ignored (superseded by linux-aws-5.15)
+trusty_linux-aws-5.13: DNE
+xenial_linux-aws-5.13: DNE
+bionic_linux-aws-5.13: DNE
+focal_linux-aws-5.13: ignored (superseded by linux-aws-5.15)
+jammy_linux-aws-5.13: DNE
+kinetic_linux-aws-5.13: DNE
+
+Patches_linux-aws-5.15:
+upstream_linux-aws-5.15: needs-triage
+trusty_linux-aws-5.15: DNE
+xenial_linux-aws-5.15: DNE
+bionic_linux-aws-5.15: DNE
+focal_linux-aws-5.15: needs-triage
+jammy_linux-aws-5.15: DNE
+kinetic_linux-aws-5.15: DNE
+
+Patches_linux-aws-hwe:
+upstream_linux-aws-hwe: needs-triage
+esm-infra/xenial_linux-aws-hwe: needs-triage
+trusty_linux-aws-hwe: DNE
+xenial_linux-aws-hwe: ignored (end of standard support)
+bionic_linux-aws-hwe: DNE
+focal_linux-aws-hwe: DNE
+jammy_linux-aws-hwe: DNE
+kinetic_linux-aws-hwe: DNE
+
+Patches_linux-azure:
+upstream_linux-azure: needs-triage
+esm-infra/xenial_linux-azure: needs-triage
+trusty_linux-azure: ignored (out of standard support)
+xenial_linux-azure: ignored (end of standard support)
+bionic_linux-azure: ignored (superseded by linux-azure-5.3)
+focal_linux-azure: needs-triage
+jammy_linux-azure: needs-triage
+kinetic_linux-azure: needs-triage
+trusty/esm_linux-azure: needs-triage
+devel_linux-azure: needs-triage
+
+Patches_linux-azure-4.15:
+upstream_linux-azure-4.15: needs-triage
+trusty_linux-azure-4.15: DNE
+xenial_linux-azure-4.15: DNE
+bionic_linux-azure-4.15: needs-triage
+focal_linux-azure-4.15: DNE
+jammy_linux-azure-4.15: DNE
+kinetic_linux-azure-4.15: DNE
+
+Patches_linux-azure-5.3:
+upstream_linux-azure-5.3: ignored (superseded by linux-azure-5.4)
+trusty_linux-azure-5.3: DNE
+xenial_linux-azure-5.3: DNE
+bionic_linux-azure-5.3: ignored (superseded by linux-azure-5.4)
+focal_linux-azure-5.3: DNE
+jammy_linux-azure-5.3: DNE
+kinetic_linux-azure-5.3: DNE
+
+Patches_linux-azure-5.4:
+upstream_linux-azure-5.4: needs-triage
+trusty_linux-azure-5.4: DNE
+xenial_linux-azure-5.4: DNE
+bionic_linux-azure-5.4: needs-triage
+focal_linux-azure-5.4: DNE
+jammy_linux-azure-5.4: DNE
+kinetic_linux-azure-5.4: DNE
+
+Patches_linux-azure-5.8:
+upstream_linux-azure-5.8: ignored (superseded by linux-azure-5.11)
+trusty_linux-azure-5.8: DNE
+xenial_linux-azure-5.8: DNE
+bionic_linux-azure-5.8: DNE
+focal_linux-azure-5.8: ignored (superseded by linux-azure-5.11)
+jammy_linux-azure-5.8: DNE
+kinetic_linux-azure-5.8: DNE
+
+Patches_linux-azure-5.11:
+upstream_linux-azure-5.11: ignored (superseded by linux-azure-5.13)
+trusty_linux-azure-5.11: DNE
+xenial_linux-azure-5.11: DNE
+bionic_linux-azure-5.11: DNE
+focal_linux-azure-5.11: ignored (superseded by linux-azure-5.13)
+jammy_linux-azure-5.11: DNE
+kinetic_linux-azure-5.11: DNE
+
+Patches_linux-azure-5.13:
+upstream_linux-azure-5.13: ignored (superseded by linux-azure-5.15)
+trusty_linux-azure-5.13: DNE
+xenial_linux-azure-5.13: DNE
+bionic_linux-azure-5.13: DNE
+focal_linux-azure-5.13: ignored (superseded by linux-azure-5.15)
+jammy_linux-azure-5.13: DNE
+kinetic_linux-azure-5.13: DNE
+
+Patches_linux-azure-5.15:
+upstream_linux-azure-5.15: needs-triage
+trusty_linux-azure-5.15: DNE
+xenial_linux-azure-5.15: DNE
+bionic_linux-azure-5.15: DNE
+focal_linux-azure-5.15: needs-triage
+jammy_linux-azure-5.15: DNE
+kinetic_linux-azure-5.15: DNE
+
+Patches_linux-azure-fde:
+upstream_linux-azure-fde: needs-triage
+trusty_linux-azure-fde: DNE
+xenial_linux-azure-fde: DNE
+bionic_linux-azure-fde: DNE
+focal_linux-azure-fde: needs-triage
+jammy_linux-azure-fde: needs-triage
+kinetic_linux-azure-fde: DNE
+
+Patches_linux-azure-fde-5.15:
+upstream_linux-azure-fde-5.15: needs-triage
+trusty_linux-azure-fde-5.15: DNE
+xenial_linux-azure-fde-5.15: DNE
+bionic_linux-azure-fde-5.15: DNE
+focal_linux-azure-fde-5.15: needs-triage
+jammy_linux-azure-fde-5.15: DNE
+kinetic_linux-azure-fde-5.15: DNE
+
+Patches_linux-bluefield:
+upstream_linux-bluefield: needs-triage
+trusty_linux-bluefield: DNE
+xenial_linux-bluefield: DNE
+bionic_linux-bluefield: DNE
+focal_linux-bluefield: needs-triage
+jammy_linux-bluefield: DNE
+kinetic_linux-bluefield: DNE
+
+Patches_linux-dell300x:
+upstream_linux-dell300x: needs-triage
+trusty_linux-dell300x: DNE
+xenial_linux-dell300x: DNE
+bionic_linux-dell300x: needs-triage
+focal_linux-dell300x: DNE
+jammy_linux-dell300x: DNE
+kinetic_linux-dell300x: DNE
+
+Patches_linux-azure-edge:
+upstream_linux-azure-edge: needs-triage
+trusty_linux-azure-edge: DNE
+xenial_linux-azure-edge: DNE
+bionic_linux-azure-edge: ignored (superseded by linux-azure-5.3)
+focal_linux-azure-edge: DNE
+jammy_linux-azure-edge: DNE
+kinetic_linux-azure-edge: DNE
+
+Patches_linux-fips:
+upstream_linux-fips: needs-triage
+trusty_linux-fips: ignored (out of standard support)
+xenial_linux-fips: ignored (out of standard support)
+bionic_linux-fips: DNE
+focal_linux-fips: DNE
+jammy_linux-fips: DNE
+kinetic_linux-fips: DNE
+fips/xenial_linux-fips: needs-triage
+fips/bionic_linux-fips: needs-triage
+fips/focal_linux-fips: needs-triage
+fips-updates/xenial_linux-fips: needs-triage
+fips-updates/bionic_linux-fips: needs-triage
+fips-updates/focal_linux-fips: needs-triage
+
+Patches_linux-gcp:
+upstream_linux-gcp: needs-triage
+esm-infra/xenial_linux-gcp: needs-triage
+trusty_linux-gcp: DNE
+xenial_linux-gcp: ignored (end of standard support)
+bionic_linux-gcp: ignored (superseded by linux-gcp-5.3)
+focal_linux-gcp: needs-triage
+jammy_linux-gcp: needs-triage
+kinetic_linux-gcp: needs-triage
+devel_linux-gcp: needs-triage
+
+Patches_linux-gcp-4.15:
+upstream_linux-gcp-4.15: needs-triage
+trusty_linux-gcp-4.15: DNE
+xenial_linux-gcp-4.15: DNE
+bionic_linux-gcp-4.15: needs-triage
+focal_linux-gcp-4.15: DNE
+jammy_linux-gcp-4.15: DNE
+kinetic_linux-gcp-4.15: DNE
+
+Patches_linux-gcp-5.3:
+upstream_linux-gcp-5.3: ignored (superseded by linux-gcp-5.4)
+trusty_linux-gcp-5.3: DNE
+xenial_linux-gcp-5.3: DNE
+bionic_linux-gcp-5.3: ignored (superseded by linux-gcp-5.4)
+focal_linux-gcp-5.3: DNE
+jammy_linux-gcp-5.3: DNE
+kinetic_linux-gcp-5.3: DNE
+
+Patches_linux-gcp-5.4:
+upstream_linux-gcp-5.4: needs-triage
+trusty_linux-gcp-5.4: DNE
+xenial_linux-gcp-5.4: DNE
+bionic_linux-gcp-5.4: needs-triage
+focal_linux-gcp-5.4: DNE
+jammy_linux-gcp-5.4: DNE
+kinetic_linux-gcp-5.4: DNE
+
+Patches_linux-gcp-5.8:
+upstream_linux-gcp-5.8: ignored (superseded by linux-gcp-5.11)
+trusty_linux-gcp-5.8: DNE
+xenial_linux-gcp-5.8: DNE
+bionic_linux-gcp-5.8: DNE
+focal_linux-gcp-5.8: ignored (superseded by linux-gcp-5.11)
+jammy_linux-gcp-5.8: DNE
+kinetic_linux-gcp-5.8: DNE
+
+Patches_linux-gcp-5.11:
+upstream_linux-gcp-5.11: ignored (superseded by linux-gcp-5.13)
+trusty_linux-gcp-5.11: DNE
+xenial_linux-gcp-5.11: DNE
+bionic_linux-gcp-5.11: DNE
+focal_linux-gcp-5.11: ignored (superseded by linux-gcp-5.13)
+jammy_linux-gcp-5.11: DNE
+kinetic_linux-gcp-5.11: DNE
+
+Patches_linux-gcp-5.13:
+upstream_linux-gcp-5.13: ignored (superseded by linux-gcp-5.15)
+trusty_linux-gcp-5.13: DNE
+xenial_linux-gcp-5.13: DNE
+bionic_linux-gcp-5.13: DNE
+focal_linux-gcp-5.13: ignored (superseded by linux-gcp-5.15)
+jammy_linux-gcp-5.13: DNE
+kinetic_linux-gcp-5.13: DNE
+
+Patches_linux-gcp-5.15:
+upstream_linux-gcp-5.15: needs-triage
+trusty_linux-gcp-5.15: DNE
+xenial_linux-gcp-5.15: DNE
+bionic_linux-gcp-5.15: DNE
+focal_linux-gcp-5.15: needs-triage
+jammy_linux-gcp-5.15: DNE
+kinetic_linux-gcp-5.15: DNE
+
+Patches_linux-gke:
+upstream_linux-gke: needs-triage
+trusty_linux-gke: DNE
+xenial_linux-gke: ignored (reached end of standard support)
+bionic_linux-gke: DNE
+focal_linux-gke: needs-triage
+jammy_linux-gke: needs-triage
+kinetic_linux-gke: DNE
+
+Patches_linux-gke-4.15:
+upstream_linux-gke-4.15: needs-triage
+trusty_linux-gke-4.15: DNE
+xenial_linux-gke-4.15: DNE
+bionic_linux-gke-4.15: needs-triage
+focal_linux-gke-4.15: DNE
+jammy_linux-gke-4.15: DNE
+kinetic_linux-gke-4.15: DNE
+
+Patches_linux-gke-5.0:
+upstream_linux-gke-5.0: needs-triage
+trusty_linux-gke-5.0: DNE
+xenial_linux-gke-5.0: DNE
+bionic_linux-gke-5.0: ignored (superseded by linux-gke-5.3)
+focal_linux-gke-5.0: DNE
+jammy_linux-gke-5.0: DNE
+kinetic_linux-gke-5.0: DNE
+
+Patches_linux-gke-5.3:
+upstream_linux-gke-5.3: ignored (superseded by linux-gke-5.4)
+trusty_linux-gke-5.3: DNE
+xenial_linux-gke-5.3: DNE
+bionic_linux-gke-5.3: ignored (superseded by linux-gke-5.4)
+focal_linux-gke-5.3: DNE
+jammy_linux-gke-5.3: DNE
+kinetic_linux-gke-5.3: DNE
+
+Patches_linux-gke-5.4:
+upstream_linux-gke-5.4: needs-triage
+trusty_linux-gke-5.4: DNE
+xenial_linux-gke-5.4: DNE
+bionic_linux-gke-5.4: needs-triage
+focal_linux-gke-5.4: DNE
+jammy_linux-gke-5.4: DNE
+kinetic_linux-gke-5.4: DNE
+
+Patches_linux-gke-5.15:
+upstream_linux-gke-5.15: needs-triage
+trusty_linux-gke-5.15: DNE
+xenial_linux-gke-5.15: DNE
+bionic_linux-gke-5.15: DNE
+focal_linux-gke-5.15: needs-triage
+jammy_linux-gke-5.15: DNE
+kinetic_linux-gke-5.15: DNE
+
+Patches_linux-gkeop:
+upstream_linux-gkeop: needs-triage
+trusty_linux-gkeop: DNE
+xenial_linux-gkeop: DNE
+bionic_linux-gkeop: DNE
+focal_linux-gkeop: needs-triage
+jammy_linux-gkeop: needs-triage
+kinetic_linux-gkeop: DNE
+
+Patches_linux-gkeop-5.4:
+upstream_linux-gkeop-5.4: needs-triage
+trusty_linux-gkeop-5.4: DNE
+xenial_linux-gkeop-5.4: DNE
+bionic_linux-gkeop-5.4: needs-triage
+focal_linux-gkeop-5.4: DNE
+jammy_linux-gkeop-5.4: DNE
+kinetic_linux-gkeop-5.4: DNE
+
+Patches_linux-ibm:
+upstream_linux-ibm: needs-triage
+trusty_linux-ibm: DNE
+xenial_linux-ibm: DNE
+bionic_linux-ibm: DNE
+focal_linux-ibm: needs-triage
+jammy_linux-ibm: needs-triage
+kinetic_linux-ibm: needs-triage
+devel_linux-ibm: needs-triage
+
+Patches_linux-ibm-5.4:
+upstream_linux-ibm-5.4: needs-triage
+trusty_linux-ibm-5.4: DNE
+xenial_linux-ibm-5.4: DNE
+bionic_linux-ibm-5.4: needs-triage
+focal_linux-ibm-5.4: DNE
+jammy_linux-ibm-5.4: DNE
+kinetic_linux-ibm-5.4: DNE
+
+Patches_linux-intel-5.13:
+upstream_linux-intel-5.13: needs-triage
+trusty_linux-intel-5.13: DNE
+xenial_linux-intel-5.13: DNE
+bionic_linux-intel-5.13: DNE
+focal_linux-intel-5.13: needs-triage
+jammy_linux-intel-5.13: DNE
+kinetic_linux-intel-5.13: DNE
+
+Patches_linux-intel-iotg:
+upstream_linux-intel-iotg: needs-triage
+trusty_linux-intel-iotg: DNE
+xenial_linux-intel-iotg: DNE
+bionic_linux-intel-iotg: DNE
+focal_linux-intel-iotg: DNE
+jammy_linux-intel-iotg: needs-triage
+kinetic_linux-intel-iotg: DNE
+
+Patches_linux-intel-iotg-5.15:
+upstream_linux-intel-iotg-5.15: needs-triage
+trusty_linux-intel-iotg-5.15: DNE
+xenial_linux-intel-iotg-5.15: DNE
+bionic_linux-intel-iotg-5.15: DNE
+focal_linux-intel-iotg-5.15: needs-triage
+jammy_linux-intel-iotg-5.15: DNE
+kinetic_linux-intel-iotg-5.15: DNE
+
+Patches_linux-lowlatency:
+upstream_linux-lowlatency: needs-triage
+trusty_linux-lowlatency: DNE
+xenial_linux-lowlatency: DNE
+bionic_linux-lowlatency: DNE
+focal_linux-lowlatency: DNE
+jammy_linux-lowlatency: needs-triage
+kinetic_linux-lowlatency: needs-triage
+devel_linux-lowlatency: needs-triage
+
+Patches_linux-lowlatency-hwe-5.15:
+upstream_linux-lowlatency-hwe-5.15: needs-triage
+trusty_linux-lowlatency-hwe-5.15: DNE
+xenial_linux-lowlatency-hwe-5.15: DNE
+bionic_linux-lowlatency-hwe-5.15: DNE
+focal_linux-lowlatency-hwe-5.15: needs-triage
+jammy_linux-lowlatency-hwe-5.15: DNE
+kinetic_linux-lowlatency-hwe-5.15: DNE
+
+Patches_linux-oracle:
+upstream_linux-oracle: needs-triage
+esm-infra/xenial_linux-oracle: needs-triage
+trusty_linux-oracle: DNE
+xenial_linux-oracle: ignored (end of standard support)
+bionic_linux-oracle: needs-triage
+focal_linux-oracle: needs-triage
+jammy_linux-oracle: needs-triage
+kinetic_linux-oracle: needs-triage
+devel_linux-oracle: needs-triage
+
+Patches_linux-oracle-5.0:
+upstream_linux-oracle-5.0: needs-triage
+trusty_linux-oracle-5.0: DNE
+xenial_linux-oracle-5.0: DNE
+bionic_linux-oracle-5.0: ignored (superseded by linux-oracle-5.3)
+focal_linux-oracle-5.0: DNE
+jammy_linux-oracle-5.0: DNE
+kinetic_linux-oracle-5.0: DNE
+
+Patches_linux-oracle-5.3:
+upstream_linux-oracle-5.3: ignored (superseded by linux-oracle-5.4)
+trusty_linux-oracle-5.3: DNE
+xenial_linux-oracle-5.3: DNE
+bionic_linux-oracle-5.3: ignored (superseded by linux-oracle-5.4)
+focal_linux-oracle-5.3: DNE
+jammy_linux-oracle-5.3: DNE
+kinetic_linux-oracle-5.3: DNE
+
+Patches_linux-oracle-5.4:
+upstream_linux-oracle-5.4: needs-triage
+trusty_linux-oracle-5.4: DNE
+xenial_linux-oracle-5.4: DNE
+bionic_linux-oracle-5.4: needs-triage
+focal_linux-oracle-5.4: DNE
+jammy_linux-oracle-5.4: DNE
+kinetic_linux-oracle-5.4: DNE
+
+Patches_linux-oracle-5.8:
+upstream_linux-oracle-5.8: ignored (superseded by linux-oracle-5.11)
+trusty_linux-oracle-5.8: DNE
+xenial_linux-oracle-5.8: DNE
+bionic_linux-oracle-5.8: DNE
+focal_linux-oracle-5.8: ignored (superseded by linux-oracle-5.11)
+jammy_linux-oracle-5.8: DNE
+kinetic_linux-oracle-5.8: DNE
+
+Patches_linux-oracle-5.11:
+upstream_linux-oracle-5.11: ignored (superseded by linux-oracle-5.13)
+trusty_linux-oracle-5.11: DNE
+xenial_linux-oracle-5.11: DNE
+bionic_linux-oracle-5.11: DNE
+focal_linux-oracle-5.11: ignored (superseded by linux-oracle-5.13)
+jammy_linux-oracle-5.11: DNE
+kinetic_linux-oracle-5.11: DNE
+
+Patches_linux-oracle-5.13:
+upstream_linux-oracle-5.13: needs-triage
+trusty_linux-oracle-5.13: DNE
+xenial_linux-oracle-5.13: DNE
+bionic_linux-oracle-5.13: DNE
+focal_linux-oracle-5.13: needs-triage
+jammy_linux-oracle-5.13: DNE
+kinetic_linux-oracle-5.13: DNE
+
+Patches_linux-oracle-5.15:
+upstream_linux-oracle-5.15: needs-triage
+trusty_linux-oracle-5.15: DNE
+xenial_linux-oracle-5.15: DNE
+bionic_linux-oracle-5.15: DNE
+focal_linux-oracle-5.15: needs-triage
+jammy_linux-oracle-5.15: DNE
+kinetic_linux-oracle-5.15: DNE
+
+Patches_linux-oem:
+upstream_linux-oem: needs-triage
+trusty_linux-oem: DNE
+xenial_linux-oem: ignored (superseded by linux-hwe)
+bionic_linux-oem: needs-triage
+focal_linux-oem: DNE
+jammy_linux-oem: DNE
+kinetic_linux-oem: DNE
+
+Patches_linux-oem-5.6:
+upstream_linux-oem-5.6: needs-triage
+trusty_linux-oem-5.6: DNE
+xenial_linux-oem-5.6: DNE
+bionic_linux-oem-5.6: DNE
+focal_linux-oem-5.6: needs-triage
+jammy_linux-oem-5.6: DNE
+kinetic_linux-oem-5.6: DNE
+
+Patches_linux-oem-5.10:
+upstream_linux-oem-5.10: needs-triage
+trusty_linux-oem-5.10: DNE
+xenial_linux-oem-5.10: DNE
+bionic_linux-oem-5.10: DNE
+focal_linux-oem-5.10: needs-triage
+jammy_linux-oem-5.10: DNE
+kinetic_linux-oem-5.10: DNE
+
+Patches_linux-oem-5.13:
+upstream_linux-oem-5.13: ignored (superseded by linux-oem-5.14)
+trusty_linux-oem-5.13: DNE
+xenial_linux-oem-5.13: DNE
+bionic_linux-oem-5.13: DNE
+focal_linux-oem-5.13: ignored (superseded by linux-oem-5.14)
+jammy_linux-oem-5.13: DNE
+kinetic_linux-oem-5.13: DNE
+
+Patches_linux-oem-5.14:
+upstream_linux-oem-5.14: needs-triage
+trusty_linux-oem-5.14: DNE
+xenial_linux-oem-5.14: DNE
+bionic_linux-oem-5.14: DNE
+focal_linux-oem-5.14: needs-triage
+jammy_linux-oem-5.14: DNE
+kinetic_linux-oem-5.14: DNE
+
+Patches_linux-oem-5.17:
+upstream_linux-oem-5.17: needs-triage
+trusty_linux-oem-5.17: DNE
+xenial_linux-oem-5.17: DNE
+bionic_linux-oem-5.17: DNE
+focal_linux-oem-5.17: DNE
+jammy_linux-oem-5.17: needs-triage
+kinetic_linux-oem-5.17: needs-triage
+devel_linux-oem-5.17: needs-triage
+
+Patches_linux-oem-osp1:
+upstream_linux-oem-osp1: needs-triage
+trusty_linux-oem-osp1: DNE
+xenial_linux-oem-osp1: DNE
+bionic_linux-oem-osp1: needs-triage
+focal_linux-oem-osp1: DNE
+jammy_linux-oem-osp1: DNE
+kinetic_linux-oem-osp1: DNE
+
+Patches_linux-raspi:
+upstream_linux-raspi: needs-triage
+trusty_linux-raspi: DNE
+xenial_linux-raspi: DNE
+bionic_linux-raspi: DNE
+focal_linux-raspi: needs-triage
+jammy_linux-raspi: needs-triage
+kinetic_linux-raspi: needs-triage
+devel_linux-raspi: needs-triage
+
+Patches_linux-raspi2:
+upstream_linux-raspi2: needs-triage
+trusty_linux-raspi2: DNE
+xenial_linux-raspi2: ignored (end of standard support)
+bionic_linux-raspi2: needs-triage
+focal_linux-raspi2: ignored (replaced by linux-raspi)
+jammy_linux-raspi2: DNE
+kinetic_linux-raspi2: DNE
+
+Patches_linux-raspi2-5.3:
+upstream_linux-raspi2-5.3: ignored (superseded by linux-raspi2-5.4)
+trusty_linux-raspi2-5.3: DNE
+xenial_linux-raspi2-5.3: DNE
+bionic_linux-raspi2-5.3: ignored (superseded by linux-raspi-5.4)
+focal_linux-raspi2-5.3: DNE
+jammy_linux-raspi2-5.3: DNE
+kinetic_linux-raspi2-5.3: DNE
+
+Patches_linux-raspi-5.4:
+upstream_linux-raspi-5.4: needs-triage
+trusty_linux-raspi-5.4: DNE
+xenial_linux-raspi-5.4: DNE
+bionic_linux-raspi-5.4: needs-triage
+focal_linux-raspi-5.4: DNE
+jammy_linux-raspi-5.4: DNE
+kinetic_linux-raspi-5.4: DNE
+
+Patches_linux-riscv:
+upstream_linux-riscv: needs-triage
+trusty_linux-riscv: DNE
+xenial_linux-riscv: DNE
+bionic_linux-riscv: DNE
+focal_linux-riscv: ignored (superseded by linux-riscv-5.8)
+jammy_linux-riscv: needs-triage
+kinetic_linux-riscv: needs-triage
+devel_linux-riscv: needs-triage
+
+Patches_linux-riscv-5.8:
+upstream_linux-riscv-5.8: ignored (superseded by linux-riscv-5.11)
+trusty_linux-riscv-5.8: DNE
+xenial_linux-riscv-5.8: DNE
+bionic_linux-riscv-5.8: DNE
+focal_linux-riscv-5.8: ignored (superseded by linux-riscv-5.11)
+jammy_linux-riscv-5.8: DNE
+kinetic_linux-riscv-5.8: DNE
+
+Patches_linux-riscv-5.11:
+upstream_linux-riscv-5.11: ignored (superseded by linux-riscv-5.13)
+trusty_linux-riscv-5.11: DNE
+xenial_linux-riscv-5.11: DNE
+bionic_linux-riscv-5.11: DNE
+focal_linux-riscv-5.11: ignored (superseded by linux-riscv-5.13)
+jammy_linux-riscv-5.11: DNE
+kinetic_linux-riscv-5.11: DNE
+
+Patches_linux-snapdragon:
+upstream_linux-snapdragon: needs-triage
+trusty_linux-snapdragon: DNE
+xenial_linux-snapdragon: ignored (end of standard support)
+bionic_linux-snapdragon: needs-triage
+focal_linux-snapdragon: DNE
+jammy_linux-snapdragon: DNE
+kinetic_linux-snapdragon: DNE
+
+Patches_linux-oem-6.0:
+upstream_linux-oem-6.0: needs-triage
+trusty_linux-oem-6.0: DNE
+trusty/esm_linux-oem-6.0: DNE
+xenial_linux-oem-6.0: DNE
+esm-infra/xenial_linux-oem-6.0: DNE
+bionic_linux-oem-6.0: DNE
+focal_linux-oem-6.0: DNE
+jammy_linux-oem-6.0: needs-triage
+kinetic_linux-oem-6.0: DNE
+devel_linux-oem-6.0: DNE
+
+blob
+mark :4
+data 895
+Candidate: CVE-2022-41859
+PublicDate: 2022-12-14
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-41859
+ https://access.redhat.com/security/cve/CVE-2022-41859
+ https://bugzilla.redhat.com/show_bug.cgi?id=2078483
+ https://github.com/FreeRADIUS/freeradius-server/commit/9e5e8f2f
+Description:
+ freeradius: Information leakage in EAP-PWD
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: medium
+Discovered-by:
+Assigned-to: 0xnishit
+CVSS:
+
+Patches_freeradius:
+ upstream: https://github.com/FreeRADIUS/freeradius-server/commit/9e5e8f2f
+upstream_freeradius: needs-triage
+esm-infra/xenial_freeradius: needs-triage
+trusty_freeradius: ignored (out of standard support)
+xenial_freeradius: ignored (out of standard support)
+bionic_freeradius: needs-triage
+focal_freeradius: needs-triage
+jammy_freeradius: needs-triage
+kinetic_freeradius: needs-triage
+devel_freeradius: needs-triage
+
+blob
+mark :5
+data 919
+Candidate: CVE-2022-41860
+PublicDate: 2022-12-14
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-41860
+ https://access.redhat.com/security/cve/CVE-2022-41860
+ https://bugzilla.redhat.com/show_bug.cgi?id=2078485
+ https://github.com/FreeRADIUS/freeradius-server/commit/f1cdbb33ec61c4a64a
+Description:
+ freeradius: Crash on unknown option in EAP-SIM
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: medium
+Discovered-by:
+Assigned-to: 0xnishit
+CVSS:
+
+Patches_freeradius:
+ upstream: https://github.com/FreeRADIUS/freeradius-server/commit/f1cdbb33ec61c4a64a
+upstream_freeradius: needs-triage
+esm-infra/xenial_freeradius: needs-triage
+trusty_freeradius: ignored (out of standard support)
+xenial_freeradius: ignored (out of standard support)
+bionic_freeradius: needs-triage
+focal_freeradius: needs-triage
+jammy_freeradius: needs-triage
+kinetic_freeradius: needs-triage
+devel_freeradius: needs-triage
+
+blob
+mark :6
+data 902
+Candidate: CVE-2022-41861
+PublicDate: 2022-12-14
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-41861
+ https://access.redhat.com/security/cve/CVE-2022-41861
+ https://bugzilla.redhat.com/show_bug.cgi?id=2078487
+ https://github.com/FreeRADIUS/freeradius-server/commit/0ec2b39d260e
+Description:
+ freeradius: Crash on invalid abinary data
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: medium
+Discovered-by:
+Assigned-to: 0xnishit
+CVSS:
+
+Patches_freeradius:
+ upstream: https://github.com/FreeRADIUS/freeradius-server/commit/0ec2b39d260e
+upstream_freeradius: needs-triage
+esm-infra/xenial_freeradius: needs-triage
+trusty_freeradius: ignored (out of standard support)
+xenial_freeradius: ignored (out of standard support)
+bionic_freeradius: needs-triage
+focal_freeradius: needs-triage
+jammy_freeradius: needs-triage
+kinetic_freeradius: needs-triage
+devel_freeradius: needs-triage
+
+reset refs/heads/main
+commit refs/heads/main
+mark :7
+author Alex Goodman <wagoodman@gmail.com> 1672843769 -0500
+committer Alex Goodman <wagoodman@gmail.com> 1672843769 -0500
+data 13
+initial data
+M 100644 :1 active/CVE-2019-17185
+M 100644 :2 active/CVE-2021-4204
+M 100644 :3 active/CVE-2022-20566
+M 100644 :4 active/CVE-2022-41859
+M 100644 :5 active/CVE-2022-41860
+M 100644 :6 active/CVE-2022-41861
+
+blob
+mark :8
+data 22622
+Candidate: CVE-2022-20566
+PublicDate: 2022-12-06
+References:
+ https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-20566
+ https://git.kernel.org/linus/d0be8347c623e0ac4202a1d4e0373882821f56b0
+Description:
+ [Unknown description]
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: medium
+Discovered-by:
+Assigned-to:
+CVSS:
+ nvd: CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H [7.8 HIGH]
+
+Patches_linux:
+ break-fix: 4af66c691f4e5c2db9bb00793669a548e9db1974 d0be8347c623e0ac4202a1d4e0373882821f56b0
+upstream_linux: released (5.18.16-1)
+esm-infra/xenial_linux: needs-triage
+trusty_linux: ignored (out of standard support)
+xenial_linux: ignored (out of standard support)
+bionic_linux: needs-triage
+focal_linux: needs-triage
+jammy_linux: needs-triage
+kinetic_linux: not-affected (5.19.0-26.27)
+trusty/esm_linux: not-affected
+devel_linux: not-affected
+
+Patches_linux-hwe:
+upstream_linux-hwe: needs-triage
+esm-infra/xenial_linux-hwe: needs-triage
+trusty_linux-hwe: DNE
+xenial_linux-hwe: ignored (end of standard support)
+bionic_linux-hwe: ignored (replaced by linux-hwe-5.4)
+focal_linux-hwe: DNE
+jammy_linux-hwe: DNE
+kinetic_linux-hwe: DNE
+
+Patches_linux-hwe-5.4:
+upstream_linux-hwe-5.4: needs-triage
+trusty_linux-hwe-5.4: DNE
+xenial_linux-hwe-5.4: DNE
+bionic_linux-hwe-5.4: needs-triage
+focal_linux-hwe-5.4: DNE
+jammy_linux-hwe-5.4: DNE
+kinetic_linux-hwe-5.4: DNE
+
+Patches_linux-hwe-5.8:
+upstream_linux-hwe-5.8: ignored (superseded by linux-hwe-5.11)
+trusty_linux-hwe-5.8: DNE
+xenial_linux-hwe-5.8: DNE
+bionic_linux-hwe-5.8: DNE
+focal_linux-hwe-5.8: ignored (superseded by linux-hwe-5.11)
+jammy_linux-hwe-5.8: DNE
+kinetic_linux-hwe-5.8: DNE
+
+Patches_linux-hwe-5.11:
+upstream_linux-hwe-5.11: ignored (superseded by linux-hwe-5.13)
+trusty_linux-hwe-5.11: DNE
+xenial_linux-hwe-5.11: DNE
+bionic_linux-hwe-5.11: DNE
+focal_linux-hwe-5.11: ignored (superseded by linux-hwe-5.13)
+jammy_linux-hwe-5.11: DNE
+kinetic_linux-hwe-5.11: DNE
+
+Patches_linux-hwe-5.13:
+upstream_linux-hwe-5.13: ignored (superseded by linux-hwe-5.15)
+trusty_linux-hwe-5.13: DNE
+xenial_linux-hwe-5.13: DNE
+bionic_linux-hwe-5.13: DNE
+focal_linux-hwe-5.13: ignored (superseded by linux-hwe-5.15)
+jammy_linux-hwe-5.13: DNE
+kinetic_linux-hwe-5.13: DNE
+
+Patches_linux-hwe-5.15:
+upstream_linux-hwe-5.15: needs-triage
+trusty_linux-hwe-5.15: DNE
+xenial_linux-hwe-5.15: DNE
+bionic_linux-hwe-5.15: DNE
+focal_linux-hwe-5.15: needs-triage
+jammy_linux-hwe-5.15: DNE
+kinetic_linux-hwe-5.15: DNE
+
+Patches_linux-hwe-edge:
+upstream_linux-hwe-edge: needs-triage
+esm-infra/xenial_linux-hwe-edge: ignored (superseded by linux-hwe)
+trusty_linux-hwe-edge: DNE
+xenial_linux-hwe-edge: ignored (superseded by linux-hwe)
+bionic_linux-hwe-edge: ignored (superseded by linux-hwe-5.4)
+focal_linux-hwe-edge: DNE
+jammy_linux-hwe-edge: DNE
+kinetic_linux-hwe-edge: DNE
+
+Patches_linux-lts-xenial:
+upstream_linux-lts-xenial: needs-triage
+trusty_linux-lts-xenial: ignored (out of standard support)
+xenial_linux-lts-xenial: DNE
+bionic_linux-lts-xenial: DNE
+focal_linux-lts-xenial: DNE
+jammy_linux-lts-xenial: DNE
+kinetic_linux-lts-xenial: DNE
+trusty/esm_linux-lts-xenial: needs-triage
+
+Patches_linux-kvm:
+upstream_linux-kvm: needs-triage
+esm-infra/xenial_linux-kvm: needs-triage
+trusty_linux-kvm: DNE
+xenial_linux-kvm: ignored (end of standard support)
+bionic_linux-kvm: needs-triage
+focal_linux-kvm: needs-triage
+jammy_linux-kvm: needs-triage
+kinetic_linux-kvm: needs-triage
+devel_linux-kvm: needs-triage
+
+Patches_linux-aws:
+upstream_linux-aws: needs-triage
+esm-infra/xenial_linux-aws: needs-triage
+trusty_linux-aws: ignored (out of standard support)
+xenial_linux-aws: ignored (end of standard support)
+bionic_linux-aws: needs-triage
+focal_linux-aws: needs-triage
+jammy_linux-aws: needs-triage
+kinetic_linux-aws: needs-triage
+trusty/esm_linux-aws: needs-triage
+devel_linux-aws: needs-triage
+
+Patches_linux-aws-5.0:
+upstream_linux-aws-5.0: needs-triage
+trusty_linux-aws-5.0: DNE
+xenial_linux-aws-5.0: DNE
+bionic_linux-aws-5.0: ignored (superseded by linux-aws-5.3)
+focal_linux-aws-5.0: DNE
+jammy_linux-aws-5.0: DNE
+kinetic_linux-aws-5.0: DNE
+
+Patches_linux-aws-5.3:
+upstream_linux-aws-5.3: ignored (superseded by linux-aws-5.4)
+trusty_linux-aws-5.3: DNE
+xenial_linux-aws-5.3: DNE
+bionic_linux-aws-5.3: ignored (superseded by linux-aws-5.4)
+focal_linux-aws-5.3: DNE
+jammy_linux-aws-5.3: DNE
+kinetic_linux-aws-5.3: DNE
+
+Patches_linux-aws-5.4:
+upstream_linux-aws-5.4: needs-triage
+trusty_linux-aws-5.4: DNE
+xenial_linux-aws-5.4: DNE
+bionic_linux-aws-5.4: needs-triage
+focal_linux-aws-5.4: DNE
+jammy_linux-aws-5.4: DNE
+kinetic_linux-aws-5.4: DNE
+
+Patches_linux-aws-5.8:
+upstream_linux-aws-5.8: ignored (superseded by linux-aws-5.11)
+trusty_linux-aws-5.8: DNE
+xenial_linux-aws-5.8: DNE
+bionic_linux-aws-5.8: DNE
+focal_linux-aws-5.8: ignored (superseded by linux-aws-5.11)
+jammy_linux-aws-5.8: DNE
+kinetic_linux-aws-5.8: DNE
+
+Patches_linux-aws-5.11:
+upstream_linux-aws-5.11: ignored (superseded by linux-aws-5.13)
+trusty_linux-aws-5.11: DNE
+xenial_linux-aws-5.11: DNE
+bionic_linux-aws-5.11: DNE
+focal_linux-aws-5.11: ignored (superseded by linux-aws-5.13)
+jammy_linux-aws-5.11: DNE
+kinetic_linux-aws-5.11: DNE
+
+Patches_linux-aws-5.13:
+upstream_linux-aws-5.13: ignored (superseded by linux-aws-5.15)
+trusty_linux-aws-5.13: DNE
+xenial_linux-aws-5.13: DNE
+bionic_linux-aws-5.13: DNE
+focal_linux-aws-5.13: ignored (superseded by linux-aws-5.15)
+jammy_linux-aws-5.13: DNE
+kinetic_linux-aws-5.13: DNE
+
+Patches_linux-aws-5.15:
+upstream_linux-aws-5.15: needs-triage
+trusty_linux-aws-5.15: DNE
+xenial_linux-aws-5.15: DNE
+bionic_linux-aws-5.15: DNE
+focal_linux-aws-5.15: needs-triage
+jammy_linux-aws-5.15: DNE
+kinetic_linux-aws-5.15: DNE
+
+Patches_linux-aws-hwe:
+upstream_linux-aws-hwe: needs-triage
+esm-infra/xenial_linux-aws-hwe: needs-triage
+trusty_linux-aws-hwe: DNE
+xenial_linux-aws-hwe: ignored (end of standard support)
+bionic_linux-aws-hwe: DNE
+focal_linux-aws-hwe: DNE
+jammy_linux-aws-hwe: DNE
+kinetic_linux-aws-hwe: DNE
+
+Patches_linux-azure:
+upstream_linux-azure: needs-triage
+esm-infra/xenial_linux-azure: needs-triage
+trusty_linux-azure: ignored (out of standard support)
+xenial_linux-azure: ignored (end of standard support)
+bionic_linux-azure: ignored (superseded by linux-azure-5.3)
+focal_linux-azure: needs-triage
+jammy_linux-azure: needs-triage
+kinetic_linux-azure: needs-triage
+trusty/esm_linux-azure: needs-triage
+devel_linux-azure: needs-triage
+
+Patches_linux-azure-4.15:
+upstream_linux-azure-4.15: needs-triage
+trusty_linux-azure-4.15: DNE
+xenial_linux-azure-4.15: DNE
+bionic_linux-azure-4.15: needs-triage
+focal_linux-azure-4.15: DNE
+jammy_linux-azure-4.15: DNE
+kinetic_linux-azure-4.15: DNE
+
+Patches_linux-azure-5.3:
+upstream_linux-azure-5.3: ignored (superseded by linux-azure-5.4)
+trusty_linux-azure-5.3: DNE
+xenial_linux-azure-5.3: DNE
+bionic_linux-azure-5.3: ignored (superseded by linux-azure-5.4)
+focal_linux-azure-5.3: DNE
+jammy_linux-azure-5.3: DNE
+kinetic_linux-azure-5.3: DNE
+
+Patches_linux-azure-5.4:
+upstream_linux-azure-5.4: needs-triage
+trusty_linux-azure-5.4: DNE
+xenial_linux-azure-5.4: DNE
+bionic_linux-azure-5.4: needs-triage
+focal_linux-azure-5.4: DNE
+jammy_linux-azure-5.4: DNE
+kinetic_linux-azure-5.4: DNE
+
+Patches_linux-azure-5.8:
+upstream_linux-azure-5.8: ignored (superseded by linux-azure-5.11)
+trusty_linux-azure-5.8: DNE
+xenial_linux-azure-5.8: DNE
+bionic_linux-azure-5.8: DNE
+focal_linux-azure-5.8: ignored (superseded by linux-azure-5.11)
+jammy_linux-azure-5.8: DNE
+kinetic_linux-azure-5.8: DNE
+
+Patches_linux-azure-5.11:
+upstream_linux-azure-5.11: ignored (superseded by linux-azure-5.13)
+trusty_linux-azure-5.11: DNE
+xenial_linux-azure-5.11: DNE
+bionic_linux-azure-5.11: DNE
+focal_linux-azure-5.11: ignored (superseded by linux-azure-5.13)
+jammy_linux-azure-5.11: DNE
+kinetic_linux-azure-5.11: DNE
+
+Patches_linux-azure-5.13:
+upstream_linux-azure-5.13: ignored (superseded by linux-azure-5.15)
+trusty_linux-azure-5.13: DNE
+xenial_linux-azure-5.13: DNE
+bionic_linux-azure-5.13: DNE
+focal_linux-azure-5.13: ignored (superseded by linux-azure-5.15)
+jammy_linux-azure-5.13: DNE
+kinetic_linux-azure-5.13: DNE
+
+Patches_linux-azure-5.15:
+upstream_linux-azure-5.15: needs-triage
+trusty_linux-azure-5.15: DNE
+xenial_linux-azure-5.15: DNE
+bionic_linux-azure-5.15: DNE
+focal_linux-azure-5.15: needs-triage
+jammy_linux-azure-5.15: DNE
+kinetic_linux-azure-5.15: DNE
+
+Patches_linux-azure-fde:
+upstream_linux-azure-fde: needs-triage
+trusty_linux-azure-fde: DNE
+xenial_linux-azure-fde: DNE
+bionic_linux-azure-fde: DNE
+focal_linux-azure-fde: needs-triage
+jammy_linux-azure-fde: needs-triage
+kinetic_linux-azure-fde: DNE
+
+Patches_linux-azure-fde-5.15:
+upstream_linux-azure-fde-5.15: needs-triage
+trusty_linux-azure-fde-5.15: DNE
+xenial_linux-azure-fde-5.15: DNE
+bionic_linux-azure-fde-5.15: DNE
+focal_linux-azure-fde-5.15: needs-triage
+jammy_linux-azure-fde-5.15: DNE
+kinetic_linux-azure-fde-5.15: DNE
+
+Patches_linux-bluefield:
+upstream_linux-bluefield: needs-triage
+trusty_linux-bluefield: DNE
+xenial_linux-bluefield: DNE
+bionic_linux-bluefield: DNE
+focal_linux-bluefield: needs-triage
+jammy_linux-bluefield: DNE
+kinetic_linux-bluefield: DNE
+
+Patches_linux-dell300x:
+upstream_linux-dell300x: needs-triage
+trusty_linux-dell300x: DNE
+xenial_linux-dell300x: DNE
+bionic_linux-dell300x: needs-triage
+focal_linux-dell300x: DNE
+jammy_linux-dell300x: DNE
+kinetic_linux-dell300x: DNE
+
+Patches_linux-azure-edge:
+upstream_linux-azure-edge: needs-triage
+trusty_linux-azure-edge: DNE
+xenial_linux-azure-edge: DNE
+bionic_linux-azure-edge: ignored (superseded by linux-azure-5.3)
+focal_linux-azure-edge: DNE
+jammy_linux-azure-edge: DNE
+kinetic_linux-azure-edge: DNE
+
+Patches_linux-fips:
+upstream_linux-fips: needs-triage
+trusty_linux-fips: ignored (out of standard support)
+xenial_linux-fips: ignored (out of standard support)
+bionic_linux-fips: DNE
+focal_linux-fips: DNE
+jammy_linux-fips: DNE
+kinetic_linux-fips: DNE
+fips/xenial_linux-fips: needs-triage
+fips/bionic_linux-fips: needs-triage
+fips/focal_linux-fips: needs-triage
+fips-updates/xenial_linux-fips: needs-triage
+fips-updates/bionic_linux-fips: needs-triage
+fips-updates/focal_linux-fips: needs-triage
+
+Patches_linux-gcp:
+upstream_linux-gcp: needs-triage
+esm-infra/xenial_linux-gcp: needs-triage
+trusty_linux-gcp: DNE
+xenial_linux-gcp: ignored (end of standard support)
+bionic_linux-gcp: ignored (superseded by linux-gcp-5.3)
+focal_linux-gcp: needs-triage
+jammy_linux-gcp: needs-triage
+kinetic_linux-gcp: needs-triage
+devel_linux-gcp: needs-triage
+
+Patches_linux-gcp-4.15:
+upstream_linux-gcp-4.15: needs-triage
+trusty_linux-gcp-4.15: DNE
+xenial_linux-gcp-4.15: DNE
+bionic_linux-gcp-4.15: needs-triage
+focal_linux-gcp-4.15: DNE
+jammy_linux-gcp-4.15: DNE
+kinetic_linux-gcp-4.15: DNE
+
+Patches_linux-gcp-5.3:
+upstream_linux-gcp-5.3: ignored (superseded by linux-gcp-5.4)
+trusty_linux-gcp-5.3: DNE
+xenial_linux-gcp-5.3: DNE
+bionic_linux-gcp-5.3: ignored (superseded by linux-gcp-5.4)
+focal_linux-gcp-5.3: DNE
+jammy_linux-gcp-5.3: DNE
+kinetic_linux-gcp-5.3: DNE
+
+Patches_linux-gcp-5.4:
+upstream_linux-gcp-5.4: needs-triage
+trusty_linux-gcp-5.4: DNE
+xenial_linux-gcp-5.4: DNE
+bionic_linux-gcp-5.4: needs-triage
+focal_linux-gcp-5.4: DNE
+jammy_linux-gcp-5.4: DNE
+kinetic_linux-gcp-5.4: DNE
+
+Patches_linux-gcp-5.8:
+upstream_linux-gcp-5.8: ignored (superseded by linux-gcp-5.11)
+trusty_linux-gcp-5.8: DNE
+xenial_linux-gcp-5.8: DNE
+bionic_linux-gcp-5.8: DNE
+focal_linux-gcp-5.8: ignored (superseded by linux-gcp-5.11)
+jammy_linux-gcp-5.8: DNE
+kinetic_linux-gcp-5.8: DNE
+
+Patches_linux-gcp-5.11:
+upstream_linux-gcp-5.11: ignored (superseded by linux-gcp-5.13)
+trusty_linux-gcp-5.11: DNE
+xenial_linux-gcp-5.11: DNE
+bionic_linux-gcp-5.11: DNE
+focal_linux-gcp-5.11: ignored (superseded by linux-gcp-5.13)
+jammy_linux-gcp-5.11: DNE
+kinetic_linux-gcp-5.11: DNE
+
+Patches_linux-gcp-5.13:
+upstream_linux-gcp-5.13: ignored (superseded by linux-gcp-5.15)
+trusty_linux-gcp-5.13: DNE
+xenial_linux-gcp-5.13: DNE
+bionic_linux-gcp-5.13: DNE
+focal_linux-gcp-5.13: ignored (superseded by linux-gcp-5.15)
+jammy_linux-gcp-5.13: DNE
+kinetic_linux-gcp-5.13: DNE
+
+Patches_linux-gcp-5.15:
+upstream_linux-gcp-5.15: needs-triage
+trusty_linux-gcp-5.15: DNE
+xenial_linux-gcp-5.15: DNE
+bionic_linux-gcp-5.15: DNE
+focal_linux-gcp-5.15: needs-triage
+jammy_linux-gcp-5.15: DNE
+kinetic_linux-gcp-5.15: DNE
+
+Patches_linux-gke:
+upstream_linux-gke: needs-triage
+trusty_linux-gke: DNE
+xenial_linux-gke: ignored (reached end of standard support)
+bionic_linux-gke: DNE
+focal_linux-gke: needs-triage
+jammy_linux-gke: needs-triage
+kinetic_linux-gke: DNE
+
+Patches_linux-gke-4.15:
+upstream_linux-gke-4.15: needs-triage
+trusty_linux-gke-4.15: DNE
+xenial_linux-gke-4.15: DNE
+bionic_linux-gke-4.15: needs-triage
+focal_linux-gke-4.15: DNE
+jammy_linux-gke-4.15: DNE
+kinetic_linux-gke-4.15: DNE
+
+Patches_linux-gke-5.0:
+upstream_linux-gke-5.0: needs-triage
+trusty_linux-gke-5.0: DNE
+xenial_linux-gke-5.0: DNE
+bionic_linux-gke-5.0: ignored (superseded by linux-gke-5.3)
+focal_linux-gke-5.0: DNE
+jammy_linux-gke-5.0: DNE
+kinetic_linux-gke-5.0: DNE
+
+Patches_linux-gke-5.3:
+upstream_linux-gke-5.3: ignored (superseded by linux-gke-5.4)
+trusty_linux-gke-5.3: DNE
+xenial_linux-gke-5.3: DNE
+bionic_linux-gke-5.3: ignored (superseded by linux-gke-5.4)
+focal_linux-gke-5.3: DNE
+jammy_linux-gke-5.3: DNE
+kinetic_linux-gke-5.3: DNE
+
+Patches_linux-gke-5.4:
+upstream_linux-gke-5.4: needs-triage
+trusty_linux-gke-5.4: DNE
+xenial_linux-gke-5.4: DNE
+bionic_linux-gke-5.4: needs-triage
+focal_linux-gke-5.4: DNE
+jammy_linux-gke-5.4: DNE
+kinetic_linux-gke-5.4: DNE
+
+Patches_linux-gke-5.15:
+upstream_linux-gke-5.15: needs-triage
+trusty_linux-gke-5.15: DNE
+xenial_linux-gke-5.15: DNE
+bionic_linux-gke-5.15: DNE
+focal_linux-gke-5.15: needs-triage
+jammy_linux-gke-5.15: DNE
+kinetic_linux-gke-5.15: DNE
+
+Patches_linux-gkeop:
+upstream_linux-gkeop: needs-triage
+trusty_linux-gkeop: DNE
+xenial_linux-gkeop: DNE
+bionic_linux-gkeop: DNE
+focal_linux-gkeop: needs-triage
+jammy_linux-gkeop: needs-triage
+kinetic_linux-gkeop: DNE
+
+Patches_linux-gkeop-5.4:
+upstream_linux-gkeop-5.4: needs-triage
+trusty_linux-gkeop-5.4: DNE
+xenial_linux-gkeop-5.4: DNE
+bionic_linux-gkeop-5.4: needs-triage
+focal_linux-gkeop-5.4: DNE
+jammy_linux-gkeop-5.4: DNE
+kinetic_linux-gkeop-5.4: DNE
+
+Patches_linux-ibm:
+upstream_linux-ibm: needs-triage
+trusty_linux-ibm: DNE
+xenial_linux-ibm: DNE
+bionic_linux-ibm: DNE
+focal_linux-ibm: needs-triage
+jammy_linux-ibm: needs-triage
+kinetic_linux-ibm: needs-triage
+devel_linux-ibm: needs-triage
+
+Patches_linux-ibm-5.4:
+upstream_linux-ibm-5.4: needs-triage
+trusty_linux-ibm-5.4: DNE
+xenial_linux-ibm-5.4: DNE
+bionic_linux-ibm-5.4: needs-triage
+focal_linux-ibm-5.4: DNE
+jammy_linux-ibm-5.4: DNE
+kinetic_linux-ibm-5.4: DNE
+
+Patches_linux-intel-5.13:
+upstream_linux-intel-5.13: needs-triage
+trusty_linux-intel-5.13: DNE
+xenial_linux-intel-5.13: DNE
+bionic_linux-intel-5.13: DNE
+focal_linux-intel-5.13: needs-triage
+jammy_linux-intel-5.13: DNE
+kinetic_linux-intel-5.13: DNE
+
+Patches_linux-intel-iotg:
+upstream_linux-intel-iotg: needs-triage
+trusty_linux-intel-iotg: DNE
+xenial_linux-intel-iotg: DNE
+bionic_linux-intel-iotg: DNE
+focal_linux-intel-iotg: DNE
+jammy_linux-intel-iotg: needs-triage
+kinetic_linux-intel-iotg: DNE
+
+Patches_linux-intel-iotg-5.15:
+upstream_linux-intel-iotg-5.15: needs-triage
+trusty_linux-intel-iotg-5.15: DNE
+xenial_linux-intel-iotg-5.15: DNE
+bionic_linux-intel-iotg-5.15: DNE
+focal_linux-intel-iotg-5.15: needs-triage
+jammy_linux-intel-iotg-5.15: DNE
+kinetic_linux-intel-iotg-5.15: DNE
+
+Patches_linux-lowlatency:
+upstream_linux-lowlatency: needs-triage
+trusty_linux-lowlatency: DNE
+xenial_linux-lowlatency: DNE
+bionic_linux-lowlatency: DNE
+focal_linux-lowlatency: DNE
+jammy_linux-lowlatency: needs-triage
+kinetic_linux-lowlatency: needs-triage
+devel_linux-lowlatency: needs-triage
+
+Patches_linux-lowlatency-hwe-5.15:
+upstream_linux-lowlatency-hwe-5.15: needs-triage
+trusty_linux-lowlatency-hwe-5.15: DNE
+xenial_linux-lowlatency-hwe-5.15: DNE
+bionic_linux-lowlatency-hwe-5.15: DNE
+focal_linux-lowlatency-hwe-5.15: needs-triage
+jammy_linux-lowlatency-hwe-5.15: DNE
+kinetic_linux-lowlatency-hwe-5.15: DNE
+
+Patches_linux-oracle:
+upstream_linux-oracle: needs-triage
+esm-infra/xenial_linux-oracle: needs-triage
+trusty_linux-oracle: DNE
+xenial_linux-oracle: ignored (end of standard support)
+bionic_linux-oracle: needs-triage
+focal_linux-oracle: needs-triage
+jammy_linux-oracle: needs-triage
+kinetic_linux-oracle: needs-triage
+devel_linux-oracle: needs-triage
+
+Patches_linux-oracle-5.0:
+upstream_linux-oracle-5.0: needs-triage
+trusty_linux-oracle-5.0: DNE
+xenial_linux-oracle-5.0: DNE
+bionic_linux-oracle-5.0: ignored (superseded by linux-oracle-5.3)
+focal_linux-oracle-5.0: DNE
+jammy_linux-oracle-5.0: DNE
+kinetic_linux-oracle-5.0: DNE
+
+Patches_linux-oracle-5.3:
+upstream_linux-oracle-5.3: ignored (superseded by linux-oracle-5.4)
+trusty_linux-oracle-5.3: DNE
+xenial_linux-oracle-5.3: DNE
+bionic_linux-oracle-5.3: ignored (superseded by linux-oracle-5.4)
+focal_linux-oracle-5.3: DNE
+jammy_linux-oracle-5.3: DNE
+kinetic_linux-oracle-5.3: DNE
+
+Patches_linux-oracle-5.4:
+upstream_linux-oracle-5.4: needs-triage
+trusty_linux-oracle-5.4: DNE
+xenial_linux-oracle-5.4: DNE
+bionic_linux-oracle-5.4: needs-triage
+focal_linux-oracle-5.4: DNE
+jammy_linux-oracle-5.4: DNE
+kinetic_linux-oracle-5.4: DNE
+
+Patches_linux-oracle-5.8:
+upstream_linux-oracle-5.8: ignored (superseded by linux-oracle-5.11)
+trusty_linux-oracle-5.8: DNE
+xenial_linux-oracle-5.8: DNE
+bionic_linux-oracle-5.8: DNE
+focal_linux-oracle-5.8: ignored (superseded by linux-oracle-5.11)
+jammy_linux-oracle-5.8: DNE
+kinetic_linux-oracle-5.8: DNE
+
+Patches_linux-oracle-5.11:
+upstream_linux-oracle-5.11: ignored (superseded by linux-oracle-5.13)
+trusty_linux-oracle-5.11: DNE
+xenial_linux-oracle-5.11: DNE
+bionic_linux-oracle-5.11: DNE
+focal_linux-oracle-5.11: ignored (superseded by linux-oracle-5.13)
+jammy_linux-oracle-5.11: DNE
+kinetic_linux-oracle-5.11: DNE
+
+Patches_linux-oracle-5.13:
+upstream_linux-oracle-5.13: needs-triage
+trusty_linux-oracle-5.13: DNE
+xenial_linux-oracle-5.13: DNE
+bionic_linux-oracle-5.13: DNE
+focal_linux-oracle-5.13: needs-triage
+jammy_linux-oracle-5.13: DNE
+kinetic_linux-oracle-5.13: DNE
+
+Patches_linux-oracle-5.15:
+upstream_linux-oracle-5.15: needs-triage
+trusty_linux-oracle-5.15: DNE
+xenial_linux-oracle-5.15: DNE
+bionic_linux-oracle-5.15: DNE
+focal_linux-oracle-5.15: needs-triage
+jammy_linux-oracle-5.15: DNE
+kinetic_linux-oracle-5.15: DNE
+
+Patches_linux-oem:
+upstream_linux-oem: needs-triage
+trusty_linux-oem: DNE
+xenial_linux-oem: ignored (superseded by linux-hwe)
+bionic_linux-oem: needs-triage
+focal_linux-oem: DNE
+jammy_linux-oem: DNE
+kinetic_linux-oem: DNE
+
+Patches_linux-oem-5.6:
+upstream_linux-oem-5.6: needs-triage
+trusty_linux-oem-5.6: DNE
+xenial_linux-oem-5.6: DNE
+bionic_linux-oem-5.6: DNE
+focal_linux-oem-5.6: needs-triage
+jammy_linux-oem-5.6: DNE
+kinetic_linux-oem-5.6: DNE
+
+Patches_linux-oem-5.10:
+upstream_linux-oem-5.10: needs-triage
+trusty_linux-oem-5.10: DNE
+xenial_linux-oem-5.10: DNE
+bionic_linux-oem-5.10: DNE
+focal_linux-oem-5.10: needs-triage
+jammy_linux-oem-5.10: DNE
+kinetic_linux-oem-5.10: DNE
+
+Patches_linux-oem-5.13:
+upstream_linux-oem-5.13: ignored (superseded by linux-oem-5.14)
+trusty_linux-oem-5.13: DNE
+xenial_linux-oem-5.13: DNE
+bionic_linux-oem-5.13: DNE
+focal_linux-oem-5.13: ignored (superseded by linux-oem-5.14)
+jammy_linux-oem-5.13: DNE
+kinetic_linux-oem-5.13: DNE
+
+Patches_linux-oem-5.14:
+upstream_linux-oem-5.14: needs-triage
+trusty_linux-oem-5.14: DNE
+xenial_linux-oem-5.14: DNE
+bionic_linux-oem-5.14: DNE
+focal_linux-oem-5.14: needs-triage
+jammy_linux-oem-5.14: DNE
+kinetic_linux-oem-5.14: DNE
+
+Patches_linux-oem-5.17:
+upstream_linux-oem-5.17: needs-triage
+trusty_linux-oem-5.17: DNE
+xenial_linux-oem-5.17: DNE
+bionic_linux-oem-5.17: DNE
+focal_linux-oem-5.17: DNE
+jammy_linux-oem-5.17: needs-triage
+kinetic_linux-oem-5.17: needs-triage
+devel_linux-oem-5.17: needs-triage
+
+Patches_linux-oem-osp1:
+upstream_linux-oem-osp1: needs-triage
+trusty_linux-oem-osp1: DNE
+xenial_linux-oem-osp1: DNE
+bionic_linux-oem-osp1: needs-triage
+focal_linux-oem-osp1: DNE
+jammy_linux-oem-osp1: DNE
+kinetic_linux-oem-osp1: DNE
+
+Patches_linux-raspi:
+upstream_linux-raspi: needs-triage
+trusty_linux-raspi: DNE
+xenial_linux-raspi: DNE
+bionic_linux-raspi: DNE
+focal_linux-raspi: needs-triage
+jammy_linux-raspi: needs-triage
+kinetic_linux-raspi: needs-triage
+devel_linux-raspi: needs-triage
+
+Patches_linux-raspi2:
+upstream_linux-raspi2: needs-triage
+trusty_linux-raspi2: DNE
+xenial_linux-raspi2: ignored (end of standard support)
+bionic_linux-raspi2: needs-triage
+focal_linux-raspi2: ignored (replaced by linux-raspi)
+jammy_linux-raspi2: DNE
+kinetic_linux-raspi2: DNE
+
+Patches_linux-raspi2-5.3:
+upstream_linux-raspi2-5.3: ignored (superseded by linux-raspi2-5.4)
+trusty_linux-raspi2-5.3: DNE
+xenial_linux-raspi2-5.3: DNE
+bionic_linux-raspi2-5.3: ignored (superseded by linux-raspi-5.4)
+focal_linux-raspi2-5.3: DNE
+jammy_linux-raspi2-5.3: DNE
+kinetic_linux-raspi2-5.3: DNE
+
+Patches_linux-raspi-5.4:
+upstream_linux-raspi-5.4: needs-triage
+trusty_linux-raspi-5.4: DNE
+xenial_linux-raspi-5.4: DNE
+bionic_linux-raspi-5.4: needs-triage
+focal_linux-raspi-5.4: DNE
+jammy_linux-raspi-5.4: DNE
+kinetic_linux-raspi-5.4: DNE
+
+Patches_linux-riscv:
+upstream_linux-riscv: needs-triage
+trusty_linux-riscv: DNE
+xenial_linux-riscv: DNE
+bionic_linux-riscv: DNE
+focal_linux-riscv: ignored (superseded by linux-riscv-5.8)
+jammy_linux-riscv: needs-triage
+kinetic_linux-riscv: needs-triage
+devel_linux-riscv: needs-triage
+
+Patches_linux-riscv-5.8:
+upstream_linux-riscv-5.8: ignored (superseded by linux-riscv-5.11)
+trusty_linux-riscv-5.8: DNE
+xenial_linux-riscv-5.8: DNE
+bionic_linux-riscv-5.8: DNE
+focal_linux-riscv-5.8: ignored (superseded by linux-riscv-5.11)
+jammy_linux-riscv-5.8: DNE
+kinetic_linux-riscv-5.8: DNE
+
+Patches_linux-riscv-5.11:
+upstream_linux-riscv-5.11: ignored (superseded by linux-riscv-5.13)
+trusty_linux-riscv-5.11: DNE
+xenial_linux-riscv-5.11: DNE
+bionic_linux-riscv-5.11: DNE
+focal_linux-riscv-5.11: ignored (superseded by linux-riscv-5.13)
+jammy_linux-riscv-5.11: DNE
+kinetic_linux-riscv-5.11: DNE
+
+Patches_linux-snapdragon:
+upstream_linux-snapdragon: needs-triage
+trusty_linux-snapdragon: DNE
+xenial_linux-snapdragon: ignored (end of standard support)
+bionic_linux-snapdragon: needs-triage
+focal_linux-snapdragon: DNE
+jammy_linux-snapdragon: DNE
+kinetic_linux-snapdragon: DNE
+
+Patches_linux-oem-6.0:
+upstream_linux-oem-6.0: needs-triage
+trusty_linux-oem-6.0: DNE
+trusty/esm_linux-oem-6.0: DNE
+xenial_linux-oem-6.0: DNE
+esm-infra/xenial_linux-oem-6.0: DNE
+bionic_linux-oem-6.0: DNE
+focal_linux-oem-6.0: DNE
+jammy_linux-oem-6.0: needs-triage
+kinetic_linux-oem-6.0: DNE
+devel_linux-oem-6.0: DNE
+
+commit refs/heads/main
+mark :9
+author Alex Goodman <wagoodman@gmail.com> 1672843837 -0500
+committer Alex Goodman <wagoodman@gmail.com> 1672843837 -0500
+data 19
+add CVE-2022-20566
+from :7
+M 100644 :8 active/CVE-2022-20566
+
+commit refs/heads/main
+mark :10
+author Alex Goodman <wagoodman@gmail.com> 1672843983 -0500
+committer Alex Goodman <wagoodman@gmail.com> 1672843983 -0500
+data 67
+retire CVE-2019-17185,CVE-2022-41859,CVE-2022-41860,CVE-2022-41861
+from :9
+D active/CVE-2019-17185
+D active/CVE-2022-41859
+D active/CVE-2022-41860
+D active/CVE-2022-41861
+M 100644 :1 retired/CVE-2019-17185
+M 100644 :4 retired/CVE-2022-41859
+M 100644 :5 retired/CVE-2022-41860
+M 100644 :6 retired/CVE-2022-41861

@@ -89,10 +89,11 @@ class Helpers:
         parent = os.path.realpath(os.path.dirname(current_test_filepath))
         return os.path.join(parent, path)
 
-    def provider_workspace_helper(self, name: str) -> WorkspaceHelper:
-        root = self.tmpdir / "provider"
-        os.makedirs(root / name / "input")
-        os.makedirs(root / name / "results")
+    def provider_workspace_helper(self, name: str, create=True) -> WorkspaceHelper:
+        root = self.tmpdir
+        if create:
+            os.makedirs(root / name / "input")
+            os.makedirs(root / name / "results")
         return WorkspaceHelper(root, name)
 
 
