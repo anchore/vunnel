@@ -154,7 +154,7 @@ class GitWrapper:
             rev = self._exec_cmd(self._head_rev_cmd_, cwd=self.dest)
             return rev.decode().strip() if isinstance(rev, bytes) else rev
         except:
-            self.logger.exception()
+            self.logger.exception("unable to get current git revision")
 
     @classmethod
     def _parse_revision_history(cls, cve_id, history):
