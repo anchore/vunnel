@@ -113,29 +113,32 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1)
 @click.pass_obj
 def status_provider(cfg: config.Application, provider_names: str) -> None:
+    print(cfg.root)
     if not provider_names:
         selected_names = providers.names()
     else:
         # not about type ignore: click assumes with nargs=-1 that all types are surrounded by a list collection
         selected_names = provider_names  # type: ignore
 
-    for name in selected_names:
+    for idx, name in enumerate(selected_names):
+        branch = "├──"
+        fill = "│"
+        if idx == len(selected_names) - 1:
+            branch = "└──"
+            fill = " "
         provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
         try:
             state = provider.workspace.state()
             if not state:
                 raise FileNotFoundError("no state found")
-
-            tmpl = f""" • {name!r} provider
-    └── {len(list(state.result_files()))} files
-        {state.timestamp}
-"""
-            print(tmpl)
+            node = f"""
+{fill}      {len(list(state.result_files(provider.workspace.path)))} result files
+{fill}      {state.timestamp}"""
         except FileNotFoundError:
-            tmpl = f""" • {name!r} provider
-    └── (no state found)
-"""
-            print(tmpl)
+            node = f"""
+{fill}      (no state found)"""
+
+        print(f"""{branch} {name} {node}""")
 
 
 @cli.command(name="list", help="list available providers")
