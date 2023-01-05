@@ -64,7 +64,7 @@ class Manager:
 
     def _can_update_incrementally(self) -> bool:
         try:
-            metadata = Metadata.read(self.workspace.scratch_path)
+            metadata = Metadata.read(self.workspace.input_path)
         except FileNotFoundError:
             self.logger.warning(f"no existing cache files found, downloading all data")
             return False
@@ -93,10 +93,10 @@ class Manager:
         for response in self.api.cve():
             yield from self._unwrap_records(response)
 
-        Metadata(timestamp=now).write(self.workspace.scratch_path)
+        Metadata(timestamp=now).write(self.workspace.input_path)
 
     def _download_updates(self) -> Generator[tuple[str, dict[str, Any]], Any, None]:
-        metadata = Metadata.read(self.workspace.scratch_path)
+        metadata = Metadata.read(self.workspace.input_path)
         last_sync = metadata.timestamp
 
         self.logger.debug(f"downloading CVEs changed since {last_sync.isoformat()}")
@@ -113,7 +113,7 @@ class Manager:
 
             yield from self._unwrap_records(response)
 
-        Metadata(timestamp=now).write(self.workspace.scratch_path)
+        Metadata(timestamp=now).write(self.workspace.input_path)
 
     def _unwrap_records(self, response: dict[str, Any]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         for vuln in response["vulnerabilities"]:

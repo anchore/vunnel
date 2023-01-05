@@ -23,18 +23,15 @@ def test_clear_input(tmpdir, dummy_file):
     # create a dummy files
     dummy_file(ws.input_path)
     dummy_file(ws.results_path)
-    dummy_file(ws.scratch_path)
 
     assert_directory(ws.input_path, exists=True, empty=False)
     assert_directory(ws.results_path, exists=True, empty=False)
-    assert_directory(ws.scratch_path, exists=True, empty=False)
 
     # clear the input
     ws.clear_input()
 
     assert_directory(ws.input_path, exists=True, empty=True)
     assert_directory(ws.results_path, exists=True, empty=False)
-    assert_directory(ws.scratch_path, exists=True, empty=False)
 
 
 def test_clear_results(tmpdir, dummy_file):
@@ -43,21 +40,18 @@ def test_clear_results(tmpdir, dummy_file):
     # create a dummy files
     dummy_file(ws.input_path)
     dummy_file(ws.results_path)
-    dummy_file(ws.scratch_path)
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     ws.record_state(urls=urls)
 
     assert_directory(ws.input_path, exists=True, empty=False)
     assert_directory(ws.results_path, exists=True, empty=False)
-    assert_directory(ws.scratch_path, exists=True, empty=False)
 
     # clear the results
     ws.clear_results()
 
     assert_directory(ws.input_path, exists=True, empty=False)
     assert_directory(ws.results_path, exists=True, empty=True)
-    assert_directory(ws.scratch_path, exists=True, empty=False)
 
     # ensure the URLs are still populated
     new_state = workspace.State.read(root=ws.path)
@@ -70,7 +64,6 @@ def test_record_state(tmpdir, dummy_file):
     # create a dummy files
     dummy_file(ws.input_path, "dummt-input-1.json")
     dummy_file(ws.results_path, "dummy-00000.json")
-    dummy_file(ws.scratch_path, "dummy-scratch-1.json")
 
     ws.record_state(urls=["http://localhost:8000/dummy-input-1.json"])
 
@@ -100,7 +93,6 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
     # create a dummy files
     dummy_file(ws.input_path, "dummt-input-1.json")
     dummy_file(ws.results_path, "dummy-00000.json")
-    dummy_file(ws.scratch_path, "dummy-scratch-1.json")
 
     ws.record_state(urls=["http://localhost:8000/dummy-input-1.json"])
 

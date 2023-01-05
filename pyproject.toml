@@ -156,7 +156,7 @@ exclude = '''
 omit = [".*", "*/site-packages/*", "*/venv/*", "tests/*", "*/cli/*"]
 
 [tool.coverage.report]
-fail_under = 65
+fail_under = 75
 
 [tool.flake8]
 # note: this mirrors the black configuration in pre-commit config

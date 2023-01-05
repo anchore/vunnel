@@ -91,7 +91,6 @@ class Helpers:
         if create:
             os.makedirs(root / name / "input")
             os.makedirs(root / name / "results")
-            os.makedirs(root / name / "scratch")
         return WorkspaceHelper(root, name)
 
 
