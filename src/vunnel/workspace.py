@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import os
 import shutil
@@ -10,6 +11,7 @@ import xxhash
 from dataclass_wizard import fromdict
 
 from vunnel import schema as schemaDef
+from vunnel import utils
 
 METADATA_FILENAME = "metadata.json"
 CHECKSUM_LISTING_FILENAME = "checksums"
@@ -59,14 +61,15 @@ class State:
                 path=os.path.basename(listing_path),  # may have been overridden, keep value
             )
 
-        with open(metadata_path, "wb") as f:
-            f.write(orjson.dumps(asdict(self), f))  # type: ignore
+        with open(metadata_path, "w") as f:
+            json.dump(asdict(self), f, indent=2, cls=utils.DTEncoder)
 
         return metadata_path
 
-    def result_files(self) -> Generator[File, File, None]:
+    def result_files(self, root: str) -> Generator[File, File, None]:
         if self.listing:
-            with open(self.listing.path) as f:
+            full_path = os.path.join(root, self.listing.path)
+            with open(full_path) as f:
                 for digest, filepath in (line.split() for line in f.readlines()):
                     yield File(digest=digest, path=filepath, algorithm=self.listing.algorithm)
 
@@ -85,10 +88,6 @@ class Workspace:
     @property
     def path(self) -> str:
         return os.path.join(self._root, self.name)
-
-    @property
-    def scratch_path(self) -> str:
-        return os.path.join(self.path, "scratch")
 
     @property
     def results_path(self) -> str:
@@ -111,16 +110,11 @@ class Workspace:
         else:
             self.logger.debug(f"using existing results workspace {self.results_path!r}")
 
-        os.makedirs(self.scratch_path, exist_ok=True)
-
     def clear(self) -> None:
         self.clear_input()
         self.clear_results()
-        self.clear_scratch()
-
-    def clear_scratch(self) -> None:
-        shutil.rmtree(self.results_path, ignore_errors=True)
-        os.makedirs(self.results_path, exist_ok=True)
+        utils.silent_remove(os.path.join(self.path, METADATA_FILENAME))
+        utils.silent_remove(os.path.join(self.path, CHECKSUM_LISTING_FILENAME))
 
     def clear_results(self) -> None:
         if os.path.exists(self.results_path):
@@ -130,8 +124,13 @@ class Workspace:
 
         try:
             current_state = State.read(root=self.path)
-            current_state.listing
+            current_listing = None
+            if current_state.listing:
+                current_listing = current_state.listing.path
+            current_state.listing = None
             current_state.write(self.path, self.results_path)
+            if current_listing:
+                utils.silent_remove(current_listing)
         except FileNotFoundError:
             pass
 

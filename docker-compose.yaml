@@ -1,9 +1,0 @@
-version: "3.9"
-
-services:
-  vunnel:
-    build: .
-    image: localhost/vunnel:latest
-    volumes:
-      - .vunnel.yaml:/vunnel/.vunnel.yaml
-      - ./data:/vunnel/data

@@ -4,7 +4,7 @@ import pytest
 
 from vunnel import workspace
 from vunnel.providers import nvd
-from vunnel.providers.nvd import api, manager
+from vunnel.providers.nvd import manager
 
 
 @pytest.mark.parametrize(
