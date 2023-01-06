@@ -57,6 +57,7 @@ class RuntimeConfig:
     on_error: OnErrorConfig = field(default_factory=OnErrorConfig)
     existing_input: InputStatePolicy = InputStatePolicy.KEEP
     existing_results: ResultStatePolicy = ResultStatePolicy.KEEP
+    result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     def __post_init__(self) -> None:
 
@@ -64,6 +65,8 @@ class RuntimeConfig:
             self.existing_input = InputStatePolicy(self.existing_input)
         if not isinstance(self.existing_results, ResultStatePolicy):
             self.existing_results = ResultStatePolicy(self.existing_results)
+        if not isinstance(self.result_store, result.StoreStrategy):
+            self.result_store = result.StoreStrategy(self.result_store)
 
     @property
     def skip_if_exists(self) -> bool:
@@ -163,6 +166,7 @@ class Provider(abc.ABC):
         return result.Writer(
             workspace=self.workspace,
             logger=self.logger,
+            store_strategy=self.runtime_cfg.result_store,
             clear_results_before_writing=self.runtime_cfg.existing_results == ResultStatePolicy.DELETE_BEFORE_WRITE,
             **kwargs,
         )

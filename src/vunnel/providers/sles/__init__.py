@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
-from vunnel import provider, schema
+from vunnel import provider, schema, result
 
 from .parser import Parser
 
@@ -10,7 +10,10 @@ from .parser import Parser
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE)
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
     )
     request_timeout: int = 125
     allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15])  # corresponds to major versions

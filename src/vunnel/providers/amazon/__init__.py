@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
-from vunnel import provider, schema
+from vunnel import provider, schema, result
 
 from .parser import Parser, amazon_security_advisories
 
@@ -11,7 +11,10 @@ from .parser import Parser, amazon_security_advisories
 class Config:
     security_advisories: dict[Any, str] = field(default_factory=lambda: amazon_security_advisories)
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE)
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
     )
     request_timeout: int = 125
 

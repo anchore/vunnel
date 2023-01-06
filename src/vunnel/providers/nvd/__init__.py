@@ -1,13 +1,18 @@
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema
+from vunnel import provider, schema, result
 from vunnel.providers.nvd.manager import Manager
 
 
 @dataclass
 class Config:
-    runtime: provider.RuntimeConfig = field(default_factory=provider.RuntimeConfig)
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
+    )
     request_timeout: int = 125
     start_year: int = 2002
     end_year: int | None = None

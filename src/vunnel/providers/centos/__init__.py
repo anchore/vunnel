@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema
+from vunnel import provider, schema, result
 
 from .parser import Parser, centos_config
 
@@ -9,7 +9,10 @@ from .parser import Parser, centos_config
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE)
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
     )
     skip_namespaces: list[str] = field(default_factory=lambda: ["centos:3", "centos:4"])
     request_timeout: int = 125
