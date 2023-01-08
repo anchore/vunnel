@@ -37,11 +37,11 @@ class Store:
         self.logger = logger
 
     @abc.abstractmethod
-    def store(self, identifier: str, record: Envelope):
+    def store(self, identifier: str, record: Envelope) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def close(self):
+    def close(self) -> None:
         raise NotImplementedError
 
 
@@ -52,7 +52,7 @@ class StoreStrategy(str, enum.Enum):
     def __repr__(self) -> str:
         return self.value
 
-    def store(self, *args, **kwargs) -> Store:
+    def store(self, *args: Any, **kwargs: Any) -> Store:
         if self == StoreStrategy.FLAT_FILE:
             return FlatFileStore(*args, **kwargs)
         elif self == StoreStrategy.SQLITE:
@@ -62,7 +62,7 @@ class StoreStrategy(str, enum.Enum):
 
 
 class FlatFileStore(Store):
-    def store(self, identifier: str, record: Envelope):
+    def store(self, identifier: str, record: Envelope) -> None:
         filename = f"{identifier}.json"
         filepath = os.path.join(self.workspace.results_path, filename)
 
@@ -74,13 +74,13 @@ class FlatFileStore(Store):
             if self.skip_duplicates and os.path.getmtime(filepath) >= self.start:
                 self.logger.warning(f"{identifier!r} entry already written (skipping)")
                 return
-            self.logger.trace(f"overwriting existing file: {filepath!r}")
+            self.logger.trace(f"overwriting existing file: {filepath!r}")  # type: ignore
 
         with open(filepath, "wb") as f:
-            self.logger.trace(f"writing record to {filepath!r}")
+            self.logger.trace(f"writing record to {filepath!r}")  # type: ignore
             f.write(orjson.dumps(asdict(record), f))  # type: ignore
 
-    def close(self):
+    def close(self) -> None:
         pass
 
 
@@ -88,32 +88,32 @@ class SQLiteStore(Store):
     filename = "results.db"
     table_name = "results"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.conn = None
         self.engine = None
         self.table = None
 
         @db.event.listens_for(db.engine.Engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
+        def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore
             cursor = dbapi_connection.cursor()
             # cursor.execute("pragma journal_mode=OFF")
             cursor.execute("PRAGMA synchronous=NORMAL")
             # cursor.execute("PRAGMA cache_size=100000")
             cursor.close()
 
-    def connection(self):
+    def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
             self.engine = db.create_engine(f"sqlite:///{self.db_file_path}")
-            self.conn = self.engine.connect()
+            self.conn = self.engine.connect()  # type: ignore
             self.table = self._create_table()
         return self.conn, self.table
 
     @property
-    def db_file_path(self):
+    def db_file_path(self) -> str:
         return os.path.join(self.workspace.results_path, self.filename)
 
-    def _create_table(self):
+    def _create_table(self) -> db.Table:
         metadata = db.MetaData(self.engine)
         table = db.Table(
             self.table_name,
@@ -124,8 +124,8 @@ class SQLiteStore(Store):
         metadata.create_all()
         return table
 
-    def store(self, identifier: str, record: Envelope):
-        record_str = orjson.dumps(asdict(record))  # type: ignore
+    def store(self, identifier: str, record: Envelope) -> None:
+        record_str = orjson.dumps(asdict(record))
         conn, table = self.connection()
 
         # upsert the record conditionally based on the skip_duplicates configuration
@@ -135,14 +135,14 @@ class SQLiteStore(Store):
             if self.skip_duplicates:
                 self.logger.warning(f"{identifier!r} entry already written (skipping)")
                 return
-            self.logger.trace(f"overwriting existing entry: {identifier!r}")
+            self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore
             statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
         else:
             statement = db.insert(table).values(id=identifier, record=record_str)
 
         conn.execute(statement)
 
-    def close(self):
+    def close(self) -> None:
         if self.conn:
             self.conn.close()
             self.engine.dispose()

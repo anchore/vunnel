@@ -1,4 +1,5 @@
 import abc
+import datetime
 import enum
 import logging
 import time
@@ -89,14 +90,23 @@ class Provider(abc.ABC):
         raise NotImplementedError("'name()' must be implemented")
 
     @abc.abstractmethod
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
         raise NotImplementedError("'update()' must be implemented")
 
     def _update(self) -> None:
-        urls, count = self.update()
+        start = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        last_updated = None
+        try:
+            current_state = workspace.State.read(root=self.workspace.path)
+            last_updated = current_state.timestamp
+        except FileNotFoundError:
+            last_updated = None
+
+        urls, count = self.update(last_updated=last_updated)
         if count > 0:
-            self.workspace.record_state(urls=urls, store=self.runtime_cfg.result_store.value)
+            self.workspace.record_state(timestamp=start, urls=urls, store=self.runtime_cfg.result_store.value)
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 

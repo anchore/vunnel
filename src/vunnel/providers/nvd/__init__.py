@@ -1,3 +1,4 @@
+import datetime
 import os
 from dataclasses import dataclass, field
 
@@ -35,6 +36,9 @@ class Provider(provider.Provider):
     def __init__(self, root: str, config: Config) -> None:
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
+
+        self.logger.debug(f"config: {config}")
+
         self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,
@@ -49,9 +53,11 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "nvd"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
-            for identifier, record in self.manager.get(skip_if_exists=self.config.runtime.skip_if_exists):
+            for identifier, record in self.manager.get(
+                skip_if_exists=self.config.runtime.skip_if_exists, last_updated=last_updated
+            ):
                 writer.write(
                     identifier=identifier.lower(),
                     schema=self.schema,

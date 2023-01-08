@@ -1,3 +1,4 @@
+import datetime
 import os
 from dataclasses import dataclass, field
 
@@ -34,7 +35,7 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "alpine"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
 
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)

@@ -1,4 +1,5 @@
 import copy
+import datetime
 import os
 from dataclasses import dataclass, field
 
@@ -52,7 +53,7 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "github"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         namespace = "github"
         with self.results_writer() as writer:
             for advisory in self.parser.get():
