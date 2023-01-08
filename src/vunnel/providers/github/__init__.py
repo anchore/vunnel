@@ -2,7 +2,7 @@ import copy
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema, result
+from vunnel import provider, result, schema
 
 from .parser import Parser
 
@@ -11,7 +11,8 @@ from .parser import Parser
 class Config:
     token: str = "env:GITHUB_TOKEN"
     api_url: str = "https://api.github.com/graphql"
-    runtime: provider.RuntimeConfig = field(default_factory=lambda: provider.RuntimeConfig(
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
             existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),

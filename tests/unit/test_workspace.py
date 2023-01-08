@@ -1,6 +1,6 @@
 import os
 
-from vunnel import schema, workspace
+from vunnel import result, schema, workspace
 
 
 def assert_directory(path: str, exists: bool = True, empty: bool = False):
@@ -42,7 +42,8 @@ def test_clear_results(tmpdir, dummy_file):
     dummy_file(ws.results_path)
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
-    ws.record_state(urls=urls)
+    store = result.StoreStrategy.FLAT_FILE
+    ws.record_state(urls=urls, result_store=store.value)
 
     assert_directory(ws.input_path, exists=True, empty=False)
     assert_directory(ws.results_path, exists=True, empty=False)
@@ -65,7 +66,9 @@ def test_record_state(tmpdir, dummy_file):
     dummy_file(ws.input_path, "dummt-input-1.json")
     dummy_file(ws.results_path, "dummy-00000.json")
 
-    ws.record_state(urls=["http://localhost:8000/dummy-input-1.json"])
+    urls = ["http://localhost:8000/dummy-input-1.json"]
+    store = result.StoreStrategy.FLAT_FILE
+    ws.record_state(urls=urls, result_store=store.value)
 
     current_state = workspace.State.read(root=ws.path)
 
@@ -94,10 +97,12 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
     dummy_file(ws.input_path, "dummt-input-1.json")
     dummy_file(ws.results_path, "dummy-00000.json")
 
-    ws.record_state(urls=["http://localhost:8000/dummy-input-1.json"])
+    urls = ["http://localhost:8000/dummy-input-1.json"]
+    store = result.StoreStrategy.FLAT_FILE
+    ws.record_state(urls=urls, result_store=store.value)
 
     # this call should not clear the URLs
-    ws.record_state(urls=None)
+    ws.record_state(urls=None, store=store.value)
 
     current_state = workspace.State.read(root=ws.path)
 

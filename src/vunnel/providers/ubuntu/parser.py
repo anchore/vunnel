@@ -14,8 +14,8 @@ from typing import Optional
 from .git import GitWrapper
 
 namespace = "ubuntu"
-feedtype = "vulnerabilities"
-purge_unreported = True
+
+default_max_workers = 8
 
 ubuntu_pkg_version_format = "dpkg"
 ubuntu_cve_url = "http://people.ubuntu.com/~ubuntu-security/cve/{}"
@@ -616,7 +616,7 @@ class Parser:
         logger: Optional[logging.Logger] = None,
         additional_versions: Optional[dict[str, str]] = None,
         enable_rev_history: bool = True,
-        max_workers: int = 5,
+        max_workers: int = default_max_workers,
     ):
         self.vc_workspace = os.path.join(workspace.input_path, self._vc_working_dir)
         # TODO: tech debt: this should use the results workspace with the correct schema-aware envelope

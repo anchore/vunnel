@@ -1,9 +1,9 @@
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema, result
+from vunnel import provider, result, schema
 
-from .parser import Parser
+from .parser import Parser, default_max_workers
 
 
 @dataclass
@@ -17,7 +17,7 @@ class Config:
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=lambda: {})
     enable_rev_history: bool = True
-    max_workers: int = 5
+    max_workers: int = default_max_workers
 
 
 class Provider(provider.Provider):

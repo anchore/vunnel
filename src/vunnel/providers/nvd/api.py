@@ -121,6 +121,10 @@ class NvdAPI:
 
         total_results = payload["totalResults"]
         results_per_page = payload["resultsPerPage"]
+
+        if not total_results or not results_per_page:
+            return
+
         pages = total_results // results_per_page
         index = results_per_page
 

@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema, result
+from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
 
 

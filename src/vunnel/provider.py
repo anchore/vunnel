@@ -96,7 +96,7 @@ class Provider(abc.ABC):
     def _update(self) -> None:
         urls, count = self.update()
         if count > 0:
-            self.workspace.record_state(urls=urls)
+            self.workspace.record_state(urls=urls, store=self.runtime_cfg.result_store.value)
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 

@@ -22,11 +22,10 @@ class Envelope:
 
 
 class Store:
-    
     def __init__(
-        self, 
+        self,
         workspace: Workspace,
-        skip_duplicates: bool = False, 
+        skip_duplicates: bool = False,
         logger: logging.Logger | None = None,
     ):
         self.workspace = workspace
@@ -46,7 +45,6 @@ class Store:
         raise NotImplementedError
 
 
-
 class StoreStrategy(str, enum.Enum):
     FLAT_FILE = "flat-file"
     SQLITE = "sqlite"
@@ -62,8 +60,8 @@ class StoreStrategy(str, enum.Enum):
         else:
             raise ValueError(f"unsupported result store strategy: {self!r}")
 
-class FlatFileStore(Store):
 
+class FlatFileStore(Store):
     def store(self, identifier: str, record: Envelope):
         filename = f"{identifier}.json"
         filepath = os.path.join(self.workspace.results_path, filename)
@@ -74,7 +72,7 @@ class FlatFileStore(Store):
 
         if os.path.exists(filepath):
             if self.skip_duplicates and os.path.getmtime(filepath) >= self.start:
-                self.logger.warning(f"{identifier!r} already written (skipping)")
+                self.logger.warning(f"{identifier!r} entry already written (skipping)")
                 return
             self.logger.trace(f"overwriting existing file: {filepath!r}")
 
@@ -118,26 +116,30 @@ class SQLiteStore(Store):
     def _create_table(self):
         metadata = db.MetaData(self.engine)
         table = db.Table(
-                self.table_name, 
-                metadata, 
-                db.Column('id', db.String(), primary_key=True, index=True),
-                db.Column('record', db.LargeBinary()),
-            )
+            self.table_name,
+            metadata,
+            db.Column("id", db.String(), primary_key=True, index=True),
+            db.Column("record", db.LargeBinary()),
+        )
         metadata.create_all()
         return table
 
     def store(self, identifier: str, record: Envelope):
         record_str = orjson.dumps(asdict(record))  # type: ignore
         conn, table = self.connection()
-        statement = db.insert(table).values(id=identifier, record=record_str)
-        # # TODO: upsert conditionally
-        # if self.skip_duplicates:
-        #     statement = statement.on_conflict_do_nothing(index_elements=[table.c.id])
-        # else:
-        #     statement = statement.on_conflict_do_update(
-        #         index_elements=[table.c.id],
-        #         set_=dict(data=statement.excluded.data)
-        #     )
+
+        # upsert the record conditionally based on the skip_duplicates configuration
+
+        existing = conn.execute(table.select().where(table.c.id == identifier)).first()
+        if existing:
+            if self.skip_duplicates:
+                self.logger.warning(f"{identifier!r} entry already written (skipping)")
+                return
+            self.logger.trace(f"overwriting existing entry: {identifier!r}")
+            statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
+        else:
+            statement = db.insert(table).values(id=identifier, record=record_str)
+
         conn.execute(statement)
 
     def close(self):
@@ -148,6 +150,7 @@ class SQLiteStore(Store):
             self.conn = None
             self.engine = None
             self.table = None
+
 
 class Writer:
     written: list[str]
