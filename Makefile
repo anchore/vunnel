@@ -18,6 +18,7 @@ SUCCESS := $(BOLD)$(GREEN)
 # note: this should always have a prefixed "v"
 PACKAGE_VERSION = v$(shell poetry run dunamai from git --style semver --dirty --no-metadata)
 COMMIT = $(shell git rev-parse HEAD)
+COMMIT_TAG = git-$(COMMIT)
 
 CHRONICLE_VERSION = v0.4.2
 GLOW_VERSION = v1.4.1
@@ -62,7 +63,7 @@ build:  ## Run build assets
 	rm -rf dist
 	poetry build
 	docker build \
-		-t $(IMAGE_NAME):$(COMMIT) \
+		-t $(IMAGE_NAME):$(COMMIT_TAG) \
 		.
 
 .PHONY: ci-check
@@ -71,12 +72,12 @@ ci-check:
 
 .PHONY: ci-publish-commit
 ci-publish-commit: ci-check  ## Publish a commit (for use in CI only)
-	docker push $(IMAGE_NAME):$(COMMIT)
+	docker push $(IMAGE_NAME):$(COMMIT_TAG)
 
 .PHONY: ci-promote-release
 ci-promote-release: ci-check  ## Promote an existing commit build as a release (for use in CI only)
-	$(CRANE) tag $(IMAGE_NAME):$(COMMIT) $(PACKAGE_VERSION)
-	$(CRANE) tag $(IMAGE_NAME):$(COMMIT) latest
+	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) $(PACKAGE_VERSION)
+	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) latest
 
 .PHONY: changelog
 changelog:
