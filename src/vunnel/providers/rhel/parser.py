@@ -162,7 +162,7 @@ class Parser:
                 if (now - last_full_sync).days < self.full_sync_interval:
                     do_full_sync = False
         except:
-            self.logger.debug_exception("ignoring error loading last_full_sync timestamp from disk")
+            self.logger.debug("ignoring error loading last_full_sync timestamp from disk", exc_info=True)
             do_full_sync = True
 
         if do_full_sync:
@@ -222,7 +222,7 @@ class Parser:
                 with open(last_full_sync_file, "w", encoding="utf-8") as fp:
                     fp.write(now.isoformat())
             except Exception:
-                self.logger.debug_exception("ignoring error saving last_full_sync timestamp to disk")
+                self.logger.debug("ignoring error saving last_full_sync timestamp to disk", exc_info=True)
 
         # reconcile cves after processing only if there were no errors, remove any that are no longer listed
         if not error:
@@ -251,7 +251,7 @@ class Parser:
                         f"CVEs reported by api missing full content on fs: {api_cve_set.difference(fs_min_cve_set)}"
                     )
             except Exception:
-                self.logger.debug_exception("ignoring errors reconciling api cves with fs content")
+                self.logger.debug("ignoring errors reconciling api cves with fs content", exc_info=True)
 
         return full_cve_dir
 

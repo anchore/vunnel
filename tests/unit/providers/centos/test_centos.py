@@ -17,7 +17,13 @@ from vunnel.providers.centos.parser import Parser
                     "Severity": "",
                     "NamespaceName": "centos:3",
                     "FixedIn": [
-                        {"Name": "htdig", "Version": "2:3.1.6-7.el3", "VersionFormat": "rpm", "NamespaceName": "centos:3"}
+                        {
+                            "Name": "htdig",
+                            "Version": "2:3.1.6-7.el3",
+                            "VersionFormat": "rpm",
+                            "NamespaceName": "centos:3",
+                            "Module": None,
+                        },
                     ],
                     "Link": "https://access.redhat.com/errata/RHSA-0000-0000",
                     "Description": "",
@@ -39,7 +45,13 @@ from vunnel.providers.centos.parser import Parser
                     "Severity": "",
                     "NamespaceName": "centos:7",
                     "FixedIn": [
-                        {"Name": "htdig", "Version": "2:3.1.6-7.el3", "VersionFormat": "rpm", "NamespaceName": "centos:7"}
+                        {
+                            "Name": "htdig",
+                            "Version": "2:3.1.6-7.el3",
+                            "VersionFormat": "rpm",
+                            "NamespaceName": "centos:7",
+                            "Module": None,
+                        }
                     ],
                     "Link": "https://access.redhat.com/errata/RHSA-0000-0000",
                     "Description": "",

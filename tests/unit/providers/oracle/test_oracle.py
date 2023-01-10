@@ -61,48 +61,56 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "bind-devel",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "bind-sdb",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "bind-libbind-devel",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "bind",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "caching-nameserver",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "bind-chroot",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "bind-libs",
                                         "Version": "30:9.3.3-8.el5",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
+                                        "Module": None,
                                     },
                                 ]
                             ),
@@ -140,36 +148,42 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "Version": "0:2.6.39-400.302.2.el6uek",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "kernel-uek",
                                         "Version": "0:2.6.39-400.302.2.el6uek",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "kernel-uek-firmware",
                                         "Version": "0:2.6.39-400.302.2.el6uek",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "kernel-uek-debug-devel",
                                         "Version": "0:2.6.39-400.302.2.el6uek",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "kernel-uek-devel",
                                         "Version": "0:2.6.39-400.302.2.el6uek",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "kernel-uek-debug",
                                         "Version": "0:2.6.39-400.302.2.el6uek",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
+                                        "Module": None,
                                     },
                                 ]
                             ),
@@ -233,6 +247,7 @@ class TestKspliceFilterer:
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.ksplice1.el8_3",
+                                        "Module": None,
                                     }
                                 ],
                             }
@@ -264,6 +279,7 @@ class TestKspliceFilterer:
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
+                                        "Module": None,
                                     }
                                 ],
                             }
@@ -282,6 +298,7 @@ class TestKspliceFilterer:
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
+                                        "Module": None,
                                     }
                                 ],
                             }
@@ -302,12 +319,14 @@ class TestKspliceFilterer:
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.ksplice1.el8_3",
+                                        "Module": None,
                                     },
                                     {
                                         "Name": "openssl",
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
+                                        "Module": None,
                                     },
                                 ],
                             }
@@ -326,6 +345,7 @@ class TestKspliceFilterer:
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
+                                        "Module": None,
                                     }
                                 ],
                             }
