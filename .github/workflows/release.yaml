@@ -1,0 +1,122 @@
+name: "Release"
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: tag the latest commit on main with the given version (prefixed with v)
+        required: true
+
+env:
+  PYTHON_VERSION: "3.10"
+  POETRY_VERSION: "1.2.1"
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check if tag already exists
+        # note: this will fail if the tag already exists
+        run: |
+          git tag ${{ github.event.inputs.version }}
+
+      # we don't want to release commits that have been pushed and tagged, but not necessarily merged onto main
+      - name: Ensure tagged commit is on main
+        run: |
+          echo "Tag: ${GITHUB_REF##*/}"
+          git fetch origin main
+          git merge-base --is-ancestor ${GITHUB_REF##*/} origin/main && echo "${GITHUB_REF##*/} is a commit on main!"
+
+      - name: Check validation results
+        uses: fountainhead/action-wait-for-check@v1.1.0
+        id: validations
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # This check name is defined as the github action job name (in .github/workflows/validations.yaml)
+          checkName: "Validations"
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Quality gate
+        if: steps.validations.conclusion != 'success'
+        run: |
+          echo "Validations Status: ${{ steps.validations.conclusion }}"
+          false
+
+
+  release:
+    needs: [quality-gate]
+    runs-on: ubuntu-20.04
+    environment: release
+    permissions:
+      contents: write
+      packages: write
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install poetry
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: ${{ env.POETRY_VERSION }}
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v3
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: poetry-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            poetry-${{ hashFiles('poetry.lock') }}
+
+      - name: Setup Poetry config
+        run: |
+          poetry config virtualenvs.in-project false
+          poetry config virtualenvs.path ~/.virtualenvs
+
+      - name: Restore tool cache
+        id: tool-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.tmp
+          key: ${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
+
+      - name: (cache-miss) Bootstrap tools
+        if: steps.tool-cache.outputs.cache-hit != 'true'
+        run: make bootstrap
+
+      - name: Install dependencies and package
+        run: poetry install
+
+      - name: Login to ghcr.io
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io --username ${{ github.actor }} --password-stdin
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Tag release
+        run: |
+          git tag ${{ github.event.inputs.version }}
+          git push origin --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote commit image to release
+        run: |
+          make ci-promote-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create github release
+        run: |
+          make changelog
+          gh release create ${{ github.event.inputs.version }} -F CHANGELOG.md -t ${{ github.event.inputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
