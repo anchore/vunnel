@@ -16,9 +16,31 @@ Supported data sources:
 
 ## Installation
 
-```
+With pip:
+
+```bash
 pip install git+https://github.com/anchore/vunnel@main
+
+# or use a git tag
+pip install git+https://github.com/anchore/vunnel@v0.1.0
 ```
+
+With docker:
+
+```bash
+docker run \
+  --rm -it \
+  -v $(pwd)/data:/data \                 # keep the processed data on the host
+  -v $(pwd)/.vunnel.yaml:/.vunnel.yaml   # if you have a vunnel config
+    ghcr.io/anchore/vunnel:latest        # a git tag can be used as the version
+      run nvd                            # arguments for vunnel
+```
+Where:
+  - the `data` volume keeps the processed data on the host
+  - the `.vunnel.yaml` uses the host application config (if present)
+  - you can swap `latest` for a specific version (same as the git tags)
+
+See [the vunnel package](https://github.com/anchore/vunnel/pkgs/container/vunnel) for a full listing of available tags.
 
 ## Getting Started
 
