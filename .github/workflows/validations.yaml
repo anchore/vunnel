@@ -5,16 +5,23 @@ on:
 
 env:
   PYTHON_VERSION: "3.10"
-  POETRY_VERSION: "1.2.0"
+  POETRY_VERSION: "1.2.1"
 
 jobs:
 
-  validations:
+  # note: the name for this check is referenced in release.yaml, do not change here without changing there
+  Validations:
     runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -24,7 +31,7 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
 
       - name: Cache Poetry virtualenv
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         id: cache
         with:
           path: ~/.virtualenvs
@@ -37,13 +44,34 @@ jobs:
           poetry config virtualenvs.in-project false
           poetry config virtualenvs.path ~/.virtualenvs
 
+      - name: Restore tool cache
+        id: tool-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/.tmp
+          key: ${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
+
+      - name: (cache-miss) Bootstrap tools
+        if: steps.tool-cache.outputs.cache-hit != 'true'
+        run: make bootstrap
+
       - name: Install dependencies and package
         run: poetry install
-        # though we have a cache, let poetry validate its valid
-        # if: steps.cache.outputs.cache-hit != 'true'
 
       - name: Run static analysis
         run: make static-analysis
 
       - name: Run unit tests
         run: make unit
+
+      - name: Build assets
+        run: make build
+
+      - name: Login to ghcr.io
+        if: ${{ github.ref == 'ref/head/main' }}
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Publish commit image
+        if: ${{ github.ref == 'ref/head/main' }}
+        run: make ci-publish-commit

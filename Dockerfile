@@ -6,9 +6,8 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt update && apt install -y git && rm -rf /var/lib/apt/lists/*
 
-COPY . src
-RUN pip install ./src
+COPY dist dist
+RUN pip install ./dist/vunnel-*.whl
 ENTRYPOINT ["vunnel"]
 
-# TODO: change to vunnel repo later
-LABEL org.opencontainers.image.source https://github.com/anchore/grype-db-builder
+LABEL org.opencontainers.image.source https://github.com/anchore/vunnel
