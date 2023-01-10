@@ -2,7 +2,7 @@ import shutil
 
 import pytest
 
-from vunnel import workspace
+from vunnel import result, workspace
 from vunnel.providers.amazon import Config, Provider, parser
 
 
@@ -85,12 +85,14 @@ def disable_get_requests(monkeypatch):
 def test_provider_schema(helpers, disable_get_requests):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    provider = Provider(root=workspace.root, config=Config())
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
     shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
 
-    provider.update()
+    p.update(None)
 
     assert 2 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)

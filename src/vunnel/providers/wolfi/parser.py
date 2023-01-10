@@ -36,9 +36,7 @@ class Parser:
         """
 
         if skip_if_exists and os.path.exists(self.secdb_dir_path):
-            self.logger.warning(
-                f"'skip_if_exists' flag enabled and found source under {self.secdb_dir_path}. Skipping download",
-            )
+            self.logger.debug(f"'skip_if_exists' flag enabled and found source under {self.secdb_dir_path}. Skipping download")
         else:
             if not os.path.exists(self.secdb_dir_path):
                 os.makedirs(self.secdb_dir_path, exist_ok=True)

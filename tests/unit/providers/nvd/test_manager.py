@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from vunnel import workspace
+from vunnel import result, workspace
 from vunnel.providers import nvd
 from vunnel.providers.nvd import manager
 
@@ -28,7 +28,7 @@ def test_parser(tmpdir, helpers, mock_data_path, mocker):
 
     subject = manager.Manager(workspace=workspace.Workspace(tmpdir, "test", create=True))
     subject.api.cve = mocker.Mock(return_value=[json_dict])
-    actual_vulns = [v for v in subject.get()]
+    actual_vulns = [v for v in subject.get(None)]
 
     assert expected_vulns == actual_vulns
 
@@ -46,10 +46,12 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries, mock
     with open(mock_data_path) as f:
         json_dict = json.load(f)
 
-    provider = nvd.Provider(root=workspace.root, config=nvd.Config())
-    provider.manager.api.cve = mocker.Mock(return_value=[json_dict])
+    c = nvd.Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = nvd.Provider(root=workspace.root, config=c)
+    p.manager.api.cve = mocker.Mock(return_value=[json_dict])
 
-    provider.update()
+    p.update(None)
 
     assert expected_written_entries == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=expected_written_entries > 0)

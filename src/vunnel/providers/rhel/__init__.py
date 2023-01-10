@@ -1,7 +1,8 @@
+import datetime
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema
+from vunnel import provider, result, schema
 
 from .parser import Parser
 
@@ -9,7 +10,10 @@ from .parser import Parser
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_input=provider.InputStatePolicy.KEEP)
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.KEEP,
+        )
     )
     request_timeout: int = 125
     max_workers: int = 4
@@ -38,7 +42,7 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "rhel"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
 
         with self.results_writer() as writer:
             for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):

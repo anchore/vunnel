@@ -3,6 +3,7 @@ import shutil
 import defusedxml.ElementTree as ET
 import pytest
 
+from vunnel import result, workspace
 from vunnel.providers.sles import Config, Provider, parser
 from vunnel.providers.sles.parser import (
     PARSER_CONFIG,
@@ -287,7 +288,9 @@ def disable_get_requests(monkeypatch):
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    provider = Provider(root=workspace.root, config=Config(allow_versions=["15"]))
+    c = Config(allow_versions=["15"])
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
 
     mock_data_path = helpers.local_dir("test-fixtures/suse_truncated.xml")
     shutil.copy(mock_data_path, workspace.input_dir / "suse-linux-enterprise-server-15.xml")
@@ -295,9 +298,9 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     def mock_download(self, *args, **kwargs):
         return mock_data_path
 
-    monkeypatch.setattr(provider.parser, "_download", mock_download)
+    monkeypatch.setattr(p.parser, "_download", mock_download)
 
-    provider.update()
+    p.update(None)
 
     assert 2 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)

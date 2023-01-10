@@ -1,7 +1,8 @@
+import datetime
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema
+from vunnel import provider, result, schema
 
 from .parser import Parser, centos_config
 
@@ -9,7 +10,10 @@ from .parser import Parser, centos_config
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE)
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
     )
     skip_namespaces: list[str] = field(default_factory=lambda: ["centos:3", "centos:4"])
     request_timeout: int = 125
@@ -33,7 +37,7 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "centos"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         # { (CVE, namespace): {...data...}" }
 
         # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)

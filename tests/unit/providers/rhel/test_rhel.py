@@ -3,7 +3,7 @@ import shutil
 
 import pytest
 
-from vunnel import workspace
+from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider, parser
 from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
 
@@ -657,21 +657,23 @@ def disable_get_requests(monkeypatch):
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    provider = Provider(root=workspace.root, config=Config())
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
 
     def mock_sync_cves(*args, **kwargs):
-        return os.path.join(provider.parser.cve_dir_path, provider.parser.__full_dir_name__)
+        return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
     def mock_init_rhsa_data(*args, **kwargs):
         return {}
 
-    monkeypatch.setattr(provider.parser, "_sync_cves", mock_sync_cves)
-    monkeypatch.setattr(provider.parser, "_init_rhsa_data", mock_init_rhsa_data)
+    monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
+    monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
     shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
 
-    provider.update()
+    p.update(None)
 
     assert 18 == workspace.num_result_entries()
     # list of 18 entries:

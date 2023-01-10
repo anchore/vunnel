@@ -128,7 +128,7 @@ Vunnel is a CLI wrapper around multiple vulnerability data providers. All provid
 - follow the workspace conventions for downloaded provider inputs, produced results, and tracking of metadata
 
 
-Each provider is given a "workspace" directory with the vunnel `root` directory named after the provider.
+Each provider is given a "workspace" directory within the vunnel `root` directory named after the provider.
 
 ```yaml
 data/                       # the "vunnel root" directory

@@ -11,7 +11,7 @@ Supported data sources:
 - Oracle (https://linux.oracle.com/security/oval)
 - RedHat (https://www.redhat.com/security/data/oval)
 - SLES (https://ftp.suse.com/pub/projects/security/oval)
-- Ubuntu (git://git.launchpad.net/ubuntu-cve-tracker)
+- Ubuntu (https://launchpad.net/ubuntu-cve-tracker)
 - Wolfi (https://packages.wolfi.dev)
 
 ## Installation
@@ -74,7 +74,7 @@ data
 
 *Note: to get more verbose output, use `-v`, `-vv`, or `-vvv` (e.g. `vunnel -vv run wolfi`)*
 
-Clear existing results for one or more providers:
+Delete existing input and result data for one or more providers:
 
 ```
 $ vunnel clear wolfi

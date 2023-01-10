@@ -2,8 +2,9 @@ import os
 from dataclasses import dataclass, field, fields
 from typing import Any
 
+import mergedeep
 import yaml
-from dataclass_wizard import fromdict
+from dataclass_wizard import asdict, fromdict
 
 from vunnel import providers
 
@@ -52,10 +53,19 @@ class Application:
 def load(path: str = ".vunnel.yaml") -> Application:  # noqa
     try:
         with open(path, encoding="utf-8") as f:
-            app_object = yaml.safe_load(f.read())
+            app_object = yaml.safe_load(f.read()) or {}
+            # we need a full default application config first then merge the loaded config on top.
+            # Why? dataclass_wizard.fromdict() will create instances from the dataclass default
+            # and NOT the field definition from the container. So it is possible to specify a
+            # single field in the config and all other fields would be set to the default value
+            # based on the dataclass definition and not any field(default_factory=...) hints
+            # from the containing class.
+            instance = asdict(Application())
+
+            mergedeep.merge(instance, app_object)
             cfg = fromdict(
                 Application,
-                app_object,
+                instance,
             )
             if cfg is None:
                 raise FileNotFoundError("parsed empty config")

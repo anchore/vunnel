@@ -28,8 +28,9 @@ class File:
 class State:
     provider: str
     urls: list[str]
+    store: str
+    timestamp: datetime.datetime
     listing: File | None = None
-    timestamp: datetime.datetime | None = field(default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc))
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderStateSchema)
 
     @staticmethod
@@ -140,17 +141,21 @@ class Workspace:
             shutil.rmtree(self.input_path)
             os.makedirs(self.input_path, exist_ok=True)
 
-    def record_state(self, urls: list[str]) -> None:
-        if not urls:
-            try:
-                current_state = State.read(root=self.path)
+    def record_state(self, timestamp: datetime.datetime, urls: list[str], store: str) -> None:
+        try:
+            current_state = State.read(root=self.path)
+        except FileNotFoundError:
+            current_state = None
+
+        if current_state:
+            if not urls:
                 urls = current_state.urls
-            except FileNotFoundError:
-                urls = []
+            if not timestamp:
+                timestamp = current_state.timestamp
 
         self.logger.info("recording workspace state")
 
-        state = State(provider=self.name, urls=urls)
+        state = State(provider=self.name, urls=urls, store=store, timestamp=timestamp)
         metadata_path = state.write(self.path, self.results_path)
 
         self.logger.debug(f"wrote workspace state to {metadata_path}")

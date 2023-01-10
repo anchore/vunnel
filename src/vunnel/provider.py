@@ -1,4 +1,5 @@
 import abc
+import datetime
 import enum
 import logging
 import time
@@ -57,6 +58,7 @@ class RuntimeConfig:
     on_error: OnErrorConfig = field(default_factory=OnErrorConfig)
     existing_input: InputStatePolicy = InputStatePolicy.KEEP
     existing_results: ResultStatePolicy = ResultStatePolicy.KEEP
+    result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     def __post_init__(self) -> None:
 
@@ -64,6 +66,8 @@ class RuntimeConfig:
             self.existing_input = InputStatePolicy(self.existing_input)
         if not isinstance(self.existing_results, ResultStatePolicy):
             self.existing_results = ResultStatePolicy(self.existing_results)
+        if not isinstance(self.result_store, result.StoreStrategy):
+            self.result_store = result.StoreStrategy(self.result_store)
 
     @property
     def skip_if_exists(self) -> bool:
@@ -86,14 +90,23 @@ class Provider(abc.ABC):
         raise NotImplementedError("'name()' must be implemented")
 
     @abc.abstractmethod
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
         raise NotImplementedError("'update()' must be implemented")
 
     def _update(self) -> None:
-        urls, count = self.update()
+        start = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        last_updated = None
+        try:
+            current_state = workspace.State.read(root=self.workspace.path)
+            last_updated = current_state.timestamp
+        except FileNotFoundError:
+            last_updated = None
+
+        urls, count = self.update(last_updated=last_updated)
         if count > 0:
-            self.workspace.record_state(urls=urls)
+            self.workspace.record_state(timestamp=start, urls=urls, store=self.runtime_cfg.result_store.value)
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 
@@ -163,6 +176,7 @@ class Provider(abc.ABC):
         return result.Writer(
             workspace=self.workspace,
             logger=self.logger,
+            store_strategy=self.runtime_cfg.result_store,
             clear_results_before_writing=self.runtime_cfg.existing_results == ResultStatePolicy.DELETE_BEFORE_WRITE,
             **kwargs,
         )
