@@ -1,6 +1,6 @@
 import pytest
 
-from vunnel import workspace
+from vunnel import provider, result, workspace
 from vunnel.providers.github import Config, Provider, parser
 from vunnel.utils import fdb as db
 
@@ -327,15 +327,15 @@ class TestGetNestedVulnerabilities:
 class TestParser:
     def test_get_with_no_cursor_no_timestamp(self, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response])
-        provider = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
-        result = [i for i in provider.get()]
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
+        result = [i for i in p.get()]
         assert result == []
 
     def test_get_commits_timestamp(self, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response])
         ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
-        provider = parser.Parser(ws, "secret")
-        for i in provider.get():
+        p = parser.Parser(ws, "secret")
+        for i in p.get():
             pass
         database = db.connection(ws.input_path)
         metadata = database.get_metadata()
@@ -346,8 +346,8 @@ class TestParser:
     def test_get_commits_timestamp_with_cursors(self, advisories, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response, advisories(has_next_page=True)])
         ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
-        provider = parser.Parser(ws, "secret")
-        for i in provider.get():
+        p = parser.Parser(ws, "secret")
+        for i in p.get():
             pass
         database = db.connection(ws.input_path)
         metadata = database.get_metadata()
@@ -357,14 +357,14 @@ class TestParser:
 
     def test_has_next_page(self, advisories, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response, advisories(has_next_page=True)])
-        provider = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
-        result = [i for i in provider.get()]
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
+        result = [i for i in p.get()]
         assert len(result) == 1
 
     def test_has_next_page_with_advisories(self, advisories, fake_get_query, tmpdir):
         fake_get_query([advisories(), advisories(has_next_page=True)])
-        provider = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
-        result = [i for i in provider.get()]
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
+        result = [i for i in p.get()]
         assert len(result) == 2
 
 
@@ -372,7 +372,9 @@ def test_provider_schema(helpers, fake_get_query, advisories):
     fake_get_query([advisories(), advisories(has_next_page=True)])
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    provider = Provider(root=workspace.root, config=Config(token="secret", api_url="https://localhost"))
-    provider.update()
+    c = Config(token="secret", api_url="https://localhost")
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    provider = Provider(root=workspace.root, config=c)
+    provider.update(None)
 
     assert workspace.result_schemas_valid(require_entries=True)

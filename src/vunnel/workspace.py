@@ -152,8 +152,6 @@ class Workspace:
                 urls = current_state.urls
             if not timestamp:
                 timestamp = current_state.timestamp
-        else:
-            urls = []
 
         self.logger.info("recording workspace state")
 

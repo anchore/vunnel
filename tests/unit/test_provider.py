@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from vunnel import provider, schema, workspace
+from vunnel import provider, result, schema, workspace
 
 
 def assert_path(path: str, exists: bool = True):
@@ -30,7 +30,7 @@ class DummyProvider(provider.Provider):
     def assert_state_file(self, exists: bool = True):
         assert_path(os.path.join(self.workspace.path, "state.json"), exists)
 
-    def update(self):
+    def update(self, *args, **kwargs):
         self.count += 1
         if self.count <= self.errors:
             raise RuntimeError("dummy error")
@@ -181,6 +181,7 @@ def test_clear_state_on_failure(dummy_provider, dummy_file):
 
 def test_keep_state_on_multiple_failures(dummy_provider, dummy_file, tmpdir):
     policy = provider.RuntimeConfig(
+        result_store=result.StoreStrategy.FLAT_FILE,
         on_error=provider.OnErrorConfig(
             action=provider.OnErrorAction.FAIL,
             input=provider.InputStatePolicy.KEEP,
@@ -269,6 +270,7 @@ def assert_dummy_workspace_state(ws):
     current_state.timestamp = None
 
     expected_state = workspace.State(
+        store=result.StoreStrategy.FLAT_FILE.value,
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="1e119ae45b38b28f", algorithm="xxh64", path="checksums"),
