@@ -1,8 +1,9 @@
 import copy
+import datetime
 import os
 from dataclasses import dataclass, field
 
-from vunnel import provider, schema
+from vunnel import provider, result, schema
 
 from .parser import Parser
 
@@ -11,7 +12,12 @@ from .parser import Parser
 class Config:
     token: str = "env:GITHUB_TOKEN"
     api_url: str = "https://api.github.com/graphql"
-    runtime: provider.RuntimeConfig = field(default_factory=provider.RuntimeConfig)
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        ),
+    )
     request_timeout: int = 125
 
     def __post_init__(self) -> None:
@@ -47,7 +53,7 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "github"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         namespace = "github"
         with self.results_writer() as writer:
             for advisory in self.parser.get():

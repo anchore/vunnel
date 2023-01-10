@@ -3,7 +3,7 @@ import shutil
 
 import pytest
 
-from vunnel import workspace
+from vunnel import result, workspace
 from vunnel.providers.alpine import Config, Provider, parser
 from vunnel.providers.alpine.parser import Parser, SecdbLandingParser
 
@@ -114,15 +114,15 @@ class TestAlpineProvider:
         assert bool(Parser._release_regex_.match(release)) == expected
 
     def test_load(self, mock_raw_data, tmpdir):
-        provider = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        a = os.path.join(provider.secdb_dir_path, "v0.0")
+        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        a = os.path.join(p.secdb_dir_path, "v0.0")
         os.makedirs(a, exist_ok=True)
         b = os.path.join(a, "main.yaml")
         with open(b, "w") as fp:
             fp.write(mock_raw_data)
 
         counter = 0
-        for release, dbtype_data_dict in provider._load():
+        for release, dbtype_data_dict in p._load():
             counter += 1
             print("got secdb data for release {}, db types: {}".format(release, list(dbtype_data_dict.keys())))
             assert release == "0.0"
@@ -133,11 +133,11 @@ class TestAlpineProvider:
         assert counter == 1
 
     def test_normalize(self, mock_parsed_data, tmpdir):
-        provider = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         release = mock_parsed_data[0]
         dbtype_data_dict = mock_parsed_data[1]
 
-        vuln_records = provider._normalize(release, dbtype_data_dict)
+        vuln_records = p._normalize(release, dbtype_data_dict)
         assert len(vuln_records) > 0
         assert all(map(lambda x: "Vulnerability" in x, vuln_records.values()))
         assert sorted(list(vuln_records.keys())) == sorted(
@@ -200,12 +200,17 @@ def disable_get_requests(monkeypatch):
 def test_provider_schema(helpers, disable_get_requests):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    provider = Provider(root=workspace.root, config=Config())
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(
+        root=workspace.root,
+        config=c,
+    )
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
     shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
 
-    provider.update()
+    p.update(None)
 
     assert 16 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)

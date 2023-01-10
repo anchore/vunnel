@@ -1,4 +1,4 @@
-from vunnel import provider, providers
+from vunnel import provider, providers, result
 from vunnel.cli import config
 
 
@@ -13,6 +13,7 @@ def test_full_config(helpers):
     cfg = config.load(path=cfg_path)
 
     runtime_cfg = provider.RuntimeConfig(
+        result_store=result.StoreStrategy.SQLITE,
         existing_input=provider.InputStatePolicy.KEEP,
         existing_results=provider.ResultStatePolicy.KEEP,
         on_error=provider.OnErrorConfig(

@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from vunnel import workspace
+from vunnel import result, workspace
 from vunnel.providers import ubuntu
 from vunnel.providers.ubuntu.parser import (
     Parser,
@@ -494,9 +494,12 @@ def hydrate_git_repo(tmpdir, helpers):
 )
 def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker):
     path = hydrate_git_repo(mock_data_path)
-    provider = ubuntu.Provider(root=path, config=ubuntu.Config())
-    provider.parser.git_wrapper.init_repo = mocker.Mock()
-    provider.update()
+
+    c = ubuntu.Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = ubuntu.Provider(root=path, config=c)
+    p.parser.git_wrapper.init_repo = mocker.Mock()
+    p.update(None)
 
     ws = helpers.provider_workspace_helper("ubuntu", create=False)
 

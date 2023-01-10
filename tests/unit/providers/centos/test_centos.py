@@ -2,7 +2,7 @@ import shutil
 
 import pytest
 
-from vunnel import workspace
+from vunnel import result, workspace
 from vunnel.providers import centos
 from vunnel.providers.centos.parser import Parser
 
@@ -80,9 +80,14 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries):
     workspace = helpers.provider_workspace_helper(name=centos.Provider.name())
     mock_data_path = helpers.local_dir(mock_data_path)
 
-    provider = centos.Provider(root=workspace.root, config=centos.Config())
-    shutil.copy(mock_data_path, provider.parser.xml_file_path)
-    provider.update()
+    c = centos.Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = centos.Provider(
+        root=workspace.root,
+        config=c,
+    )
+    shutil.copy(mock_data_path, p.parser.xml_file_path)
+    p.update(None)
 
     assert expected_written_entries == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=expected_written_entries > 0)

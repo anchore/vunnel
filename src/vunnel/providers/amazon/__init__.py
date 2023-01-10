@@ -1,8 +1,9 @@
+import datetime
 import os
 from dataclasses import dataclass, field
 from typing import Any
 
-from vunnel import provider, schema
+from vunnel import provider, result, schema
 
 from .parser import Parser, amazon_security_advisories
 
@@ -11,7 +12,10 @@ from .parser import Parser, amazon_security_advisories
 class Config:
     security_advisories: dict[Any, str] = field(default_factory=lambda: amazon_security_advisories)
     runtime: provider.RuntimeConfig = field(
-        default_factory=lambda: provider.RuntimeConfig(existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE)
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
     )
     request_timeout: int = 125
 
@@ -38,7 +42,7 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "amazon"
 
-    def update(self) -> tuple[list[str], int]:
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for vuln in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
