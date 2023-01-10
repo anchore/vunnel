@@ -23,6 +23,7 @@ centos_config.tag_pattern = re.compile(r"\{http://oval.mitre.org/XMLSchema/.*\}(
 centos_config.ns_pattern = re.compile(r"(\{http://oval.mitre.org/XMLSchema/.*\})\w*")
 centos_config.is_installed_pattern = re.compile(r"Red Hat Enterprise Linux (\d+).*is installed")
 centos_config.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
+centos_config.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
 centos_config.signed_with_pattern = re.compile(r"(.*) is signed with (.*) key")
 centos_config.platform_version_pattern = re.compile(r"Red Hat Enterprise Linux (\d+)")
 
