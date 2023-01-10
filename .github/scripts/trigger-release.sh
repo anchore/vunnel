@@ -9,7 +9,7 @@ chronicle=$TEMP_DIR/chronicle
 
 # we need all of the git state to determine the next version. Since tagging is done by
 # the release pipeline it is possible to not have all of the tags from previous releases.
-git fetch --all
+git fetch --tags
 
 NEXT_VERSION=$($chronicle next-version)
 

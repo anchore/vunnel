@@ -15,7 +15,8 @@ TITLE := $(BOLD)$(PURPLE)
 SUCCESS := $(BOLD)$(GREEN)
 
 # this is the python package version for vunnel, based off of the git state
-PACKAGE_VERSION = $(shell poetry run dunamai from git --style semver --dirty --no-metadata)
+# note: this should always have a prefixed "v"
+PACKAGE_VERSION = v$(shell poetry run dunamai from git --style semver --dirty --no-metadata)
 COMMIT = $(shell git rev-parse HEAD)
 
 CHRONICLE_VERSION = v0.4.2
@@ -53,11 +54,11 @@ unit:  ## Run unit tests
 
 .PHONY: version
 version:
-	@#always prefix a "v"
-	@echo v$(PACKAGE_VERSION)
+	@echo $(PACKAGE_VERSION)
 
 .PHONY: build
 build:  ## Run build assets
+	git fetch --tags
 	rm -rf dist
 	poetry build
 	docker build \

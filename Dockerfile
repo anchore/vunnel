@@ -11,3 +11,4 @@ RUN pip install ./dist/vunnel-*.whl
 ENTRYPOINT ["vunnel"]
 
 LABEL org.opencontainers.image.source https://github.com/anchore/vunnel
+LABEL org.opencontainers.image.description "A tool for pulling and processing vulnerability data from mutiple sources"
