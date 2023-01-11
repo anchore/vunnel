@@ -37,8 +37,6 @@ providers:
   nvd:
     runtime: *runtime
     request_timeout: 20
-    start_year: 1987
-    end_year: 2002
   oracle:
     runtime: *runtime
     request_timeout: 20
