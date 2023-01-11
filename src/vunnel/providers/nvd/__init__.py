@@ -11,7 +11,7 @@ class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
-            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            existing_results=provider.ResultStatePolicy.KEEP,
         )
     )
     request_timeout: int = 125
@@ -38,6 +38,12 @@ class Provider(provider.Provider):
         self.config = config
 
         self.logger.debug(f"config: {config}")
+
+        if self.config.runtime.skip_if_exists and config.runtime.existing_results != provider.ResultStatePolicy.KEEP:
+            raise ValueError(
+                "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' "
+                + "(otherwise incremental updates will fail)"
+            )
 
         self.schema = schema.NVDSchema()
         self.manager = Manager(
