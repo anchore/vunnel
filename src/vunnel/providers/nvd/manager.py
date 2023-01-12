@@ -16,13 +16,9 @@ class Manager:
         workspace: Workspace,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
-        start_year: int = 2002,
-        end_year: int | None = None,
         api_key: str | None = None,
     ) -> None:
         self.workspace = workspace
-        self.start_year = start_year
-        self.end_year = end_year
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)

@@ -60,8 +60,6 @@ def test_full_config(helpers):
             nvd=providers.nvd.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
-                start_year=1987,
-                end_year=2002,
             ),
             oracle=providers.oracle.Config(
                 runtime=runtime_cfg,

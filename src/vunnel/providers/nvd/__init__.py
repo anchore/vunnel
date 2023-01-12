@@ -15,8 +15,6 @@ class Config:
         )
     )
     request_timeout: int = 125
-    start_year: int = 2002
-    end_year: int | None = None
     api_key: str = "env:NVD_API_KEY"
 
     def __post_init__(self) -> None:
@@ -49,8 +47,6 @@ class Provider(provider.Provider):
         self.manager = Manager(
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
-            start_year=self.config.start_year,
-            end_year=self.config.end_year,
             api_key=self.config.api_key,
             logger=self.logger,
         )
