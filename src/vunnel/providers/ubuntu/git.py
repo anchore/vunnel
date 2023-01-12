@@ -28,7 +28,8 @@ class GitWrapper:
     _reset_head_cmd_ = "git reset --hard origin/master"
     _write_graph_ = "git commit-graph write --reachable --changed-paths"
     _change_set_cmd_ = "git log --no-renames --no-merges --name-status --format=oneline {from_rev}..{to_rev}"
-    _rev_history_cmd_ = "git log --no-merges --follow --name-status --format=oneline {from_rev} -- {file}"
+    _rev_history_cmd_ = "git log --no-merges --name-status --format=oneline {from_rev} -- {file}"
+    _rev_history_with_follow_cmd_ = "git log --no-merges --follow --name-status --format=oneline {from_rev} -- {file}"
     _get_rev_content_cmd_ = "git show {sha}:{file}"
     _head_rev_cmd_ = "git rev-parse HEAD"
 
@@ -127,7 +128,11 @@ class GitWrapper:
         try:
             self.logger.trace("fetching revision history for {}".format(file_path))
 
-            cmd = self._rev_history_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
+            if file_path.startswith("active/"):
+                cmd = self._rev_history_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
+            else:
+                cmd = self._rev_history_with_follow_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
+
             out = self._exec_cmd(cmd, cwd=self.dest)
 
             return self._parse_revision_history(cve_id, out.decode())
