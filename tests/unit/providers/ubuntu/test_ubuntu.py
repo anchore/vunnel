@@ -88,7 +88,7 @@ class TestUbuntuParser:
             data = f.readlines()
 
         print("Parsing")
-        result = parse_cve_file(data)
+        result = parse_cve_file("CVE-2017-9996", data)
         print("Complete")
 
         expected = {

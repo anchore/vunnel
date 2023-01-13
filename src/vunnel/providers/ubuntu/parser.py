@@ -8,8 +8,10 @@ import logging
 import os
 import re
 import time
-from collections import namedtuple
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+from vunnel.workspace import Workspace
 
 from .git import GitWrapper
 
@@ -19,8 +21,6 @@ default_max_workers = 8
 
 ubuntu_pkg_version_format = "dpkg"
 ubuntu_cve_url = "http://people.ubuntu.com/~ubuntu-security/cve/{}"
-DistroPkgTuple = namedtuple("DistroPkgTuple", ["distro", "pkg"])
-
 _patches_header_regex = re.compile(r"Patches_(\S+)\s*")
 _patches_regex = re.compile(r"\s*(.+)_(.+)\s*:\s+(.+)\s*")
 _patch_state_regex = re.compile(r"\s*(\S+)(\s+.+)?\s*")
@@ -78,6 +78,12 @@ ubuntu_version_names = {
 
 # driver workspace
 driver_workspace = None
+
+
+@dataclass(frozen=True)
+class DistroPkg:
+    distro: str
+    pkg: str
 
 
 class JsonifierMixin:
@@ -146,7 +152,26 @@ class Severity(enum.IntEnum):
         return self.name
 
 
-def check_header(expected, lines):
+@dataclass
+class Patch:
+    distro: str
+    package: str
+    status: str
+    version: str
+    priority: str | None
+
+
+@dataclass
+class CVEFile:
+    # Keep this naming for now to preserve compatibility with legacy
+    name: str
+    priority: str = "Unknown"
+    patches: list[Patch] = field(default_factory=list)
+    ignored_patches: list[Patch] = field(default_factory=list)
+    git_last_processed_rev: str | None = None
+
+
+def check_header(expected: str, lines: list[str]):
     """
     Check that the first element of the lines list matches expected + ':'. And pop it off if found. Else raise exception.
     :param expected: The str value of the header prefix expected to be found on the first line
@@ -161,7 +186,7 @@ def check_header(expected, lines):
         lines.pop(0)
 
 
-def parse_list(header, lines):
+def parse_list(header: str, lines: list[str]) -> list[str]:
     """
     Greedy parser that consumes lines if lines[0] is the header until the first empty line.
 
@@ -172,7 +197,7 @@ def parse_list(header, lines):
 
     check_header(header, lines)
 
-    refs = []
+    refs: list[str] = []
     while lines:
         if _indent_line_regex.match(lines[0]):
             refs.append(lines.pop(0).strip())
@@ -182,7 +207,7 @@ def parse_list(header, lines):
     return refs
 
 
-def parse_patch(header, lines):
+def parse_patch(header: str, lines: list[str]) -> list[Patch]:
     """
     Parse a patch spec of the form:
     Patches_<packagename>:
@@ -204,8 +229,8 @@ def parse_patch(header, lines):
     if lines[0].startswith("Patches"):
         check_header(header, lines)
 
-    patches = []
-    priority = None
+    patches: list[Patch] = []
+    priority: str | None = None
     while lines:
         line = lines[0].strip()
         if not line:
@@ -216,8 +241,8 @@ def parse_patch(header, lines):
         if pkg_priority:
             pkg = pkg_priority.group(1)
             priority = pkg_priority.group(2)
-            for patch in filter(lambda x: x["package"] == pkg, patches):
-                patch["priority"] = priority
+            for patch in filter(lambda x: x.package == pkg, patches):
+                patch.priority = priority
             lines.pop(0)
             continue
         else:
@@ -235,14 +260,7 @@ def parse_patch(header, lines):
                             if version[0] == "(" and version[-1] == ")":
                                 version = version[1:-1]
 
-                        p = {
-                            "distro": match.group(1),
-                            "package": match.group(2),
-                            "status": state,
-                            "version": version,
-                        }
-                        if priority:
-                            p["priority"] = priority
+                        p = Patch(distro=match.group(1), package=match.group(2), status=state, version=version, priority=priority)
                         patches.append(p)
                 lines.pop(0)
             else:
@@ -251,7 +269,7 @@ def parse_patch(header, lines):
     return patches
 
 
-def parse_simple_keyvalue(expected_key, lines):
+def parse_simple_keyvalue(expected_key: str, lines: list[str]) -> str:
     """
     Parse a <Header>: <value> line and any skip ahead any empty lines following
 
@@ -262,20 +280,20 @@ def parse_simple_keyvalue(expected_key, lines):
 
     tokens = lines[0].split(":", 1)
     if len(tokens) != 2:
-        raise ValueError("Could not parse {} as key: value".format(lines[0]))
+        raise ValueError(f"Could not parse {lines[0]} as key: value")
 
     key = tokens[0]
     value = tokens[1].strip()
 
     if key != expected_key:
-        raise ValueError("Did not find expected key {}. Found {}".format(expected_key, key))
+        raise ValueError(f"Did not find expected key {expected_key}. Found {key}")
 
     lines.pop(0)
 
     return value
 
 
-def parse_multiline_keyvalue(header, lines):
+def parse_multiline_keyvalue(header: str, lines: list[str]) -> str:
     """
     Parse a header plus multiple lines (to an empty line) into a single string, stripping newlines
 
@@ -285,14 +303,14 @@ def parse_multiline_keyvalue(header, lines):
     """
     check_header(header, lines)
 
-    content = []
+    content: list[str] = []
     while lines and _indent_line_regex.match(lines[0]):
         content.append(lines.pop(0).strip())
 
     return " ".join(content)
 
 
-def get_patch_section(header_line):
+def get_patch_section(header_line: str) -> str | None:
     match = _patches_header_regex.match(header_line)
     if match:
         return match.group(1)
@@ -309,16 +327,8 @@ sections_parsers = {
     "Priority": parse_simple_keyvalue,
 }
 
-# These fields may be found in a Patch_<pkg> section but are not required
-optional_patch_fields = {
-    "debdiff": parse_simple_keyvalue,
-    "patch": parse_simple_keyvalue,
-    "vendor": parse_simple_keyvalue,
-    "upstream": parse_simple_keyvalue,
-}
 
-
-def check_release(releasename):
+def check_release(releasename: str) -> bool:
     """
     Returns true if the releasename is one we care about.
 
@@ -328,7 +338,7 @@ def check_release(releasename):
     return releasename in ubuntu_version_names
 
 
-def check_state(state):
+def check_state(state: str) -> bool:
     """
     Returns true if the state is one we should process.
     :param state:l
@@ -337,7 +347,7 @@ def check_state(state):
     return state and patch_states.get(state)
 
 
-def check_patch(patch_record):
+def check_patch(patch_record: Patch) -> bool:
     """
     Filtering test for a patch record to determine if this patch record indicates:
     * The release is affected
@@ -351,10 +361,10 @@ def check_patch(patch_record):
         return False
 
     # Distro filter step
-    return check_release(patch_record.get("distro")) and check_state(patch_record.get("status"))
+    return check_release(patch_record.distro) and check_state(patch_record.status)
 
 
-def check_merge(patch_record):
+def check_merge(patch_record: Patch) -> bool:
     """
     Test a patch record to see if it meets the merge criteria
 
@@ -367,11 +377,12 @@ def check_merge(patch_record):
 
     # perform regex match only if the value is non-null and non-empty
     return all(
-        patch_record.get(key, None) and re.match(regex, patch_record.get(key)) for key, regex in patch_merge_criteria.items()
+        patch_record.__dict__.get(key, None) and re.match(regex, patch_record.__dict__.get(key))
+        for key, regex in patch_merge_criteria.items()
     )
 
 
-def parse_cve_file(content_lines):
+def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
     """
     Parses a single CVE file into a dict representation suitable for further processing.
 
@@ -379,7 +390,7 @@ def parse_cve_file(content_lines):
     :return: dict version of the cve record
     """
 
-    parsed = {"patches": []}
+    parsed = CVEFile(name=cve_id)
     len(content_lines)
 
     # Copy to avoid modifying the passed param directly since the parsing is greedy.
@@ -393,18 +404,18 @@ def parse_cve_file(content_lines):
             section = line.split(":", 1)[0]
             if section in sections_parsers:
                 content = sections_parsers[section](section, lines)
-                parsed[section] = content
+                parsed.__dict__[section] = content
                 continue
             else:
                 patch_name = get_patch_section(section)
                 p_match = _patches_regex.match(line)
                 if patch_name:
                     patches = parse_patch(section, lines)
-                    parsed["patches"] += patches
+                    parsed.patches += patches
                     continue
                 elif p_match and map_namespace(p_match.group(1)):
                     patches = parse_patch(section, lines)
-                    parsed["patches"] += patches
+                    parsed.patches += patches
                     continue
                 else:
                     # Consume the line. No match to parse.
@@ -509,22 +520,18 @@ def map_parsed(parsed_cve, logger=None):
     return s
 
 
-def filter_resolved_patches(cve_dict, dpt_list):
+def filter_resolved_patches(cve: CVEFile, dpt_list: list[DistroPkg]) -> dict[DistroPkg, Patch]:
     """
     Filter patch records from the cve dictionary that match the package and distribution of the items in the list but don't satisfy merge criteria
 
     :param cve_dict: dict version of a cve record, like the return value of parse_cve_file()
-    :param dpt_list: list of DistroPkgTuple objects
+    :param dpt_list: list of DistroPkg objects
     :return:
     """
     filtered_map = dict()
     for dpt in dpt_list:
         matched_p = next(
-            (
-                p
-                for p in cve_dict.get("patches")
-                if dpt.distro == p.get("distro") and dpt.pkg == p.get("package") and not check_merge(p)
-            ),
+            (p for p in cve.patches if dpt.distro == p.distro and dpt.pkg == p.package and not check_merge(p)),
             None,
         )
         if matched_p:
@@ -538,7 +545,7 @@ def filter_merged_patches(cve_dict, dpt_list):
     Filter patch records from the cve dictionary that match the package and distribution of the items in the list
 
     :param cve_dict: dict version of a cve record, like the return value of parse_cve_file()
-    :param dpt_list: list of DistroPkgTuple objects
+    :param dpt_list: list of DistroPkg objects
     :return:
     """
     filtered_map = dict()
@@ -555,7 +562,7 @@ def filter_merged_patches(cve_dict, dpt_list):
 
 class UbuntuCVEState:
     """
-    CVE state is a on-disk representation of the entire state and history of the cves from the bzr repo in a canonical form.
+    CVE state is an on-disk representation of the entire state and history of the cves from the bzr repo in a canonical form.
     Specifically: a json document of the data and a revision history tracking which revisions from the bzr repo have been processed.
 
     """
@@ -612,7 +619,7 @@ class Parser:
 
     def __init__(
         self,
-        workspace,
+        workspace: Workspace,
         logger: Optional[logging.Logger] = None,
         additional_versions: Optional[dict[str, str]] = None,
         enable_rev_history: bool = True,
@@ -656,7 +663,7 @@ class Parser:
         for merged_cve in self._merged_cve_iterator():
             yield from map_parsed(merged_cve, self.logger)
 
-    def _process_data(self, vc_dir, to_rev, from_rev=None):
+    def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):
         self.logger.debug(
             "processing data from git repository: {}, from revision: {}, to revision: {}".format(vc_dir, from_rev, to_rev)
         )
@@ -678,7 +685,7 @@ class Parser:
         proc_exception = None
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_workers) as executor:
 
-            def worker(fn, cve_id, *args, **kwargs):
+            def worker(fn, cve_id: str, *args, **kwargs):
                 try:
                     return fn(cve_id, *args, **kwargs)
                 except:
@@ -717,7 +724,7 @@ class Parser:
             self.logger.debug("{} is no longer relevant, deleting merged CVE state if any".format(cve_id))
             self._delete_merged_cve(cve_id)
 
-    def _process_cve(self, cve_id, cve_rel_path, f, to_rev, updated_paths):
+    def _process_cve(self, cve_id: str, cve_rel_path: str, f: str, to_rev: str, updated_paths: list[str]):
         if cve_rel_path in updated_paths:
             # merge cves updated since last revision or all if the last processed revision is not available
             # self.logger.debug("CVE updated since last run, processing {}".format(cve_rel_path))
@@ -748,16 +755,28 @@ class Parser:
             else:
                 return None
 
-    def _save_last_processed_rev(self, revno):
+    def _save_last_processed_rev(self, revno: str):
         last_processed_rev_path = os.path.join(self.norm_workspace, self._last_processed_rev_file_git)
 
         with open(last_processed_rev_path, "w") as f:
             f.write("{}".format(revno))
 
-    def _load_merged_cve(self, cve_id):
+    def _load_merged_cve(self, cve_id: str) -> CVEFile | Any:
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
-                cve = json.load(fp)
+                cve_json = json.load(fp)
+                name = cve_json.get("name", cve_json.get("Name"))
+                priority = cve_json.get("priority", cve_json.get("Priority", "Unknown"))
+                patches = cve_json.get("patches")
+                ignored_patches = cve_json.get("ignored_patches")
+                git_last_processed_rev = cve_json.get("git_last_processed_rev")
+                cve = CVEFile(
+                    name=name,
+                    priority=priority,
+                    patches=patches,
+                    ignored_patches=ignored_patches,
+                    git_last_processed_rev=git_last_processed_rev,
+                )
                 return cve
 
         return None
@@ -796,12 +815,13 @@ class Parser:
             return
 
         # reprocess only ignored patches
-        merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(saved_state.get("ignored_patches"))
+        merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(saved_state.ignored_patches)
 
         # Found patches that can be merged and or can't be resolved from the saved state, could be a new namespace
         if merged_patches or to_be_merged_map:
             self.logger.debug("found unresolved patches in previously merged state, could be a new distro")
             # Process revision history for eol-ed packages that need to be merged
+            saved_state.priority if not None else "Unknown"
             if to_be_merged_map:
                 if self.enable_rev_history:
                     self.logger.debug("attempting to resolve patches using revision history for {}".format(cve_rel_path))
@@ -809,7 +829,7 @@ class Parser:
                         cve_id=cve_id,
                         cve_rel_path=cve_rel_path,
                         to_be_merged_dpt_list=list(to_be_merged_map.keys()),
-                        priority=saved_state.get("Priority", "Unknown"),
+                        priority=saved_state.priority,
                     )
                     merged_patches.extend(resolved_patches)
                     if pending_dpt_list:
@@ -849,31 +869,31 @@ class Parser:
         return saved_state
 
     @staticmethod
-    def _categorize_patches(patch_list):
+    def _categorize_patches(patch_list: list[Patch]) -> tuple[list[Patch], list[Patch], dict[DistroPkg, Patch]]:
         """
         Takes in a list of patches and splits them into merged and ignored lists and a dictionary of patches that need further resolution
         :param patch_list:
         :return:
         """
 
-        to_be_merged_map = {}
-        merged_patches = []
-        ignored_patches = []
+        to_be_merged_map: dict[DistroPkg, Patch] = {}
+        merged_patches: list[Patch] = []
+        ignored_patches: list[Patch] = []
 
         for p in patch_list:
-            namespace_name = map_namespace(p.get("distro"))
+            namespace_name = map_namespace(p.distro)
 
             if not namespace_name:
                 ignored_patches.append(p)
             elif namespace_name and check_merge(p):
-                to_be_merged_map[DistroPkgTuple(distro=p.get("distro"), pkg=p["package"])] = p
+                to_be_merged_map[DistroPkg(distro=p.distro, pkg=p.package)] = p
             else:
                 # Patch does not meet criteria for resolution - either its not eol-ed or in a namespace we care about
                 merged_patches.append(p)
 
         return merged_patches, ignored_patches, to_be_merged_map
 
-    def _merge_cve(self, cve_id, cve_rel_path, cve_abs_path, repo_current_rev):
+    def _merge_cve(self, cve_id: str, cve_rel_path: str, cve_abs_path: str, repo_current_rev: str):
         """
         Parses the contents of an ubuntu security tracker CVE file and returns the normalized data as a dictionary.
         If the CVE has any patches/fixes that meet the merge criteria, the revision history of the CVE is traversed
@@ -887,13 +907,12 @@ class Parser:
 
         with open(cve_abs_path) as cve_file:
             raw_content = cve_file.readlines()
-            parsed_cve = parse_cve_file(raw_content)
-            parsed_cve["Name"] = cve_id
+            parsed_cve = parse_cve_file(cve_id, raw_content)
 
         cve_latest_rev = None
         # merged_cve_path = os.path.join(self.norm_workspace, vuln_name)
 
-        merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(parsed_cve.get("patches"))
+        merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(parsed_cve.patches)
 
         # Found patches that can't be resolved from the input data, could be the first time the driver is running
         if to_be_merged_map:
@@ -905,7 +924,7 @@ class Parser:
                     cve_id=cve_id,
                     cve_rel_path=cve_rel_path,
                     to_be_merged_dpt_list=list(to_be_merged_map.keys()),
-                    priority=parsed_cve.get("Priority", "Unknown"),
+                    priority=parsed_cve.__dict__.get("Priority", "Unknown"),
                     saved_state=saved_cve,
                 )
                 merged_patches.extend(resolved_patches)
@@ -939,9 +958,9 @@ class Parser:
         else:  # No patches that require resolution
             pass
 
-        parsed_cve["patches"] = merged_patches
-        parsed_cve["ignored_patches"] = ignored_patches
-        parsed_cve[self._last_processed_rev_key_git] = cve_latest_rev if cve_latest_rev else repo_current_rev
+        parsed_cve.patches = merged_patches
+        parsed_cve.ignored_patches = ignored_patches
+        parsed_cve.git_last_processed_rev = cve_latest_rev if cve_latest_rev else repo_current_rev
 
         # save the merged cve state to disk before returning
         self._save_merged_cve(cve_id, parsed_cve)
@@ -950,14 +969,14 @@ class Parser:
 
     def _resolve_patches_using_history(
         self,
-        cve_id,
-        cve_rel_path,
-        to_be_merged_dpt_list,
-        priority=None,
-        saved_state=None,
+        cve_id: str,
+        cve_rel_path: str,
+        to_be_merged_dpt_list: list[DistroPkg],
+        priority: str | None = None,
+        saved_state: Any = None,
     ):
         t = time.time()
-        self.logger.debug("processing CVE revision history for: {}".format(cve_rel_path))
+        self.logger.debug(f"processing CVE revision history for: {cve_rel_path}")
 
         # setup metrics
         metrics = {
@@ -968,10 +987,10 @@ class Parser:
         }
 
         # initialize
-        resolved_patches = []
+        resolved_patches: list[Patch] = []
 
         # copy the keys so the original ds is not modified
-        pending_dpt_list = copy.deepcopy(to_be_merged_dpt_list)
+        pending_dpt_list: list[DistroPkg] = copy.deepcopy(to_be_merged_dpt_list)
 
         # last processed commit
         if saved_state and self._last_processed_rev_key_git in saved_state:
@@ -999,7 +1018,7 @@ class Parser:
                 rev_raw_content = self.git_wrapper.get_content(rev)
 
                 # parse the cve and filter based on merge criteria
-                rev_cve = parse_cve_file(rev_raw_content)
+                rev_cve = parse_cve_file(cve_id, rev_raw_content)
                 rev_matched_map = filter_resolved_patches(rev_cve, pending_dpt_list)
                 resolved_patches.extend(list(rev_matched_map.values()))
                 pending_dpt_list = [x for x in pending_dpt_list if x not in rev_matched_map]
@@ -1007,17 +1026,19 @@ class Parser:
                 # metrics for processed revision
                 metrics["revs_processed"] += 1
                 for rev_p in rev_matched_map.values():
-                    rev_p_ns = map_namespace(rev_p.get("distro"))
-                    if rev_p.get("status", "Unknown") not in metrics["previous_state_counter"]:
-                        metrics["previous_state_counter"][rev_p.get("status", "Unknown")] = {rev_p_ns: 0}
-                    if rev_p.get("distro", "Unknown") not in metrics["previous_state_counter"][rev_p.get("status", "Unknown")]:
-                        metrics["previous_state_counter"][rev_p.get("status", "Unknown")][rev_p_ns] = 0
+                    rev_p_ns = map_namespace(rev_p.distro)
+                    patch_status = rev_p.status if not None else "Unknown"
+                    patch_distro = rev_p.distro if not None else "Unknown"
+                    if patch_states not in metrics["previous_state_counter"]:
+                        metrics["previous_state_counter"][patch_status] = {rev_p_ns: 0}
+                    if patch_distro not in metrics["previous_state_counter"][patch_status]:
+                        metrics["previous_state_counter"][patch_status][rev_p_ns] = 0
 
-                    metrics["previous_state_counter"][rev_p.get("status", "Unknown")][rev_p_ns] += 1
+                    metrics["previous_state_counter"][patch_status][rev_p_ns] += 1
 
                 # free up after processing
                 rev_matched_map.clear()
-                rev_cve.clear()
+                rev_cve = None
                 del rev_raw_content[:]
         else:
             # no revs for processing
@@ -1051,7 +1072,7 @@ class Parser:
                     rev_raw_content = self.git_wrapper.get_content(rev)
 
                     # parse the cve and filter based on merge criteria
-                    rev_cve = parse_cve_file(rev_raw_content)
+                    rev_cve = parse_cve_file(cve_id, rev_raw_content)
                     rev_matched_map = filter_resolved_patches(rev_cve, pending_dpt_list)
                     resolved_patches.extend(list(rev_matched_map.values()))
                     pending_dpt_list = [x for x in pending_dpt_list if x not in rev_matched_map]

@@ -7,12 +7,23 @@ import shlex
 import shutil
 import subprocess  # nosec
 import tempfile
-from collections import namedtuple
+from dataclasses import dataclass
 
 from vunnel import utils
 
-GitCommitSummary = namedtuple("GitCommitSummary", ["sha", "updated", "deleted"])
-GitRevision = namedtuple("GitRevision", ["sha", "status", "file"])
+
+@dataclass
+class GitCommitSummary:
+    sha: str
+    updated: dict[str, str]
+    deleted: dict[str, str]
+
+
+@dataclass
+class GitRevision:
+    sha: str
+    status: str
+    file: str
 
 
 class GitWrapper:
@@ -40,10 +51,11 @@ class GitWrapper:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+        self.cve_rev_history: dict[str, list[GitRevision]]
 
         try:
             out = self._exec_cmd(self._check_cmd_)
-            self.logger.trace("git executable verified using cmd: {}, output: {}".format(self._check_cmd_, out))
+            self.logger.trace("git executable verified using cmd: {}, output: {}".format(self._check_cmd_, out.decode()))
         except:
             self.logger.exception('could not find required "git" executable. Please install git on host')
             raise
@@ -54,7 +66,7 @@ class GitWrapper:
             out = self._exec_cmd(cmd, cwd=destination)
             self.logger.debug("check for git repository, cmd: {}, output: {}".format(cmd, out.decode()))
         except:
-            self.logger.warning("git working tree not found at {}".format(destination))
+            self.logger.warning(f"git working tree not found at {destination}")
             return False
 
         return True
@@ -83,6 +95,17 @@ class GitWrapper:
             self.logger.exception("failed to clone initialize git repository {} to {}".format(self.src, self.dest))
             raise
 
+        # TODO: init the rev history for all CVE's
+
+    # def _build_cve_revision_history(self):
+    #     self.logger.info("building full revision history for all CVEs")
+    #     self.cve_rev_history = {}
+    #     out = self._exec_cmd("git log --name-status --no-merges -- retired/  active/")
+    #     full_log = self._parse_log(out.decode())
+
+    #     for entry in full_log:
+    #         entry
+
     @utils.retry_with_backoff()
     def sync_with_upstream(self):
         try:
@@ -104,29 +127,25 @@ class GitWrapper:
         """
         try:
             self.logger.debug("writing commit graph")
-            out = self._exec_cmd(self._write_graph_, cwd=self.dest)
+            self._exec_cmd(self._write_graph_, cwd=self.dest)
         except:
             self.logger.exception("failed to write commit graph")
             raise
 
-    def get_merged_change_set(self, from_rev, to_rev=None):
+    def get_merged_change_set(self, from_rev: str, to_rev: str | None = None) -> tuple[dict[str, str], dict[str, str]]:
         try:
             self.logger.trace("fetching changes set between revisions {} - {}".format(from_rev, to_rev))
-
             cmd = self._change_set_cmd_.format(from_rev=from_rev, to_rev=to_rev if to_rev else "")
             out = self._exec_cmd(cmd, cwd=self.dest)
-
             commit_list = self._parse_log(out.decode())
-
             return self._compute_change_set(commit_list)
         except:
             self.logger.exception("failed to compute logically modified and removed CVEs between commits")
             raise
 
-    def get_revision_history(self, cve_id, file_path, from_rev=None):
+    def get_revision_history(self, cve_id: str, file_path: str, from_rev: str | None = None) -> list[GitRevision]:
         try:
             self.logger.trace("fetching revision history for {}".format(file_path))
-
             cmd = self._rev_history_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
             out = self._exec_cmd(cmd, cwd=self.dest)
 
@@ -141,21 +160,18 @@ class GitWrapper:
             self.logger.exception("failed to fetch the revision history for {}".format(file_path))
             raise
 
-    def get_content(self, git_rev):
+    def get_content(self, git_rev: GitRevision) -> list[str]:
         if not isinstance(git_rev, GitRevision):
             raise ValueError("Input must be a GitRevision")
 
         try:
-            # self.logger.trace("fetching content for {} from git commit {}".format(git_rev.file, git_rev.sha))
-
             cmd = self._get_rev_content_cmd_.format(sha=git_rev.sha, file=git_rev.file)
             out = self._exec_cmd(cmd, cwd=self.dest)
-
             return out.decode().splitlines()
         except:
             self.logger.exception("failed to get content for {} from git commit {}".format(git_rev.file, git_rev.sha))
 
-    def get_current_rev(self):
+    def get_current_rev(self) -> str:
         try:
             rev = self._exec_cmd(self._head_rev_cmd_, cwd=self.dest)
             return rev.decode().strip() if isinstance(rev, bytes) else rev
@@ -222,7 +238,7 @@ class GitWrapper:
         )
 
     @staticmethod
-    def _compute_change_set(commit_list: list[GitCommitSummary]):
+    def _compute_change_set(commit_list: list[GitCommitSummary]) -> tuple[dict[str, str], dict[str, str]]:
         """
         List of GitCommitSummary tuples in the log order (last commit first)
         [
@@ -237,8 +253,8 @@ class GitWrapper:
         # reverse the commit list and process commits in the order they were inserted
         commit_list.reverse()
 
-        modified = {}
-        removed = {}
+        modified: dict[str, str] = {}
+        removed: dict[str, str] = {}
 
         for commit in commit_list:
             # Overlay each commit on top of computed results
@@ -331,8 +347,8 @@ class GitWrapper:
         :param commit_lines:
         :return:
         """
-        updated = {}
-        deleted = {}
+        updated: dict[str, str] = {}
+        deleted: dict[str, str] = {}
 
         for components in commit_lines[1:]:
             if re.match(self.__active_retired_filename_regex__, components[1]):
@@ -359,7 +375,7 @@ class GitWrapper:
         else:
             return None
 
-    def _exec_cmd(self, cmd, *args, **kwargs):
+    def _exec_cmd(self, cmd, *args, **kwargs) -> bytes:
         """
         Run a command with errors etc handled
         :param cmd: list of arguments (including command name, e.g. ['ls', '-l])
@@ -370,10 +386,7 @@ class GitWrapper:
         try:
             self.logger.trace("running: {}".format(cmd))
             cmd_list = shlex.split(cmd)
-            if "stdout" in kwargs:
-                return subprocess.check_call(cmd_list, *args, **kwargs)  # nosec
-            else:
-                return subprocess.check_output(cmd_list, *args, **kwargs)  # nosec
+            return subprocess.check_output(cmd_list, *args, **kwargs)  # nosec
         except Exception as e:
             self.logger.exception("error executing command: {}".format(cmd))
             raise e
