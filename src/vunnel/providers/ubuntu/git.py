@@ -163,7 +163,7 @@ class GitWrapper:
             self.logger.exception("unable to get current git revision")
 
     @classmethod
-    def _parse_revision_history(cls, cve_id, history):
+    def _parse_revision_history(cls, cve_id: str, history: str) -> list[GitRevision]:
         """
         eabaf525ae78eea3cd9f6063721afd1111efcd5c ran process_cves
         R100    active/CVE-2017-16011   ignored/CVE-2017-16011
@@ -202,7 +202,7 @@ class GitWrapper:
         return revs
 
     @staticmethod
-    def _parse_revision(rev_raw):
+    def _parse_revision(rev_raw: list[str]) -> GitRevision:
         """
         List containing two items
         [
@@ -222,7 +222,7 @@ class GitWrapper:
         )
 
     @staticmethod
-    def _compute_change_set(commit_list):
+    def _compute_change_set(commit_list: list[GitCommitSummary]):
         """
         List of GitCommitSummary tuples in the log order (last commit first)
         [
@@ -257,7 +257,7 @@ class GitWrapper:
 
         return modified, removed
 
-    def _parse_log(self, ordered_changes):
+    def _parse_log(self, ordered_changes: str) -> list[GitCommitSummary]:
         """
         Input in the form
 
@@ -281,8 +281,8 @@ class GitWrapper:
         :return:
         """
 
-        commits_list = []
-        commit_lines = []
+        commits_list: list[GitCommitSummary] = []
+        commit_lines: list[list[str]] = []
         # split lines and remove any empty string in between or at the end
         ordered_changes_iterator = (item.strip() for item in ordered_changes.splitlines() if item.strip())
 
@@ -291,7 +291,7 @@ class GitWrapper:
             if components and len(components) > 1:
                 if len(components[0]) > 5:  # indicates this is a commit sha since length greater than any change status
                     if commit_lines:  # encountered next commit, process the stored one first
-                        c = self._parse_normalized_commit(commit_lines, self.logger)
+                        c = self._parse_normalized_commit(commit_lines)
                         commits_list.append(c) if c else None
                         del commit_lines[:]
                     # else:  # encountered the first commit line, keep going
@@ -305,13 +305,13 @@ class GitWrapper:
 
         # process the last commit if any
         if commit_lines:
-            c = self._parse_normalized_commit(commit_lines, self.logger)
+            c = self._parse_normalized_commit(commit_lines)
             commits_list.append(c) if c else None
             del commit_lines[:]
 
         return commits_list
 
-    def _parse_normalized_commit(self, commit_lines, logger):
+    def _parse_normalized_commit(self, commit_lines: list[list[str]]) -> GitCommitSummary | None:
         """
         A list of lists where each inner list represents a line in the commit log
         [
