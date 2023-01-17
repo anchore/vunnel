@@ -1,0 +1,15 @@
+{
+  "provider": "wolfi",
+  "urls": [],
+  "store": "flat-file",
+  "timestamp": "2023-01-17T14:58:13+00:00",
+  "listing": {
+    "digest": "a20561cda2e03e1c",
+    "path": "checksums",
+    "algorithm": "xxh64"
+  },
+  "schema": {
+    "version": "1.0.0",
+    "url": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json"
+  }
+}

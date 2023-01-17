@@ -51,7 +51,7 @@ static-analysis:  ## Run all static analyses
 
 .PHONY: unit
 unit:  ## Run unit tests
-	poetry run pytest --cov vunnel -v tests/unit/
+	poetry run pytest --cov-report html --cov vunnel -v tests/unit/
 
 .PHONY: version
 version:

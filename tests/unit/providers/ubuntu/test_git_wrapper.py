@@ -162,7 +162,7 @@ class TestGitWrapper(unittest.TestCase):
 @pytest.mark.parametrize(
     "git_log_output,expected",
     [
-        (
+        pytest.param(
             """
 567e50a45a53a6c32120926656a9b2af0eb10c5b (HEAD -> master, origin/master, origin/HEAD) Process cves run: triaged 2 CVEs, 58 Ignored, 2 Packages
 A       active/CVE-2018-14628
@@ -188,6 +188,7 @@ A       active/CVE-2013-4348
                     GitRevision("721abff41afecaa0a499ea49ecaf6c11ac879675", "active/CVE-2013-4348"),
                 ],
             },
+            id="active-retired-active transition",
         ),
     ],
 )

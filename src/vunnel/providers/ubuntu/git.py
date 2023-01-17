@@ -324,7 +324,7 @@ class GitWrapper:
                     deleted[cve_id] = components[1]
                 else:
                     # either not a commit line or an irrelevant file, ignore it
-                    self.logger.warn("encountered unknown change symbol {}".format(components[0]))
+                    self.logger.warning("encountered unknown change symbol {}".format(components[0]))
             else:
                 # not a match
                 pass
