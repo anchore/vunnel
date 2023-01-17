@@ -132,8 +132,8 @@ def status_provider(cfg: config.Application, provider_names: str) -> None:
             if not state:
                 raise FileNotFoundError("no state found")
             node = f"""
-{fill}      {len(list(state.result_files(provider.workspace.path)))} result files
-{fill}      {state.timestamp}"""
+{fill}      results: {state.result_count(provider.workspace.path)}
+{fill}      from:    {state.timestamp.strftime("%Y-%m-%d %H:%M:%S")}"""
         except FileNotFoundError:
             node = f"""
 {fill}      (no state found)"""
