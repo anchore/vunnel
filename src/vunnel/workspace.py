@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import shutil
+import sqlite3
 from dataclasses import asdict, dataclass, field
 from typing import Any, Generator
 
@@ -73,6 +74,21 @@ class State:
             with open(full_path) as f:
                 for digest, filepath in (line.split() for line in f.readlines()):
                     yield File(digest=digest, path=filepath, algorithm=self.listing.algorithm)
+
+    def result_count(self, root: str) -> int:
+        count = 0
+        if self.listing:
+            full_path = os.path.join(root, self.listing.path)
+            with open(full_path) as f:
+                for _digest, filepath in (line.split() for line in f.readlines()):
+                    if filepath.endswith(".db"):
+                        # open up the sqlite db and count the records in the "results" table
+                        with sqlite3.connect(os.path.join(root, filepath)) as db:
+                            count += db.execute("SELECT COUNT(*) FROM results").fetchone()[0]
+                    else:
+                        count += 1
+
+        return count
 
 
 class Workspace:
