@@ -111,8 +111,9 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
 
 @cli.command(name="status", help="describe current provider state")
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1)
+@click.option("--show-empty", default=False, is_flag=True, help="show providers with no state")
 @click.pass_obj
-def status_provider(cfg: config.Application, provider_names: str) -> None:
+def status_provider(cfg: config.Application, provider_names: str, show_empty: bool) -> None:
     print(cfg.root)
     if not provider_names:
         selected_names = providers.names()
@@ -126,19 +127,25 @@ def status_provider(cfg: config.Application, provider_names: str) -> None:
         if idx == len(selected_names) - 1:
             branch = "└──"
             fill = " "
-        provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
         try:
+            provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
+
             state = provider.workspace.state()
             if not state:
                 raise FileNotFoundError("no state found")
-            node = f"""
+            node = f"""\
 {fill}      results: {state.result_count(provider.workspace.path)}
 {fill}      from:    {state.timestamp.strftime("%Y-%m-%d %H:%M:%S")}"""
         except FileNotFoundError:
-            node = f"""
+            if not show_empty:
+                continue
+            node = f"""\
 {fill}      (no state found)"""
+        except Exception as e:
+            node = f"""\
+{fill}      unable to load state: {e}"""
 
-        print(f"""{branch} {name} {node}""")
+        print(f"""{branch} {name}\n{node}""")
 
 
 @cli.command(name="list", help="list available providers")
