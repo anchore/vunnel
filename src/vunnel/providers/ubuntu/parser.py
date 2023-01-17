@@ -8,8 +8,10 @@ import logging
 import os
 import re
 import time
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any, Generator, Optional
+
+import orjson
 
 from vunnel.workspace import Workspace
 
@@ -155,10 +157,10 @@ class Severity(enum.IntEnum):
 @dataclass
 class Patch:
     distro: str
-    package: str
     status: str
     version: str
-    priority: str | None
+    package: str | None = None
+    priority: str | None = None
 
 
 @dataclass
@@ -169,6 +171,27 @@ class CVEFile:
     patches: list[Patch] = field(default_factory=list)
     ignored_patches: list[Patch] = field(default_factory=list)
     git_last_processed_rev: str | None = None
+    references: list[str] | None = None
+    description: str | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]):
+        name = d.get("name", d.get("Name", d.get("candidate", d.get("Candidate"))))
+        priority = d.get("priority", d.get("Priority", "Unknown"))
+        patches = [Patch(**p) for p in d.get("patches", [])]
+        ignored_patches = [Patch(**p) for p in d.get("ignored_patches", [])]
+        git_last_processed_rev = d.get("git_last_processed_rev")
+        references = d.get("references", d.get("References"))
+        description = d.get("description", d.get("Description"))
+        return CVEFile(
+            name=name,
+            priority=priority,
+            patches=patches,
+            ignored_patches=ignored_patches,
+            git_last_processed_rev=git_last_processed_rev,
+            references=references,
+            description=description,
+        )
 
 
 def check_header(expected: str, lines: list[str]):
@@ -318,16 +341,6 @@ def get_patch_section(header_line: str) -> str | None:
         return None
 
 
-# Specify sections we care about and the parser for each section
-sections_parsers = {
-    "Candidate": parse_simple_keyvalue,
-    "References": parse_list,
-    "Description": parse_multiline_keyvalue,
-    #    'Ubuntu-Description': parse_multiline_keyvalue,
-    "Priority": parse_simple_keyvalue,
-}
-
-
 def check_release(releasename: str) -> bool:
     """
     Returns true if the releasename is one we care about.
@@ -375,11 +388,10 @@ def check_merge(patch_record: Patch) -> bool:
     if not patch_record:
         return False
 
+    patch_dict = asdict(patch_record)
+
     # perform regex match only if the value is non-null and non-empty
-    return all(
-        patch_record.__dict__.get(key, None) and re.match(regex, patch_record.__dict__.get(key))
-        for key, regex in patch_merge_criteria.items()
-    )
+    return all(patch_dict.get(key, None) and re.match(regex, patch_dict.get(key)) for key, regex in patch_merge_criteria.items())
 
 
 def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
@@ -391,7 +403,6 @@ def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
     """
 
     parsed = CVEFile(name=cve_id)
-    len(content_lines)
 
     # Copy to avoid modifying the passed param directly since the parsing is greedy.
     lines = copy.deepcopy(content_lines)
@@ -402,10 +413,14 @@ def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
             lines.pop(0)
         else:
             section = line.split(":", 1)[0]
-            if section in sections_parsers:
-                content = sections_parsers[section](section, lines)
-                parsed.__dict__[section] = content
-                continue
+            if section == "Candidate":
+                parsed.name = parse_simple_keyvalue(section, lines)
+            elif section == "References":
+                parsed.references = parse_list(section, lines)
+            elif section == "Description":
+                parsed.description = parse_multiline_keyvalue(section, lines)
+            elif section == "Priority":
+                parsed.priority = parse_simple_keyvalue(section, lines)
             else:
                 patch_name = get_patch_section(section)
                 p_match = _patches_regex.match(line)
@@ -424,7 +439,7 @@ def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
     return parsed
 
 
-def map_namespace(release_name):
+def map_namespace(release_name: str) -> str | None:
     """
     Returns a namespace name (ubuntu:<version>) where version is a numeric id instead of release name
     e.g. map_namespace('vivid') -> ubuntu:15.04
@@ -439,7 +454,7 @@ def map_namespace(release_name):
     return None
 
 
-def map_parsed(parsed_cve, logger=None):
+def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):
     """
     Maps a parsed CVE dict into a Vulnerability object.
 
@@ -458,12 +473,12 @@ def map_parsed(parsed_cve, logger=None):
 
     # Map keyed by namespace name
     vulns = {}
-    if not (parsed_cve.get("Candidate") or parsed_cve.get("Name")):
-        logger.error("could not find a Candidate or Name for parsed cve: {}".format(parsed_cve))
+    if not (parsed_cve.name):
+        logger.error("could not find a Name for parsed cve: {}".format(asdict(parsed_cve)))
         return []
 
-    for p in parsed_cve.get("patches"):
-        namespace_name = map_namespace(p.get("distro"))
+    for p in parsed_cve.patches:
+        namespace_name = map_namespace(p.distro)
 
         # Build the CVE record even if no fixedIn record
         r = vulns.get(namespace_name)
@@ -473,11 +488,11 @@ def map_parsed(parsed_cve, logger=None):
 
             r = Vulnerability()
             try:
-                r.Severity = getattr(Severity, parsed_cve.get("Priority", "").capitalize())
+                r.Severity = getattr(Severity, parsed_cve.priority.capitalize())
             except:
                 r.Severity = Severity.Unknown
 
-            r.Name = parsed_cve.get("Candidate", parsed_cve.get("Name"))
+            r.Name = parsed_cve.name
             r.Metadata = {}
             r.Link = ubuntu_cve_url.format(r.Name)
             r.FixedIn = []
@@ -485,15 +500,15 @@ def map_parsed(parsed_cve, logger=None):
             vulns[namespace_name] = r
 
         # If the patch status is one we care about, make the FixedIn record, else skip it but create CVE records
-        if check_state(p.get("status")):
+        if check_state(p.status):
             pkg = FixedIn()
-            pkg.Name = p["package"]
+            pkg.Name = p.package
 
             # If there is a version indicating a fix use it, else 'None' is special keyword for no-fix-available
-            if p.get("status") == "released":
+            if p.status == "released":
                 # Can do version format check here, but requires code from anchore-engine
                 # anchore_engine.services.policy_engine.engine.util.deb.DpkgVersion.from_string(p.get('status'))
-                pkg.Version = p.get("version")
+                pkg.Version = p.version
                 if pkg.Version is None:
                     logger.warn(
                         'found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(
@@ -511,8 +526,8 @@ def map_parsed(parsed_cve, logger=None):
             r.FixedIn.append(pkg)
 
             # Check for max priority of all packages with it set
-            if p.get("priority"):
-                pkg_sev = getattr(Severity, p.get("priority", "").capitalize())
+            if p.priority:
+                pkg_sev = getattr(Severity, p.priority.capitalize())
                 if pkg_sev > r.Severity:
                     r.Severity = pkg_sev
 
@@ -540,7 +555,7 @@ def filter_resolved_patches(cve: CVEFile, dpt_list: list[DistroPkg]) -> dict[Dis
     return filtered_map
 
 
-def filter_merged_patches(cve_dict, dpt_list):
+def filter_merged_patches(cve: CVEFile, dpt_list: list[DistroPkg]) -> dict[DistroPkg, Patch]:
     """
     Filter patch records from the cve dictionary that match the package and distribution of the items in the list
 
@@ -548,51 +563,16 @@ def filter_merged_patches(cve_dict, dpt_list):
     :param dpt_list: list of DistroPkg objects
     :return:
     """
-    filtered_map = dict()
+    filtered_map: dict[DistroPkg, Patch] = dict()
     for dpt in dpt_list:
         matched_p = next(
-            (p for p in cve_dict.get("patches") if dpt.distro == p.get("distro") and dpt.pkg == p.get("package")),
+            (p for p in cve.patches if dpt.distro == p.distro and dpt.pkg == p.package),
             None,
         )
         if matched_p:
             filtered_map[dpt] = matched_p
 
     return filtered_map
-
-
-class UbuntuCVEState:
-    """
-    CVE state is an on-disk representation of the entire state and history of the cves from the bzr repo in a canonical form.
-    Specifically: a json document of the data and a revision history tracking which revisions from the bzr repo have been processed.
-
-    """
-
-    _data_file = "anchore_ubuntu_cve_state"
-
-    def __init__(self, base_path):
-        self.base_path = base_path
-        self.data_path = os.path.join(base_path, self._data_file)
-        self.last_revision = None
-        self.cve_state = None
-
-    def load_cve_state(self):
-        if not os.path.exists(self.data_path):
-            self.cve_state = {}
-            self.last_revision = 0
-        else:
-            with open(self.data_path) as f:
-                json.load(f)
-
-    def merge(self, cve_entry):
-        """
-        Merge a parsed CVE entry into the state model
-        :param cve_entry: A dictionary of namespace -> Vulnerability mappings with each CVE containing FixedIn objects as appropriate
-        :return: None
-        """
-
-        for namespace, vuln in cve_entry.items():
-            # Do conditional merge here. If existing record has FixedIn data, don't remove anything that was non-ignored and is now ignored.
-            self.cve_state[namespace][vuln.Name] = vuln
 
 
 class Parser:
@@ -658,15 +638,15 @@ class Parser:
         self._save_last_processed_rev(current_rev)
 
         # load merged state and map it to vulnerabilities
-        self.logger.debug("loading processed CVE content and transforming into to vulnerabilities")
+        self.logger.debug("loading processed CVE content and transforming into vulnerabilities")
 
         for merged_cve in self._merged_cve_iterator():
             yield from map_parsed(merged_cve, self.logger)
 
     def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):
-        self.logger.debug(
-            "processing data from git repository: {}, from revision: {}, to revision: {}".format(vc_dir, from_rev, to_rev)
-        )
+        self.logger.debug(f"processing data from git repository: {vc_dir}, from revision: {from_rev}, to revision: {to_rev}")
+
+        self.git_wrapper.prepare_cve_revision_history()
 
         # gather a list of changed files if the last repo revision processed is available
         updated_paths = []
@@ -761,44 +741,34 @@ class Parser:
         with open(last_processed_rev_path, "w") as f:
             f.write("{}".format(revno))
 
-    def _load_merged_cve(self, cve_id: str) -> CVEFile | Any:
+    def _load_merged_cve(self, cve_id: str) -> CVEFile | None:
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
                 cve_json = json.load(fp)
-                name = cve_json.get("name", cve_json.get("Name"))
-                priority = cve_json.get("priority", cve_json.get("Priority", "Unknown"))
-                patches = cve_json.get("patches")
-                ignored_patches = cve_json.get("ignored_patches")
-                git_last_processed_rev = cve_json.get("git_last_processed_rev")
-                cve = CVEFile(
-                    name=name,
-                    priority=priority,
-                    patches=patches,
-                    ignored_patches=ignored_patches,
-                    git_last_processed_rev=git_last_processed_rev,
-                )
-                return cve
+                return CVEFile.from_dict(cve_json)
 
         return None
 
-    def _save_merged_cve(self, cve_id, merged_cve):
-        with open(os.path.join(self.norm_workspace, cve_id), "w") as fp:
-            json.dump(merged_cve, fp)
+    def _save_merged_cve(self, cve_id: str, merged_cve: CVEFile):
+        filepath = os.path.join(self.norm_workspace, cve_id)
+        with open(filepath, "wb") as f:
+            self.logger.trace(f"writing record to {filepath!r}")  # type: ignore
+            f.write(orjson.dumps(asdict(merged_cve), f))  # type: ignore
 
     def _delete_merged_cve(self, cve_id):
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             os.remove(os.path.join(self.norm_workspace, cve_id))
 
-    def _merged_cve_iterator(self):
+    def _merged_cve_iterator(self) -> Generator[CVEFile, None, None]:
         for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
                 cve = json.load(fp)
-                yield cve
+                yield CVEFile.from_dict(cve)
 
     def _merged_cve_exists(self, cve_id):
         return os.path.exists(os.path.join(self.norm_workspace, cve_id))
 
-    def _reprocess_merged_cve(self, cve_id, cve_rel_path):
+    def _reprocess_merged_cve(self, cve_id: str, cve_rel_path: str):
         """
         Assumes that a normalized state exists for cve and processes only ignored patches, mainly for handling new distros
 
@@ -806,12 +776,11 @@ class Parser:
         :param cve_rel_path:
         :return:
         """
-        self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
-
+        self.logger.debug(f"reprocessing merged CVE {cve_rel_path}")
         saved_state = self._load_merged_cve(cve_id)
 
         if not saved_state:
-            self.logger.warning("no saved state fround for {}".format(cve_id))
+            self.logger.warning(f"no saved state found for {cve_id}")
             return
 
         # reprocess only ignored patches
@@ -845,24 +814,23 @@ class Parser:
                     del pending_dpt_list[:]
 
                     if cve_latest_rev:
-                        saved_state[self._last_processed_rev_key_git] = cve_latest_rev
+                        saved_state.git_last_processed_rev = cve_latest_rev
                 else:
                     self.logger.debug("revision history processing is disabled. Merging unresolved patches as they are")
                     merged_patches.extend(to_be_merged_map.values())
 
             # pulling this outside of the revision history block for fixing ENTERPRISE-195. saved state should be updated if there are mergeable or to-be-merged packages
             # there might already be resolved patches, extend it with merged patches, don't overwrite it
-            if saved_state["patches"]:
-                saved_state["patches"].extend(merged_patches)
+            if saved_state.patches:
+                saved_state.patches.extend(merged_patches)
             else:
-                saved_state["patches"] = merged_patches
+                saved_state.patches = merged_patches
 
             # overwrite ignored patches since its the final list
-            saved_state["ignored_patches"] = ignored_patches
+            saved_state.ignored_patches = ignored_patches
 
             # save the merged cve state to disk before returning
             self._save_merged_cve(cve_id, saved_state)
-
         else:  # No patches that require resolution
             pass
 
@@ -910,8 +878,6 @@ class Parser:
             parsed_cve = parse_cve_file(cve_id, raw_content)
 
         cve_latest_rev = None
-        # merged_cve_path = os.path.join(self.norm_workspace, vuln_name)
-
         merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(parsed_cve.patches)
 
         # Found patches that can't be resolved from the input data, could be the first time the driver is running
@@ -1029,7 +995,7 @@ class Parser:
                     rev_p_ns = map_namespace(rev_p.distro)
                     patch_status = rev_p.status if not None else "Unknown"
                     patch_distro = rev_p.distro if not None else "Unknown"
-                    if patch_states not in metrics["previous_state_counter"]:
+                    if patch_status not in metrics["previous_state_counter"]:
                         metrics["previous_state_counter"][patch_status] = {rev_p_ns: 0}
                     if patch_distro not in metrics["previous_state_counter"][patch_status]:
                         metrics["previous_state_counter"][patch_status][rev_p_ns] = 0
@@ -1038,7 +1004,7 @@ class Parser:
 
                 # free up after processing
                 rev_matched_map.clear()
-                rev_cve = None
+                del rev_cve
                 del rev_raw_content[:]
         else:
             # no revs for processing
@@ -1080,20 +1046,17 @@ class Parser:
                     # metrics for processed revision
                     metrics["revs_processed"] += 1
                     for rev_p in rev_matched_map.values():
-                        rev_p_ns = map_namespace(rev_p.get("distro"))
-                        if rev_p.get("status", "Unknown") not in metrics["previous_state_counter"]:
-                            metrics["previous_state_counter"][rev_p.get("status", "Unknown")] = {rev_p_ns: 0}
-                        if (
-                            rev_p.get("distro", "Unknown")
-                            not in metrics["previous_state_counter"][rev_p.get("status", "Unknown")]
-                        ):
-                            metrics["previous_state_counter"][rev_p.get("status", "Unknown")][rev_p_ns] = 0
+                        rev_p_ns = map_namespace(rev_p.distro)
+                        if rev_p.status not in metrics["previous_state_counter"]:
+                            metrics["previous_state_counter"][rev_p.status] = {rev_p_ns: 0}
+                        if rev_p.distro not in metrics["previous_state_counter"][rev_p.status]:
+                            metrics["previous_state_counter"][rev_p.status][rev_p_ns] = 0
 
-                        metrics["previous_state_counter"][rev_p.get("status", "Unknown")][rev_p_ns] += 1
+                        metrics["previous_state_counter"][rev_p.status][rev_p_ns] += 1
 
                     # free up after processing
                     rev_matched_map.clear()
-                    rev_cve.clear()
+                    del rev_cve
                     del rev_raw_content[:]
             else:
                 self.logger.debug("Merge with saved state resolved all relevant patches")

@@ -22,7 +22,7 @@ class GitCommitSummary:
 @dataclass
 class GitRevision:
     sha: str
-    status: str
+    # status: str
     file: str
 
 
@@ -43,7 +43,7 @@ class GitWrapper:
     _get_rev_content_cmd_ = "git show {sha}:{file}"
     _head_rev_cmd_ = "git rev-parse HEAD"
 
-    def __init__(self, source, checkout_dest, workspace=None, logger=None):
+    def __init__(self, source: str, checkout_dest: str, workspace: str | None = None, logger: logging.Logger | None = None):
         self.src = source
         self.dest = checkout_dest
         self.workspace = workspace if workspace else tempfile.gettempdir()
@@ -51,7 +51,7 @@ class GitWrapper:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        self.cve_rev_history: dict[str, list[GitRevision]]
+        self.cve_rev_history: dict[str, list[GitRevision]] = {}
 
         try:
             out = self._exec_cmd(self._check_cmd_)
@@ -95,16 +95,24 @@ class GitWrapper:
             self.logger.exception("failed to clone initialize git repository {} to {}".format(self.src, self.dest))
             raise
 
-        # TODO: init the rev history for all CVE's
+    def parse_full_cve_revision_history(self, git_log_output: str) -> dict[str, list[GitRevision]]:
+        hist = {}
+        entries = self._parse_log(git_log_output)
 
-    # def _build_cve_revision_history(self):
-    #     self.logger.info("building full revision history for all CVEs")
-    #     self.cve_rev_history = {}
-    #     out = self._exec_cmd("git log --name-status --no-merges -- retired/  active/")
-    #     full_log = self._parse_log(out.decode())
+        for entry in entries:
+            for cve, file in entry.updated.items():
+                if cve not in hist:
+                    hist[cve] = []
 
-    #     for entry in full_log:
-    #         entry
+                hist[cve].append(GitRevision(entry.sha, file))
+
+        return hist
+
+    def prepare_cve_revision_history(self):
+        self.logger.info("building full revision history for all CVEs")
+        self.cve_rev_history = {}
+        out = self._exec_cmd("git log --name-status --no-merges --format=oneline -- retired/ active/", cwd=self.dest)
+        self.cve_rev_history = self.parse_full_cve_revision_history(out.decode())
 
     @utils.retry_with_backoff()
     def sync_with_upstream(self):
@@ -146,16 +154,7 @@ class GitWrapper:
     def get_revision_history(self, cve_id: str, file_path: str, from_rev: str | None = None) -> list[GitRevision]:
         try:
             self.logger.trace("fetching revision history for {}".format(file_path))
-            cmd = self._rev_history_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
-            out = self._exec_cmd(cmd, cwd=self.dest)
-
-            if not file_path.startswith("active/"):
-                dirname, basename = os.path.split(file_path)
-                active_path = os.path.join(os.path.split(dirname)[0], "active", basename)
-                cmd = self._rev_history_cmd_.format(file=active_path, from_rev=f"{from_rev}.." if from_rev else "")
-                out += self._exec_cmd(cmd, cwd=self.dest)
-
-            return self._parse_revision_history(cve_id, out.decode())
+            return self.cve_rev_history.get(cve_id, [])
         except:
             self.logger.exception("failed to fetch the revision history for {}".format(file_path))
             raise
@@ -177,45 +176,6 @@ class GitWrapper:
             return rev.decode().strip() if isinstance(rev, bytes) else rev
         except:
             self.logger.exception("unable to get current git revision")
-
-    @classmethod
-    def _parse_revision_history(cls, cve_id: str, history: str) -> list[GitRevision]:
-        """
-        eabaf525ae78eea3cd9f6063721afd1111efcd5c ran process_cves
-        R100    active/CVE-2017-16011   ignored/CVE-2017-16011
-        704e87cde2d217b0b806678f34d23e0c3a22a3d1 ran process_cves
-        M       active/CVE-2017-16011
-        e54645943d9a38c2065130b9a453bddbfbbf2b18 research jquery CVEs
-        M       active/CVE-2017-16011
-
-        :param cve_id:
-        :param history:
-        :return:
-        """
-        revs = []
-
-        history_lines = [item.strip() for item in history.splitlines() if item.strip()]
-        if not history_lines:
-            return revs
-
-        if len(history_lines) % 2 != 0:
-            raise ValueError("Input must contain two lines per revision, input line count is {}".format(len(history_lines)))
-
-        for x in range(0, len(history_lines), 2):
-            # TODO check status is not D and file name matches CVE-*
-            rev = cls._parse_revision(history_lines[x : x + 2])
-
-            # don't include deleted revisions
-            if rev.status.startswith("D"):
-                continue
-
-            # break the moment a different CVE ID is encountered
-            if cve_id not in rev.file:
-                break
-
-            revs.append(rev)
-
-        return revs
 
     @staticmethod
     def _parse_revision(rev_raw: list[str]) -> GitRevision:
