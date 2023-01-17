@@ -7,12 +7,23 @@ import shlex
 import shutil
 import subprocess  # nosec
 import tempfile
-from collections import namedtuple
+from dataclasses import dataclass
 
 from vunnel import utils
 
-GitCommitSummary = namedtuple("GitCommitSummary", ["sha", "updated", "deleted"])
-GitRevision = namedtuple("GitRevision", ["sha", "status", "file"])
+
+@dataclass
+class GitCommitSummary:
+    sha: str
+    updated: dict[str, str]
+    deleted: dict[str, str]
+
+
+@dataclass
+class GitRevision:
+    sha: str
+    # status: str
+    file: str
 
 
 class GitWrapper:
@@ -29,11 +40,10 @@ class GitWrapper:
     _write_graph_ = "git commit-graph write --reachable --changed-paths"
     _change_set_cmd_ = "git log --no-renames --no-merges --name-status --format=oneline {from_rev}..{to_rev}"
     _rev_history_cmd_ = "git log --no-merges --name-status --format=oneline {from_rev} -- {file}"
-    _rev_history_with_follow_cmd_ = "git log --no-merges --follow --name-status --format=oneline {from_rev} -- {file}"
     _get_rev_content_cmd_ = "git show {sha}:{file}"
     _head_rev_cmd_ = "git rev-parse HEAD"
 
-    def __init__(self, source, checkout_dest, workspace=None, logger=None):
+    def __init__(self, source: str, checkout_dest: str, workspace: str | None = None, logger: logging.Logger | None = None):
         self.src = source
         self.dest = checkout_dest
         self.workspace = workspace if workspace else tempfile.gettempdir()
@@ -41,10 +51,11 @@ class GitWrapper:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+        self.cve_rev_history: dict[str, list[GitRevision]] = {}
 
         try:
             out = self._exec_cmd(self._check_cmd_)
-            self.logger.trace("git executable verified using cmd: {}, output: {}".format(self._check_cmd_, out))
+            self.logger.trace("git executable verified using cmd: {}, output: {}".format(self._check_cmd_, out.decode()))
         except:
             self.logger.exception('could not find required "git" executable. Please install git on host')
             raise
@@ -55,7 +66,7 @@ class GitWrapper:
             out = self._exec_cmd(cmd, cwd=destination)
             self.logger.debug("check for git repository, cmd: {}, output: {}".format(cmd, out.decode()))
         except:
-            self.logger.warning("git working tree not found at {}".format(destination))
+            self.logger.warning(f"git working tree not found at {destination}")
             return False
 
         return True
@@ -84,6 +95,25 @@ class GitWrapper:
             self.logger.exception("failed to clone initialize git repository {} to {}".format(self.src, self.dest))
             raise
 
+    def parse_full_cve_revision_history(self, git_log_output: str) -> dict[str, list[GitRevision]]:
+        hist = {}
+        entries = self._parse_log(git_log_output)
+
+        for entry in entries:
+            for cve, file in entry.updated.items():
+                if cve not in hist:
+                    hist[cve] = []
+
+                hist[cve].append(GitRevision(entry.sha, file))
+
+        return hist
+
+    def prepare_cve_revision_history(self):
+        self.logger.info("building full revision history for all CVEs")
+        self.cve_rev_history = {}
+        out = self._exec_cmd("git log --name-status --no-merges --format=oneline -- retired/ active/", cwd=self.dest)
+        self.cve_rev_history = self.parse_full_cve_revision_history(out.decode())
+
     @utils.retry_with_backoff()
     def sync_with_upstream(self):
         try:
@@ -105,103 +135,50 @@ class GitWrapper:
         """
         try:
             self.logger.debug("writing commit graph")
-            out = self._exec_cmd(self._write_graph_, cwd=self.dest)
+            self._exec_cmd(self._write_graph_, cwd=self.dest)
         except:
             self.logger.exception("failed to write commit graph")
             raise
 
-    def get_merged_change_set(self, from_rev, to_rev=None):
+    def get_merged_change_set(self, from_rev: str, to_rev: str | None = None) -> tuple[dict[str, str], dict[str, str]]:
         try:
             self.logger.trace("fetching changes set between revisions {} - {}".format(from_rev, to_rev))
-
             cmd = self._change_set_cmd_.format(from_rev=from_rev, to_rev=to_rev if to_rev else "")
             out = self._exec_cmd(cmd, cwd=self.dest)
-
             commit_list = self._parse_log(out.decode())
-
             return self._compute_change_set(commit_list)
         except:
             self.logger.exception("failed to compute logically modified and removed CVEs between commits")
             raise
 
-    def get_revision_history(self, cve_id, file_path, from_rev=None):
+    def get_revision_history(self, cve_id: str, file_path: str, from_rev: str | None = None) -> list[GitRevision]:
         try:
             self.logger.trace("fetching revision history for {}".format(file_path))
-
-            if file_path.startswith("active/"):
-                cmd = self._rev_history_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
-            else:
-                cmd = self._rev_history_with_follow_cmd_.format(file=file_path, from_rev=f"{from_rev}.." if from_rev else "")
-
-            out = self._exec_cmd(cmd, cwd=self.dest)
-
-            return self._parse_revision_history(cve_id, out.decode())
+            return self.cve_rev_history.get(cve_id, [])
         except:
             self.logger.exception("failed to fetch the revision history for {}".format(file_path))
             raise
 
-    def get_content(self, git_rev):
+    def get_content(self, git_rev: GitRevision) -> list[str]:
         if not isinstance(git_rev, GitRevision):
             raise ValueError("Input must be a GitRevision")
 
         try:
-            # self.logger.trace("fetching content for {} from git commit {}".format(git_rev.file, git_rev.sha))
-
             cmd = self._get_rev_content_cmd_.format(sha=git_rev.sha, file=git_rev.file)
             out = self._exec_cmd(cmd, cwd=self.dest)
-
             return out.decode().splitlines()
         except:
             self.logger.exception("failed to get content for {} from git commit {}".format(git_rev.file, git_rev.sha))
 
-    def get_current_rev(self):
+    def get_current_rev(self) -> str:
         try:
             rev = self._exec_cmd(self._head_rev_cmd_, cwd=self.dest)
             return rev.decode().strip() if isinstance(rev, bytes) else rev
         except:
             self.logger.exception("unable to get current git revision")
 
-    @classmethod
-    def _parse_revision_history(cls, cve_id, history):
-        """
-        eabaf525ae78eea3cd9f6063721afd1111efcd5c ran process_cves
-        R100    active/CVE-2017-16011   ignored/CVE-2017-16011
-        704e87cde2d217b0b806678f34d23e0c3a22a3d1 ran process_cves
-        M       active/CVE-2017-16011
-        e54645943d9a38c2065130b9a453bddbfbbf2b18 research jquery CVEs
-        M       active/CVE-2017-16011
-
-        :param cve_id:
-        :param history:
-        :return:
-        """
-        revs = []
-
-        history_lines = [item.strip() for item in history.splitlines() if item.strip()]
-        if not history_lines:
-            return revs
-
-        if len(history_lines) % 2 != 0:
-            raise ValueError("Input must contain two lines per revision, input line count is {}".format(len(history_lines)))
-
-        for x in range(0, len(history_lines), 2):
-            # TODO check status is not D and file name matches CVE-*
-            rev = cls._parse_revision(history_lines[x : x + 2])
-
-            # don't include deleted revisions
-            if rev.status.startswith("D"):
-                continue
-
-            # break the moment a different CVE ID is encountered
-            if cve_id not in rev.file:
-                break
-
-            revs.append(rev)
-
-        return revs
-
     @staticmethod
-    def _parse_revision(rev_raw):
+    def _parse_revision(rev_raw: list[str]) -> GitRevision:
         """
         List containing two items
         [
@@ -221,7 +198,7 @@ class GitWrapper:
         )
 
     @staticmethod
-    def _compute_change_set(commit_list):
+    def _compute_change_set(commit_list: list[GitCommitSummary]) -> tuple[dict[str, str], dict[str, str]]:
         """
         List of GitCommitSummary tuples in the log order (last commit first)
         [
@@ -236,8 +213,8 @@ class GitWrapper:
         # reverse the commit list and process commits in the order they were inserted
         commit_list.reverse()
 
-        modified = {}
-        removed = {}
+        modified: dict[str, str] = {}
+        removed: dict[str, str] = {}
 
         for commit in commit_list:
             # Overlay each commit on top of computed results
@@ -256,7 +233,7 @@ class GitWrapper:
 
         return modified, removed
 
-    def _parse_log(self, ordered_changes):
+    def _parse_log(self, ordered_changes: str) -> list[GitCommitSummary]:
         """
         Input in the form
 
@@ -280,8 +257,8 @@ class GitWrapper:
         :return:
         """
 
-        commits_list = []
-        commit_lines = []
+        commits_list: list[GitCommitSummary] = []
+        commit_lines: list[list[str]] = []
         # split lines and remove any empty string in between or at the end
         ordered_changes_iterator = (item.strip() for item in ordered_changes.splitlines() if item.strip())
 
@@ -290,7 +267,7 @@ class GitWrapper:
             if components and len(components) > 1:
                 if len(components[0]) > 5:  # indicates this is a commit sha since length greater than any change status
                     if commit_lines:  # encountered next commit, process the stored one first
-                        c = self._parse_normalized_commit(commit_lines, self.logger)
+                        c = self._parse_normalized_commit(commit_lines)
                         commits_list.append(c) if c else None
                         del commit_lines[:]
                     # else:  # encountered the first commit line, keep going
@@ -304,13 +281,13 @@ class GitWrapper:
 
         # process the last commit if any
         if commit_lines:
-            c = self._parse_normalized_commit(commit_lines, self.logger)
+            c = self._parse_normalized_commit(commit_lines)
             commits_list.append(c) if c else None
             del commit_lines[:]
 
         return commits_list
 
-    def _parse_normalized_commit(self, commit_lines, logger):
+    def _parse_normalized_commit(self, commit_lines: list[list[str]]) -> GitCommitSummary | None:
         """
         A list of lists where each inner list represents a line in the commit log
         [
@@ -330,8 +307,8 @@ class GitWrapper:
         :param commit_lines:
         :return:
         """
-        updated = {}
-        deleted = {}
+        updated: dict[str, str] = {}
+        deleted: dict[str, str] = {}
 
         for components in commit_lines[1:]:
             if re.match(self.__active_retired_filename_regex__, components[1]):
@@ -358,7 +335,7 @@ class GitWrapper:
         else:
             return None
 
-    def _exec_cmd(self, cmd, *args, **kwargs):
+    def _exec_cmd(self, cmd, *args, **kwargs) -> bytes:
         """
         Run a command with errors etc handled
         :param cmd: list of arguments (including command name, e.g. ['ls', '-l])
@@ -369,10 +346,7 @@ class GitWrapper:
         try:
             self.logger.trace("running: {}".format(cmd))
             cmd_list = shlex.split(cmd)
-            if "stdout" in kwargs:
-                return subprocess.check_call(cmd_list, *args, **kwargs)  # nosec
-            else:
-                return subprocess.check_output(cmd_list, *args, **kwargs)  # nosec
+            return subprocess.check_output(cmd_list, *args, **kwargs)  # nosec
         except Exception as e:
             self.logger.exception("error executing command: {}".format(cmd))
             raise e
