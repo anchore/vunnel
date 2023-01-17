@@ -2,7 +2,9 @@ import os
 import shutil
 import unittest
 
-from vunnel.providers.ubuntu.git import GitWrapper
+import pytest
+
+from vunnel.providers.ubuntu.git import GitRevision, GitWrapper
 
 
 class TestGitWrapper(unittest.TestCase):
@@ -156,27 +158,38 @@ class TestGitWrapper(unittest.TestCase):
         print("Modified: {}".format(modified))
         print("Removed: {}".format(removed))
 
-    def test_parse_revision_history(self):
-        with open(self._git_rev_log_file_) as f:
-            git_rev_log = f.read()
 
-        wrapper = GitWrapper(self._workspace_, self._workspace_)
-
-        revs = wrapper._parse_revision_history(self._rev_log_cve_, git_rev_log)
-
-        self.assertEqual(len(revs), len(self._revisions_))
-
-        for got, expected in zip(revs, self._revisions_):
-            self.assertEqual(got.sha, expected["sha"])
-            self.assertEqual(got.file, expected["file"])
-            self.assertEqual(got.status, expected["status"])
-            print(got)
-
-    def test_error_parse_revision_history(self):
-        with open(self._git_rev_log_file_) as f:
-            git_rev_log = f.read()
-
-        lines = [item.strip() for item in git_rev_log.splitlines() if item.strip()]
-
-        with self.assertRaises(ValueError):
-            GitWrapper._parse_revision_history(self._rev_log_cve_, "\n".join(lines[:-1]))
+@pytest.mark.parametrize(
+    "git_log_output,expected",
+    [
+        (
+            """
+567e50a45a53a6c32120926656a9b2af0eb10c5b (HEAD -> master, origin/master, origin/HEAD) Process cves run: triaged 2 CVEs, 58 Ignored, 2 Packages
+A       active/CVE-2018-14628
+A       active/CVE-2022-47630
+721abff41afecaa0a499ea49ecaf6c11ac879679 Updating openssl status for trusty/xenial
+M       active/CVE-2022-3996
+721abff41afecaa0a499ea49ecaf6c11ac879678 update retired
+M       retired/CVE-2013-4348
+721abff41afecaa0a499ea49ecaf6c11ac879677 move to retired
+R100       active/CVE-2013-4348    retired/CVE-2013-4348
+721abff41afecaa0a499ea49ecaf6c11ac879676 update
+M       active/CVE-2013-4348
+721abff41afecaa0a499ea49ecaf6c11ac879675 added
+A       active/CVE-2013-4348
+    """,
+            {
+                "CVE-2018-14628": [GitRevision("567e50a45a53a6c32120926656a9b2af0eb10c5b", "active/CVE-2018-14628")],
+                "CVE-2022-47630": [GitRevision("567e50a45a53a6c32120926656a9b2af0eb10c5b", "active/CVE-2022-47630")],
+                "CVE-2022-3996": [GitRevision("721abff41afecaa0a499ea49ecaf6c11ac879679", "active/CVE-2022-3996")],
+                "CVE-2013-4348": [
+                    GitRevision("721abff41afecaa0a499ea49ecaf6c11ac879678", "retired/CVE-2013-4348"),
+                    GitRevision("721abff41afecaa0a499ea49ecaf6c11ac879676", "active/CVE-2013-4348"),
+                    GitRevision("721abff41afecaa0a499ea49ecaf6c11ac879675", "active/CVE-2013-4348"),
+                ],
+            },
+        ),
+    ],
+)
+def test_parse_full_cve_revision_history(git_log_output: str, expected: dict[str, list[GitRevision]]):
+    assert GitWrapper("", "").parse_full_cve_revision_history(git_log_output) == expected
