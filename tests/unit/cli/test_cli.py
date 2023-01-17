@@ -100,3 +100,185 @@ def test_clear(mocker, monkeypatch, args, clear, clear_input, clear_results) -> 
     assert workspace_mock.clear.call_count == clear
     assert workspace_mock.clear_input.call_count == clear_input
     assert workspace_mock.clear_results.call_count == clear_results
+
+
+def test_config(monkeypatch) -> None:
+    envs = {
+        "NVD_API_KEY": "secret",
+        "GITHUB_TOKEN": "secret",
+    }
+    monkeypatch.setattr(os, "environ", envs)
+
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["-c", "-", "config"])
+    assert res.exit_code == 0
+    expected_output = """
+log:
+  level: INFO
+  slim: false
+providers:
+  alpine:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+  amazon:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+    security_advisories:
+      '2': https://alas.aws.amazon.com/AL2/alas.rss
+      '2022': https://alas.aws.amazon.com/AL2022/alas.rss
+  centos:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+    skip_namespaces:
+      - centos:3
+      - centos:4
+  debian:
+    distro_map:
+      bookworm: '12'
+      bullseye: '11'
+      buster: '10'
+      jessie: '8'
+      sid: unstable
+      stretch: '9'
+      trixie: '13'
+      wheezy: '7'
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+  github:
+    api_url: https://api.github.com/graphql
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+    token: secret
+  nvd:
+    api_key: secret
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: keep
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+  oracle:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+  rhel:
+    full_sync_interval: 2
+    max_workers: 4
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: keep
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+    skip_namespaces:
+      - rhel:3
+      - rhel:4
+  sles:
+    allow_versions:
+      - '11'
+      - '12'
+      - '15'
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+  ubuntu:
+    additional_versions: {}
+    enable_rev_history: true
+    max_workers: 8
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: keep
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+  wolfi:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+root: ./data
+"""
+    assert expected_output.strip() in res.output
