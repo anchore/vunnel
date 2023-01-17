@@ -157,10 +157,17 @@ exclude = '''
 '''
 
 [tool.coverage.run]
-omit = [".*", "*/site-packages/*", "*/venv/*", "tests/*", "*/cli/*"]
+omit = [
+  ".*",
+  "*/site-packages/*",
+  "*/venv/*",
+  "tests/*",
+  "src/vunnel/__main__.py",
+  "src/vunnel/cli/__init__.py",
+]
 
 [tool.coverage.report]
-fail_under = 75
+fail_under = 80
 
 [tool.flake8]
 # note: this mirrors the black configuration in pre-commit config
