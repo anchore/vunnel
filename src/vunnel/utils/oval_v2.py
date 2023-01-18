@@ -8,6 +8,7 @@ OVAL content, it's up to the driver to transform it into normalized feed data
 from __future__ import annotations
 
 import enum
+import gzip
 import logging
 import os
 import re
@@ -416,39 +417,44 @@ def iter_parse_vulnerability_file(
 
     if os.path.exists(oval_file_path):
         ingress = False
-        for event, xml_element in ET.iterparse(oval_file_path, events=("start", "end")):
-            # gather definition
-            if event == "start" and parser_factory.get_oval_element(xml_element, parser_config):
-                ingress = True
-            elif event == "end":
-                # is this an interesting oval element?
-                oval_element = parser_factory.get_oval_element(xml_element, parser_config)
+        opener = open
 
-                # is the interesting oval element in ingress?
-                if oval_element and ingress:
-                    # yes and yes, halt ingress and parse the element
-                    ingress = False
-                    parser = parser_factory.get_parser(oval_element)
-                    if parser:
-                        result = parser.parse(xml_element, parser_config)
-                        if result:
-                            parsed_dict[oval_element][result.identity] = result
+        if oval_file_path.endswith(".gz"):
+            opener = gzip.open
+
+        with opener(oval_file_path, "rb") as f:
+            for event, xml_element in ET.iterparse(f, events=("start", "end")):
+                # gather definition
+                if event == "start" and parser_factory.get_oval_element(xml_element, parser_config):
+                    ingress = True
+                elif event == "end":
+                    # is this an interesting oval element?
+                    oval_element = parser_factory.get_oval_element(xml_element, parser_config)
+
+                    # is the interesting oval element in ingress?
+                    if oval_element and ingress:
+                        # yes and yes, halt ingress and parse the element
+                        ingress = False
+                        parser = parser_factory.get_parser(oval_element)
+                        if parser:
+                            result = parser.parse(xml_element, parser_config)
+                            if result:
+                                parsed_dict[oval_element][result.identity] = result
+                            else:
+                                logger.warning("unable to parse %s element", repr(oval_element.value))
                         else:
-                            logger.warn("unable to parse %s element", repr(oval_element.value))
-                    else:
-                        logger.warn(
-                            "no parser found for oval element %s, skipping",
-                            oval_element,
-                        )
-                # else:
-                #     # this marks the end of an xml element but does it's not an interesting oval element or may be not the whole element yet
-                #     pass
+                            logger.warning(
+                                "no parser found for oval element %s, skipping",
+                                oval_element,
+                            )
+                    # else:
+                    #     # this marks the end of an xml element but does it's not an interesting oval element or may be not the whole element yet
+                    #     pass
 
-            # clear the element if doesn't need to be processed or done processing
-            if not ingress and event == "end":
-                xml_element.clear()
-
+                # clear the element if doesn't need to be processed or done processing
+                if not ingress and event == "end":
+                    xml_element.clear()
     else:
-        logger.warn("{} not found, returning empty results".format(oval_file_path))
+        logger.warning(f"{oval_file_path} not found, returning empty results")
 
     return parsed_dict

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import gzip
 import logging
 import os
 import re
@@ -65,26 +66,32 @@ def parse(dest_file: str, config: Config):
 
     if os.path.exists(dest_file):
         processing = False
-        for event, element in ET.iterparse(dest_file, events=("start", "end")):
-            # gather definition
-            if event == "start" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
-                processing = True
-            elif event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
-                try:
-                    _process_definition(element, vuln_dict, config)
-                except:
-                    logger.exception("Error parsing oval record. Logging error and continuing")
-                finally:
-                    processing = False
+        opener = open
 
-            if not processing and event == "end":
-                # print('Clearing element: {} post event: {}'.format(re.search(tag_pattern, element.tag).group(1), event))
-                element.clear()
+        if dest_file.endswith(".gz"):
+            opener = gzip.open
 
-            # bail after definitions
-            if event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definitions":
-                # print('Stopped parsing')
-                break
+        with opener(dest_file, "rb") as f:
+            for event, element in ET.iterparse(dest_file, events=("start", "end")):
+                # gather definition
+                if event == "start" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
+                    processing = True
+                elif event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
+                    try:
+                        _process_definition(element, vuln_dict, config)
+                    except:
+                        logger.exception("Error parsing oval record. Logging error and continuing")
+                    finally:
+                        processing = False
+
+                if not processing and event == "end":
+                    # print('Clearing element: {} post event: {}'.format(re.search(tag_pattern, element.tag).group(1), event))
+                    element.clear()
+
+                # bail after definitions
+                if event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definitions":
+                    # print('Stopped parsing')
+                    break
     else:
         logger.warning(f"{dest_file} not found, returning empty results")
 

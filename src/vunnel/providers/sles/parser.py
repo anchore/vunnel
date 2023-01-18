@@ -44,8 +44,8 @@ PARSER_CONFIG = OVALParserConfig(
 
 
 class Parser:
-    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml"
-    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml"
+    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml.gz"
+    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml.gz"
     __oval_dir_path__ = "oval"
     __source_dir_path__ = "source"
 
@@ -100,7 +100,9 @@ class Parser:
 
         with open(oval_file_path, "wb") as fp:
             for chunk in r.iter_content(chunk_size=1024):
-                fp.write(chunk)
+                if chunk:
+                    fp.write(chunk)
+                    fp.flush()
 
         return oval_file_path
 
