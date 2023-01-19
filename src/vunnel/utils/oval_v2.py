@@ -403,7 +403,7 @@ def iter_parse_vulnerability_file(
     oval_file_path: str,
     parser_config: OVALParserConfig,
     parser_factory: OVALParserFactory,
-) -> dict:
+) -> defaultdict[enum.Enum, dict[str, Parsed]]:
     """
     Starting point for parsing a vulnerability class OVAL file content.
     Iteratively parses the file using the parsers supplied by the input factory.
@@ -413,7 +413,7 @@ def iter_parse_vulnerability_file(
     logger = logging.getLogger("oval-v2-parser")
 
     logger.info(f"parsing {oval_file_path}")
-    parsed_dict = defaultdict(dict)
+    parsed_dict: defaultdict[enum.Enum, dict[str, Parsed]] = defaultdict(dict)
 
     if os.path.exists(oval_file_path):
         ingress = False
