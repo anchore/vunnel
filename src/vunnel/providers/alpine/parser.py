@@ -1,4 +1,5 @@
 # flake8: noqa
+from __future__ import annotations
 
 import copy
 import logging
@@ -6,7 +7,6 @@ import os
 import re
 import shutil
 from html.parser import HTMLParser
-from typing import List
 
 import requests
 import yaml
@@ -67,7 +67,7 @@ class Parser:
         self._urls = set()
 
     @property
-    def urls(self) -> List[str]:
+    def urls(self) -> list[str]:
         return list(self._urls)
 
     def _download(self, skip_if_exists=False):

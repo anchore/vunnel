@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import enum
 import logging
@@ -174,7 +176,7 @@ class Writer:
         self.wrote = 0
         self.store = store_strategy.store(workspace=workspace, skip_duplicates=skip_duplicates, logger=logger)
 
-    def __enter__(self) -> "Writer":
+    def __enter__(self) -> Writer:
         return self
 
     def __exit__(

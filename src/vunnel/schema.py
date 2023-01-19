@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION = "1.0.0"

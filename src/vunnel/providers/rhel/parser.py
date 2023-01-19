@@ -1,4 +1,6 @@
 # flake8: noqa
+from __future__ import annotations
+
 import concurrent.futures
 import copy
 import json
@@ -8,7 +10,6 @@ import re
 from collections import namedtuple
 from datetime import datetime as dt
 from decimal import Decimal as D
-from typing import List
 
 import requests
 from cvss import CVSS3
@@ -645,7 +646,7 @@ class Parser:
         return merged_fixed_ins
 
     @staticmethod
-    def _merge_out_of_support_affected(affected_fixed_ins: List[FixedIn], out_of_support: List[FixedIn]) -> List[FixedIn]:
+    def _merge_out_of_support_affected(affected_fixed_ins: list[FixedIn], out_of_support: list[FixedIn]) -> list[FixedIn]:
         if out_of_support and affected_fixed_ins:
             merged = copy.deepcopy(affected_fixed_ins)
             for oos in out_of_support:

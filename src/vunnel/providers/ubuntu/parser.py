@@ -1,4 +1,5 @@
 # flake8: noqa
+from __future__ import annotations
 
 import concurrent.futures
 import copy
@@ -9,7 +10,7 @@ import os
 import re
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Generator, Optional
+from typing import Any, Generator
 
 import orjson
 
@@ -600,8 +601,8 @@ class Parser:
     def __init__(
         self,
         workspace: Workspace,
-        logger: Optional[logging.Logger] = None,
-        additional_versions: Optional[dict[str, str]] = None,
+        logger: logging.Logger | None = None,
+        additional_versions: dict[str, str] | None = None,
         enable_rev_history: bool = True,
         max_workers: int = default_max_workers,
     ):
