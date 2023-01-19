@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from vunnel import provider, providers, result
 from vunnel.cli import config
 

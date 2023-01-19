@@ -5,6 +5,7 @@ A generic framework for parsing an OVAL xml file. Design is based on separate co
 Each section is associated with a parser that can be overridden by the driver. Parsed output represents a view of the
 OVAL content, it's up to the driver to transform it into normalized feed data
 """
+from __future__ import annotations
 
 import enum
 import logging
@@ -14,7 +15,6 @@ import xml.etree.ElementTree as ET  # nosec (this is only used to get the defini
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Type
 
 
 class OVALElementEnum(enum.Enum):
@@ -84,7 +84,7 @@ class Test(Parsed):
 @dataclass()
 class Impact:
     namespace_test_id: str
-    affected_test_ids: List[str]
+    affected_test_ids: list[str]
 
 
 class OVALElementParser(ABC):
@@ -92,7 +92,7 @@ class OVALElementParser(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Optional[Parsed]:
+    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Parsed | None:
         ...
 
     @staticmethod
@@ -117,7 +117,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
     oval_element = OVALElementEnum.VULNERABILITY
 
     @staticmethod
-    def _parse_criteria(xml_element: ET.Element, oval_ns: str, config: OVALParserConfig) -> List[Impact]:
+    def _parse_criteria(xml_element: ET.Element, oval_ns: str, config: OVALParserConfig) -> list[Impact]:
         """
         The first or outermost criteria with in a definition, may contain nested groups of criteria/criterion bound by
         different operators
@@ -157,7 +157,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
         return results
 
     @staticmethod
-    def _parse_group(criteria_element: ET.Element, config: OVALParserConfig) -> List[Impact]:
+    def _parse_group(criteria_element: ET.Element, config: OVALParserConfig) -> list[Impact]:
         """
         A logical group is bunch of conditions bound by AND operator
 
@@ -204,7 +204,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
         return results
 
     @staticmethod
-    def _parse_sub_group(crit_element: ET.Element, config: OVALParserConfig, regex: re.Pattern) -> List[str]:
+    def _parse_sub_group(crit_element: ET.Element, config: OVALParserConfig, regex: re.Pattern) -> list[str]:
         """
         A logical sub-group is bunch of conditions bound by OR operator or a single condition
 
@@ -241,7 +241,7 @@ class TestParser(OVALElementParser):
     oval_element = OVALElementEnum.TEST
 
     @staticmethod
-    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Optional[Test]:
+    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Test | None:
         """
         Examples of xml elements parsed
 
@@ -279,7 +279,7 @@ class ArtifactParser(OVALElementParser):
     oval_element = OVALElementEnum.ARTIFACT
 
     @staticmethod
-    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Optional[Artifact]:
+    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Artifact | None:
         """
         Example of xml element parsed
 
@@ -316,7 +316,7 @@ class VersionParser(OVALElementParser):
     oval_element = OVALElementEnum.VERSION
 
     @staticmethod
-    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Optional[Version]:
+    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Version | None:
         """
         Examples of xml elements parsed
 
@@ -358,7 +358,7 @@ class OVALParserFactory:
     The latter ties a parser to the xml tag of element it can process
     """
 
-    def __init__(self, parsers: List[Type[OVALElementParser]], element_enum: Type[enum.Enum]):
+    def __init__(self, parsers: list[type[OVALElementParser]], element_enum: type[enum.Enum]):
         if not parsers or not isinstance(parsers, list) or any(not issubclass(item, OVALElementParser) for item in parsers):
             raise ValueError("Invalid input for parsers, must be a list of OVALElementParser sub-classes")
 
@@ -371,7 +371,7 @@ class OVALParserFactory:
         if set(self.element_enum) != set(self.parser_map.keys()):
             raise ValueError("Parsers are not a match for the oval element enumeration")
 
-    def get_parser(self, oval_element: enum.Enum) -> Optional[Type[OVALElementParser]]:
+    def get_parser(self, oval_element: enum.Enum) -> type[OVALElementParser] | None:
         """
         Returns the parser for input oval element if one is available
         """
@@ -380,7 +380,7 @@ class OVALParserFactory:
         else:
             return None
 
-    def get_oval_element(self, xml_element: ET.Element, config: OVALParserConfig) -> Optional[enum.Enum]:
+    def get_oval_element(self, xml_element: ET.Element, config: OVALParserConfig) -> enum.Enum | None:
         """
         Checks and returns an oval enumeration instance if the xml content is a supported OVAL element
         """
@@ -402,7 +402,7 @@ def iter_parse_vulnerability_file(
     oval_file_path: str,
     parser_config: OVALParserConfig,
     parser_factory: OVALParserFactory,
-) -> Dict:
+) -> dict:
     """
     Starting point for parsing a vulnerability class OVAL file content.
     Iteratively parses the file using the parsers supplied by the input factory.

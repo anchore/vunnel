@@ -1,11 +1,12 @@
 # flake8: noqa
+from __future__ import annotations
+
 import logging
 import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, DecimalException
-from typing import Optional
 
 import requests
 from cvss import CVSS3
@@ -106,7 +107,7 @@ class Parser:
     @classmethod
     def _get_name_and_version_from_test(
         cls, test_id: str, tests_dict: dict, artifacts_dict: dict, versions_dict: dict
-    ) -> tuple[Optional[str], Optional[str]]:
+    ) -> tuple[str | None, str | None]:
         name = None
         version = None
 
@@ -140,7 +141,7 @@ class Parser:
         return name, version
 
     @classmethod
-    def _make_cvss(cls, cvss_vector: str, vulnerability_id: str) -> Optional[CVSS]:
+    def _make_cvss(cls, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
         try:
             cvss3_obj = CVSS3(cvss_vector)
 
@@ -371,7 +372,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
     logger = logging.getLogger("sles-vulnerability-parser")
 
     @classmethod
-    def parse(cls, xml_element, config: OVALParserConfig) -> Optional[SLESOVALVulnerability]:
+    def parse(cls, xml_element, config: OVALParserConfig) -> SLESOVALVulnerability | None:
 
         identity = name = severity = description = link = None
         impact = cvss = []

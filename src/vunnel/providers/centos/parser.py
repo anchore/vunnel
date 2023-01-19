@@ -1,11 +1,11 @@
 # flake8: noqa
+from __future__ import annotations
 
 import bz2
 import hashlib
 import logging
 import os
 import re
-from typing import List
 
 import requests
 
@@ -74,7 +74,7 @@ class Parser:
         self.logger = logger
 
     @property
-    def urls(self) -> List[str]:
+    def urls(self) -> list[str]:
         return [
             self._url_,
             self._meta_url_,
