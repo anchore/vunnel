@@ -6,6 +6,8 @@ a requirement for drivers. It can store any additional metadata, accessible  as
 a dictionary and serialized to and from JSON. This metadata file gets created
 if it doesn't exist.
 """
+from __future__ import annotations
+
 import json
 import os
 

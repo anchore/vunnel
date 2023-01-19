@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import json
 import logging
@@ -35,7 +37,7 @@ class State:
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderStateSchema)
 
     @staticmethod
-    def read(root: str) -> "State":
+    def read(root: str) -> State:
         metadata_path = os.path.join(root, METADATA_FILENAME)
         with open(metadata_path, encoding="utf-8") as f:
             return fromdict(
