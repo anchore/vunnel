@@ -31,19 +31,22 @@ class GitWrapper:
     __cve_id_regex__ = re.compile(r"CVE-\S+")
     _check_cmd_ = "git --version"
     _is_git_repo_cmd_ = "git rev-parse --is-inside-work-tree"
-    _clone_cmd_ = "git clone -b master {src} {dest}"
-    _check_out_cmd_ = "git checkout master"
+    _set_remote_cmd_ = "git remote set-url origin {src}"
+    _clone_cmd_ = "git clone -b {branch} {src} {dest}"
+    _check_out_cmd_ = "git checkout {branch}"
     _pull_cmd_ = "git pull -f"
     _fetch_cmd_ = "git fetch --all"
     _pull_ff_only_cmd_ = "git pull --ff-only"
-    _reset_head_cmd_ = "git reset --hard origin/master"
     _write_graph_ = "git commit-graph write --reachable --changed-paths"
     _change_set_cmd_ = "git log --no-renames --no-merges --name-status --format=oneline {from_rev}..{to_rev}"
     _get_rev_content_cmd_ = "git show {sha}:{file}"
     _head_rev_cmd_ = "git rev-parse HEAD"
 
-    def __init__(self, source: str, checkout_dest: str, workspace: str | None = None, logger: logging.Logger | None = None):
+    def __init__(
+        self, source: str, branch: str, checkout_dest: str, workspace: str | None = None, logger: logging.Logger | None = None
+    ):
         self.src = source
+        self.branch = branch
         self.dest = checkout_dest
         self.workspace = workspace if workspace else tempfile.gettempdir()
 
@@ -83,15 +86,15 @@ class GitWrapper:
             return
 
         try:
-            self.logger.info("cloning git repository {} to {}".format(self.src, self.dest))
+            self.logger.info(f"cloning git repository {self.src} branch {self.branch} to {self.dest}")
 
-            cmd = self._clone_cmd_.format(src=self.src, dest=self.dest)
+            cmd = self._clone_cmd_.format(src=self.src, dest=self.dest, branch=self.branch)
             out = self._exec_cmd(cmd)
 
             self.logger.debug("initialized git repo, cmd: {}, output: {}".format(cmd, out.decode()))
             self._write_graph()
         except:
-            self.logger.exception("failed to clone initialize git repository {} to {}".format(self.src, self.dest))
+            self.logger.exception(f"failed to clone git repository {self.src} branch {self.branch} to {self.dest}")
             raise
 
     def parse_full_cve_revision_history(self, git_log_output: str) -> dict[str, list[GitRevision]]:
@@ -117,7 +120,8 @@ class GitWrapper:
     def sync_with_upstream(self):
         try:
             try:
-                self._exec_cmd(self._check_out_cmd_, cwd=self.dest)
+                self._exec_cmd(self._set_remote_cmd_.format(src=self.src), cwd=self.dest)
+                self._exec_cmd(self._check_out_cmd_.format(branch=self.branch), cwd=self.dest)
             except:  # nosec
                 pass
             out = self._exec_cmd(self._pull_ff_only_cmd_, cwd=self.dest)
