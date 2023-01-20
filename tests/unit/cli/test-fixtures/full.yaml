@@ -52,6 +52,15 @@ providers:
     request_timeout: 20
     allow_versions:
       - 13
+  ubuntu:
+    runtime: *runtime
+    request_timeout: 20
+    additional_versions:
+      "zzz": "24.24"
+    enable_rev_history: true
+    max_workers: 25
+    git_url: "https://xyz.abc"
+    git_branch: "yoda"
   wolfi:
     runtime: *runtime
     request_timeout: 20

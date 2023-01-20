@@ -257,6 +257,8 @@ providers:
   ubuntu:
     additional_versions: {}
     enable_rev_history: true
+    git_branch: master
+    git_url: git://git.launchpad.net/ubuntu-cve-tracker
     max_workers: 8
     request_timeout: 125
     runtime:
