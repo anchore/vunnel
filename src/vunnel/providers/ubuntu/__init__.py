@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from vunnel import provider, result, schema
 
-from .parser import Parser, default_max_workers
+from .parser import Parser, default_git_branch, default_git_url, default_max_workers
 
 
 @dataclass
@@ -21,6 +21,8 @@ class Config:
     additional_versions: dict[str, str] = field(default_factory=lambda: {})
     enable_rev_history: bool = True
     max_workers: int = default_max_workers
+    git_url: str = default_git_url
+    git_branch: str = default_git_branch
 
 
 class Provider(provider.Provider):
@@ -37,6 +39,8 @@ class Provider(provider.Provider):
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,
             max_workers=self.config.max_workers,
+            git_url=self.config.git_url,
+            git_branch=self.config.git_branch,
         )
 
     @classmethod

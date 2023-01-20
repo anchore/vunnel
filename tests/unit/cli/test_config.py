@@ -79,6 +79,15 @@ def test_full_config(helpers):
                 request_timeout=20,
                 allow_versions=[13],
             ),
+            ubuntu=providers.ubuntu.Config(
+                runtime=runtime_cfg,
+                request_timeout=20,
+                additional_versions={"zzz": "24.24"},
+                enable_rev_history=True,
+                max_workers=25,
+                git_url="https://xyz.abc",
+                git_branch="yoda",
+            ),
             wolfi=providers.wolfi.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,

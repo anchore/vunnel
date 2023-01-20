@@ -21,6 +21,8 @@ from .git import GitWrapper
 namespace = "ubuntu"
 
 default_max_workers = 8
+default_git_url = "git://git.launchpad.net/ubuntu-cve-tracker"
+default_git_branch = "master"
 
 ubuntu_pkg_version_format = "dpkg"
 ubuntu_cve_url = "http://people.ubuntu.com/~ubuntu-security/cve/{}"
@@ -580,8 +582,7 @@ class Parser:
     __payload__ = Vulnerability
 
     _bzr_src = "https://launchpad.net/ubuntu-cve-tracker"
-    _git_https = "https://git.launchpad.net/ubuntu-cve-tracker"
-    _git_src = "git://git.launchpad.net/ubuntu-cve-tracker"
+    _git_src_url = "git://git.launchpad.net/ubuntu-cve-tracker"
     _bzr_to_git_transition_commit = "dc3f64a0dfe6b1780240ff115d8a0a1b23fd00b4"
 
     _active_cve_dir = "active"
@@ -605,6 +606,8 @@ class Parser:
         additional_versions: dict[str, str] | None = None,
         enable_rev_history: bool = True,
         max_workers: int = default_max_workers,
+        git_url: str = default_git_url,
+        git_branch: str = default_git_branch,
     ):
         self.vc_workspace = os.path.join(workspace.input_path, self._vc_working_dir)
         # TODO: tech debt: this should use the results workspace with the correct schema-aware envelope
@@ -612,9 +615,10 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        self.urls = [self._git_https]
-
-        self.git_wrapper = GitWrapper(source=self._git_src, checkout_dest=self.vc_workspace, logger=logger)
+        self.git_url = git_url
+        self.git_branch = git_branch
+        self.urls = [self.git_url]
+        self.git_wrapper = GitWrapper(source=self.git_url, branch=self.git_branch, checkout_dest=self.vc_workspace, logger=logger)
 
         if additional_versions:
             ubuntu_version_names.update(additional_versions)

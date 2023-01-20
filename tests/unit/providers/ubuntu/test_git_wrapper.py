@@ -133,7 +133,7 @@ class TestGitWrapper(unittest.TestCase):
         with open(self._git_change_log_file_) as f:
             git_commit_log = f.read()
 
-        wrapper = GitWrapper(self._workspace_, self._workspace_)
+        wrapper = GitWrapper(self._workspace_, "master", self._workspace_)
 
         commits = wrapper._parse_log(git_commit_log)
 
@@ -149,7 +149,7 @@ class TestGitWrapper(unittest.TestCase):
         with open(self._git_change_log_file_) as f:
             git_commit_log = f.read()
 
-        wrapper = GitWrapper(self._workspace_, self._workspace_)
+        wrapper = GitWrapper(self._workspace_, "master", self._workspace_)
 
         commits = wrapper._parse_log(git_commit_log)
 
@@ -195,4 +195,4 @@ A       active/CVE-2013-4348
     ],
 )
 def test_parse_full_cve_revision_history(git_log_output: str, expected: dict[str, list[GitRevision]]):
-    assert GitWrapper("", "").parse_full_cve_revision_history(git_log_output) == expected
+    assert GitWrapper("", "master", "").parse_full_cve_revision_history(git_log_output) == expected
