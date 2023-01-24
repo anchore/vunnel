@@ -17,6 +17,8 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 
+from defusedxml.ElementTree import iterparse
+
 
 class OVALElementEnum(enum.Enum):
     """
@@ -423,7 +425,7 @@ def iter_parse_vulnerability_file(
             opener = gzip.open
 
         with opener(oval_file_path, "rb") as f:
-            for event, xml_element in ET.iterparse(f, events=("start", "end")):
+            for event, xml_element in iterparse(f, events=("start", "end")):
                 # gather definition
                 if event == "start" and parser_factory.get_oval_element(xml_element, parser_config):
                     ingress = True
