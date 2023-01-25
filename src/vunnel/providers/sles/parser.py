@@ -293,6 +293,7 @@ class Parser:
                             "package name and or version invalid, skipping fixed-in for %s",
                             test_id,
                         )
+                        continue
 
                     fixes.append(
                         FixedIn(
