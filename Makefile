@@ -20,7 +20,7 @@ PACKAGE_VERSION = v$(shell poetry run dunamai from git --style semver --dirty --
 COMMIT = $(shell git rev-parse HEAD)
 COMMIT_TAG = git-$(COMMIT)
 
-CHRONICLE_VERSION = v0.4.2
+CHRONICLE_VERSION = v0.5.1
 GLOW_VERSION = v1.4.1
 CRANE_VERSION = v0.12.1
 
