@@ -42,7 +42,7 @@ class Provider(provider.Provider):
 
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for release, vuln_dict in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+            for release, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
 
                     writer.write(
