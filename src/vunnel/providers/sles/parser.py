@@ -26,6 +26,7 @@ from vunnel.utils.oval_v2 import (
     iter_parse_vulnerability_file,
 )
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
+from vunnel.workspace import Workspace
 
 namespace = "sles"
 
@@ -44,15 +45,17 @@ PARSER_CONFIG = OVALParserConfig(
 
 
 class Parser:
-    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml"
-    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml"
+    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml.gz"
+    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml.gz"
     __oval_dir_path__ = "oval"
     __source_dir_path__ = "source"
 
     # this is pretty odd, but there are classmethods that need logging
     logger = logging.getLogger("sles-parser")
 
-    def __init__(self, workspace, allow_versions, download_timeout=125, logger=None):
+    def __init__(
+        self, workspace: Workspace, allow_versions: list[str], download_timeout: int = 125, logger: logging.Logger | None = None
+    ):
         self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
         self.download_timeout = download_timeout
@@ -65,8 +68,7 @@ class Parser:
         Parser.logger = logger
 
     @utils.retry_with_backoff()
-    def _download(self, major_version: str, skip_if_exists: bool = False):
-
+    def _download(self, major_version: str, skip_if_exists: bool = False) -> str:
         if not os.path.exists(self.oval_dir_path):
             self.logger.debug(f"creating workspace for OVAL source data at {self.oval_dir_path}")
             os.makedirs(self.oval_dir_path)
@@ -100,7 +102,9 @@ class Parser:
 
         with open(oval_file_path, "wb") as fp:
             for chunk in r.iter_content(chunk_size=1024):
-                fp.write(chunk)
+                if chunk:
+                    fp.write(chunk)
+                    fp.flush()
 
         return oval_file_path
 
@@ -289,6 +293,7 @@ class Parser:
                             "package name and or version invalid, skipping fixed-in for %s",
                             test_id,
                         )
+                        continue
 
                     fixes.append(
                         FixedIn(
@@ -323,7 +328,7 @@ class Parser:
 
         return results
 
-    def get(self, skip_if_exists=False):
+    def get(self, skip_if_exists: bool = False):
         parser_factory = OVALParserFactory(
             parsers=[
                 SLESVulnerabilityParser,
