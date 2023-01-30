@@ -36,6 +36,7 @@ class GitWrapper:
     _check_out_cmd_ = "git checkout {branch}"
     _pull_cmd_ = "git pull -f"
     _fetch_cmd_ = "git fetch --all"
+    _reset_cmd_ = "git reset --hard HEAD"
     _pull_ff_only_cmd_ = "git pull --ff-only"
     _write_graph_ = "git commit-graph write --reachable --changed-paths"
     _change_set_cmd_ = "git log --no-renames --no-merges --name-status --format=oneline {from_rev}..{to_rev}"
@@ -122,6 +123,7 @@ class GitWrapper:
             try:
                 self._exec_cmd(self._set_remote_cmd_.format(src=self.src), cwd=self.dest)
                 self._exec_cmd(self._check_out_cmd_.format(branch=self.branch), cwd=self.dest)
+                self._exec_cmd(self._reset_cmd_, cwd=self.dest)
             except:  # nosec
                 pass
             out = self._exec_cmd(self._pull_ff_only_cmd_, cwd=self.dest)
