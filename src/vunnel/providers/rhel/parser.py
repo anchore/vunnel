@@ -346,8 +346,7 @@ class Parser:
 
         # get all data
         self.logger.debug("parsing RHSA data using centos driver")
-        # self.rhsa_dict = rhsa_provider.get()  # TODO: ALEX, skip_if_exists seems to be intentionally not passed (or is it a bug?)
-        self.rhsa_dict = rhsa_provider.get(skip_if_exists=skip_if_exists)
+        self.rhsa_dict = rhsa_provider.get()
 
         self.urls.extend(rhsa_provider.urls)
 
