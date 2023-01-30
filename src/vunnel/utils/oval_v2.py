@@ -449,9 +449,6 @@ def iter_parse_vulnerability_file(
                                 "no parser found for oval element %s, skipping",
                                 oval_element,
                             )
-                    # else:
-                    #     # this marks the end of an xml element but does it's not an interesting oval element or may be not the whole element yet
-                    #     pass
 
                 # clear the element if doesn't need to be processed or done processing
                 if not ingress and event == "end":
