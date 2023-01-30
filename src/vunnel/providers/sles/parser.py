@@ -68,20 +68,12 @@ class Parser:
         Parser.logger = logger
 
     @utils.retry_with_backoff()
-    def _download(self, major_version: str, skip_if_exists: bool = False) -> str:
+    def _download(self, major_version: str) -> str:
         if not os.path.exists(self.oval_dir_path):
             self.logger.debug(f"creating workspace for OVAL source data at {self.oval_dir_path}")
             os.makedirs(self.oval_dir_path)
 
         oval_file_path = os.path.join(self.oval_dir_path, self.__oval_file_name__.format(major_version))
-
-        if skip_if_exists and os.path.exists(oval_file_path):
-            self.logger.debug(
-                "'skip_if_exists' flag enabled and found %s. Skipping download",
-                oval_file_path,
-            )
-            return oval_file_path
-
         download_url = self.__oval_url__.format(major_version)
         self.urls.append(download_url)
 
@@ -328,7 +320,7 @@ class Parser:
 
         return results
 
-    def get(self, skip_if_exists: bool = False):
+    def get(self):
         parser_factory = OVALParserFactory(
             parsers=[
                 SLESVulnerabilityParser,
@@ -343,7 +335,7 @@ class Parser:
         for major_version in self.allow_versions:
             try:
                 # download oval
-                oval_file_path = self._download(major_version, skip_if_exists)
+                oval_file_path = self._download(major_version)
 
                 # parse oval contents
                 parsed_dict = iter_parse_vulnerability_file(

@@ -94,7 +94,7 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
 
 
-def test_provider_schema(helpers, disable_get_requests):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
@@ -106,6 +106,12 @@ def test_provider_schema(helpers, disable_get_requests):
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
     shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
+
+    def mock_download():
+        return None
+
+    monkeypatch.setattr(p.parser, "_download_json", mock_download)
+    monkeypatch.setattr(p.parser, "_download_dsa", mock_download)
 
     p.update(None)
 

@@ -58,50 +58,44 @@ class Parser:
         self.logger = logger
 
     @utils.retry_with_backoff()
-    def _download_json(self, skip_if_exists=False):
+    def _download_json(self):
         """
         Downloads debian json file
         :return:
         """
-        if skip_if_exists and os.path.exists(self.json_file_path):
-            self.logger.debug(f"'skip_if_exists' flag enabled and found {self.json_file_path}. Skipping download")
-        else:
-            try:
-                self.logger.info(f"downloading debian security tracker data from {self._dsa_url_}")
+        try:
+            self.logger.info(f"downloading debian security tracker data from {self._dsa_url_}")
 
-                r = requests.get(self._json_url_, timeout=self.download_timeout)
-                if r.status_code != 200:
-                    raise Exception(f"GET {self._json_url_} failed with HTTP error {r.status_code}")
+            r = requests.get(self._json_url_, timeout=self.download_timeout)
+            if r.status_code != 200:
+                raise Exception(f"GET {self._json_url_} failed with HTTP error {r.status_code}")
 
-                json.loads(r.text)  # quick check if json is valid
-                with open(self.json_file_path, "w", encoding="utf-8") as OFH:
-                    OFH.write(r.text)
+            json.loads(r.text)  # quick check if json is valid
+            with open(self.json_file_path, "w", encoding="utf-8") as OFH:
+                OFH.write(r.text)
 
-            except Exception:
-                self.logger.exception("Error downloading debian json file")
-                raise
+        except Exception:
+            self.logger.exception("Error downloading debian json file")
+            raise
 
     @utils.retry_with_backoff()
-    def _download_dsa(self, skip_if_exists=False):
+    def _download_dsa(self):
         """
         Downloads debian dsa file
         :return:
         """
-        if skip_if_exists and os.path.exists(self.dsa_file_path):
-            self.logger.debug(f"'skip_if_exists' flag enabled and found {self.dsa_file_path}. Skipping download")
-        else:
-            try:
-                self.logger.info(f"downloading DSA from {self._dsa_url_}")
-                r = requests.get(self._dsa_url_, timeout=self.download_timeout)
-                if r.status_code != 200:
-                    raise Exception(f"GET {self._dsa_url_} failed with HTTP error {r.status_code}")
+        try:
+            self.logger.info(f"downloading DSA from {self._dsa_url_}")
+            r = requests.get(self._dsa_url_, timeout=self.download_timeout)
+            if r.status_code != 200:
+                raise Exception(f"GET {self._dsa_url_} failed with HTTP error {r.status_code}")
 
-                with open(self.dsa_file_path, "w", encoding="utf-8") as OFH:
-                    OFH.write(r.text)
+            with open(self.dsa_file_path, "w", encoding="utf-8") as OFH:
+                OFH.write(r.text)
 
-            except Exception:
-                self.logger.exception("error downloading debian DSA file")
-                raise
+        except Exception:
+            self.logger.exception("error downloading debian DSA file")
+            raise
 
     def _get_cve_to_dsalist(self, dsa):
         """
@@ -462,10 +456,10 @@ class Parser:
 
         return vuln_records
 
-    def get(self, skip_if_exists=False):
+    def get(self):
         # download the files
-        self._download_json(skip_if_exists)
-        self._download_dsa(skip_if_exists)
+        self._download_json()
+        self._download_dsa()
 
         # normalize dsa list first
         ns_cve_dsalist = self._normalize_dsa_list()

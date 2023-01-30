@@ -370,7 +370,7 @@ def disable_get_requests(monkeypatch):
     monkeypatch.setattr(parser.requests, "get", disabled)
 
 
-def test_provider_schema(helpers, disable_get_requests):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
@@ -379,6 +379,11 @@ def test_provider_schema(helpers, disable_get_requests):
 
     mock_data_path = helpers.local_dir("test-fixtures/mock_data")
     shutil.copy(mock_data_path, workspace.input_dir / "com.oracle.elsa-all.xml")
+
+    def mock_download():
+        return None
+
+    monkeypatch.setattr(p.parser, "_download", mock_download)
 
     p.update(None)
 
