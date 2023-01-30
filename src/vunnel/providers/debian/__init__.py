@@ -48,7 +48,7 @@ class Provider(provider.Provider):
 
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for relno, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+            for relno, vuln_id, record in self.parser.get():
                 vuln_id = vuln_id.lower()
                 writer.write(
                     identifier=os.path.join(f"debian:{relno}", vuln_id),

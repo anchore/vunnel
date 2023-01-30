@@ -98,51 +98,47 @@ class Parser:
             raise Exception("Error fetching/processing sha256")
 
     @utils.retry_with_backoff()
-    def _download(self, skip_if_exists=False):
+    def _download(self):
+        download = True
 
-        if skip_if_exists and os.path.exists(self.xml_file_path):
-            self.logger.debug("'skip_if_exists' flag enabled and found {}. Skipping download".format(self.xml_file_path))
+        if os.path.exists(self.xml_file_path) and os.path.exists(self.xml_sha_file_path):
+            with open(self.xml_sha_file_path) as fp:
+                previous = fp.read()
+                previous = previous.strip()
+
+            latest = self._get_sha256()
+            self.logger.debug("previous sha256: {}, latest sha256: {}".format(previous, latest))
+            download = previous.lower() != latest.lower()
+
+        if download:
+            try:
+                self.logger.info("downloading RHSA from {}".format(self._url_))
+                r = requests.get(self._url_, stream=True, timeout=self.download_timeout)
+                if r.status_code == 200:
+                    # compute the sha256 as the file is decompressed
+                    sha256 = hashlib.sha256()
+                    with open(self.xml_file_path, "wb") as extracted:
+                        decompressor = bz2.BZ2Decompressor()
+                        for chunk in r.iter_content(chunk_size=1024):
+                            uncchunk = decompressor.decompress(chunk)
+                            extracted.write(uncchunk)
+                            sha256.update(uncchunk)
+
+                    sha256sum = str(sha256.hexdigest()).lower()
+                    self.logger.debug("sha256 for {}: {}".format(self.xml_file_path, sha256sum))
+
+                    # save the sha256 to another file
+                    with open(self.xml_sha_file_path, "w") as fp:
+                        fp.write(sha256sum)
+
+                    return sha256sum
+                else:
+                    raise Exception("GET {} failed with HTTP error {}".format(self._url_, r.status_code))
+            except Exception:
+                self.logger.exception("error downloading RHSA file")
+                raise Exception("error downloading RHSA file")
         else:
-            download = True
-
-            if os.path.exists(self.xml_file_path) and os.path.exists(self.xml_sha_file_path):
-                with open(self.xml_sha_file_path) as fp:
-                    previous = fp.read()
-                    previous = previous.strip()
-
-                latest = self._get_sha256()
-                self.logger.debug("previous sha256: {}, latest sha256: {}".format(previous, latest))
-                download = previous.lower() != latest.lower()
-
-            if download:
-                try:
-                    self.logger.info("downloading RHSA from {}".format(self._url_))
-                    r = requests.get(self._url_, stream=True, timeout=self.download_timeout)
-                    if r.status_code == 200:
-                        # compute the sha256 as the file is decompressed
-                        sha256 = hashlib.sha256()
-                        with open(self.xml_file_path, "wb") as extracted:
-                            decompressor = bz2.BZ2Decompressor()
-                            for chunk in r.iter_content(chunk_size=1024):
-                                uncchunk = decompressor.decompress(chunk)
-                                extracted.write(uncchunk)
-                                sha256.update(uncchunk)
-
-                        sha256sum = str(sha256.hexdigest()).lower()
-                        self.logger.debug("sha256 for {}: {}".format(self.xml_file_path, sha256sum))
-
-                        # save the sha256 to another file
-                        with open(self.xml_sha_file_path, "w") as fp:
-                            fp.write(sha256sum)
-
-                        return sha256sum
-                    else:
-                        raise Exception("GET {} failed with HTTP error {}".format(self._url_, r.status_code))
-                except Exception:
-                    self.logger.exception("error downloading RHSA file")
-                    raise Exception("error downloading RHSA file")
-            else:
-                self.logger.info("stored csum matches server csum. Skipping download")
+            self.logger.info("stored csum matches server csum. Skipping download")
 
         return None
 
@@ -150,8 +146,8 @@ class Parser:
         # normalize and return results
         return parse(self.xml_file_path, self.config)
 
-    def get(self, skip_if_exists=False):
+    def get(self):
         # download
-        self._download(skip_if_exists=skip_if_exists)
+        self._download()
 
         return self.parse()

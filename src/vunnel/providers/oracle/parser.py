@@ -66,11 +66,7 @@ class Parser:
         return [self._url_]
 
     @utils.retry_with_backoff()
-    def _download(self, skip_if_exists=False):
-        if skip_if_exists and os.path.exists(self.xml_file_path):
-            self.logger.debug(f"'skip_if_exists' flag enabled and found {self.xml_file_path}. Skipping download")
-            return
-
+    def _download(self):
         try:
             self.logger.info(f"downloading ELSA from {self._url_}")
             r = requests.get(self._url_, stream=True, timeout=self.download_timeout)
@@ -99,9 +95,9 @@ class Parser:
         filtered_results = filterer.filter(raw_results)
         return filtered_results
 
-    def get(self, skip_if_exists=False):
+    def get(self):
         # download
-        self._download(skip_if_exists=skip_if_exists)
+        self._download()
         return self._parse_oval_data(self.xml_file_path, self.config)
 
 

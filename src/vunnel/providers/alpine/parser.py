@@ -70,7 +70,7 @@ class Parser:
     def urls(self) -> list[str]:
         return list(self._urls)
 
-    def _download(self, skip_if_exists=False):
+    def _download(self):
         """
         Downloads alpine sec db files
         :return:
@@ -81,62 +81,57 @@ class Parser:
         if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
 
-        if skip_if_exists and os.path.exists(self.secdb_dir_path):
-            self.logger.debug(
-                "'skip_if_exists' flag enabled and found source under {}. Skipping download".format(self.secdb_dir_path)
-            )
-        else:
-            links = []
-            try:
-                if not os.path.exists(self.secdb_dir_path):
-                    os.makedirs(self.secdb_dir_path, exist_ok=True)
+        links = []
+        try:
+            if not os.path.exists(self.secdb_dir_path):
+                os.makedirs(self.secdb_dir_path, exist_ok=True)
 
-                self.logger.info("downloading alpine secdb metadata from: {}".format(self.metadata_url))
-                r = requests.get(self.metadata_url, timeout=self.download_timeout)
-                if r.status_code == 200:
-                    try:
-                        self.logger.debug("HTML parsing secdb landing page content for links")
-                        parser = SecdbLandingParser()
-                        parser.feed(r.text)
-                        links = parser.links
-                    except:
-                        self.logger.warning("unable to html parse secdb landing page content for links")
+            self.logger.info("downloading alpine secdb metadata from: {}".format(self.metadata_url))
+            r = requests.get(self.metadata_url, timeout=self.download_timeout)
+            if r.status_code == 200:
+                try:
+                    self.logger.debug("HTML parsing secdb landing page content for links")
+                    parser = SecdbLandingParser()
+                    parser.feed(r.text)
+                    links = parser.links
+                except:
+                    self.logger.warning("unable to html parse secdb landing page content for links")
 
-                    if not links:
-                        self.logger.debug("string parsing secdb landing page content for links")
-                        links = re.findall(self._link_finder_regex_, r.text)
-                else:
-                    r.raise_for_status()
-            except Exception:
-                self.logger.exception("error downloading or parsing alpine secdb metadata")
-                raise
-
-            if links:
-                self.logger.debug("found release specific secdb links: {}".format(links))
+                if not links:
+                    self.logger.debug("string parsing secdb landing page content for links")
+                    links = re.findall(self._link_finder_regex_, r.text)
             else:
-                raise Exception("unable to find release specific secdb links")
+                r.raise_for_status()
+        except Exception:
+            self.logger.exception("error downloading or parsing alpine secdb metadata")
+            raise
 
-            for link in links:
-                if link not in ignore_links:
-                    try:
-                        rel = link.strip("/")
-                        rel_dir = os.path.join(self.secdb_dir_path, rel)
-                        os.makedirs(rel_dir, exist_ok=True)
-                        for db_type in self._db_types:
-                            file_name = "{}.yaml".format(db_type)
-                            download_url = "/".join([self.metadata_url, rel, file_name])
-                            self._urls.add(download_url)
-                            self.logger.info("Downloading secdb {} {}".format(rel, db_type))
-                            r = requests.get(download_url, stream=True, timeout=self.download_timeout)
-                            if r.status_code == 200:
-                                file_path = os.path.join(rel_dir, file_name)
-                                with open(file_path, "wb") as fp:
-                                    for chunk in r.iter_content():
-                                        fp.write(chunk)
-                            else:
-                                r.raise_for_status()
-                    except:
-                        self.logger.exception("ignoring error processing secdb for {}".format(link))
+        if links:
+            self.logger.debug("found release specific secdb links: {}".format(links))
+        else:
+            raise Exception("unable to find release specific secdb links")
+
+        for link in links:
+            if link not in ignore_links:
+                try:
+                    rel = link.strip("/")
+                    rel_dir = os.path.join(self.secdb_dir_path, rel)
+                    os.makedirs(rel_dir, exist_ok=True)
+                    for db_type in self._db_types:
+                        file_name = "{}.yaml".format(db_type)
+                        download_url = "/".join([self.metadata_url, rel, file_name])
+                        self._urls.add(download_url)
+                        self.logger.info("Downloading secdb {} {}".format(rel, db_type))
+                        r = requests.get(download_url, stream=True, timeout=self.download_timeout)
+                        if r.status_code == 200:
+                            file_path = os.path.join(rel_dir, file_name)
+                            with open(file_path, "wb") as fp:
+                                for chunk in r.iter_content():
+                                    fp.write(chunk)
+                        else:
+                            r.raise_for_status()
+                except:
+                    self.logger.exception("ignoring error processing secdb for {}".format(link))
 
     def _load(self):
         """
@@ -248,13 +243,13 @@ class Parser:
 
         return vuln_dict
 
-    def get(self, skip_if_exists: bool = False):
+    def get(self):
         """
         Download, load and normalize alpine sec db and return a dict of releae - list of vulnerability records
         :return:
         """
         # download the data
-        self._download(skip_if_exists)
+        self._download()
 
         for release, dbtype_data_dict in self._load():
             # normalize the loaded data

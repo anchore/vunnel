@@ -84,7 +84,7 @@ def disable_get_requests(monkeypatch):
     monkeypatch.setattr(parser.requests, "get", disabled)
 
 
-def test_provider_schema(helpers, disable_get_requests):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
@@ -93,6 +93,11 @@ def test_provider_schema(helpers, disable_get_requests):
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
     shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
+
+    def mock_download(self, *args, **kwargs):
+        pass
+
+    monkeypatch.setattr(p.parser, "_download_rss", mock_download)
 
     p.update(None)
 

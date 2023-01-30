@@ -6,7 +6,7 @@ import pytest
 
 from vunnel import result, workspace
 from vunnel.providers import centos
-from vunnel.providers.centos.parser import Parser
+from vunnel.providers.centos import Parser, parser
 
 
 @pytest.mark.parametrize(
@@ -83,6 +83,14 @@ def test_parser(tmpdir, helpers, mock_data_path, full_entry):
     assert vuln == full_entry
 
 
+@pytest.fixture
+def disable_get_requests(monkeypatch):
+    def disabled(*args, **kwargs):
+        raise RuntimeError("requests disabled but HTTP GET attempted")
+
+    monkeypatch.setattr(parser.requests, "get", disabled)
+
+
 @pytest.mark.parametrize(
     "mock_data_path,expected_written_entries",
     [
@@ -90,7 +98,7 @@ def test_parser(tmpdir, helpers, mock_data_path, full_entry):
         ("test-fixtures/centos-7-entry", 1),
     ],
 )
-def test_provider_schema(helpers, mock_data_path, expected_written_entries):
+def test_provider_schema(helpers, mock_data_path, expected_written_entries, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=centos.Provider.name())
     mock_data_path = helpers.local_dir(mock_data_path)
 
@@ -101,6 +109,12 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries):
         config=c,
     )
     shutil.copy(mock_data_path, p.parser.xml_file_path)
+
+    def mock_download():
+        return None
+
+    monkeypatch.setattr(p.parser, "_download", mock_download)
+
     p.update(None)
 
     assert expected_written_entries == workspace.num_result_entries()

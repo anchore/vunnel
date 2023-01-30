@@ -48,22 +48,19 @@ class Parser:
         self.logger = logger
 
     @utils.retry_with_backoff()
-    def _download_rss(self, rss_url, rss_file, skip_if_exists=False):
-        if skip_if_exists and os.path.exists(rss_file):
-            self.logger.debug(f"'skip_if_exists' flag enabled and found {rss_file}. Skipping download")
-        else:
-            try:
-                self.logger.info(f"downloading amazon security advisory from {rss_url}")
-                self.urls.append(rss_url)
-                r = requests.get(rss_url, timeout=self.download_timeout)
-                if r.status_code == 200:
-                    with open(rss_file, "w", encoding="utf-8") as fp:
-                        fp.write(r.text)
-                else:
-                    raise Exception(f"GET {rss_url} failed with HTTP error {r.status_code}")
-            except Exception:
-                self.logger.exception("error downloading amazon linux vulnerability feeds")
-                raise
+    def _download_rss(self, rss_url, rss_file):
+        try:
+            self.logger.info(f"downloading amazon security advisory from {rss_url}")
+            self.urls.append(rss_url)
+            r = requests.get(rss_url, timeout=self.download_timeout)
+            if r.status_code == 200:
+                with open(rss_file, "w", encoding="utf-8") as fp:
+                    fp.write(r.text)
+            else:
+                raise Exception(f"GET {rss_url} failed with HTTP error {r.status_code}")
+        except Exception:
+            self.logger.exception("error downloading amazon linux vulnerability feeds")
+            raise
 
     def _parse_rss(self, file_path):
         self.logger.debug(f"parsing RSS data from {file_path}")
@@ -99,7 +96,7 @@ class Parser:
     @utils.retry_with_backoff()
     def _get_alas_html(self, alas_url, alas_file, skip_if_exists=True):
         if skip_if_exists and os.path.exists(alas_file):  # read alas from disk if its available
-            self.logger.debug(f"loading ALAS from {alas_file}")
+            self.logger.debug(f"loading existing ALAS from {alas_file}")
             with open(alas_file, encoding="utf-8") as fp:
                 content = fp.read()
             return content
@@ -136,7 +133,7 @@ class Parser:
             rss_file = os.path.join(self.workspace.input_path, self._rss_file_name_.format(version))
             html_dir = os.path.join(self.workspace.input_path, self._html_dir_name_.format(version))
 
-            self._download_rss(url, rss_file, skip_if_exists)
+            self._download_rss(url, rss_file)
 
             # parse rss for alas summaries
             alas_summaries = self._parse_rss(rss_file)
