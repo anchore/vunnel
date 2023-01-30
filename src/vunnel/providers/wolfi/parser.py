@@ -131,23 +131,6 @@ class Parser:
                             vuln_record["Vulnerability"]["NamespaceName"] = namespace + ":" + str(release)
                             vuln_record["Vulnerability"]["Link"] = "http://cve.mitre.org/cgi-bin/cvename.cgi?name=" + str(vid)
                             vuln_record["Vulnerability"]["Severity"] = "Unknown"
-
-                            # lookup nvd record only when creating the vulnerability, no point looking it up every time
-                            nvd_severity = None
-                            # TODO: ALEX fix this in grype-db-builder
-                            # if session:
-                            #     try:
-                            #         nvd_severity = nvd.get_severity(
-                            #             vid, session=session
-                            #         )
-                            #     except Exception:
-                            #         self.logger.exception(
-                            #             "Ignoring error processing nvdv2 record"
-                            #         )
-
-                            # use nvd severity
-                            if nvd_severity:
-                                vuln_record["Vulnerability"]["Severity"] = nvd_severity
                         else:
                             vuln_record = vuln_dict[vid]
 
