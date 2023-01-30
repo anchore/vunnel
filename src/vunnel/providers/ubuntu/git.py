@@ -1,6 +1,7 @@
 # flake8: noqa
 from __future__ import annotations
 
+import getpass
 import logging
 import os
 import re
@@ -9,6 +10,7 @@ import shutil
 import subprocess  # nosec
 import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 
 from vunnel import utils
 
@@ -63,8 +65,25 @@ class GitWrapper:
             self.logger.exception('could not find required "git" executable. Please install git on host')
             raise
 
+    def _prevent_repo_dubious_ownership(self, destination: str):
+        """
+        Newer versions of git now require that the repo directory and .git directory are
+        either owned by the current user or the repo directory must be set as a safe
+        directory using `git config --global --add safe.directory <path>`.
+
+        https://medium.com/@thecodinganalyst/git-detect-dubious-ownership-in-repository-e7f33037a8f
+        https://github.blog/2022-04-12-git-security-vulnerability-announced/
+        """
+        current_user = getpass.getuser()
+
+        for p in [Path(destination), Path(destination).joinpath(".git/")]:
+            if p.exists() and p.owner() != current_user:
+                self._exec_cmd(f"git config --global --add safe.directory {destination}")
+                break
+
     def _check(self, destination):
         try:
+            self._prevent_repo_dubious_ownership(destination=destination)
             cmd = self._is_git_repo_cmd_
             out = self._exec_cmd(cmd, cwd=destination)
             self.logger.debug("check for git repository, cmd: {}, output: {}".format(cmd, out.decode()))
