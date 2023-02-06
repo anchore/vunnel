@@ -591,9 +591,7 @@ class Parser:
     _vc_working_dir = "ubuntu-cve-tracker"
     _normalized_cve_dir = "normalized-cve-data"
     _last_processed_rev_file = "bzr-last-processed-rev"
-    _last_processed_rev_key = "bzr_last_processed_rev"
     _last_processed_rev_file_git = "git-last-processed-rev"
-    _last_processed_rev_key_git = "git_last_processed_rev"
 
     data_filename_regex = re.compile(r"(active|retired|ignored)/CVE-[0-9]{4}-[0-9]+")
 
@@ -944,7 +942,7 @@ class Parser:
         cve_rel_path: str,
         to_be_merged_dpt_list: list[DistroPkg],
         priority: str | None = None,
-        saved_state: Any = None,
+        saved_state: CVEFile | None = None,
     ):
         t = time.time()
         self.logger.debug(f"processing CVE revision history for: {cve_rel_path}")
@@ -964,10 +962,8 @@ class Parser:
         pending_dpt_list: list[DistroPkg] = copy.deepcopy(to_be_merged_dpt_list)
 
         # last processed commit
-        if saved_state and self._last_processed_rev_key_git in saved_state:
-            saved_cve_last_processed_rev = saved_state[self._last_processed_rev_key_git]
-        elif saved_state and self._last_processed_rev_key in saved_state:
-            saved_cve_last_processed_rev = self._bzr_to_git_transition_commit
+        if saved_state and saved_state.git_last_processed_rev:
+            saved_cve_last_processed_rev = saved_state.git_last_processed_rev
         else:
             saved_cve_last_processed_rev = None
 
