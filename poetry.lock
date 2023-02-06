@@ -366,14 +366,14 @@ toml = ["tomli"]
 
 [[package]]
 name = "cvss"
-version = "2.5"
+version = "2.6"
 description = "CVSS2/3 library with interactive calculator for Python 2 and Python 3"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cvss-2.5-py2.py3-none-any.whl", hash = "sha256:c1a48f8a6024642b986c51182a79d7aa2c05d1d75c57ad3496b9ab0451a8e89a"},
-    {file = "cvss-2.5.tar.gz", hash = "sha256:63f648cffb2647498cf28646a7004fe0f48872c9ba7d8653bebd710409f8ba0e"},
+    {file = "cvss-2.6-py2.py3-none-any.whl", hash = "sha256:7006a025e1587f94fc7ce6bd2f3fa10b27a85d2f843d72d4346122779919c63b"},
+    {file = "cvss-2.6.tar.gz", hash = "sha256:1e8f0c7ac1c1d7f4fb6d901950aa216358809de25ee7c41bc138615a23936c80"},
 ]
 
 [[package]]
@@ -1695,7 +1695,7 @@ greenlet = {version = "!=0.4.17", markers = "python_version >= \"3\" and (platfo
 
 [package.extras]
 aiomysql = ["aiomysql", "greenlet (!=0.4.17)"]
-aiosqlite = ["aiosqlite", "greenlet (!=0.4.17)", "typing_extensions (!=3.10.0.1)"]
+aiosqlite = ["aiosqlite", "greenlet (!=0.4.17)", "typing-extensions (!=3.10.0.1)"]
 asyncio = ["greenlet (!=0.4.17)"]
 asyncmy = ["asyncmy (>=0.2.3,!=0.2.4)", "greenlet (!=0.4.17)"]
 mariadb-connector = ["mariadb (>=1.0.1,!=1.1.2)"]
@@ -1705,14 +1705,14 @@ mssql-pyodbc = ["pyodbc"]
 mypy = ["mypy (>=0.910)", "sqlalchemy2-stubs"]
 mysql = ["mysqlclient (>=1.4.0)", "mysqlclient (>=1.4.0,<2)"]
 mysql-connector = ["mysql-connector-python"]
-oracle = ["cx_oracle (>=7)", "cx_oracle (>=7,<8)"]
+oracle = ["cx-oracle (>=7)", "cx-oracle (>=7,<8)"]
 postgresql = ["psycopg2 (>=2.7)"]
 postgresql-asyncpg = ["asyncpg", "greenlet (!=0.4.17)"]
 postgresql-pg8000 = ["pg8000 (>=1.16.6,!=1.29.0)"]
 postgresql-psycopg2binary = ["psycopg2-binary"]
 postgresql-psycopg2cffi = ["psycopg2cffi"]
 pymysql = ["pymysql", "pymysql (<1)"]
-sqlcipher = ["sqlcipher3_binary"]
+sqlcipher = ["sqlcipher3-binary"]
 
 [[package]]
 name = "stevedore"
@@ -2052,4 +2052,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "0df64ca5e8b58684d36ee92390d3863f33849710274d165bb41e226349af1550"
+content-hash = "d1d7d39739b1994e3930d3db71e8be48002080ffc3dff881085a1ff36fb86d9b"
