@@ -13,6 +13,7 @@ RED := $(shell tput -T linux setaf 1)
 RESET := $(shell tput -T linux sgr0)
 TITLE := $(BOLD)$(PURPLE)
 SUCCESS := $(BOLD)$(GREEN)
+ERROR := $(BOLD)$(RED)
 
 # this is the python package version for vunnel, based off of the git state
 # note: this should always have a prefixed "v"
@@ -29,6 +30,10 @@ ifndef PACKAGE_VERSION
 	$(error PACKAGE_VERSION is not set)
 endif
 
+.DEFAULT_GOAL := all
+
+.PHONY: all
+all: static-analysis test  ## Run all validations
 
 $(TEMP_DIR):
 	mkdir -p $(TEMP_DIR)
@@ -39,19 +44,28 @@ bootstrap: $(TEMP_DIR)  ## Download and install all tooling dependencies
 	GOBIN="$(abspath $(TEMP_DIR))" go install github.com/charmbracelet/glow@$(GLOW_VERSION)
 	GOBIN="$(abspath $(TEMP_DIR))" go install github.com/google/go-containerregistry/cmd/crane@$(CRANE_VERSION)
 
-.PHONY: all
-all: static-analysis test  ## Run all validations
-
 .PHONY: test
 test: unit  ## Run all tests
 
 .PHONY: static-analysis
-static-analysis:  ## Run all static analyses
-	poetry run pre-commit run -a --hook-stage push
+static-analysis: virtual-env-check  ## Run all static analyses
+	pre-commit run -a --hook-stage push
+
+.PHONY: lint-fix
+lint-fix: virtual-env-check  ## Fix linting issues (ruff)
+	ruff check . --fix
+
+.PHONY: format
+format: virtual-env-check  ## Format all code (black)
+	black src tests
+
+.PHONY: check-types
+check-types: virtual-env-check  ## Run type checks (mypy)
+	mypy --config-file ./pyproject.toml src/vunnel
 
 .PHONY: unit
-unit:  ## Run unit tests
-	poetry run pytest --cov-report html --cov vunnel -v tests/unit/
+unit: virtual-env-check  ## Run unit tests
+	pytest --cov-report html --cov vunnel -v tests/unit/
 
 .PHONY: version
 version:
@@ -71,22 +85,28 @@ ci-check:
 	@.github/scripts/ci-check.sh
 
 .PHONY: ci-publish-commit
-ci-publish-commit: ci-check  ## Publish a commit (for use in CI only)
+ci-publish-commit: ci-check
 	docker push $(IMAGE_NAME):$(COMMIT_TAG)
 
 .PHONY: ci-promote-release
-ci-promote-release: ci-check  ## Promote an existing commit build as a release (for use in CI only)
+ci-promote-release: ci-check
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) $(PACKAGE_VERSION)
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) latest
 
 .PHONY: changelog
 changelog:
-	@$(CHRONICLE) -n . > CHANGELOG.md
+	@$(CHRONICLE) -vvv -n . > CHANGELOG.md
 	@$(GLOW) CHANGELOG.md
 
 .PHONY: trigger-release
 trigger-release:
 	@.github/scripts/trigger-release.sh
+
+virtual-env-check:
+	@ if [ "${VIRTUAL_ENV}" = "" ]; then \
+		echo "$(ERROR)Not in a virtual environment. Try running with 'poetry run' or enter a 'poetry shell' session.$(RESET)"; \
+		exit 1; \
+	fi
 
 .PHONY: help
 help:

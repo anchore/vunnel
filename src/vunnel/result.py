@@ -6,14 +6,16 @@ import logging
 import os
 import time
 from dataclasses import asdict, dataclass
-from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import orjson
 import sqlalchemy as db
 
-from .schema import Schema
-from .workspace import Workspace
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from .schema import Schema
+    from .workspace import Workspace
 
 
 @dataclass
@@ -57,10 +59,9 @@ class StoreStrategy(str, enum.Enum):
     def store(self, *args: Any, **kwargs: Any) -> Store:
         if self == StoreStrategy.FLAT_FILE:
             return FlatFileStore(*args, **kwargs)
-        elif self == StoreStrategy.SQLITE:
+        if self == StoreStrategy.SQLITE:
             return SQLiteStore(*args, **kwargs)
-        else:
-            raise ValueError(f"unsupported result store strategy: {self!r}")
+        raise ValueError(f"unsupported result store strategy: {self!r}")
 
 
 class FlatFileStore(Store):
@@ -76,11 +77,11 @@ class FlatFileStore(Store):
             if self.skip_duplicates and os.path.getmtime(filepath) >= self.start:
                 self.logger.warning(f"{identifier!r} entry already written (skipping)")
                 return
-            self.logger.trace(f"overwriting existing file: {filepath!r}")  # type: ignore
+            self.logger.trace(f"overwriting existing file: {filepath!r}")  # type: ignore[attr-defined]
 
         with open(filepath, "wb") as f:
-            self.logger.trace(f"writing record to {filepath!r}")  # type: ignore
-            f.write(orjson.dumps(asdict(record), f))  # type: ignore
+            self.logger.trace(f"writing record to {filepath!r}")  # type: ignore[attr-defined]
+            f.write(orjson.dumps(asdict(record), f))  # type: ignore[arg-type]
 
     def close(self) -> None:
         pass
@@ -97,7 +98,7 @@ class SQLiteStore(Store):
         self.table = None
 
         @db.event.listens_for(db.engine.Engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore
+        def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
             cursor = dbapi_connection.cursor()
             # cursor.execute("pragma journal_mode=OFF")
             cursor.execute("PRAGMA synchronous=NORMAL")
@@ -107,7 +108,7 @@ class SQLiteStore(Store):
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
             self.engine = db.create_engine(f"sqlite:///{self.db_file_path}")
-            self.conn = self.engine.connect()  # type: ignore
+            self.conn = self.engine.connect()  # type: ignore[attr-defined]
             self.table = self._create_table()
         return self.conn, self.table
 
@@ -137,7 +138,7 @@ class SQLiteStore(Store):
             if self.skip_duplicates:
                 self.logger.warning(f"{identifier!r} entry already written (skipping)")
                 return
-            self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore
+            self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore[attr-defined]
             statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
         else:
             statement = db.insert(table).values(id=identifier, record=record_str)

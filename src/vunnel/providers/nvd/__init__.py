@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-import datetime
 import os
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
+
+if TYPE_CHECKING:
+    import datetime
 
 
 @dataclass
@@ -14,7 +17,7 @@ class Config:
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
             existing_results=provider.ResultStatePolicy.KEEP,
-        )
+        ),
     )
     request_timeout: int = 125
     api_key: str = "env:NVD_API_KEY"
@@ -42,7 +45,7 @@ class Provider(provider.Provider):
         if self.config.runtime.skip_if_exists and config.runtime.existing_results != provider.ResultStatePolicy.KEEP:
             raise ValueError(
                 "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' "
-                + "(otherwise incremental updates will fail)"
+                "(otherwise incremental updates will fail)",
             )
 
         self.schema = schema.NVDSchema()
@@ -60,7 +63,8 @@ class Provider(provider.Provider):
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
             for identifier, record in self.manager.get(
-                skip_if_exists=self.config.runtime.skip_if_exists, last_updated=last_updated
+                skip_if_exists=self.config.runtime.skip_if_exists,
+                last_updated=last_updated,
             ):
                 writer.write(
                     identifier=identifier.lower(),

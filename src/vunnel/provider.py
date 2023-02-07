@@ -42,7 +42,7 @@ class OnErrorConfig:
     action: OnErrorAction = OnErrorAction.FAIL
     retry_count: int = 3
     retry_delay: int = 5
-    input: InputStatePolicy = InputStatePolicy.KEEP
+    input: InputStatePolicy = InputStatePolicy.KEEP  # noqa: A003
     results: ResultStatePolicy = ResultStatePolicy.KEEP
 
     def __post_init__(self) -> None:
@@ -124,7 +124,7 @@ class Provider(abc.ABC):
         self.workspace.create()
         try:
             self._update()
-        except Exception as e:  # noqa
+        except Exception as e:
             self._on_error(e)
 
     def _on_error(self, e: Exception) -> None:
@@ -150,7 +150,7 @@ class Provider(abc.ABC):
                     self._update()
                     last_exception = None
                     break
-                except Exception as ex:  # noqa
+                except Exception as ex:
                     self.logger.error(f"error during update (attempt {attempt}): {e}")
                     self._on_error_handle_state()
                     last_exception = ex
@@ -169,7 +169,7 @@ class Provider(abc.ABC):
         extra = []
         prefix = ""
         if getattr(self, "config", None):
-            extra.append(f"config={self.config}")  # type: ignore
+            extra.append(f"config={self.config}")  # type: ignore[attr-defined]
         if extra:
             prefix = ", "
         return f"Provider(name={self.name()}, input={self.workspace.input_path}{prefix}{', '.join(extra)})"

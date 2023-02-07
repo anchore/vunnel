@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import datetime
 import os
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 
 from .parser import Parser, namespace
+
+if TYPE_CHECKING:
+    import datetime
 
 
 @dataclass
@@ -15,7 +18,7 @@ class Config:
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
             existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
-        )
+        ),
     )
     request_timeout: int = 125
 
