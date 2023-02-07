@@ -1810,14 +1810,14 @@ files = [
 
 [[package]]
 name = "types-requests"
-version = "2.28.11.8"
+version = "2.28.11.9"
 description = "Typing stubs for requests"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "types-requests-2.28.11.8.tar.gz", hash = "sha256:e67424525f84adfbeab7268a159d3c633862dafae15c5b19547ce1b55954f0a3"},
-    {file = "types_requests-2.28.11.8-py3-none-any.whl", hash = "sha256:61960554baca0008ae7e2db2bd3b322ca9a144d3e80ce270f5fb640817e40994"},
+    {file = "types-requests-2.28.11.9.tar.gz", hash = "sha256:b942e832566810c4b521c2ae70c6cd990abd7f518e0c661d9a8d90a29b1cd19a"},
+    {file = "types_requests-2.28.11.9-py3-none-any.whl", hash = "sha256:8fd62803b8830d8f88591a40d95e92a34e2495fff052b8d7f713a5008a5fb0fa"},
 ]
 
 [package.dependencies]
@@ -2052,4 +2052,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "9842ff647dde14c894bc557bb4f9e5d0eca1e263f5b8575162bed6453895af2a"
+content-hash = "4c052ff9b216d85030ddf268c640dbad793bc481ac11f06e512faa243ea82500"
