@@ -54,7 +54,7 @@ autoflake = "^2.0.1"
 pytest-mock = "^3.10.0"
 pytest-xdist = "^3.1.0"
 unimport = "^0.12.3"
-types-requests = "^2.28.11.9"
+types-requests = "^2.28.11.12"
 dunamai = "^1.15.0"
 
 [build-system]
