@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from vunnel import provider
 from vunnel.providers import (
     alpine,
     amazon,
@@ -16,6 +15,9 @@ from vunnel.providers import (
     ubuntu,
     wolfi,
 )
+
+if TYPE_CHECKING:
+    from vunnel import provider
 
 _providers = {
     alpine.Provider.name(): alpine.Provider,

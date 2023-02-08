@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import datetime
 import os
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
 
 from .parser import Parser, debian_distro_map
+
+if TYPE_CHECKING:
+    import datetime
 
 
 @dataclass

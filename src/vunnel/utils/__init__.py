@@ -8,9 +8,12 @@ import os
 import random
 import shutil
 import time
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import rfc3339
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def retry_with_backoff(retries: int = 10, backoff_in_seconds: int = 1) -> Callable[[Any], Any]:
@@ -24,7 +27,7 @@ def retry_with_backoff(retries: int = 10, backoff_in_seconds: int = 1) -> Callab
                 except KeyboardInterrupt:
                     logger.warning("keyboard interrupt, cancelling request...")
                     raise
-                except:  # noqa: E722,B001
+                except:  # noqa: E722
                     if attempt >= retries:
                         logger.exception(f"failed after {retries} retries")
                         raise
