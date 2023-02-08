@@ -76,6 +76,13 @@ class RuntimeConfig:
         return self.existing_input == InputStatePolicy.KEEP
 
 
+def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
+    if cfg.existing_input != InputStatePolicy.KEEP:
+        raise ValueError(
+            f"existing_input policy is '{cfg.existing_input}' but only a value of 'keep' is allowed for this provider",
+        )
+
+
 class Provider(abc.ABC):
     def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):  # noqa: B008
         self.logger = logging.getLogger(self.name())
