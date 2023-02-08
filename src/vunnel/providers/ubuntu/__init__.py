@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-import datetime
 import os
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 
 from .parser import Parser, default_git_branch, default_git_url, default_max_workers
+
+if TYPE_CHECKING:
+    import datetime
 
 
 @dataclass
@@ -15,7 +18,7 @@ class Config:
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
             existing_input=provider.InputStatePolicy.KEEP,
-        )
+        ),
     )
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=lambda: {})

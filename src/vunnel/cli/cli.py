@@ -16,8 +16,7 @@ from vunnel.cli import config
 @click.option("--config", "-c", "config_path", default=".vunnel.yaml", help="override config path")
 @click.group(help="Tool for pulling and parsing vulnerability data for use with grype-db.")
 @click.pass_context
-def cli(ctx, verbose: bool, config_path: str) -> None:  # type: ignore
-    # noqa
+def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
     import logging.config
 
     # TODO: config parsing
@@ -67,7 +66,7 @@ def cli(ctx, verbose: bool, config_path: str) -> None:  # type: ignore
                     "level": log_level,
                 },
             },
-        }
+        },
     )
 
 
@@ -78,7 +77,7 @@ def show_config(cfg: config.Application) -> None:
 
     # noqa
     class IndentDumper(yaml.Dumper):
-        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:  # noqa: ARG002
             return super().increase_indent(flow, False)
 
     def enum_asdict_factory(data: list[tuple[str, Any]]) -> dict[Any, Any]:
@@ -163,11 +162,7 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
 @click.pass_obj
 def status_provider(cfg: config.Application, provider_names: str, show_empty: bool) -> None:
     print(cfg.root)
-    if not provider_names:
-        selected_names = providers.names()
-    else:
-        # not about type ignore: click assumes with nargs=-1 that all types are surrounded by a list collection
-        selected_names = provider_names  # type: ignore
+    selected_names = provider_names if provider_names else providers.names()
 
     for idx, name in enumerate(selected_names):
         branch = "├──"

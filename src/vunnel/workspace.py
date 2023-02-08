@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import datetime
+import datetime  # noqa: TCH003
 import json
 import logging
 import os
 import shutil
 import sqlite3
 from dataclasses import asdict, dataclass, field
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
 
 import orjson
 import xxhash
@@ -15,6 +15,9 @@ from dataclass_wizard import fromdict
 
 from vunnel import schema as schemaDef
 from vunnel import utils
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 METADATA_FILENAME = "metadata.json"
 CHECKSUM_LISTING_FILENAME = "checksums"
@@ -204,7 +207,7 @@ def write_file_listing(output_file: str, path: str) -> str:
     listing_hasher = xxhash.xxh64()
 
     with open(output_file, "w", encoding="utf-8") as f:
-        for root, dirs, files in os.walk(path):  # noqa
+        for root, dirs, files in os.walk(path):
             dirs.sort()  # sort the existing list that os.walk generator continues to reference
             for file in sorted(files):
                 full_path = os.path.join(root, file)

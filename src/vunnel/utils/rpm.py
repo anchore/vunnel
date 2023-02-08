@@ -65,10 +65,7 @@ def split_fullversion(version: str) -> tuple[str | None, str | None, str | None]
     """
     ver_comp = version.rsplit("-", 1)
 
-    if len(ver_comp) > 1:
-        release = ver_comp.pop()
-    else:
-        release = None
+    release = ver_comp.pop() if len(ver_comp) > 1 else None
 
     epoch_comp = ver_comp[0].split(":", 1) if ver_comp else []
 
@@ -132,8 +129,7 @@ def compare_labels(evr_1: tuple[str | None, str | None, str | None], evr_2: tupl
     return rpm_ver_cmp(rel_1, rel_2)
 
 
-# noqa
-def rpm_ver_cmp(a: str | None, b: str | None) -> int:
+def rpm_ver_cmp(a: str | None, b: str | None) -> int:  # noqa: C901,PLR0912,PLR0911
     """
     A translation of the RPM lib's C code for version compare rpmvercmp in lib/rpmvercmp.c into pure python with
     no external
@@ -197,13 +193,13 @@ def rpm_ver_cmp(a: str | None, b: str | None) -> int:
             # whichever number has more digits wins
             if len(a_seg_str) > len(b_seg_str):
                 return 1
-            elif len(a_seg_str) < len(b_seg_str):
+            if len(a_seg_str) < len(b_seg_str):
                 return -1
 
         # String compare of the segments, covers both numeric and non since they are same length if numeric
         if a_seg_str > b_seg_str:
             return 1
-        elif a_seg_str < b_seg_str:
+        if a_seg_str < b_seg_str:
             return -1
 
     # this catches the case where all numeric and alpha segments have

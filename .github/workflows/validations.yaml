@@ -59,13 +59,13 @@ jobs:
         run: poetry install
 
       - name: Run static analysis
-        run: make static-analysis
+        run: poetry run make static-analysis
 
       - name: Run unit tests
-        run: make unit
+        run: poetry run make unit
 
       - name: Build assets
-        run: make build
+        run: poetry run make build
 
       - name: Login to ghcr.io
         if: github.ref == 'refs/heads/main'
