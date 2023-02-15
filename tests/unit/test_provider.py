@@ -63,7 +63,7 @@ def dummy_provider(tmpdir):
 
         if populate:
             # update the provider
-            subject.populate()
+            subject.run()
 
             # check that the input and results are populated
             assert os.path.exists(subject.input_file)
@@ -88,7 +88,7 @@ def test_clear_existing_state(dummy_provider):
     subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
     subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
 
-    subject.populate()
+    subject.run()
 
     assert subject.workspace.clear_input.call_count == 1
     assert subject.workspace.clear_results.call_count == 1
@@ -105,7 +105,7 @@ def test_keep_existing_state(dummy_provider, dummy_file):
     subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
     subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
 
-    subject.populate()
+    subject.run()
 
     assert subject.workspace.clear_input.call_count == 0
     assert subject.workspace.clear_results.call_count == 0
@@ -121,12 +121,12 @@ def test_keep_existing_state_until_write(dummy_provider, dummy_file):
     subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
 
     with pytest.raises(RuntimeError):
-        subject.populate()
+        subject.run()
 
     assert subject.workspace.clear_results.call_count == 0
 
     # successful
-    subject.populate()
+    subject.run()
 
     assert subject.workspace.clear_results.call_count == 1
 
@@ -148,7 +148,7 @@ def test_fail_on_failure(dummy_provider, dummy_file):
     subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
 
     with pytest.raises(RuntimeError):
-        subject.populate()
+        subject.run()
 
     assert subject.workspace.clear_input.call_count == 0
     assert subject.workspace.clear_results.call_count == 0
@@ -173,7 +173,7 @@ def test_clear_state_on_failure(dummy_provider, dummy_file):
     subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
 
     with pytest.raises(RuntimeError):
-        subject.populate()
+        subject.run()
 
     assert subject.workspace.clear_input.call_count == 1
     assert subject.workspace.clear_results.call_count == 1
@@ -199,7 +199,7 @@ def test_keep_state_on_multiple_failures(dummy_provider, dummy_file, tmpdir):
     subject = dummy_provider(use_dir=tmpdir, populate=False, runtime_cfg=policy, errors=1)
 
     with pytest.raises(RuntimeError):
-        subject.populate()
+        subject.run()
 
     assert_dummy_workspace_state(subject.workspace)
 
@@ -220,7 +220,7 @@ def test_skip_on_failure(dummy_provider, dummy_file):
     subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
     subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
 
-    subject.populate()
+    subject.run()
 
     assert subject.workspace.clear_input.call_count == 1
     assert subject.workspace.clear_results.call_count == 1
@@ -239,7 +239,7 @@ def test_retry_on_failure(dummy_provider, dummy_file):
 
     subject = dummy_provider(populate=False, runtime_cfg=policy, errors=1)
 
-    subject.populate()
+    subject.run()
 
     assert subject.count == 2
     assert_dummy_workspace_state(subject.workspace)
@@ -257,7 +257,7 @@ def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
     subject = dummy_provider(populate=False, runtime_cfg=policy, errors=2, create_files=False)
 
     with pytest.raises(RuntimeError):
-        subject.populate()
+        subject.run()
 
     assert subject.count == 2
 

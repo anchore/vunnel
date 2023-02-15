@@ -24,7 +24,9 @@ class Config:
 
 
 class Provider(provider.Provider):
-    def __init__(self, root: str, config: Config):
+    def __init__(self, root: str, config: Config | None = None):
+        if not config:
+            config = Config()
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 

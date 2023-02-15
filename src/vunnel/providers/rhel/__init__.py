@@ -21,13 +21,15 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    max_workers: int = 4
+    parallelism: int = 4
     full_sync_interval: int = 2
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
 
 
 class Provider(provider.Provider):
-    def __init__(self, root: str, config: Config):
+    def __init__(self, root: str, config: Config | None = None):
+        if not config:
+            config = Config()
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
@@ -37,7 +39,7 @@ class Provider(provider.Provider):
         self.parser = Parser(
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
-            max_workers=self.config.max_workers,
+            max_workers=self.config.parallelism,
             full_sync_interval=self.config.full_sync_interval,
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,

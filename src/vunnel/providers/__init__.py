@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import sys
 from typing import TYPE_CHECKING, Any
 
 from vunnel.providers import (
@@ -15,6 +17,11 @@ from vunnel.providers import (
     ubuntu,
     wolfi,
 )
+
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
 
 if TYPE_CHECKING:
     from vunnel import provider
@@ -40,3 +47,29 @@ def create(name: str, workspace_path: str, *args: Any, **kwargs: Any) -> provide
 
 def names() -> list[str]:
     return sorted(_providers.keys())
+
+
+def register(name: str, cls: type[provider.Provider]) -> None:
+    if name in _providers and _providers[name] != cls:
+        raise KeyError(f"provider {name!r} is already registered to another provider class: {_providers[name]!r}")
+    _providers[name] = cls
+
+
+def load_plugins() -> None:
+    plugins = entry_points(group="vunnel.plugins.providers")
+
+    logging.debug(f"discovered plugins: {len(plugins)}")
+    for idx, p in enumerate(plugins):
+        branch = "├──"
+        if idx == len(plugins) - 1:
+            branch = "└──"
+
+        logging.debug(f"{branch} {p.name}: {p.value}")
+
+    for tool in plugins:
+        try:
+            logging.info(f"loading provider plugin {tool.name!r}")
+            tool.load()
+        except:  # noqa: E722
+            # note: this should not be fatal. Log and move on.
+            logging.exception(f"failed loading provider plugin {tool.name!r}")
