@@ -46,10 +46,11 @@ $(BIN_DIR):
 
 .PHONY: show-changes
 show-changes: ## Show the current file changeset
-	@poetry run python ./configure.py -v show-changes
+	poetry run python ./configure.py -v show-changes
+	poetry run python ./configure.py select-providers
 
 .PHONY: select-providers
-select-providers: $(BIN_DIR) ## Determine the provider(s) to use for the grype database based on the file changeset
+select-providers: ## Determine the provider(s) to use for the grype database based on the file changeset
 	@poetry run python ./configure.py select-providers --json 2>/dev/null
 
 .PHONY: configure
