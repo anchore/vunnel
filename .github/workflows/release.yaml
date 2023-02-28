@@ -7,6 +7,7 @@ on:
         required: true
 
 jobs:
+
   quality-gate:
     runs-on: ubuntu-20.04
     steps:
@@ -41,6 +42,9 @@ jobs:
           # This check name is defined as the github action job name (in .github/workflows/nightly-quality-gate.yaml)
           checkName: "Nightly-Quality-Gate"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # If there is no result in 10 seconds, assume it hasn't run yet
+          timeoutSeconds: 10
+          intervalSeconds: 3
 
       - name: Release quality gate
         if: steps.validations.conclusion != 'success' || steps.nightly-quality-gate.conclusion != 'success'
@@ -49,9 +53,9 @@ jobs:
           echo "Nightly Quality Gate Status: ${{ steps.nightly-quality-gate.conclusion }}"
           false
 
-
   release:
-    needs: [quality-gate]
+    needs:
+      - quality-gate
     runs-on: ubuntu-20.04
     environment: release
     permissions:

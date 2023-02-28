@@ -9,8 +9,36 @@ on:
 
 jobs:
 
-  Nightly-Quality-Gate:
+  select-providers:
     runs-on: ubuntu-20.04
+    outputs:
+      providers: ${{ steps.determine-providers.outputs.providers }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+        with:
+          tools: false
+
+      - name: Determine providers
+        id: determine-providers
+        run: |
+          # select all providers as test subjects (this populates the matrix downstream)
+          content=`cd tests/quality && poetry run make all-providers`
+          echo $content
+          echo "providers=$content" >> $GITHUB_OUTPUT
+
+  validate-provider:
+    runs-on: ubuntu-20.04
+    needs: select-providers
+    strategy:
+      matrix:
+        provider: ${{fromJson(needs.select-providers.outputs.providers)}}
+      fail-fast: false
     permissions:
       contents: read
       packages: read
@@ -26,4 +54,18 @@ jobs:
       - name: Run quality gate
         uses: ./.github/actions/quality-gate
         with:
-          provider: all
+          provider: ${{ matrix.provider }}
+
+  # note: the name for this check is referenced in release.yaml, do not change here without changing there
+  Nightly-Quality-Gate:
+    runs-on: ubuntu-20.04
+    needs: validate-provider
+    if: ${{ always() && !cancelled() }}
+    steps:
+      - run: |
+          echo "Validations Status: ${{ needs.run-provider-validation.result }}"
+          if [ "${{ needs.run-provider-validation.result }}" == "failure" ]; then
+            echo "Quality gate failed!"
+            exit 1
+          fi
+          echo "Quality gate passed!"

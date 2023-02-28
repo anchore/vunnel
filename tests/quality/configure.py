@@ -342,6 +342,20 @@ def select_providers(cfg: Config, output_json: bool):
             print(provider)
 
 
+@cli.command(name="all-providers", help="show all providers available to test")
+@click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
+@click.pass_obj
+def all_providers(cfg: Config, output_json: bool):
+    selected_providers = set(test.provider for test in cfg.tests)
+    sorted_providers = sorted(list(selected_providers))
+
+    if output_json:
+        print(json.dumps(sorted_providers))
+    else:
+        for provider in sorted_providers:
+            print(provider)
+
+
 @cli.command(name="configure", help="setup yardstick and grype-db configurations for building a DB")
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1, required=True)
 @click.pass_obj

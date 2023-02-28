@@ -39,8 +39,12 @@ show-changes: ## Show the current file changeset
 	poetry run python ./configure.py -v show-changes
 	poetry run python ./configure.py select-providers
 
+.PHONY: all-providers
+all-providers: ## Select all providers for testing
+	@poetry run python ./configure.py all-providers --json 2>/dev/null
+
 .PHONY: select-providers
-select-providers: ## Determine the provider(s) to use for the grype database based on the file changeset
+select-providers: ## Determine the provider(s) to use for testing based on the file changeset
 	@poetry run python ./configure.py select-providers --json 2>/dev/null
 
 .PHONY: configure
