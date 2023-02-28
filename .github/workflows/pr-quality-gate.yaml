@@ -1,5 +1,4 @@
 name: "PR Quality Gate"
-description: "Run quality gate for all providers which this PR affects"
 on:
   issue_comment:
     types: [created]

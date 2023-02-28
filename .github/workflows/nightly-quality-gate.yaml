@@ -1,5 +1,4 @@
 name: "Nightly Quality Gate"
-description: "Run quality gate for all providers"
 on:
   # allow for kicking off quality gate check manually
   workflow_dispatch:
