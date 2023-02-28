@@ -23,7 +23,7 @@ inputs:
     default: "831180ac25"
   bootstrap-apt-packages:
     description: "Space delimited list of tools to install via apt"
-    default: "libxml2-utils"
+    default: ""
 
 runs:
   using: "composite"

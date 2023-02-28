@@ -1,7 +1,12 @@
 name: "Validations"
 on:
-  workflow_dispatch:
+  # needed for publishing commit images on the main branch
   push:
+    branches:
+      - main
+
+  # needed when running from forks
+  pull_request:
 
 jobs:
 

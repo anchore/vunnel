@@ -222,6 +222,8 @@ def changes():
     logging.info("determining providers affected by the current file changeset")
 
     base_ref = os.environ.get("GITHUB_BASE_REF", "main")
+    if not base_ref:
+        base_ref = "main"
 
     # get list of files changed with git diff
     changed_files = subprocess.check_output(["git", "diff", "--name-only", base_ref]).decode("utf-8").splitlines()
