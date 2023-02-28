@@ -4,19 +4,18 @@ on:
     types: [created]
   push:
 
-
 jobs:
 
   select-providers:
     runs-on: ubuntu-20.04
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/run-gate')
+#    if: github.event.issue.pull_request && contains(github.event.comment.body, '/run-gate')
     steps:
       - uses: actions/checkout@v3
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
           # checkout relative to the PR head
-          ref: refs/pull/${{ github.event.issue.number }}/head
+#          ref: refs/pull/${{ github.event.issue.number }}/head
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -45,7 +44,7 @@ jobs:
           # in order to properly resolve the version from git
           fetch-depth: 0
           # checkout relative to the PR head
-          ref: refs/pull/${{ github.event.issue.number }}/head
+#          ref: refs/pull/${{ github.event.issue.number }}/head
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
