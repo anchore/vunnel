@@ -21,7 +21,7 @@ PACKAGE_VERSION = v$(shell poetry run dunamai from git --style semver --dirty --
 COMMIT = $(shell git rev-parse HEAD)
 COMMIT_TAG = git-$(COMMIT)
 
-CHRONICLE_VERSION = v0.5.1
+CHRONICLE_VERSION = v0.6.0
 GLOW_VERSION = v1.4.1
 CRANE_VERSION = v0.12.1
 
@@ -98,8 +98,8 @@ changelog:
 	@$(CHRONICLE) -vvv -n . > CHANGELOG.md
 	@$(GLOW) CHANGELOG.md
 
-.PHONY: trigger-release
-trigger-release:
+.PHONY: release
+release:
 	@.github/scripts/trigger-release.sh
 
 virtual-env-check:

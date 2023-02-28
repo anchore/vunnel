@@ -1,0 +1,31 @@
+name: "Nightly Quality Gate"
+description: "Run quality gate for all providers"
+on:
+  # allow for kicking off quality gate check manually
+  workflow_dispatch:
+
+  # run 2 AM (UTC) daily
+  schedule:
+    - cron:  '0 2 * * *'
+
+jobs:
+
+  Nightly-Quality-Gate:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Run quality gate
+        uses: ./.github/actions/quality-gate
+        with:
+          provider: all
+

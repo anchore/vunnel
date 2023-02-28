@@ -1,0 +1,75 @@
+name: "Bootstrap"
+description: "Bootstrap all tools and dependencies"
+inputs:
+  python-version:
+    description: "Python version to install"
+    required: true
+    default: "3.9"
+  poetry-version:
+    description: "Poetry version to install"
+    required: true
+    default: "1.3.2"
+  use-poetry-cache:
+    description: "Restore poetry cache"
+    required: true
+    default: "true"
+  tools:
+    description: "Bootstrap tooling"
+    required: true
+    default: "true"
+  cache-key-prefix:
+    description: "Prefix all cache keys with this value"
+    required: true
+    default: "831180ac25"
+  bootstrap-apt-packages:
+    description: "Space delimited list of tools to install via apt"
+    default: "libxml2-utils"
+
+runs:
+  using: "composite"
+  steps:
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: python-${{ inputs.python-version }}
+
+    - name: Install poetry
+      uses: abatilo/actions-poetry@v2.2.0
+      with:
+        poetry-version: ${{ inputs.poetry-version }}
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      if: inputs.use-poetry-cache == 'true'
+      id: cache
+      with:
+        path: ~/.virtualenvs
+        key: ${{ inputs.cache-key-prefix }}-python-${{ inputs.python-version }}-poetry-${{ inputs.poetry-version }}-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          ${{ inputs.cache-key-prefix }}-python-${{ inputs.python-version }}-poetry-${{ inputs.poetry-version }}
+
+    - name: Setup Poetry config
+      run: |
+        poetry config virtualenvs.in-project false
+        poetry config virtualenvs.path ~/.virtualenvs
+
+    - name: Restore tool cache
+      id: tool-cache
+      if: inputs.tools == 'true'
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/.tmp
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
+
+    - name: (cache-miss) Bootstrap tools
+      if: steps.tool-cache.outputs.cache-hit != 'true' && inputs.tools == 'true'
+      run: make bootstrap
+
+    - name: Install apt packages
+      if: inputs.bootstrap-apt-packages != ''
+      shell: bash
+      run: |
+        DEBIAN_FRONTEND=noninteractive sudo apt update && sudo -E apt install -y ${{ inputs.bootstrap-apt-packages }}
+
+    - name: Install dependencies and package
+      run: poetry install
