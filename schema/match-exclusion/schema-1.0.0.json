@@ -1,65 +1,84 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "anchore-match-exclusion",
+  "description": "describes an anchore vulnerability match exclusion record",
   "type": "object",
-  "title": "match-exclusions",
-  "description": "records to exclude matches on vulnerability records downstream in grype",
+  "required": [ "id", "exclusions" ],
+  "additionalProperties": false,
   "properties": {
     "id": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^(CVE|GHSA)-*"
     },
-    "constraints": {
+    "exclusions": {
       "type": "array",
-      "items": [
-        {
-          "type": "object",
-          "properties": {
-            "ecosystem_constraints": {
-              "type": "array",
-              "items": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "language": {
-                      "type": "string"
-                    },
-                    "package_constraints": {
-                      "type": "array",
-                      "items": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "package_name": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "package_name"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  "required": [
-                    "language",
-                    "package_constraints"
-                  ]
-                }
-              ]
-            }
-          },
-          "required": [
-            "ecosystem_constraints"
-          ]
-        }
-      ]
-    },
-    "justification": {
-      "type": "string"
+      "items": { "$ref": "#/$defs/exclusion" }
     }
   },
-  "required": [
-    "id",
-    "constraints",
-    "justification"
-  ]
+  "$defs": {
+    "exclusion": {
+      "type": "object",
+      "required": [ "justification" ],
+      "additionalProperties": false,
+      "properties": {
+        "justification": {
+          "type": "string"
+        },
+        "constraints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/exclusion_constraint" }
+        }
+      }
+    },
+    "exclusion_constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["nvd:cpe", "github:language:python"]
+          }
+        },
+        "packages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/package_exclusion_constraint" }
+        }
+      }
+    },
+    "package_exclusion_constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "description": "The language of a package as defined by syft with the valid values coming from: https://github.com/anchore/syft/blob/586d3fe77f32d202408bd2b7b179b88dfd0a6455/syft/pkg/language.go#L14-L26",
+          "type": "string",
+          "enum": ["java", "javascript", "python", "php", "ruby", "go", "rust", "dart", "dotnet", "swift", "c++", "haskell"]
+        },
+        "type": {
+          "description": "The type of a package as defined by syft with the valid values coming from: https://github.com/anchore/syft/blob/586d3fe77f32d202408bd2b7b179b88dfd0a6455/syft/pkg/type.go#L10-L29",
+          "type": "string",
+          "enum": ["apk", "alpm", "python", "gem", "deb", "rpm", "npm", "python", "php-composer", "java-archive", "jenkins-plugin", "go-module", "rust-crate", "msrc-kb", "dart-pub", "dotnet", "pod", "conan", "portage", "hackage", "binary"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "versions": {
+          "description": "Versions of the package which should be excluded.  Versions ranges are not supported",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "locations": {
+          "description": "locations which should be excluded.  glob patterns are supported as noted in https://github.com/anchore/grype#specifying-matches-to-ignore",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
 }

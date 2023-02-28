@@ -1,0 +1,75 @@
+name: "PR Quality Gate"
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+
+  select-providers:
+    runs-on: ubuntu-20.04
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/run-gate')
+    outputs:
+      providers: ${{ steps.determine-providers.outputs.providers }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+          # checkout relative to the PR head
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+        with:
+          tools: false
+
+      - name: Determine providers
+        id: determine-providers
+        run: |
+          # be nice to folks troubleshooting in CI...
+          cd tests/quality
+          poetry run make show-changes
+
+          # determine which providers to run (to later populate the matrix)
+          content=`poetry run make select-providers`
+          echo $content
+          echo "providers=$content" >> $GITHUB_OUTPUT
+
+  validate-provider:
+    runs-on: ubuntu-20.04
+    needs: select-providers
+    strategy:
+      matrix:
+        provider: ${{fromJson(needs.select-providers.outputs.providers)}}
+      fail-fast: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+          # checkout relative to the PR head
+          ref: refs/pull/${{ github.event.issue.number }}/head
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Run quality gate
+        uses: ./.github/actions/quality-gate
+        with:
+          provider: ${{ matrix.provider }}
+
+  evaluate-quality-gate:
+    runs-on: ubuntu-20.04
+    needs: validate-provider
+    if: ${{ always() && !cancelled() }}
+    steps:
+      - run: |
+          echo "Validations Status: ${{ needs.run-provider-validation.result }}"
+          if [ "${{ needs.run-provider-validation.result }}" == "failure" ]; then
+            echo "Quality gate failed!"
+            exit 1
+          fi
+          echo "Quality gate passed!"

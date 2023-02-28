@@ -57,7 +57,7 @@ def test_run(mocker, monkeypatch) -> None:
     runner = CliRunner()
     res = runner.invoke(cli.cli, ["-c", "-", "run", "nvd"])
     assert res.exit_code == 0
-    assert populate_mock.populate.call_count == 1
+    assert populate_mock.run.call_count == 1
     assert create_mock.call_args_list == [
         mocker.call(
             "nvd",
@@ -162,7 +162,7 @@ providers:
       - centos:3
       - centos:4
   debian:
-    distro_map:
+    releases:
       bookworm: '12'
       bullseye: '11'
       buster: '10'
@@ -223,7 +223,7 @@ providers:
       result_store: sqlite
   rhel:
     full_sync_interval: 2
-    max_workers: 4
+    parallelism: 4
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -259,7 +259,7 @@ providers:
     enable_rev_history: true
     git_branch: master
     git_url: git://git.launchpad.net/ubuntu-cve-tracker
-    max_workers: 8
+    parallelism: 8
     request_timeout: 125
     runtime:
       existing_input: keep

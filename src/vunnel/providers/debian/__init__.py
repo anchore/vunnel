@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
-    distro_map: dict[str, Any] = field(default_factory=lambda: debian_distro_map)
+    releases: dict[str, Any] = field(default_factory=lambda: debian_distro_map.copy())
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
@@ -24,11 +24,13 @@ class Config:
     request_timeout: int = 125
 
     def __post_init__(self) -> None:
-        self.distro_map = {str(k).lower(): str(v).lower() for k, v in self.distro_map.items()}
+        self.releases = {str(k).lower(): str(v).lower() for k, v in self.releases.items()}
 
 
 class Provider(provider.Provider):
-    def __init__(self, root: str, config: Config):
+    def __init__(self, root: str, config: Config | None = None):
+        if not config:
+            config = Config()
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
@@ -38,7 +40,7 @@ class Provider(provider.Provider):
         self.parser = Parser(
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
-            distro_map=self.config.distro_map,
+            distro_map=self.config.releases,
             logger=self.logger,
         )
 

@@ -119,7 +119,7 @@ class Provider(abc.ABC):
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 
-    def populate(self) -> None:
+    def run(self) -> None:
         self.logger.debug(f"using {self.workspace.path!r} as workspace")
 
         if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:

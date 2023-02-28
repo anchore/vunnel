@@ -6,11 +6,8 @@ on:
         description: tag the latest commit on main with the given version (prefixed with v)
         required: true
 
-env:
-  PYTHON_VERSION: "3.9"
-  POETRY_VERSION: "1.3.2"
-
 jobs:
+
   quality-gate:
     runs-on: ubuntu-20.04
     steps:
@@ -37,15 +34,28 @@ jobs:
           checkName: "Validations"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Quality gate
-        if: steps.validations.conclusion != 'success'
+      - name: Check nightly quality gate results
+        uses: fountainhead/action-wait-for-check@v1.1.0
+        id: nightly-quality-gate
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # This check name is defined as the github action job name (in .github/workflows/nightly-quality-gate.yaml)
+          checkName: "Nightly-Quality-Gate"
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # If there is no result in 10 seconds, assume it hasn't run yet
+          timeoutSeconds: 10
+          intervalSeconds: 3
+
+      - name: Release quality gate
+        if: steps.validations.conclusion != 'success' || steps.nightly-quality-gate.conclusion != 'success'
         run: |
           echo "Validations Status: ${{ steps.validations.conclusion }}"
+          echo "Nightly Quality Gate Status: ${{ steps.nightly-quality-gate.conclusion }}"
           false
 
-
   release:
-    needs: [quality-gate]
+    needs:
+      - quality-gate
     runs-on: ubuntu-20.04
     environment: release
     permissions:
@@ -59,42 +69,8 @@ jobs:
           # in order to properly resolve the version from git
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install poetry
-        uses: abatilo/actions-poetry@v2.2.0
-        with:
-          poetry-version: ${{ env.POETRY_VERSION }}
-
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v3
-        id: cache
-        with:
-          path: ~/.virtualenvs
-          key: poetry-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            poetry-${{ hashFiles('poetry.lock') }}
-
-      - name: Setup Poetry config
-        run: |
-          poetry config virtualenvs.in-project false
-          poetry config virtualenvs.path ~/.virtualenvs
-
-      - name: Restore tool cache
-        id: tool-cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/.tmp
-          key: ${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
-
-      - name: (cache-miss) Bootstrap tools
-        if: steps.tool-cache.outputs.cache-hit != 'true'
-        run: make bootstrap
-
-      - name: Install dependencies and package
-        run: poetry install
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
 
       - name: Login to ghcr.io
         run: |

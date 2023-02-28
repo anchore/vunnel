@@ -11,7 +11,7 @@ from html.parser import HTMLParser
 import requests
 import yaml
 
-from vunnel import workspace
+from vunnel import workspace, utils
 from vunnel.utils.vulnerability import vulnerability_element
 
 namespace = "alpine"
@@ -118,20 +118,35 @@ class Parser:
                     rel_dir = os.path.join(self.secdb_dir_path, rel)
                     os.makedirs(rel_dir, exist_ok=True)
                     for db_type in self._db_types:
+                        if db_type == "community" and rel == "v3.2":
+                            # edge case: community.yaml processing was added in v3.3
+                            # since this involves semver processing and we have a known list, the simplest
+                            # approach is to exclude this single version for now.
+                            # future enhancement could add semver processing for something like "<3.3 continue"
+                            continue
+
                         file_name = "{}.yaml".format(db_type)
                         download_url = "/".join([self.metadata_url, rel, file_name])
-                        self._urls.add(download_url)
+
                         self.logger.info("Downloading secdb {} {}".format(rel, db_type))
-                        r = requests.get(download_url, stream=True, timeout=self.download_timeout)
-                        if r.status_code == 200:
-                            file_path = os.path.join(rel_dir, file_name)
-                            with open(file_path, "wb") as fp:
-                                for chunk in r.iter_content():
-                                    fp.write(chunk)
-                        else:
-                            r.raise_for_status()
+                        r = self._download_url(download_url)
+
+                        file_path = os.path.join(rel_dir, file_name)
+                        with open(file_path, "wb") as fp:
+                            for chunk in r.iter_content():
+                                fp.write(chunk)
+
+                except KeyboardInterrupt:
+                    raise
                 except:
                     self.logger.exception("ignoring error processing secdb for {}".format(link))
+
+    @utils.retry_with_backoff()
+    def _download_url(self, url) -> requests.Response:
+        self._urls.add(url)
+        r = requests.get(url, stream=True, timeout=self.download_timeout)
+        r.raise_for_status()
+        return r
 
     def _load(self):
         """

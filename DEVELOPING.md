@@ -9,7 +9,10 @@ This project requires:
 
 Once you have python and poetry installed, get the project bootstrapped:
 
-```
+```bash
+# get basic project tooling
+make bootstrap
+
 # get a persistent virtual environment to work within
 poetry shell
 
@@ -19,7 +22,7 @@ poetry install
 
 [Pre-commit](https://pre-commit.com/) is used to help enforce static analysis checks with git hooks:
 
-```
+```bash
 poetry run pre-commit install --hook-type pre-push
 ```
 
@@ -28,6 +31,7 @@ To jump into a poetry-managed virtualenv run `poetry shell`, this will prevent t
 ## Developing
 
 If you want to use a locally-editable copy of vunnel while you develop:
+
 ```bash
 poetry shell
 pip uninstall vunnel  #... if you already have vunnel installed in this virtual env
@@ -35,17 +39,20 @@ pip install -e .
 ```
 
 To run all static-analysis and tests:
+
 ```bash
 make
 ```
 
 Or run them individually:
+
 ```bash
 make static-analysis
 make test
 ```
 
 If you want to see all of the things you can do:
+
 ```bash
 make help
 ```

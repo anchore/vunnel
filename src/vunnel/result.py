@@ -141,6 +141,7 @@ class SQLiteStore(Store):
             self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore[attr-defined]
             statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
         else:
+            self.logger.trace(f"writing record to {identifier!r} key")  # type: ignore[attr-defined]
             statement = db.insert(table).values(id=identifier, record=record_str)
 
         conn.execute(statement)

@@ -1,0 +1,21 @@
+name: "Quality Gate"
+description: "Run quality gate for a given provider"
+inputs:
+  provider:
+    description: "Provider to check"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    # assume we have python and poetry installed
+
+    - name: Capture vulnerability results
+      shell: bash
+      working-directory: tests/quality
+      run: poetry run make capture provider=${{ inputs.provider }}
+
+    - name: Validate provider results
+      shell: bash
+      working-directory: tests/quality
+      run: poetry run make validate
