@@ -19,8 +19,8 @@ AlasFixedIn = namedtuple("AlasFixedIn", ["pkg", "ver"])
 
 amazon_security_advisories = {
     # '1': 'https://alas.aws.amazon.com/alas.rss',
-    "2": "https://alas.aws.amazon.com/AL2/alas.rss",
-    "2022": "https://alas.aws.amazon.com/AL2022/alas.rss",
+    "2": ["https://alas.aws.amazon.com/AL2/alas.rss"],
+    "2022": ["https://alas.aws.amazon.com/AL2022/alas.rss", "https://alas.aws.amazon.com/AL2023/alas.rss"],
 }
 
 severity_map = {
@@ -39,7 +39,7 @@ class Parser:
 
     def __init__(self, workspace, download_timeout=125, security_advisories=None, logger=None):
         self.workspace = workspace
-        self.version_url_map = security_advisories if security_advisories else amazon_security_advisories
+        self.version_urls_map = security_advisories if security_advisories else amazon_security_advisories
         self.download_timeout = download_timeout
         self.urls = []
 
@@ -129,35 +129,36 @@ class Parser:
         return AlasFixedIn(pkg=name, ver=version)
 
     def get(self, skip_if_exists=False):
-        for version, url in self.version_url_map.items():
-            rss_file = os.path.join(self.workspace.input_path, self._rss_file_name_.format(version))
-            html_dir = os.path.join(self.workspace.input_path, self._html_dir_name_.format(version))
+        for version, urls in self.version_urls_map.items():
+            for index, url in enumerate(urls):
+                rss_file = os.path.join(self.workspace.input_path, self._rss_file_name_.format(f"{version}_{index}"))
+                html_dir = os.path.join(self.workspace.input_path, self._html_dir_name_.format(version))
 
-            self._download_rss(url, rss_file)
+                self._download_rss(url, rss_file)
 
-            # parse rss for alas summaries
-            alas_summaries = self._parse_rss(rss_file)
+                # parse rss for alas summaries
+                alas_summaries = self._parse_rss(rss_file)
 
-            # setup directory for alas htmls
-            if not os.path.exists(html_dir):
-                self.logger.debug("initializing workspace for ALAS files")
-                os.makedirs(html_dir)
+                # setup directory for alas htmls
+                if not os.path.exists(html_dir):
+                    self.logger.debug("initializing workspace for ALAS files")
+                    os.makedirs(html_dir)
 
-            # iterate through list of alas summaries
-            for alas in alas_summaries:
-                # download alas html content
-                alas_file = os.path.join(html_dir, alas.id)
-                html_content = self._get_alas_html(alas.url, alas_file)
+                # iterate through list of alas summaries
+                for alas in alas_summaries:
+                    # download alas html content
+                    alas_file = os.path.join(html_dir, alas.id)
+                    html_content = self._get_alas_html(alas.url, alas_file)
 
-                # parse alas html for fixes
-                parser = PackagesHTMLParser()
-                parser.feed(html_content)
+                    # parse alas html for fixes
+                    parser = PackagesHTMLParser()
+                    parser.feed(html_content)
 
-                # split the package name and version of the fixed in packages and construct a set
-                fixed_in = {self.get_package_name_version(pkg_name) for pkg_name in parser.fixes}
+                    # split the package name and version of the fixed in packages and construct a set
+                    fixed_in = {self.get_package_name_version(pkg_name) for pkg_name in parser.fixes}
 
-                # construct a vulnerability object and yield it
-                yield map_to_vulnerability(version, alas, fixed_in)
+                    # construct a vulnerability object and yield it
+                    yield map_to_vulnerability(version, alas, fixed_in)
 
 
 class JsonifierMixin:

@@ -39,7 +39,7 @@ def test_full_config(helpers):
                 request_timeout=20,
             ),
             amazon=providers.amazon.Config(
-                security_advisories={42: "https://alas.aws.amazon.com/AL2/alas-42.rss"},  # cap sensitive!
+                security_advisories={42: ["https://alas.aws.amazon.com/AL2/alas-42.rss"]},  # cap sensitive!
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),

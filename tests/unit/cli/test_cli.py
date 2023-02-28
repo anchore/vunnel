@@ -144,8 +144,11 @@ providers:
         retry_delay: 5
       result_store: sqlite
     security_advisories:
-      '2': https://alas.aws.amazon.com/AL2/alas.rss
-      '2022': https://alas.aws.amazon.com/AL2022/alas.rss
+      '2':
+        - https://alas.aws.amazon.com/AL2/alas.rss
+      '2022':
+        - https://alas.aws.amazon.com/AL2022/alas.rss
+        - https://alas.aws.amazon.com/AL2023/alas.rss
   centos:
     request_timeout: 125
     runtime:

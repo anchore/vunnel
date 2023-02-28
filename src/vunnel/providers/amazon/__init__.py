@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
-    security_advisories: dict[Any, str] = field(default_factory=lambda: amazon_security_advisories)
+    security_advisories: dict[Any, list[str]] = field(default_factory=lambda: amazon_security_advisories)
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
@@ -24,7 +24,7 @@ class Config:
     request_timeout: int = 125
 
     def __post_init__(self) -> None:
-        self.security_advisories = {str(k): str(v) for k, v in self.security_advisories.items()}
+        self.security_advisories = {str(k): urls for k, urls in self.security_advisories.items()}
 
 
 class Provider(provider.Provider):
