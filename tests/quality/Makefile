@@ -5,9 +5,6 @@ YARDSTICK_RESULT_DIR = .yardstick/result
 YARDSTICK_LABELS_DIR = .yardstick/labels
 TEST_DB_ARCHIVE = $(GRYPE_DB_BUILD_DIR)/grype-db.tar.gz
 
-GRYPE_DB = $(BIN_DIR)/grype-db
-GRYPE = $(BIN_DIR)/grype
-
 SBOM_STORE_TAG = md5-$(shell md5sum .yardstick.yaml | cut -d' ' -f1)
 SBOM_STORE_IMAGE = ghcr.io/anchore/grype/quality-test-sbom-store:$(SBOM_STORE_TAG)
 RESULT_SET = pr_vs_latest_via_sbom
@@ -23,9 +20,6 @@ RESET := $(shell tput -T linux sgr0)
 TITLE := $(BOLD)$(PURPLE)
 SUCCESS := $(BOLD)$(GREEN)
 
-# this can be a tag or a branch or blank for latest
-GRYPE_DB_VERSION =
-GRYPE_VERSION =
 
 .PHONY: all
 all: capture validate ## Fetch or capture all data and run all quality checks
@@ -40,10 +34,6 @@ validate:  ## Run all quality checks against already collected data
 .PHONY: capture
 capture: clear-data clear-results configure sboms build-db vulns ## Collect and store all syft and grype results relative to the given provider
 
-$(BIN_DIR):
-	curl -sSfL https://raw.githubusercontent.com/anchore/grype-db/main/install.sh | sh -s -- -b $(BIN_DIR) $(GRYPE_DB_VERSION)
-	curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $(BIN_DIR) $(GRYPE_VERSION)
-
 .PHONY: show-changes
 show-changes: ## Show the current file changeset
 	poetry run python ./configure.py -v show-changes
@@ -54,11 +44,11 @@ select-providers: ## Determine the provider(s) to use for the grype database bas
 	@poetry run python ./configure.py select-providers --json 2>/dev/null
 
 .PHONY: configure
-configure: $(BIN_DIR)  ## write yardstick and grype configuration files relative to the given provider
+configure: ## write yardstick and grype configuration files relative to the given provider
 	poetry run python ./configure.py configure $(provider)
 
 .PHONY: build-db
-build-db: $(BIN_DIR)  ## Build a grype database for the given provider
+build-db:  ## Build a grype database for the given provider
 	poetry run python ./configure.py build-db
 
 .PHONY: vulns

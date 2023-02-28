@@ -5,19 +5,29 @@ import os
 import glob
 import json
 import fnmatch
+import enum
+import dataclasses
+import requests
+import shlex
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import click
 import mergedeep
 import yaml
 from dataclass_wizard import asdict, fromdict, DumpMeta
+
 from yardstick.cli.config import (
     Application,
     Tool,
     ScanMatrix,
     ResultSet,
 )
+
+
+BIN_DIR = "./bin"
+CLONE_DIR = f"{BIN_DIR}/grype-db-src"
+GRYPE_DB = f"{BIN_DIR}/grype-db"
 
 
 @dataclass
@@ -29,6 +39,7 @@ class ConfigurationState:
 @dataclass
 class Yardstick:
     default_max_year: int = 2021
+    tools: list[Tool] = field(default_factory=list)
 
 
 @dataclass
@@ -46,9 +57,14 @@ class Test:
 
 
 @dataclass
+class GrypeDB:
+    version: str = "latest"
+
+
+@dataclass
 class Config:
     yardstick: Yardstick = field(default_factory=Yardstick)
-    tools: list[Tool] = field(default_factory=list)
+    grype_db: GrypeDB = field(default_factory=GrypeDB)
     tests: list[Test] = field(default_factory=list)
 
     @classmethod
@@ -87,7 +103,7 @@ class Config:
                     description="latest vulnerability data vs current vunnel data with latest grype tooling (via SBOM ingestion)",
                     matrix=ScanMatrix(
                         images=images,
-                        tools=self.tools,
+                        tools=self.yardstick.tools,
                     ),
                 )
             },
@@ -170,6 +186,64 @@ def cli(ctx, verbose: bool, config_path: str):
             },
         }
     )
+
+
+@cli.command(name="config", help="show the application config")
+@click.pass_obj
+def show_config(cfg: Config):
+    logging.info("showing application config")
+
+    # noqa
+    class IndentDumper(yaml.Dumper):
+        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:  # noqa: ARG002
+            return super().increase_indent(flow, False)
+
+    def enum_asdict_factory(data: list[tuple[str, Any]]) -> dict[Any, Any]:
+        # prevents showing oddities such as
+        #
+        #   wolfi:
+        #       request_timeout: 125
+        #       runtime:
+        #       existing_input: !!python/object/apply:vunnel.provider.InputStatePolicy
+        #           - keep
+        #       existing_results: !!python/object/apply:vunnel.provider.ResultStatePolicy
+        #           - delete-before-write
+        #       on_error:
+        #           action: !!python/object/apply:vunnel.provider.OnErrorAction
+        #           - fail
+        #           input: !!python/object/apply:vunnel.provider.InputStatePolicy
+        #           - keep
+        #           results: !!python/object/apply:vunnel.provider.ResultStatePolicy
+        #           - keep
+        #           retry_count: 3
+        #           retry_delay: 5
+        #       result_store: !!python/object/apply:vunnel.result.StoreStrategy
+        #           - flat-file
+        #
+        # and instead preferring:
+        #
+        #   wolfi:
+        #       request_timeout: 125
+        #       runtime:
+        #       existing_input: keep
+        #       existing_results: delete-before-write
+        #       on_error:
+        #           action: fail
+        #           input: keep
+        #           results: keep
+        #           retry_count: 3
+        #           retry_delay: 5
+        #       result_store: flat-file
+
+        def convert_value(obj: Any) -> Any:
+            if isinstance(obj, enum.Enum):
+                return obj.value
+            return obj
+
+        return {k: convert_value(v) for k, v in data}
+
+    cfg_dict = dataclasses.asdict(cfg, dict_factory=enum_asdict_factory)
+    print(yaml.dump(cfg_dict, Dumper=IndentDumper, default_flow_style=False))
 
 
 def write_config_state(cached_providers: list[str], uncached_providers: list[str], path: str = ".state.yaml"):
@@ -287,12 +361,66 @@ def configure(cfg: Config, provider_names: list[str]):
 
     write_config_state(cached_providers, uncached_providers)
 
+    _install(cfg.grype_db.version)
+
     return cached_providers, uncached_providers
+
+
+@cli.command(name="install", help="install tooling (currently only grype-db)")
+@click.pass_obj
+def install(cfg: Config):
+    _install(cfg.grype_db.version)
+
+
+def _install(version: str):
+    os.makedirs(BIN_DIR, exist_ok=True)
+
+    if not os.path.exists(CLONE_DIR):
+        subprocess.run(["git", "clone", "https://github.com/anchore/grype-db", CLONE_DIR], check=True)
+    else:
+        subprocess.run(["git", "fetch", "--all"], cwd=CLONE_DIR, check=True)
+
+    if version == "latest":
+        version = (
+            requests.get("https://github.com/anchore/grype-db/releases/latest", headers={"Accept": "application/json"})
+            .json()
+            .get("tag_name", "")
+        )
+        logging.info(f"latest released grype-db version is {version!r}")
+
+    elif not version.startswith("v"):
+        # assume it's a git branch
+        subprocess.run(["git", "checkout", version], cwd=CLONE_DIR, check=True)
+
+        version = subprocess.check_output(["git", "describe", "--tags"], cwd=CLONE_DIR).decode("utf-8").strip()
+
+        logging.info(f"grype-db version derived from git is {version!r}")
+
+    if version.startswith("v"):
+        if os.path.exists(GRYPE_DB):
+            grype_db_version = (
+                subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
+            )
+            if grype_db_version == version:
+                logging.info(f"grype-db already installed at version {version!r}")
+                return
+            else:
+                logging.info(f"updating grype-db from version {grype_db_version!r} to {version!r}")
+
+    logging.info(f"installing grype-db at version {version!r}")
+
+    subprocess.run(["git", "checkout", version], cwd=CLONE_DIR, check=True)
+
+    cmd = f"go build -v -ldflags=\"-X 'github.com/anchore/grype-db/cmd/grype-db/application.version={version}'\" -o ../grype-db ./cmd/grype-db"
+
+    logging.info(f"building grype-db: {cmd}")
+
+    subprocess.run(shlex.split(cmd), cwd=CLONE_DIR, env=os.environ, check=True)
 
 
 @cli.command(name="build-db", help="build a DB consisting of one or more providers")
 @click.pass_obj
-def build_db(_: Config):
+def build_db(cfg: Config):
     state = read_config_state()
 
     if not state.cached_providers and not state.uncached_providers:
@@ -302,7 +430,6 @@ def build_db(_: Config):
     logging.info(f"preparing data directory for uncached={state.uncached_providers!r} cached={state.cached_providers!r}")
 
     cache_file = "grype-db-cache.tar.gz"
-    grype_db = "bin/grype-db"
     data_dir = "data"
     build_dir = "build"
     db_archive = f"{build_dir}/grype-db.tar.gz"
@@ -321,12 +448,12 @@ def build_db(_: Config):
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
         subprocess.run(["oras", "pull", f"ghcr.io/anchore/grype-db/data/{provider}:latest"], check=True)
-        subprocess.run([grype_db, "cache", "restore", "--path", cache_file], check=True)
+        subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
 
     logging.info("building DB")
-    subprocess.run([grype_db, "build", "-v"], check=True)
-    subprocess.run([grype_db, "package", "-v"], check=True)
+    subprocess.run([GRYPE_DB, "build", "-v"], check=True)
+    subprocess.run([GRYPE_DB, "package", "-v"], check=True)
 
     archives = glob.glob(f"{build_dir}/*.tar.gz")
     if not archives:
