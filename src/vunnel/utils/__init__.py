@@ -37,6 +37,8 @@ def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 1) -> Callabl
                 time.sleep(sleep)
                 attempt += 1
 
+            raise RuntimeError("max retries reached, failed to execute function")
+
         return wrapper
 
     return rwb
