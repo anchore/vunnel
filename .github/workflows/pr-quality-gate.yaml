@@ -9,6 +9,8 @@ jobs:
   select-providers:
     runs-on: ubuntu-20.04
 #    if: github.event.issue.pull_request && contains(github.event.comment.body, '/run-gate')
+    outputs:
+      providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -31,14 +33,15 @@ jobs:
 
           # determine which providers to run (to later populate the matrix)
           content=`poetry run make select-providers`
+          echo $content
           echo "providers=$content" >> $GITHUB_OUTPUT
 
-  pr-quality-gate:
+  validate-provider:
     runs-on: ubuntu-20.04
     needs: select-providers
     strategy:
       matrix:
-        provider: ${{fromJson(needs.determine-providers.outputs.providers)}}
+        provider: ${{fromJson(needs.select-providers.outputs.providers)}}
       fail-fast: false
     permissions:
       contents: read
@@ -58,3 +61,16 @@ jobs:
         uses: ./.github/actions/quality-gate
         with:
           provider: ${{ matrix.provider }}
+
+  evaluate-quality-gate:
+    runs-on: ubuntu-20.04
+    needs: validate-provider
+    if: ${{ always() && !cancelled() }}
+    steps:
+      - run: |
+          echo "Validations Status: ${{ needs.run-provider-validation.result }}"
+          if [ "${{ needs.run-provider-validation.result }}" == "failure" ]; then
+            echo "Quality gate failed!"
+            exit 1
+          fi
+          echo "Quality gate passed!"
