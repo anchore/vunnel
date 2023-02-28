@@ -88,9 +88,9 @@ class Config:
                     matrix=ScanMatrix(
                         images=images,
                         tools=self.tools,
-                    )
+                    ),
                 )
-            }
+            },
         )
 
     def test_configuration_by_provider(self, provider: str) -> Optional[Test]:
@@ -192,7 +192,7 @@ def read_config_state(path: str = ".state.yaml"):
 def write_yardstick_config(cfg: Application, path: str = ".yardstick.yaml"):
     logging.info(f"writing yardstick config to {path!r}")
 
-    DumpMeta(key_transform='SNAKE', skip_defaults=True).bind_to(Application)
+    DumpMeta(key_transform="SNAKE", skip_defaults=True).bind_to(Application)
 
     with open(path, "w") as f:
         f.write(yaml.dump(asdict(cfg)))
@@ -200,17 +200,20 @@ def write_yardstick_config(cfg: Application, path: str = ".yardstick.yaml"):
 
 def write_grype_db_config(providers: set[str], path: str = ".grype-db.yaml"):
     with open(path, "w") as f:
-        f.write("""
+        f.write(
+            """
 pull:
   parallelism: 1
 provider:
   root: ./data
   configs:
-""" + "\n".join([f"    - name: {provider}" for provider in providers]))
+"""
+            + "\n".join([f"    - name: {provider}" for provider in providers])
+        )
 
 
 @cli.command(name="select-providers", help="determine the providers to test from a file changeset")
-@click.option("--json", "-j", "output_json",  help="output result as json list (useful for CI)", is_flag=True)
+@click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
 @click.pass_obj
 def select_providers(cfg: Config, output_json: bool):
     logging.info("determining providers affected by the current file changeset")
@@ -229,9 +232,7 @@ def select_providers(cfg: Config, output_json: bool):
         if not test.provider:
             continue
 
-        search_globs = [
-            f"src/vunnel/providers/{test.provider}/**"
-        ]
+        search_globs = [f"src/vunnel/providers/{test.provider}/**"]
 
         for additional_provider in test.additional_providers:
             search_globs.append(f"src/vunnel/providers/{additional_provider.name}/**")

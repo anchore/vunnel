@@ -54,4 +54,3 @@ jobs:
         uses: ./.github/actions/quality-gate
         with:
           provider: ${{ matrix.provider }}
-

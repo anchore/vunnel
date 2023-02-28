@@ -54,7 +54,7 @@ label (TP or FP). This could also mean that multiple conflicting labels were
 found for the a single match. The more indeterminate matches there are the less
 confident you can be about the F1 score. Ideally there should be 0 indeterminate
 matches, but this is difficult to achieve since vulnerability data is constantly
-changing. 
+changing.
 
 False negatives represent matches that should have been made by the tool but
 were missed. We should always make certain that this value does not increase
@@ -122,7 +122,7 @@ targets into fixed targets as possible:
   This allows us to account for capability differences between tool runs.
 
 
-To reduce maintenance effort of this comparison over time there are a few things 
+To reduce maintenance effort of this comparison over time there are a few things
 to keep in mind:
 
 - Once an image is labeled (at a specific digest) the image digest should be
@@ -168,7 +168,7 @@ modifying the comparison labels.
 To get started, let's assume we see some quality gate failure in like this (something found in CI
 or after running `./gate.py`):
 ```
-Running comparison against labels... 
+Running comparison against labels...
    Results used:
     ├── f4fb4e6e-c911-41b6-9a10-f90b3954a41a : grype@v0.53.1-19-g8900767 against docker.io/anchore/test_images@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
     └── fcebdd0b-d80a-4fe2-b81a-802c7b98d83b : grype@v0.53.1 against docker.io/anchore/test_images@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
@@ -206,7 +206,7 @@ yardstick label explore 5bf0611b-183f-4525-a1ab-f268f62f48b6
 At this point we can use the TUI to explore and modify the match data, by deleting things or labeling as
 true positives, false positives, etc.. **After making changes make sure to save the results** (`Ctrl-S`)!
 
-At this point you can run the quality gate using updated label data. The quality gate can run against 
+At this point you can run the quality gate using updated label data. The quality gate can run against
 just one image, for example the image we first found in the failure, so run the quality gate and see
 how changes to the label data have affected the result:
 ```shell
@@ -232,7 +232,7 @@ branch, update the submodule locally using:
 git submodule update --remote
 ```
 
-Next, _commit the submodule change_ as part of any other changes 
+Next, _commit the submodule change_ as part of any other changes
 to the Grype pull request and push as part of the in-progress PR
 against Grype. The PR will now use the updated match labels when running
 the quality check.

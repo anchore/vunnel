@@ -103,6 +103,11 @@ exclude = '''
     | dist
     | data
     | backup
+    | tests/quality/vulnerability-match-labels
+    | tests/quality/.yardstick
+    | tests/quality/data
+    | tests/quality/build
+    | tests/quality/bin
   )/
 )
 '''
