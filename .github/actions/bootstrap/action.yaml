@@ -31,7 +31,7 @@ runs:
 
     - uses: actions/setup-python@v4
       with:
-        python-version: python-${{ inputs.python-version }}
+        python-version: ${{ inputs.python-version }}
 
     - name: Install poetry
       uses: abatilo/actions-poetry@v2.2.0
