@@ -47,6 +47,10 @@ all-providers: ## Select all providers for testing
 select-providers: ## Determine the provider(s) to use for testing based on the file changeset
 	@poetry run python ./configure.py select-providers --json 2>/dev/null
 
+.PHONY: validate-test-tool-versions
+validate-test-tool-versions: ## Pass/Fail to determine if we're using the production versions of grype and grype-db
+	@poetry run python ./configure.py validate-test-tool-versions
+
 .PHONY: configure
 configure: ## write yardstick and grype configuration files relative to the given provider
 	poetry run python ./configure.py configure $(provider)

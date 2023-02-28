@@ -9,6 +9,7 @@ import enum
 import dataclasses
 import requests
 import shlex
+import sys
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 
@@ -354,6 +355,42 @@ def all_providers(cfg: Config, output_json: bool):
     else:
         for provider in sorted_providers:
             print(provider)
+
+
+@cli.command(
+    name="validate-test-tool-versions",
+    help="Pass/Fail to indicate if production versions of grype and grype-db are used when testing",
+)
+@click.pass_obj
+def validate_test_tool_versions(cfg: Config):
+    logging.info("validating test tool versions")
+
+    reasons = []
+
+    logging.info(f"grype-db version: {cfg.grype_db.version!r}")
+    if cfg.grype_db.version != "latest":
+        reasons.append("grype-db version is not latest")
+
+    for idx, tool in enumerate(cfg.yardstick.tools):
+        if tool.name != "grype":
+            continue
+
+        label = tool.label
+        if not label:
+            label = ""
+
+        logging.info(f"grype version (index={idx+1} label={label}): {tool.version!r}")
+
+        if tool.version != "latest" and not tool.version.startswith("latest+"):
+            reasons.append(f"grype version is not latest (index {idx+1})")
+
+    for reason in reasons:
+        logging.error(reason)
+
+    if reasons:
+        print("FAIL")
+        sys.exit(1)
+    print("PASS")
 
 
 @cli.command(name="configure", help="setup yardstick and grype-db configurations for building a DB")

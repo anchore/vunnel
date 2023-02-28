@@ -32,6 +32,10 @@ jobs:
       - name: Run unit tests
         run: poetry run make unit
 
+      - name: Ensure quality gate tools are properly configured
+        run: |
+          cd tests/quality && make validate-test-tool-versions
+
       - name: Build assets
         run: poetry run make build
 
