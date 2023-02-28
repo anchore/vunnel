@@ -1,0 +1,83 @@
+yardstick:
+  default_max_year: 2021
+
+#  result_set:
+#    name:  pr_vs_latest_via_sbom
+#    description: "latest vulnerability data vs current vunnel data with latest grype results (via SBOM ingestion)"
+
+tools:
+  - name: syft
+    version: v0.68.1
+    produces: SBOM
+
+  - name: grype
+    label: custom-db
+    version: latest+import-db=build/grype-db.tar.gz
+    takes: SBOM
+
+  - name: grype
+    version: latest
+    takes: SBOM
+
+
+tests:
+# TODO: specific cases for all providers
+#    - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
+#    - docker.io/rockylinux:8@sha256:72afc2e1a20c9ddf56a81c51148ebcbe927c0a879849efe813bee77d69df1dd8
+
+  - provider: alpine
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - docker.io/alpine:3.2@sha256:ddac200f3ebc9902fb8cfcd599f41feb2151f1118929da21bcef57dc276975f9
+
+  - provider: amazon
+    images:
+      - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
+
+  - provider: centos
+    images:
+      - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
+
+  - provider: debian
+    images:
+      - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
+
+#  - providers:
+#      - name: github
+#    images:
+#      -
+
+  - provider: nvd
+    images:
+      - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
+
+  - provider: oracle
+    images:
+      - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
+
+  - provider: rhel
+    images:
+      - registry.access.redhat.com/ubi8@sha256:68fecea0d255ee253acbf0c860eaebb7017ef5ef007c25bee9eeffd29ce85b29
+
+#  - providers:
+#      - name: sles
+#    images:
+#      -
+
+  - provider: ubuntu
+    images:
+      - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
+
+  - provider: wolfi
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - cgr.dev/chainguard/wolfi-base:latest-20221001@sha256:be3834598c3c4b76ace6a866edcbbe1fa18086f9ee238b57769e4d230cd7d507
+
+
+#    additional-trigger-globs:
+#      - src/vunnel/providers/wolfi/**   # note: already included by default
+#      - src/vunnel/providers/nvd/**     # note: already included by default
