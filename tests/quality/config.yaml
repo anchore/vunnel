@@ -36,9 +36,13 @@ tests:
     images:
       - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
 
-  - provider: centos
-    images:
-      - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
+# why not include centos?
+# because centos is not included in the grype-db build, instead the rhel provider is used.
+# however since the rhel provider uses the centos provider code we still need the rhel provider
+# to be tested on centos changes.
+#  - provider: centos
+#    images:
+#      - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
 
   - provider: debian
     images:
@@ -58,8 +62,11 @@ tests:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
 
   - provider: rhel
+    additional-trigger-globs:
+      - src/vunnel/providers/centos/**
     images:
       - registry.access.redhat.com/ubi8@sha256:68fecea0d255ee253acbf0c860eaebb7017ef5ef007c25bee9eeffd29ce85b29
+      - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
 
 #  - providers:
 #      - name: sles
