@@ -52,7 +52,6 @@ class Provider(provider.Provider):
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for release, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
-
                     writer.write(
                         identifier=os.path.join(f"{namespace.lower()}:{release.lower()}", vuln_id),
                         schema=self.schema,

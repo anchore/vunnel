@@ -68,7 +68,7 @@ def load_plugins() -> None:
 
     for tool in plugins:
         try:
-            logging.info(f"loading provider plugin {tool.name!r}")
+            logging.debug(f"loading provider plugin {tool.name!r}")
             tool.load()
         except:  # noqa: E722
             # note: this should not be fatal. Log and move on.

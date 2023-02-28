@@ -50,9 +50,11 @@ class Provider(provider.Provider):
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for namespace, vulns in self.parser.get():
+
                 namespace = namespace.lower()
                 for vuln_id, record in vulns.items():
                     vuln_id = vuln_id.lower()
+
                     writer.write(
                         identifier=os.path.join(namespace, vuln_id),
                         schema=self.schema,
