@@ -49,6 +49,7 @@ runs:
           ${{ inputs.cache-key-prefix }}-python-${{ inputs.python-version }}-poetry-${{ inputs.poetry-version }}
 
     - name: Setup Poetry config
+      shell: bash
       run: |
         poetry config virtualenvs.in-project false
         poetry config virtualenvs.path ~/.virtualenvs
@@ -63,6 +64,7 @@ runs:
 
     - name: (cache-miss) Bootstrap tools
       if: steps.tool-cache.outputs.cache-hit != 'true' && inputs.tools == 'true'
+      shell: bash
       run: make bootstrap
 
     - name: Install apt packages
@@ -72,4 +74,5 @@ runs:
         DEBIAN_FRONTEND=noninteractive sudo apt update && sudo -E apt install -y ${{ inputs.bootstrap-apt-packages }}
 
     - name: Install dependencies and package
+      shell: bash
       run: poetry install
