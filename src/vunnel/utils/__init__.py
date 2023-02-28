@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def retry_with_backoff(retries: int = 10, backoff_in_seconds: int = 1) -> Callable[[Any], Any]:
+def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callable[[Any], Any]:
     def rwb(f: Callable[[Any], Any]) -> Callable[[Any], Any]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             logger = logging.getLogger("utils:retry-with-backoff")
@@ -33,9 +33,11 @@ def retry_with_backoff(retries: int = 10, backoff_in_seconds: int = 1) -> Callab
                         raise
 
                 sleep = backoff_in_seconds * 2**attempt + random.uniform(0, 1)  # nosec
-                logger.warning(f"{f} failed. Retrying in {sleep} seconds (attempt {attempt+1} of {retries})")
+                logger.warning(f"{f} failed. Retrying in {int(sleep)} seconds (attempt {attempt+1} of {retries})")
                 time.sleep(sleep)
                 attempt += 1
+
+            raise RuntimeError("max retries reached, failed to execute function")
 
         return wrapper
 

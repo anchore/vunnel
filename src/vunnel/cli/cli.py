@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import enum
 import logging
+import sys
 from typing import Any
 
 import click
@@ -28,7 +29,8 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
     elif verbose >= 2:
         log_level = "TRACE"
 
-    log_format = "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s"
+    log_format = "%(log_color)s %(asctime)s [%(levelname)s] %(message)s"
+    # log_format = "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s"
     if ctx.obj.log.slim:
         log_format = "%(log_color)s %(message)s"
 
@@ -68,6 +70,8 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
             },
         },
     )
+
+    providers.load_plugins()
 
 
 @cli.command(name="config", help="show the application config")
@@ -135,7 +139,7 @@ def run_provider(cfg: config.Application, provider_name: str) -> None:
     logging.info(f"running {provider_name} provider")
 
     provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
-    provider.populate()
+    provider.run()
 
 
 @cli.command(name="clear", help="clear provider state")
@@ -144,6 +148,9 @@ def run_provider(cfg: config.Application, provider_name: str) -> None:
 @click.option("--result", "-r", is_flag=True, help="clear only the result state")
 @click.pass_obj
 def clear_provider(cfg: config.Application, provider_names: str, _input: bool, result: bool) -> None:
+    if not provider_names:
+        logging.warning("no providers specified, bailing...")
+        sys.exit(1)
     for provider_name in provider_names:
         logging.info(f"clearing {provider_name} provider state")
 

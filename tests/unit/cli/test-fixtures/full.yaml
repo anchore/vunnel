@@ -27,7 +27,7 @@ providers:
   debian:
     runtime: *runtime
     request_timeout: 20
-    distro_map:
+    releases:
       jinx: 87
   github:
     runtime: *runtime
@@ -43,7 +43,7 @@ providers:
   rhel:
     runtime: *runtime
     request_timeout: 20
-    max_workers: 7
+    parallelism: 7
     full_sync_interval: 22
     skip_namespaces:
       - rhel:8
@@ -58,7 +58,7 @@ providers:
     additional_versions:
       "zzz": "24.24"
     enable_rev_history: true
-    max_workers: 25
+    parallelism: 25
     git_url: "https://xyz.abc"
     git_branch: "yoda"
   wolfi:

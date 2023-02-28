@@ -23,13 +23,15 @@ class Config:
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=lambda: {})
     enable_rev_history: bool = True
-    max_workers: int = default_max_workers
+    parallelism: int = default_max_workers
     git_url: str = default_git_url
     git_branch: str = default_git_branch
 
 
 class Provider(provider.Provider):
-    def __init__(self, root: str, config: Config):
+    def __init__(self, root: str, config: Config | None = None):
+        if not config:
+            config = Config()
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
@@ -41,7 +43,7 @@ class Provider(provider.Provider):
             logger=self.logger,
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,
-            max_workers=self.config.max_workers,
+            max_workers=self.config.parallelism,
             git_url=self.config.git_url,
             git_branch=self.config.git_branch,
         )

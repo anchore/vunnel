@@ -16,71 +16,7 @@ There are two times when assets are released:
 
 ## Creating a new release
 
-You can release vunnel by running `make trigger-release` (if you have the appropriate repo permissions):
-```
-$ make trigger-release
-
-Proposed version: v0.1.0
-
-   Changelog
-
-  ## v0.1.0 https://github.com/anchore/vunnel/tree/v0.1.0 (2023-01-10)
-
-  Full Changelog https://github.com/anchore/vunnel/compare/v0.0.0...v0.1.0
-
-  ### Added Features
-
-  • Port remaining feed drivers from enterprise [Issue #3 https://github.com/anchore/vunnel/issues/3]
-
-  ### Bug Fixes
-
-  • NVD provider taking a long time even when results are cached [Issue #9 https://github.com/anchore/vunnel/issues/9]
-
-Do you want to trigger a release with this version? [y/n] y
-
-Kicking off release for v0.1.0...
-✓ Created workflow_dispatch event for release.yaml at main
-
-To see runs for this workflow, try: gh run list --workflow=release.yaml
-
-Waiting for release to start...
-Head to the release workflow to monitor the release: https://github.com/anchore/vunnel/actions/runs/3885067293
-
-✓ main Release · 3885067293
-Triggered via workflow_dispatch about 1 minute ago
-
-JOBS
-✓ quality-gate in 48s (ID 10556082455)
-  ✓ Set up job
-  ✓ Run actions/checkout@v3
-  ✓ Check if tag already exists
-  ✓ Ensure tagged commit is on main
-  ✓ Check validation results
-  - Quality gate
-  ✓ Post Run actions/checkout@v3
-  ✓ Complete job
-✓ release in 43s (ID 10556109730)
-  ✓ Set up job
-  ✓ Run actions/checkout@v3
-  ✓ Run actions/setup-python@v4
-  ✓ Install poetry
-  ✓ Cache Poetry virtualenv
-  ✓ Setup Poetry config
-  ✓ Restore tool cache
-  - (cache-miss) Bootstrap tools
-  ✓ Install dependencies and package
-  ✓ Login to ghcr.io
-  ✓ Tag release
-  ✓ Promote commit image to release
-  ✓ Create github release
-  ✓ Post Restore tool cache
-  ✓ Post Cache Poetry virtualenv
-  ✓ Post Run actions/checkout@v3
-  ✓ Complete job
-  ✓ Post Run actions/setup-python@v4
-
-✓ Run Release (3885067293) completed with 'success'
-```
+You can release vunnel by running `make release` (if you have the appropriate repo permissions).
 
 You do **not** need to use this local trigger script. You can always kick off the release from the GitHub actions UI as a workflow_dispatch, inputting the desired new version for the release. This approach acts as a manual override for the version if `chronicle` is non-functional or the issue/PR labels are not ready but a release is urgently needed. Remember, if you go this approach you will need to check the release notes afterwards and manually tailor as-needed.
 

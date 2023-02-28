@@ -24,7 +24,9 @@ class Config:
 
 
 class Provider(provider.Provider):
-    def __init__(self, root: str, config: Config):
+    def __init__(self, root: str, config: Config | None = None):
+        if not config:
+            config = Config()
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
@@ -50,7 +52,6 @@ class Provider(provider.Provider):
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for release, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
-
                     writer.write(
                         identifier=os.path.join(f"{namespace.lower()}:{release.lower()}", vuln_id),
                         schema=self.schema,
