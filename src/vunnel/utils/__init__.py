@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 1) -> Callable[[Any], Any]:
+def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callable[[Any], Any]:
     def rwb(f: Callable[[Any], Any]) -> Callable[[Any], Any]:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             logger = logging.getLogger("utils:retry-with-backoff")
