@@ -25,7 +25,11 @@ jobs:
       - name: Determine providers
         id: determine-providers
         run: |
-          content=`poetry run make select-providers`
+          # be nice to folks troubleshooting in CI...
+          cd tests/quality && poetry run make show-changes
+
+          # determine which providers to run (to later populate the matrix)
+          content=`cd tests/quality && poetry run make select-providers`
           echo "providers=$content" >> $GITHUB_OUTPUT
 
   pr-quality-gate:

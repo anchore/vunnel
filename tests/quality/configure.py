@@ -212,10 +212,13 @@ provider:
         )
 
 
-@cli.command(name="select-providers", help="determine the providers to test from a file changeset")
-@click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
+@cli.command(name="show-changes", help="show the current file changeset")
 @click.pass_obj
-def select_providers(cfg: Config, output_json: bool):
+def show_changes(_: Config):
+    changes()
+
+
+def changes():
     logging.info("determining providers affected by the current file changeset")
 
     base_ref = os.environ.get("GITHUB_BASE_REF", "main")
@@ -226,6 +229,15 @@ def select_providers(cfg: Config, output_json: bool):
     logging.info(f"changed files: {len(changed_files)}")
     for changed_file in changed_files:
         logging.debug(f"  {changed_file}")
+
+    return changed_files
+
+
+@cli.command(name="select-providers", help="determine the providers to test from a file changeset")
+@click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
+@click.pass_obj
+def select_providers(cfg: Config, output_json: bool):
+    changed_files = changes()
 
     selected_providers = set()
     for test in cfg.tests:

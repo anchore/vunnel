@@ -44,6 +44,10 @@ $(BIN_DIR):
 	curl -sSfL https://raw.githubusercontent.com/anchore/grype-db/main/install.sh | sh -s -- -b $(BIN_DIR) $(GRYPE_DB_VERSION)
 	curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b $(BIN_DIR) $(GRYPE_VERSION)
 
+.PHONY: show-changes
+show-changes: ## Show the current file changeset
+	@poetry run python ./configure.py -v show-changes
+
 .PHONY: select-providers
 select-providers: $(BIN_DIR) ## Determine the provider(s) to use for the grype database based on the file changeset
 	@poetry run python ./configure.py select-providers --json 2>/dev/null
