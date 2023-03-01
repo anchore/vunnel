@@ -301,6 +301,9 @@ def changes():
     if not base_ref:
         base_ref = "origin/main"
 
+    if "/" not in base_ref:
+        base_ref = f"origin/{base_ref}"
+
     # get list of files changed with git diff
     changed_files = subprocess.check_output(["git", "diff", "--name-only", base_ref]).decode("utf-8").splitlines()
 
