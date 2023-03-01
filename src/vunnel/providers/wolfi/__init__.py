@@ -49,12 +49,9 @@ class Provider(provider.Provider):
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
 
         with self.results_writer() as writer:
-
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for release, vuln_dict in self.parser.get():
-
                 for vuln_id, record in vuln_dict.items():
-
                     writer.write(
                         identifier=os.path.join(f"{namespace.lower()}:{release.lower()}", vuln_id),
                         schema=self.schema,

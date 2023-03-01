@@ -3,4 +3,4 @@
 <!--- 2. Please link PRs to corresponding issues with `Closes #issue-number` in the description -->
 
 
-_Note for maintainers_: Be sure to add the `run-quality-gate` label to the PR when it has stabilized.
+_Note for maintainers_: Be sure to add the `run-pr-quality-gate` label to the PR when it has stabilized.

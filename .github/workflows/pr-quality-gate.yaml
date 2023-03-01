@@ -41,14 +41,17 @@ jobs:
   validate-provider:
     runs-on: ubuntu-20.04
     needs: select-providers
-    if: contains(github.event.pull_request.labels.*.name, 'run-quality-gate')
+    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate')
+
     strategy:
       matrix:
         provider: ${{fromJson(needs.select-providers.outputs.providers)}}
       fail-fast: false
+
     permissions:
       contents: read
       packages: read
+
     steps:
       - uses: actions/checkout@v3
         with:
