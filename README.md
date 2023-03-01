@@ -14,6 +14,7 @@ Supported data sources:
 - Ubuntu (https://launchpad.net/ubuntu-cve-tracker)
 - Wolfi (https://packages.wolfi.dev)
 
+
 ## Installation
 
 With pip:
@@ -41,6 +42,7 @@ Where:
   - you can swap `latest` for a specific version (same as the git tags)
 
 See [the vunnel package](https://github.com/anchore/vunnel/pkgs/container/vunnel) for a full listing of available tags.
+
 
 ## Getting Started
 
@@ -129,6 +131,7 @@ providers:
 ```
 
 Use `vunnel config` to get a better idea of all of the possible configuration options.
+
 
 ## FAQ
 
