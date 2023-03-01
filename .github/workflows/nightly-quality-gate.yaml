@@ -50,6 +50,8 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
+        with:
+          go: true
 
       - name: Run quality gate
         uses: ./.github/actions/quality-gate
