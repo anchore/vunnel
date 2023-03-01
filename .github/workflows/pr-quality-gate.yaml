@@ -1,13 +1,12 @@
 name: "PR Quality Gate"
 on:
-  issue_comment:
-    types: [created]
+  pull_request:
 
 jobs:
 
   select-providers:
     runs-on: ubuntu-20.04
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '/run-gate')
+    if: contains(github.event.pull_request.labels.*.name, 'run-quality-gate')
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
