@@ -55,6 +55,7 @@ class Provider(provider.Provider):
             for (vuln_id, namespace), (_, record) in vuln_dict.items():
                 namespace = namespace.lower()
                 vuln_id = vuln_id.lower()
+
                 writer.write(
                     identifier=os.path.join(namespace, vuln_id),
                     schema=self.schema,
