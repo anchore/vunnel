@@ -58,6 +58,222 @@ make help
 ```
 
 
+## Adding a new provider
+
+"Vulnerability matching" is the process of taking a list of vulnerabilities and matching them against a list of packages.
+A provider in this repo is responsible for the "vulnerability" side of this process. The "package" side is handled by
+[Syft](github.com/anchore/syft). A prerequisite for adding a new provider is that Syft can catalog the package types that
+the provider is feeding vulnerability data for, so [Grype](github.com/anchore/grype) can perform the matching from these two sources.
+
+To add a new provider, you will need to create a new provider class  under `/src/vunnel/providers/<name>` that inherits from `provider.Provider` and implements:
+- `name()`: a unique and semantically-useful name for the provider (same as the name of the directory)
+- `update()`: downloads and processes the raw data, writing all results with `self.results_writer()`
+
+All results must conform to a [particular schema](https://github.com/anchore/vunnel/tree/main/schema), today there are a few kinds:
+- `os`: a generic operating system vulnerability
+- `nvd`: tailored to describe vulnerabilities from the NVD
+- `github-security-advisory`: tailored to describe vulnerabilities from GitHub
+
+Validating this provider has different implications depending on what is being added. For example, if the provider is
+adding a new vulnerability source but is ultimately using an existing schema to express results then there is very little to do!
+If you are adding a new schema, then the downstream data pipeline will need to be altered to support reading data in the new schema.
+
+### ...for an existing schema
+
+1. Fork Vunnel and add the new provider.
+
+You should be able to see the new provider in the `vunnel list` command and run it with `vunnel run <name>`.
+The entries written should write out to a specific `namespace` in the DB downstream, as indicated in the record.
+This namespace is needed when making grype changes.
+
+
+2. Fork Grype and map distro type to a specific namespace.
+
+This step might not be needed depending on the provider. Any change needed would be in the current grype db schema namespace index: https://github.com/anchore/grype/blob/main/grype/db/v5/namespace/index.go .
+
+
+3. In Vunnel: add a new test case to `tests/quality/config.yaml` for the new provider.
+
+The configuration maps a provider to test to specific images to test with, for example:
+```yaml
+...
+  - provider: amazon
+    images:
+      - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
+      - docker.io/anchore/test_images:vulnerabilities-amazonlinux-2-5c26ce9@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
+...
+```
+
+These images are used to test the provider on PRs and nightly builds to verify the specific provider is working.
+Always use both the image tag and digest for all container image entries.
+Pick an image that has a good representation of the package types that your new provider is adding vulnerability data for.
+
+
+4. In Vunnel: swap the tools to your Grype branch in `tests/quality/config.yaml`.
+
+If you wanted to see PR quality gate checks pass with your specific Grype changes (if you have any) then you can update the
+`yardstick.tools[*]` entries for grype to use the a version that points to your fork (w.g. `your-fork-username/grype@main`).
+If you don't have any grype changes needed then you can skip this step.
+
+
+5. In Vunnel: add new "vulnerability match labels" to annotate True and False positive findings with Grype.
+
+In order to evaluate the quality of the new provider, we need to know what the expected results are. This is done by
+annotating Grype results with "True Positive" labels (good results) and "False Positive" labels (bad results). We'll use
+[Yardstick](github.com/anchore/yardstick) to do this:
+
+```bash
+$ cd tests/quality
+
+# capture results with the development version of grype (from your fork)
+$ make capture provider=<your-provider-name>
+
+# list your results
+$ yardstick result list | grep grype
+
+d415064e-2bf3-4a1d-bda6-9c3957f2f71a  docker.io/anc...  grype@v0.58.0             2023-03...
+75d1fe75-0890-4d89-a497-b1050826d9f6  docker.io/anc...  grype[custom-db]@bdcefd2  2023-03...
+
+# use the "grype[custom-db]" result UUID and explore the results and add labels to each entry
+$ yardstick label explore 75d1fe75-0890-4d89-a497-b1050826d9f6
+
+# You can use the yardstick TUI to label results:
+# - use "T" to label a row as a True Positive
+# - use "F" to label a row as a False Positive
+# - Ctrl-Z to undo a label
+# - Ctrl-S to save your labels
+# - Ctrl-C to quit when you are done
+
+```
+
+Later we'll open a PR in the [Vulnerability-Match-Labels repo](github.com/anchore/vulnerability-match-labels) to persist these labels.
+For the meantime we can iterate locally with the labels we've added.
+
+
+6. In Vunnel: run the quality gate.
+
+```bash
+cd tests/quality
+
+# capture the test data for your specific provider, build a DB, and run grype with the new DB
+make capture provider=<your-provider-name>
+
+# evaluate the quality gate
+make validate
+```
+
+This uses the latest Grype-DB release to build a DB and the specified Grype version with a DB containing only data from the new provider.
+
+You are looking for a passing run before continuing further.
+
+
+7. In Vunnel: open a PR to persist the new labels.
+
+```
+# fork the github.com/anchore/vulnerability-match-labels repo, but you do not need to clone it...
+
+$ cd tests/quality/vulnerability-match-labels
+
+$ git remote add fork git@github.com:anchore/vulnerability-match-labels.git
+$ git checkout -b 'add-labels-for-<your-provider-name>'
+$ git status
+
+# you should see changes from the labels/ directory for your provider that you added
+
+$ git add .
+$ git commit -m 'add labels for <your-provider-name>'
+$ git push fork add-labels-for-<your-provider-name>
+```
+
+At this point you can open a PR against in the [Vulnerability-Match-Labels repo](github.com/anchore/vulnerability-match-labels).
+
+_Note: you will not be able to open a Vunnel PR that passes PR checks until the labels are merged into the Vulnerability-Match-Labels repo._
+
+Once the PR is merged in the Vulnerability-Match-Labels repo you can update the submodule in Vunnel to point to the latest commit in the Vulnerability-Match-Labels repo.
+
+```bash
+$ cd tests/quality
+
+$ git submodule update --remote vulnerability-match-labels
+```
+
+
+8. In Vunnel: open a PR with your new provider.
+
+The PR will also run all of the same quality gate checks that you ran locally.
+
+If you have Grype changes, you should also create a PR for that as well. The Vunnel PR will not pass PR checks until the Grype PR is merged and the `test/quality/config.yaml` file is updated to point back to the `latest` Grype version.
+
+
+
+### ...for a new schema
+
+This is the same process as listed above with a few additional steps:
+
+1. You will need to add the new schema to the Vunnel repo in the `schemas` directory.
+2. Grype-DB will need to be updated to support the new schema in the `pkg/provider/unmarshal` and `pkg/process/v*` directories.
+3. The Vunnel `tests/quality/config.yaml` file will need to be updated to use development `grype-db.version`, pointing to your fork.
+4. The final Vunnel PR will not be able to be merged until the Grype-DB PR is merged and the `tests/quality/config.yaml` file is updated to point back to the `latest` Grype-DB version.
+
+
+## Architecture
+
+Vunnel is a CLI tool that downloads and processes vulnerability data from various sources (in the codebase, these are called "providers").
+It is designed to be extensible and easy to add new providers. Additionally, the Vunnel CLI tool is optimized to run
+a single provider at a time, not orchestrating multiple providers at once. [Grype-db](github.com/anchore/grype-db) is the
+tool that collates output from multiple providers and produces a single database, and is ultimately responsible for
+orchestrating multiple Vunnel calls to prepare the input data.
+
+All providers work within a common root directory, by default `./data`. Within this directory, each provider has its own
+"workspace" subdirectory. By convention no provider should read or write outside of its own workspace. This implies that
+providers are independent of each other and can be run in parallel safely.
+
+Within a provider's workspace, there are a few common subdirectories:
+```
+data                     # vunnel root directory
+└── wolfi                # "wolfi" provider workspace
+    ├── input            # contains all raw data downloaded by the provider
+    └── results          # contains all processed data produced by the provider
+```
+
+All results from a provider are handled by a common base class helper (`provider.Provider.results_writer()`) and is driven
+by the application configuration (e.g. JSON flat files or SQLite database). The data shape of the results are
+self-describing via an envelope with a schema reference. For example:
+
+```json
+{
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json",
+  "identifier": "wolfi:rolling/CVE-2007-2728",
+  "item": {
+    "Vulnerability": {
+      "Severity": "Unknown",
+      "NamespaceName": "wolfi:rolling",
+      "FixedIn": [
+        {
+          "Name": "php",
+          "Version": "0",
+          "VersionFormat": "apk",
+          "NamespaceName": "wolfi:rolling"
+        }
+      ],
+      "Link": "http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-2728",
+      "Description": "The soap extension in PHP calls php_rand_r with an uninitialized seed variable, which has...",
+      "Metadata": {},
+      "Name": "CVE-2007-2728",
+      "CVSS": []
+    }
+  }
+}
+```
+
+Note:
+- the `schema` field is a URL to the schema that describes the data shape of the `item` field
+- the `identifier` field should have a unique identifier within the context of the provider results
+- the `item` field is the actual vulnerability data, and the shape of this field is defined by the schema
+
+Currently only JSON payloads are supported at this time.
+
+
 ## What might need refactoring?
 
 The best way is to look for [issues with the `refactor` label](https://github.com/anchore/vunnel/issues?q=is%3Aissue+is%3Aopen+label%3Arefactor).
