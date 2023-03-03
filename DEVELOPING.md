@@ -84,7 +84,7 @@ If you are adding a new schema, then the downstream data pipeline will need to b
 
 You should be able to see the new provider in the `vunnel list` command and run it with `vunnel run <name>`.
 The entries written should write out to a specific `namespace` in the DB downstream, as indicated in the record.
-This namespace is needed when making grype changes.
+This namespace is needed when making Grype changes.
 
 
 2. Fork Grype and map distro type to a specific namespace.
@@ -146,7 +146,7 @@ $ yardstick label explore 75d1fe75-0890-4d89-a497-b1050826d9f6
 
 ```
 
-Later we'll open a PR in the [Vulnerability-Match-Labels repo](github.com/anchore/vulnerability-match-labels) to persist these labels.
+Later we'll open a PR in the [vulnerability-match-labels repo](github.com/anchore/vulnerability-match-labels) to persist these labels.
 For the meantime we can iterate locally with the labels we've added.
 
 
@@ -155,7 +155,7 @@ For the meantime we can iterate locally with the labels we've added.
 ```bash
 cd tests/quality
 
-# capture the test data for your specific provider, build a DB, and run grype with the new DB
+# runs your specific provider to gather vulnerability data, builds a DB, and runs grype with the new DB
 make capture provider=<your-provider-name>
 
 # evaluate the quality gate
@@ -167,14 +167,18 @@ This uses the latest Grype-DB release to build a DB and the specified Grype vers
 You are looking for a passing run before continuing further.
 
 
-7. In Vunnel: open a PR to persist the new labels.
+7. Open a [vulnerability-match-labels repo](github.com/anchore/vulnerability-match-labels) PR to persist the new labels.
+
+Vunnel uses the labels in the vulnerability-Match-Labels repo via a git submodule. We've already added labels locally
+within this submodule in an earlier step. To persist these labels we need to push them to a fork and open a PR:
 
 ```
 # fork the github.com/anchore/vulnerability-match-labels repo, but you do not need to clone it...
 
+# from the Vunnel repo...
 $ cd tests/quality/vulnerability-match-labels
 
-$ git remote add fork git@github.com:anchore/vulnerability-match-labels.git
+$ git remote add fork git@github.com:your-fork-name/vulnerability-match-labels.git
 $ git checkout -b 'add-labels-for-<your-provider-name>'
 $ git status
 
@@ -185,11 +189,11 @@ $ git commit -m 'add labels for <your-provider-name>'
 $ git push fork add-labels-for-<your-provider-name>
 ```
 
-At this point you can open a PR against in the [Vulnerability-Match-Labels repo](github.com/anchore/vulnerability-match-labels).
+At this point you can open a PR against in the [vulnerability-match-labels repo](github.com/anchore/vulnerability-match-labels).
 
-_Note: you will not be able to open a Vunnel PR that passes PR checks until the labels are merged into the Vulnerability-Match-Labels repo._
+_Note: you will not be able to open a Vunnel PR that passes PR checks until the labels are merged into the vulnerability-match-labels repo._
 
-Once the PR is merged in the Vulnerability-Match-Labels repo you can update the submodule in Vunnel to point to the latest commit in the Vulnerability-Match-Labels repo.
+Once the PR is merged in the vulnerability-match-labels repo you can update the submodule in Vunnel to point to the latest commit in the vulnerability-match-labels repo.
 
 ```bash
 $ cd tests/quality
@@ -203,7 +207,6 @@ $ git submodule update --remote vulnerability-match-labels
 The PR will also run all of the same quality gate checks that you ran locally.
 
 If you have Grype changes, you should also create a PR for that as well. The Vunnel PR will not pass PR checks until the Grype PR is merged and the `test/quality/config.yaml` file is updated to point back to the `latest` Grype version.
-
 
 
 ### ...for a new schema
