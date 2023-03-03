@@ -13,6 +13,7 @@ yardstick:
       #  - "latest" to use the latest released grype
       #  - a released version name (e.g. "v0.52.1")
       #  - a branch name (e.g. "dev-fix-foo")
+      #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
@@ -34,6 +35,7 @@ grype-db:
   #  - "latest" to use the latest released grype-db
   #  - a released version name (e.g. "v0.15.2")
   #  - a branch name (e.g. "dev-fix-foo")
+  #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   version: latest
 
 tests:
