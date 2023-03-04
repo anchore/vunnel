@@ -48,7 +48,7 @@ types-requests = "^2.28.11.7"
 mypy = "^1.0"
 radon = "^5.1.0"
 dunamai = "^1.15.0"
-ruff = "^0.0.243"
+ruff = "^0.0.253"
 yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.4.3"}
 tabulate = "0.9.0"
 
@@ -183,6 +183,7 @@ ignore = [
   "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
   "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
   "PLR2004", # a little too agressive, not allowing any magic numbers
+  "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
   "G004", # it's ok to use formatted strings for logging
 ]
 

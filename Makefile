@@ -1,10 +1,17 @@
 TEMP_DIR = ./.tmp
+IMAGE_NAME = ghcr.io/anchore/vunnel
+
+# Command templates #################################
 CRANE = $(TEMP_DIR)/crane
 CHRONICLE = $(TEMP_DIR)/chronicle
 GLOW = $(TEMP_DIR)/glow
-IMAGE_NAME = ghcr.io/anchore/vunnel
 
-# formatting support
+# Tool versions #################################
+CHRONICLE_VERSION = v0.6.0
+GLOW_VERSION = v1.4.1
+CRANE_VERSION = v0.12.1
+
+# Formatting variables #################################
 BOLD := $(shell tput -T linux bold)
 PURPLE := $(shell tput -T linux setaf 5)
 GREEN := $(shell tput -T linux setaf 2)
@@ -21,10 +28,6 @@ PACKAGE_VERSION = v$(shell poetry run dunamai from git --style semver --dirty --
 COMMIT = $(shell git rev-parse HEAD)
 COMMIT_TAG = git-$(COMMIT)
 
-CHRONICLE_VERSION = v0.6.0
-GLOW_VERSION = v1.4.1
-CRANE_VERSION = v0.12.1
-
 
 ifndef PACKAGE_VERSION
 	$(error PACKAGE_VERSION is not set)
@@ -35,8 +38,21 @@ endif
 .PHONY: all
 all: static-analysis test  ## Run all validations
 
-$(TEMP_DIR):
-	mkdir -p $(TEMP_DIR)
+.PHONY: static-analysis
+static-analysis: virtual-env-check  ## Run all static analyses
+	pre-commit run -a --hook-stage push
+
+.PHONY: test
+test: unit  ## Run all tests
+
+virtual-env-check:
+	@ if [ "${VIRTUAL_ENV}" = "" ]; then \
+		echo "$(ERROR)Not in a virtual environment. Try running with 'poetry run' or enter a 'poetry shell' session.$(RESET)"; \
+		exit 1; \
+	fi
+
+
+## Bootstrapping targets #################################
 
 .PHONY: bootstrap
 bootstrap: $(TEMP_DIR)  ## Download and install all tooling dependencies
@@ -44,12 +60,11 @@ bootstrap: $(TEMP_DIR)  ## Download and install all tooling dependencies
 	GOBIN="$(abspath $(TEMP_DIR))" go install github.com/charmbracelet/glow@$(GLOW_VERSION)
 	GOBIN="$(abspath $(TEMP_DIR))" go install github.com/google/go-containerregistry/cmd/crane@$(CRANE_VERSION)
 
-.PHONY: test
-test: unit  ## Run all tests
+$(TEMP_DIR):
+	mkdir -p $(TEMP_DIR)
 
-.PHONY: static-analysis
-static-analysis: virtual-env-check  ## Run all static analyses
-	pre-commit run -a --hook-stage push
+
+## Static analysis targets #################################
 
 .PHONY: lint-fix
 lint-fix: virtual-env-check  ## Fix linting issues (ruff)
@@ -63,13 +78,15 @@ format: virtual-env-check  ## Format all code (black)
 check-types: virtual-env-check  ## Run type checks (mypy)
 	mypy --config-file ./pyproject.toml src/vunnel
 
+
+## Testing targets #################################
+
 .PHONY: unit
 unit: virtual-env-check  ## Run unit tests
 	pytest --cov-report html --cov vunnel -v tests/unit/
 
-.PHONY: version
-version:
-	@echo $(PACKAGE_VERSION)
+
+## Build-related targets #################################
 
 .PHONY: build
 build:  ## Run build assets
@@ -79,6 +96,10 @@ build:  ## Run build assets
 	docker build \
 		-t $(IMAGE_NAME):$(COMMIT_TAG) \
 		.
+
+.PHONY: version
+version:
+	@echo $(PACKAGE_VERSION)
 
 .PHONY: ci-check
 ci-check:
@@ -102,11 +123,8 @@ changelog:
 release:
 	@.github/scripts/trigger-release.sh
 
-virtual-env-check:
-	@ if [ "${VIRTUAL_ENV}" = "" ]; then \
-		echo "$(ERROR)Not in a virtual environment. Try running with 'poetry run' or enter a 'poetry shell' session.$(RESET)"; \
-		exit 1; \
-	fi
+
+## Halp! #################################
 
 .PHONY: help
 help:
