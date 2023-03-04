@@ -3,12 +3,11 @@ from __future__ import annotations
 import shutil
 
 import pytest
-
 from vunnel import result, workspace
 from vunnel.providers.debian import Config, Provider, parser
 
 
-@pytest.fixture
+@pytest.fixture()
 def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
@@ -31,15 +30,10 @@ class TestParser:
 
         assert len(ns_cve_dsalist) > 0
 
-        for ns, cve_dsalist in ns_cve_dsalist.items():
+        for _ns, cve_dsalist in ns_cve_dsalist.items():
             assert isinstance(cve_dsalist, dict)
             assert len(cve_dsalist) > 0
-            assert all(
-                map(
-                    lambda x: isinstance(x, list) and len(x) > 0,
-                    cve_dsalist.values(),
-                )
-            )
+            assert all(isinstance(x, list) and len(x) > 0 for x in cve_dsalist.values())
 
             # print("Number of CVEs in {}: {}".format(ns, len(cve_dsalist)))
             # more_dsas = {x: y for x, y in cve_dsalist.items() if len(y) > 1}
@@ -63,12 +57,12 @@ class TestParser:
         weird_dsas = [dsa for dsa in no_cves if not dsa["fixed_in"]]
         # print("")
         # print("Number of DSAs with neither fixes nor CVEs: {}".format(len(weird_dsas)))
-        assert 3 == len(weird_dsas)
+        assert len(weird_dsas) == 3
 
         no_cve_dsas = [dsa for dsa in no_cves if dsa["fixed_in"]]
         # print("")
         # print("Number of DSAs with fixes and no CVEs: {}".format(len(no_cve_dsas)))
-        assert 1 == len(no_cve_dsas)
+        assert len(no_cve_dsas) == 1
 
     def test_normalize_json(self, tmpdir, helpers, disable_get_requests):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
@@ -84,10 +78,10 @@ class TestParser:
         assert isinstance(vuln_records, dict)
         assert len(vuln_records) > 0
 
-        for rel, vuln_dict in vuln_records.items():
+        for _rel, vuln_dict in vuln_records.items():
             assert isinstance(vuln_dict, dict)
             assert len(vuln_dict) > 0
-            assert all(map(lambda x: "Vulnerability" in x, vuln_dict.values()))
+            assert all("Vulnerability" in x for x in vuln_dict.values())
 
             assert all(x.get("Vulnerability", {}).get("Name") for x in vuln_dict.values())
 
@@ -115,5 +109,5 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert 21 == workspace.num_result_entries()
+    assert workspace.num_result_entries() == 21
     assert workspace.result_schemas_valid(require_entries=True)

@@ -188,21 +188,5 @@ ignore = [
 ]
 
 extend-exclude = [
-  "**/src/vunnel/providers/alpine/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/amazon/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/centos/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/debian/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/github/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/nvd/parser.py",       # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/oracle/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/rhel/parser.py",      # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/sles/parser.py",      # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/ubuntu/git.py",       # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/ubuntu/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/wolfi/parser.py",     # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/oval_v2.py",              # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/oval_parser.py",          # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/fdb.py",                  # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/vulnerability.py",        # ported from enterprise, never had type hints
-  "**/tests/**",                                 # any tests
+  "**/tests/**",
 ]

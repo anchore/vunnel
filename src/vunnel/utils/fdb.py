@@ -30,12 +30,13 @@ class FileBasedDatabase:
         how a `.get()` would work in a dictionary.
         """
         if not name.endswith(self.serializer.ext):
-            name = "{}{}".format(name, self.serializer.ext)
+            name = f"{name}{self.serializer.ext}"
         if self.files == []:
             self._update_file_cache()
         if name in self.files:
             path = os.path.join(self.directory_path, name)
             return self.serializer(path)
+        return None
 
     def create(self, name):
         """
@@ -44,7 +45,7 @@ class FileBasedDatabase:
         the file exists or not, the serializer should be able to write to it.
         """
         if not name.endswith(self.serializer.ext):
-            name = "{}{}".format(name, self.serializer.ext)
+            name = f"{name}{self.serializer.ext}"
         path = os.path.join(self.directory_path, name)
         return self.serializer(path)
 

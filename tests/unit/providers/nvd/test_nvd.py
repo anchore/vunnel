@@ -3,13 +3,12 @@ from __future__ import annotations
 import json
 
 import pytest
-
-from vunnel import provider, result, workspace
+from vunnel import provider, result
 from vunnel.providers import nvd
 
 
 @pytest.mark.parametrize(
-    "policy,should_raise",
+    ("policy", "should_raise"),
     (
         (provider.ResultStatePolicy.KEEP, False),
         (provider.ResultStatePolicy.DELETE_BEFORE_WRITE, True),
@@ -28,7 +27,7 @@ def test_incremental_update_with_existing_results(policy, should_raise):
 
 
 @pytest.mark.parametrize(
-    "mock_data_path,expected_written_entries",
+    ("mock_data_path", "expected_written_entries"),
     [
         ("test-fixtures/single-entry.json", 1),
     ],

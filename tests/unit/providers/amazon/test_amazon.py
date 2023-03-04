@@ -3,7 +3,6 @@ from __future__ import annotations
 import shutil
 
 import pytest
-
 from vunnel import result, workspace
 from vunnel.providers.amazon import Config, Provider, parser
 
@@ -21,7 +20,7 @@ class TestParser:
             assert isinstance(alas, parser.AlasSummary)
             assert alas.id is not None
             assert alas.url is not None
-            assert alas.sev.lower() in parser.severity_map.keys()
+            assert alas.sev.lower() in parser.severity_map
 
         # TODO: beef up these assertions (should cover the full data shape)
 
@@ -76,7 +75,7 @@ class TestParser:
         assert a == b
 
 
-@pytest.fixture
+@pytest.fixture()
 def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
@@ -101,5 +100,5 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert 2 == workspace.num_result_entries()
+    assert workspace.num_result_entries() == 2
     assert workspace.result_schemas_valid(require_entries=True)

@@ -5,7 +5,6 @@ import shutil
 import unittest
 
 import pytest
-
 from vunnel.providers.ubuntu.git import GitRevision, GitWrapper
 
 
@@ -137,12 +136,12 @@ class TestGitWrapper(unittest.TestCase):
 
         commits = wrapper._parse_log(git_commit_log)
 
-        self.assertEqual(len(commits), len(self._commit_changes_))
+        assert len(commits) == len(self._commit_changes_)
 
         for got, expected in zip(commits, self._commit_changes_):
-            self.assertTrue(got.sha in expected["sha"])
-            self.assertEqual(got.updated, expected["updated"])
-            self.assertEqual(got.deleted, expected["deleted"])
+            assert got.sha in expected["sha"]
+            assert got.updated == expected["updated"]
+            assert got.deleted == expected["deleted"]
             print(got)
 
     def test_compute_change_set(self):
@@ -155,14 +154,14 @@ class TestGitWrapper(unittest.TestCase):
 
         modified, removed = wrapper._compute_change_set(commits)
 
-        self.assertEqual(modified, self._overall_changes_["modified"])
-        self.assertEqual(removed, self._overall_changes_["removed"])
-        print("Modified: {}".format(modified))
-        print("Removed: {}".format(removed))
+        assert modified == self._overall_changes_["modified"]
+        assert removed == self._overall_changes_["removed"]
+        print(f"Modified: {modified}")
+        print(f"Removed: {removed}")
 
 
 @pytest.mark.parametrize(
-    "git_log_output,expected",
+    ("git_log_output", "expected"),
     [
         pytest.param(
             """

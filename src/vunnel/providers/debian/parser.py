@@ -119,7 +119,7 @@ class Parser:
                             distro=fixedin["distro"],
                             pkg=fixedin["pkg"],
                             ver=fixedin["ver"],
-                        )
+                        ),
                     )
         else:
             self.logger.debug(f"no CVEs found for {dsa['id']}")
@@ -169,7 +169,7 @@ class Parser:
                     version = version.strip() if version else None
                     if not version:
                         self.logger.debug(
-                            f"release version not included dsa: {dsa.get('id', None)}, distro: {distro}, pkg: {pkg}"
+                            f"release version not included dsa: {dsa.get('id', None)}, distro: {distro}, pkg: {pkg}",
                         )
                     dsa["fixed_in"].append({"distro": distro, "pkg": pkg, "ver": version})
                     continue
@@ -180,7 +180,7 @@ class Parser:
                     version = version.strip() if version else None
                     if not version:
                         self.logger.debug(
-                            f"release version not included dsa: {dsa.get('id', None)}, distro: {distro}, pkg: {pkg}"
+                            f"release version not included dsa: {dsa.get('id', None)}, distro: {distro}, pkg: {pkg}",
                         )
                     dsa["fixed_in"].append({"distro": distro, "pkg": pkg, "ver": version})
                     continue
@@ -257,8 +257,7 @@ class Parser:
 
         return ns_cve_dsalist
 
-    # noqa
-    def _normalize_json(self, ns_cve_dsalist=None):
+    def _normalize_json(self, ns_cve_dsalist=None):  # noqa: PLR0912,PLR0915
         adv_mets = {}
         # all_matched_dsas = set()
         # all_dsas = set()
@@ -397,7 +396,7 @@ class Parser:
                                             "dsa": {"fixed": 0, "notfixed": 0},
                                             "nodsa": {"fixed": 0, "notfixed": 0},
                                             "neither": {"fixed": 0, "notfixed": 0},
-                                        }
+                                        },
                                     }
 
                                 if met_sev not in adv_mets[met_ns]:

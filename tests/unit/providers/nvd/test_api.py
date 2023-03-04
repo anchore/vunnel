@@ -4,11 +4,10 @@ import json
 from datetime import datetime
 
 import pytest
-
 from vunnel.providers.nvd import api
 
 
-@pytest.fixture
+@pytest.fixture()
 def simple_mock(mocker):
     subject = api.NvdAPI(api_key="secret", timeout=1)
 
@@ -23,7 +22,7 @@ def simple_mock(mocker):
         mocker.Mock(
             status_code=200,
             text=json.dumps(first_json_dict).encode("utf-8"),
-        )
+        ),
     ]
 
     return mocker.patch.object(api.requests, "get", side_effect=responses), [first_json_dict], subject
@@ -34,7 +33,7 @@ class TestAPI:
         mock, responses, subject = simple_mock
         subject.api_key = None
 
-        vulnerabilities = [v for v in subject.cve("CVE-2020-0000")]
+        vulnerabilities = list(subject.cve("CVE-2020-0000"))
 
         assert vulnerabilities == responses
         assert api.requests.get.call_args_list == [
@@ -49,7 +48,7 @@ class TestAPI:
     def test_cve_single_cve(self, simple_mock, mocker):
         mock, responses, subject = simple_mock
 
-        vulnerabilities = [v for v in subject.cve("CVE-2020-0000")]
+        vulnerabilities = list(subject.cve("CVE-2020-0000"))
 
         assert vulnerabilities == responses
         assert api.requests.get.call_args_list == [
@@ -101,12 +100,12 @@ class TestAPI:
                 mocker.Mock(
                     status_code=200,
                     text=json.dumps(json_response).encode("utf-8"),
-                )
+                ),
             )
 
         mocker.patch.object(api.requests, "get", side_effect=responses)
 
-        vulnerabilities = [v for v in subject.cve()]
+        vulnerabilities = list(subject.cve())
 
         assert vulnerabilities == json_responses
         assert api.requests.get.call_args_list == [
@@ -133,13 +132,12 @@ class TestAPI:
     def test_cve_pub_date_range(self, simple_mock, mocker):
         mock, responses, subject = simple_mock
 
-        vulnerabilities = [
-            v
-            for v in subject.cve(
+        vulnerabilities = list(
+            subject.cve(
                 pub_start_date=datetime.fromisoformat("2019-12-04"),
                 pub_end_date=datetime.fromisoformat("2019-12-05"),
             )
-        ]
+        )
 
         assert vulnerabilities
         assert api.requests.get.call_args_list == [
@@ -154,13 +152,12 @@ class TestAPI:
     def test_cve_last_modified_date_range(self, simple_mock, mocker):
         mock, responses, subject = simple_mock
 
-        vulnerabilities = [
-            v
-            for v in subject.cve(
+        vulnerabilities = list(
+            subject.cve(
                 last_mod_start_date=datetime.fromisoformat("2019-12-04"),
                 last_mod_end_date=datetime.fromisoformat("2019-12-05"),
             )
-        ]
+        )
 
         assert vulnerabilities
         assert api.requests.get.call_args_list == [
@@ -176,9 +173,9 @@ class TestAPI:
         mock, responses, subject = simple_mock
 
         with pytest.raises(RuntimeError):
-            vulnerabilities = [v for v in subject.cve(results_per_page=2001)]
+            list(subject.cve(results_per_page=2001))
 
-        vulnerabilities = [v for v in subject.cve(results_per_page=5)]
+        list(subject.cve(results_per_page=5))
 
         assert api.requests.get.call_args_list == [
             mocker.call(
@@ -192,7 +189,7 @@ class TestAPI:
     def test_cve_history(self, simple_mock, mocker):
         mock, responses, subject = simple_mock
 
-        changes = [c for c in subject.cve_history("CVE-2020-0000")]
+        changes = list(subject.cve_history("CVE-2020-0000"))
 
         assert changes
         assert api.requests.get.call_args_list == [

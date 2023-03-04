@@ -9,7 +9,6 @@ import sys
 from dataclasses import asdict
 
 import pytest
-
 from vunnel import result, workspace
 from vunnel.providers import ubuntu
 from vunnel.providers.ubuntu.parser import (
@@ -229,7 +228,7 @@ class TestUbuntuParser:
                         "version": "7:3.2.6-1",
                     },
                 ],
-            }
+            },
         )
 
         # No longer parsing by default
@@ -307,7 +306,7 @@ class TestUbuntuParser:
             assert check_patch(data[0]) == data[1]
 
     @pytest.mark.parametrize(
-        "patch,expected",
+        ("patch", "expected"),
         [
             (Patch(distro="foo", package="bar", status="ignored ftw", version="end-of-life now but something else before"), True),
             (Patch(distro="foo", package="bar", status="ignored", version="reached end-of-life"), True),
@@ -368,16 +367,11 @@ class TestUbuntuParser:
                 "Priority": "medium",
                 "Name": "CVE-0000-0000",
                 "ignored_patches": [
-                    {
-                        "distro": "devel",
-                        "package": "mozjs52",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                ]
-                + new_distro_patches,
+                    {"distro": "devel", "package": "mozjs52", "status": "DNE", "version": None},
+                    *new_distro_patches,
+                ],
                 "git_last_processed_rev": "40a85b5b23bd905f8d5c6791d3f61108406ec372",
-            }
+            },
         )
         ws = workspace.Workspace(tmpdir, "test")
         udp = Parser(workspace=ws, additional_versions={"madeup": "00.00"}, enable_rev_history=False)
@@ -394,7 +388,7 @@ class TestUbuntuParser:
         assert result.patches == data.patches + [Patch(**p) for p in new_distro_patches]
 
 
-@pytest.fixture
+@pytest.fixture()
 def hydrate_git_repo(tmpdir, helpers):
     def run(cmd, **kwargs):
         subprocess.run(shlex.split(cmd), **kwargs, stderr=sys.stderr, stdout=sys.stdout)
@@ -417,7 +411,7 @@ def hydrate_git_repo(tmpdir, helpers):
 
 
 @pytest.mark.parametrize(
-    "mock_data_path,expected_written_entries",
+    ("mock_data_path", "expected_written_entries"),
     [
         ("test-fixtures/repo-fast-export", 42),
         # this is 6 records distributed across multiple distros:

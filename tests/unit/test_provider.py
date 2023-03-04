@@ -5,7 +5,6 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-
 from vunnel import provider, result, schema, workspace
 
 
@@ -53,7 +52,7 @@ class DummyProvider(provider.Provider):
         return ["http://localhost:8000/dummy-input-1.json"], 1
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_provider(tmpdir):
     def apply(populate=True, use_dir=None, **kwargs):
         if not use_dir:
