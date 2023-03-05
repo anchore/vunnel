@@ -162,7 +162,7 @@ class JsonifierMixin:
         jsonified = {}
         for k, v in vars(self).items():
             if k[0] != "_":
-                if isinstance(v, (list, set)):
+                if isinstance(v, list | set):
                     jsonified[k] = [x.json() if hasattr(x, "json") and callable(x.json) else x for x in v]
                 elif isinstance(v, dict):
                     jsonified[k] = {x: y.json() if hasattr(y, "json") and callable(y.json) else y for x, y in v.items()}
