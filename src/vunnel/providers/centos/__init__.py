@@ -57,7 +57,6 @@ class Provider(provider.Provider):
 
         with self.results_writer() as writer:
             for (vuln_id, namespace), (_, record) in vuln_dict.items():
-
                 namespace = namespace.lower()
                 vuln_id = vuln_id.lower()
 

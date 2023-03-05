@@ -82,7 +82,6 @@ class FileBasedDatabase:
 
 
 class JSONSerializer:
-
     ext = ".json"
 
     def __init__(self, path):
@@ -107,7 +106,6 @@ class JSONSerializer:
 
 
 class RawSerializer:
-
     ext = ".txt"
 
     def __init__(self, path):

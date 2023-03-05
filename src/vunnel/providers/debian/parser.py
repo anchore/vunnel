@@ -283,7 +283,6 @@ class Parser:
 
         for pkg in data:
             for vid in data[pkg]:
-
                 # skip non CVE vids
                 if not re.match("^CVE.*", vid):
                     continue
@@ -319,7 +318,6 @@ class Parser:
                             complete = False
 
                         if complete:
-
                             if vid not in vuln_records[relno]:
                                 # create a new record
                                 vuln_records[relno][vid] = copy.deepcopy(vulnerability.vulnerability_element)

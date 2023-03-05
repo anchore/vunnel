@@ -439,7 +439,6 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
 
 
 class NodeParser(dict):
-
     __parsers__ = ("_severity", "_fixedin", "_summary", "_url", "_cves", "_withdrawn")
 
     def __init__(self, data, logger=None):

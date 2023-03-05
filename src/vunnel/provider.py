@@ -46,7 +46,6 @@ class OnErrorConfig:
     results: ResultStatePolicy = ResultStatePolicy.KEEP
 
     def __post_init__(self) -> None:
-
         if not isinstance(self.action, OnErrorAction):
             self.action = OnErrorAction(self.action)
         if not isinstance(self.input, InputStatePolicy):
@@ -63,7 +62,6 @@ class RuntimeConfig:
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     def __post_init__(self) -> None:
-
         if not isinstance(self.existing_input, InputStatePolicy):
             self.existing_input = InputStatePolicy(self.existing_input)
         if not isinstance(self.existing_results, ResultStatePolicy):
