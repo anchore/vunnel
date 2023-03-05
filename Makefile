@@ -66,6 +66,10 @@ $(TEMP_DIR):
 
 ## Static analysis targets #################################
 
+.PHONY: lint
+lint: virtual-env-check  ## Show linting issues (ruff)
+	ruff check .
+
 .PHONY: lint-fix
 lint-fix: virtual-env-check  ## Fix linting issues (ruff)
 	ruff check . --fix
