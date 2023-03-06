@@ -6,15 +6,17 @@ This project requires:
 - python (>= 3.7)
 - pip (>= 22.2)
 - poetry (>= 1.2): see [installation instructions](https://python-poetry.org/docs/#installation)
+- docker
 
 Once you have python and poetry installed, get the project bootstrapped:
 
 ```bash
+# clone the vunnel repo
+git clone git@github.com:anchore/vunnel.git
+cd vunnel
+
 # get basic project tooling
 make bootstrap
-
-# get a persistent virtual environment to work within
-poetry shell
 
 # install project dependencies
 poetry install
@@ -23,7 +25,7 @@ poetry install
 [Pre-commit](https://pre-commit.com/) is used to help enforce static analysis checks with git hooks:
 
 ```bash
-poetry run pre-commit install --hook-type pre-push
+pre-commit install --hook-type pre-push
 ```
 
 To jump into a poetry-managed virtualenv run `poetry shell`, this will prevent the need for `poetry run...` prefix for each command.
@@ -51,11 +53,140 @@ make static-analysis
 make test
 ```
 
+To format the codebase or attempt to automatically fix linting errors:
+
+```bash
+make format
+make lint-fix
+```
+
 If you want to see all of the things you can do:
 
 ```bash
 make help
 ```
+
+
+## Architecture
+
+Vunnel is a CLI tool that downloads and processes vulnerability data from various sources (in the codebase, these are called "providers").
+
+<!-- repo path: docs/vunnel-run-workflow.drawio -->
+<!-- asset comment: https://github.com/anchore/vunnel/issues/102#issuecomment-1456403838 -->
+<img src="https://user-images.githubusercontent.com/590471/223163266-e73d2595-f320-4607-a016-f1b22aad45c7.svg" width="600" />
+
+Conceptually, one or more invocations of Vunnel will produce a single data directory which Grype-DB uses to create a Grype database:
+
+<!-- repo path: docs/vunnel+grype-db-workflow.drawio -->
+<!-- asset comment: https://github.com/anchore/vunnel/issues/102#issuecomment-1456408327 -->
+<img src="https://user-images.githubusercontent.com/590471/223167464-aca39d4b-699a-47da-b852-fea904ba9824.svg" width="600" />
+
+Additionally, the Vunnel CLI tool is optimized to run
+a single provider at a time, not orchestrating multiple providers at once. [Grype-db](github.com/anchore/grype-db) is the
+tool that collates output from multiple providers and produces a single database, and is ultimately responsible for
+orchestrating multiple Vunnel calls to prepare the input data:
+
+<!-- repo path: docs/grype-db-actions.drawio -->
+<!-- asset comment: https://github.com/anchore/vunnel/issues/102#issuecomment-1456415533 -->
+<img src="https://user-images.githubusercontent.com/590471/223165191-8b06b696-f7b5-4a92-912a-c7110c1cd324.svg" width="600" />
+
+For more information about how Grype-DB uses Vunnel see [the Grype-DB documentation](https://github.com/anchore/grype-db/blob/main/DEVELOPING.md#architecture).
+
+
+### Vunnel Providers
+
+A "Provider" is the core abstraction for Vunnel and represents a single source of vulnerability data. Vunnel is a CLI wrapper
+around multiple vulnerability data providers.
+
+All provider implementations should...
+- live under `src/vunnel/providers` in their own directory (e.g. the NVD provider code is under `src/vunnel/providers/nvd/...`)
+- have a class that implements the [`Provider` interface](https://github.com/anchore/vunnel/blob/1285a3be0f24fd6472c1f469dd327541ff1fc01e/src/vunnel/provider.py#L73)
+- be centrally registered with a unique name under [`src/vunnel/providers/__init__.py`](https://github.com/anchore/vunnel/blob/1285a3be0f24fd6472c1f469dd327541ff1fc01e/src/vunnel/providers/__init__.py)
+- be independent from other vulnerability providers data --that is, the debian provider CANNOT reach into the NVD data provider directory to look up information (such as severity)
+- follow the workspace conventions for downloaded provider inputs, produced results, and tracking of metadata
+
+Each provider has a "workspace" directory within the "vunnel root" directory (defaults to `./data`) named after the provider.
+
+```yaml
+data/                       # the "vunnel root" directory
+└── alpine/                 # the provider workspace directory
+    ├── input/              # any file that needs to be downloaded and referenced should be stored here
+    ├── results/            # schema-compliant vulnerability results (1 record per file)
+    ├── checksums           # listing of result file checksums (xxh64 algorithm)
+    └── metadata.json       # metadata about the input and result files
+```
+
+The `metadata.json` and `checksums` are written out after all results are written to `results/`. An example `metadata.json`:
+```json
+{
+    "provider": "amazon",
+    "urls": [
+        "https://alas.aws.amazon.com/AL2022/alas.rss"
+    ],
+    "listing": {
+        "digest": "dd3bb0f6c21f3936",
+        "path": "checksums",
+        "algorithm": "xxh64"
+    },
+    "timestamp": "2023-01-01T21:20:57.504194+00:00",
+    "schema": {
+        "version": "1.0.0",
+        "url": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json"
+    }
+}
+```
+Where:
+- `provider`: the name of the provider that generated the results
+- `urls`: the URLs that were referenced to generate the results
+- `listing`: the path to the `checksums` listing file that lists all of the results, the checksum of that file, and the algorithm used to checksum the file (and the same algorithm used for all contained checksums)
+- `timestamp`: the point in time when the results were generated or last updated
+- `schema`: the data shape that the current file conforms to
+
+All results from a provider are handled by a common base class helper (`provider.Provider.results_writer()`) and is driven
+by the application configuration (e.g. JSON flat files or SQLite database). The data shape of the results are
+self-describing via an envelope with a schema reference. For example:
+
+For example:
+```json
+{
+    "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json",
+    "identifier": "3.3/cve-2015-8366",
+    "item": {
+        "Vulnerability": {
+            "Severity": "Unknown",
+            "NamespaceName": "alpine:3.3",
+            "FixedIn": [
+                {
+                    "VersionFormat": "apk",
+                    "NamespaceName": "alpine:3.3",
+                    "Name": "libraw",
+                    "Version": "0.17.1-r0"
+                }
+            ],
+            "Link": "http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-8366",
+            "Description": "",
+            "Metadata": {},
+            "Name": "CVE-2015-8366",
+            "CVSS": []
+        }
+    }
+}
+```
+
+Where:
+- the `schema` field is a URL to the schema that describes the data shape of the `item` field
+- the `identifier` field should have a unique identifier within the context of the provider results
+- the `item` field is the actual vulnerability data, and the shape of this field is defined by the schema
+
+Note that the identifier is `3.3/cve-2015-8366` and not just `cve-2015-8366` in order to uniquely identify
+`cve-2015-8366` as applied to the `alpine 3.3` distro version among other records in the results directory.
+
+Currently only JSON payloads are supported at this time.
+
+Possible vulnerability schemas supported within the vunnel repo are:
+- [Generic OS Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/os)
+- [GitHub Security Advisories](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/github-security-advisory)
+- [NVD Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/nvd)
 
 
 ## Adding a new provider
@@ -219,64 +350,6 @@ This is the same process as listed above with a few additional steps:
 4. The final Vunnel PR will not be able to be merged until the Grype-DB PR is merged and the `tests/quality/config.yaml` file is updated to point back to the `latest` Grype-DB version.
 
 
-## Architecture
-
-Vunnel is a CLI tool that downloads and processes vulnerability data from various sources (in the codebase, these are called "providers").
-It is designed to be extensible and easy to add new providers. Additionally, the Vunnel CLI tool is optimized to run
-a single provider at a time, not orchestrating multiple providers at once. [Grype-db](github.com/anchore/grype-db) is the
-tool that collates output from multiple providers and produces a single database, and is ultimately responsible for
-orchestrating multiple Vunnel calls to prepare the input data.
-
-All providers work within a common root directory, by default `./data`. Within this directory, each provider has its own
-"workspace" subdirectory. By convention no provider should read or write outside of its own workspace. This implies that
-providers are independent of each other and can be run in parallel safely.
-
-Within a provider's workspace, there are a few common subdirectories:
-```
-data                     # vunnel root directory
-└── wolfi                # "wolfi" provider workspace
-    ├── input            # contains all raw data downloaded by the provider
-    └── results          # contains all processed data produced by the provider
-```
-
-All results from a provider are handled by a common base class helper (`provider.Provider.results_writer()`) and is driven
-by the application configuration (e.g. JSON flat files or SQLite database). The data shape of the results are
-self-describing via an envelope with a schema reference. For example:
-
-```json
-{
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json",
-  "identifier": "wolfi:rolling/CVE-2007-2728",
-  "item": {
-    "Vulnerability": {
-      "Severity": "Unknown",
-      "NamespaceName": "wolfi:rolling",
-      "FixedIn": [
-        {
-          "Name": "php",
-          "Version": "0",
-          "VersionFormat": "apk",
-          "NamespaceName": "wolfi:rolling"
-        }
-      ],
-      "Link": "http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-2728",
-      "Description": "The soap extension in PHP calls php_rand_r with an uninitialized seed variable, which has...",
-      "Metadata": {},
-      "Name": "CVE-2007-2728",
-      "CVSS": []
-    }
-  }
-}
-```
-
-Note:
-- the `schema` field is a URL to the schema that describes the data shape of the `item` field
-- the `identifier` field should have a unique identifier within the context of the provider results
-- the `item` field is the actual vulnerability data, and the shape of this field is defined by the schema
-
-Currently only JSON payloads are supported at this time.
-
-
 ## What might need refactoring?
 
 The best way is to look for [issues with the `refactor` label](https://github.com/anchore/vunnel/issues?q=is%3Aissue+is%3Aopen+label%3Arefactor).
@@ -343,90 +416,3 @@ We use `mypy` today for static type checking, however, the ported code has been 
 If you want to make enhancements in this area consider using automated tooling such as [`pytype`](https://github.com/google/pytype) to generate types via inference into `.pyi` files and later merge them into the codebase with [`merge-pyi`](https://github.com/google/pytype/tree/main/pytype/tools/merge_pyi).
 
 Alternatively a tool like [`MonkeyType`](https://github.com/Instagram/MonkeyType) can be used generate static types from runtime data and incorporate into the code.
-
-## Architecture
-
-Vunnel is a CLI wrapper around multiple vulnerability data providers. All provider implementations should...
-- live under `src/vunnel/providers` in their own directory (e.g. the NVD provider code is under `src/vunnel/providers/nvd/...`)
-- have a class that implements the [`Provider` interface](https://github.com/anchore/vunnel/blob/1285a3be0f24fd6472c1f469dd327541ff1fc01e/src/vunnel/provider.py#L73)
-- be centrally registered with a unique name under [`src/vunnel/providers/__init__.py`](https://github.com/anchore/vunnel/blob/1285a3be0f24fd6472c1f469dd327541ff1fc01e/src/vunnel/providers/__init__.py)
-- be independent from other vulnerability providers data --that is, the debian provider CANNOT reach into the NVD data provider directory to look up information (such as severity)
-- follow the workspace conventions for downloaded provider inputs, produced results, and tracking of metadata
-
-
-Each provider is given a "workspace" directory within the vunnel `root` directory named after the provider.
-
-```yaml
-data/                       # the "vunnel root" directory
-└── alpine/                 # the provider workspace directory
-    ├── input/              # any file that needs to be downloaded and referenced should be stored here
-    ├── results/            # schema-compliant vulnerability results (1 record per file)
-    ├── checksums           # listing of result file checksums (xxh64 algorithm)
-    └── metadata.json       # metadata about the input and result files
-```
-
-The `metadata.json` and `checksums` are written out after all results are written to `results/`. An example `metadata.json`:
-```json
-{
-    "provider": "amazon",
-    "urls": [
-        "https://alas.aws.amazon.com/AL2022/alas.rss"
-    ],
-    "listing": {
-        "digest": "dd3bb0f6c21f3936",
-        "path": "checksums",
-        "algorithm": "xxh64"
-    },
-    "timestamp": "2023-01-01T21:20:57.504194+00:00",
-    "schema": {
-        "version": "1.0.0",
-        "url": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json"
-    }
-}
-```
-Where:
--  `provider`: the name of the provider that generated the results
-- `urls`: the URLs that were referenced to generate the results
-- `listing`: the path to the `checksums` listing file that lists all of the results, the checksum of that file, and the algorithm used to checksum the file (and the same algorithm used for all contained checksums)
-- `timestamp`: the point in time when the results were generated or last updated
-- `schema`: the data shape that the current file conforms to
-
-All results stored in `results/**/*.json` should follow have `schema`, `identifier`, and `item` fields contained within an object.
-
-- `schema`: the vulnerability schema which the `.item` field conforms to
-- `identifier`: a string that uniquely identifies the current vulnerability record within the entire `results` directory
-- `item`: the vulnerability record
-
-For example:
-```json
-{
-    "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json",
-    "identifier": "3.3/cve-2015-8366",
-    "item": {
-        "Vulnerability": {
-            "Severity": "Unknown",
-            "NamespaceName": "alpine:3.3",
-            "FixedIn": [
-                {
-                    "VersionFormat": "apk",
-                    "NamespaceName": "alpine:3.3",
-                    "Name": "libraw",
-                    "Version": "0.17.1-r0"
-                }
-            ],
-            "Link": "http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-8366",
-            "Description": "",
-            "Metadata": {},
-            "Name": "CVE-2015-8366",
-            "CVSS": []
-        }
-    }
-}
-```
-
-Note that the identifier is `3.3/cve-2015-8366` and not just `cve-2015-8366` in order to uniquely identify `cve-2015-8366` as applied to the `alpine 3.3` distro version among other records in the results directory.
-
-Possible vulnerability schemas supported within the vunnel repo are:
-- [GitHub Security Advisories](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/github-security-advisory)
-- [Generic OS Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/os)
-- [NVD Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/nvd)
