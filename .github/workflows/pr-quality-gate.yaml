@@ -67,6 +67,9 @@ jobs:
         uses: ./.github/actions/quality-gate
         with:
           provider: ${{ matrix.provider }}
+        env:
+          # needed as a secret for the github provider
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   evaluate-quality-gate:
     runs-on: ubuntu-20.04
