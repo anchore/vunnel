@@ -213,7 +213,10 @@ If you are adding a new schema, then the downstream data pipeline will need to b
 
 1. Fork Vunnel and add the new provider.
 
-You should be able to see the new provider in the `vunnel list` command and run it with `vunnel run <name>`.
+Take a look at the example provider in the `example` directory. You are encouraged to copy `example/awesome/*` into
+`src/vunnel/providers/YOURPROVIDERNAME/` and modify it to fit the needs of your new provider, however, this is not required.
+
+Once implemented, you should be able to see the new provider in the `vunnel list` command and run it with `vunnel run <name>`.
 The entries written should write out to a specific `namespace` in the DB downstream, as indicated in the record.
 This namespace is needed when making Grype changes.
 
