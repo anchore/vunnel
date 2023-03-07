@@ -1,4 +1,7 @@
 TEMP_DIR = ./.tmp
+BIN_DIR = ./bin
+ABS_BIN_DIR = $(shell realpath $(BIN_DIR))
+
 CRANE = $(TEMP_DIR)/crane
 CHRONICLE = $(TEMP_DIR)/chronicle
 GLOW = $(TEMP_DIR)/glow
@@ -34,6 +37,26 @@ endif
 
 .PHONY: all
 all: static-analysis test  ## Run all validations
+
+.PHONY: dev
+dev:  ## Get a development shell with locally editable grype, grype-db, and vunnel repos
+	@.github/scripts/dev-shell.sh $(provider) $(providers)
+
+.PHONY: build-grype
+build-grype: $(TEMP_DIR) ## Build grype for local development
+	@cd ../grype && go build -o $(ABS_BIN_DIR)/grype .
+
+.PHONY: build-grype-db
+build-grype-db: $(TEMP_DIR) ## Build grype-db for local development
+	@cd ../grype-db && go build -o $(ABS_BIN_DIR)/grype-db ./cmd/grype-db
+
+.PHONY: update-db
+update-db: check-dev-shell ## Build and import a grype database based off of the current configuration
+	@.github/scripts/update-dev-db.sh
+
+.PHONY: check-dev-shell
+check-dev-shell:
+	@test -n "$$DEV_VUNNEL_SHELL" || (echo "$(RED)DEV_VUNNEL_SHELL is not set. Run 'make dev provider=\"...\"' first$(RESET)" && exit 1)
 
 $(TEMP_DIR):
 	mkdir -p $(TEMP_DIR)

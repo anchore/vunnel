@@ -25,7 +25,7 @@ poetry install
 [Pre-commit](https://pre-commit.com/) is used to help enforce static analysis checks with git hooks:
 
 ```bash
-pre-commit install --hook-type pre-push
+poetry run pre-commit install --hook-type pre-push
 ```
 
 To jump into a poetry-managed virtualenv run `poetry shell`, this will prevent the need for `poetry run...` prefix for each command.
