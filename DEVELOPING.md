@@ -433,6 +433,7 @@ annotating Grype results with "True Positive" labels (good results) and "False P
 [Yardstick](github.com/anchore/yardstick) to do this:
 
 ```bash
+# note: be certain you are in a "poetry shell" session
 $ cd tests/quality
 
 # capture results with the development version of grype (from your fork)
@@ -463,6 +464,7 @@ For the meantime we can iterate locally with the labels we've added.
 #### **6. In Vunnel: run the quality gate.**
 
 ```bash
+# note: be certain you are in a "poetry shell" session
 cd tests/quality
 
 # runs your specific provider to gather vulnerability data, builds a DB, and runs grype with the new DB
