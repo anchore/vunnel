@@ -2,6 +2,10 @@ TEMP_DIR = ./.tmp
 BIN_DIR = ./bin
 ABS_BIN_DIR = $(shell realpath $(BIN_DIR))
 
+# path to the grype repo, defaults to ../grype if not set in the GRYPE_PATH environment variable (same for the grype-db repo)
+GRYPE_PATH ?= ../grype
+GRYPE_DB_PATH ?= ../grype-db
+
 CRANE = $(TEMP_DIR)/crane
 CHRONICLE = $(TEMP_DIR)/chronicle
 GLOW = $(TEMP_DIR)/glow
@@ -40,15 +44,15 @@ all: static-analysis test  ## Run all validations
 
 .PHONY: dev
 dev:  ## Get a development shell with locally editable grype, grype-db, and vunnel repos
-	@.github/scripts/dev-shell.sh $(provider) $(providers)
+	@DEV_VUNNEL_BIN_DIR=$(ABS_BIN_DIR) .github/scripts/dev-shell.sh $(provider) $(providers)
 
 .PHONY: build-grype
 build-grype: $(TEMP_DIR) ## Build grype for local development
-	@cd ../grype && go build -o $(ABS_BIN_DIR)/grype .
+	@cd $(GRYPE_PATH) && go build -o $(ABS_BIN_DIR)/grype .
 
 .PHONY: build-grype-db
 build-grype-db: $(TEMP_DIR) ## Build grype-db for local development
-	@cd ../grype-db && go build -o $(ABS_BIN_DIR)/grype-db ./cmd/grype-db
+	@cd $(GRYPE_DB_PATH) && go build -o $(ABS_BIN_DIR)/grype-db ./cmd/grype-db
 
 .PHONY: update-db
 update-db: check-dev-shell ## Build and import a grype database based off of the current configuration
