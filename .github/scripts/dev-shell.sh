@@ -48,6 +48,13 @@ trap finish EXIT
 
 title "Entering vunnel development shell..."
 
+if [ -f .env ]; then
+    step "Sourcing .env file"
+    set -o allexport
+    source .env
+    set +o allexport
+fi
+
 step "Configuring with providers: $DEV_VUNNEL_PROVIDERS"
 
 step "Writing grype config: $GRYPE_CONFIG"

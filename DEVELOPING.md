@@ -16,6 +16,10 @@ Once you have python and poetry installed, get the project bootstrapped:
 # clone grype and grype-db, which is needed for provider development
 git clone git@github.com:anchore/grype.git
 git clone git@github.com:anchore/grype-db.git
+# note: if you already have these repos cloned, you can skip this step. However, if they
+# reside in a different directory than where the vunnel repo is, then you will need to
+# set the `GRYPE_PATH` and/or `GRYPE_DB_PATH` environment variables for the development
+# shell to function. You can add these to a local .env file in the vunnel repo root.
 
 # clone the vunnel repo
 git clone git@github.com:anchore/vunnel.git
@@ -118,7 +122,14 @@ $ which grype
 ```
 
 The development builds of grype and grype-db provided are derived from `../grype` and `../grype-db` paths relative to the vunnel project.
-If you want to use a different path, you can set the `GRYPE_PATH` and `GRYPE_DB_PATH` environment variables.
+If you want to use a different path, you can set the `GRYPE_PATH` and `GRYPE_DB_PATH` environment variables. This can be
+persisted by adding a `.env` file to the root of the vunnel project:
+
+```bash
+# example .env file in the root of the vunnel repo
+GRYPE_PATH=~/somewhere/else/grype
+GRYPE_DB_PATH=~/also/somewhere/else/grype-db
+```
 
 To rebuild the grype and grype-db binaries from local source, run:
 
