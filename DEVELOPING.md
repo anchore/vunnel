@@ -7,10 +7,16 @@ This project requires:
 - pip (>= 22.2)
 - poetry (>= 1.2): see [installation instructions](https://python-poetry.org/docs/#installation)
 - docker
+- go (>= 1.20)
+- posix shell (bash, zsh, etc... needed for the `make dev` "development shell")
 
 Once you have python and poetry installed, get the project bootstrapped:
 
 ```bash
+# clone grype and grype-db, which is needed for provider development
+git clone git@github.com:anchore/grype.git
+git clone git@github.com:anchore/grype-db.git
+
 # clone the vunnel repo
 git clone git@github.com:anchore/vunnel.git
 cd vunnel
@@ -32,32 +38,105 @@ To jump into a poetry-managed virtualenv run `poetry shell`, this will prevent t
 
 ## Developing
 
-If you want to use a locally-editable copy of vunnel while you develop:
+The easiest way to develop on a providers is to use the development shell, selecting the specific provider(s) you'd like to focus your development workflow on:
 
 ```bash
-poetry shell
-pip uninstall vunnel  #... if you already have vunnel installed in this virtual env
-pip install -e .
+# Specify one or more providers you want to develop on.
+# Any provider from the output of "vunnel list" is valid.
+# Specify multiple as a space-delimited list:
+# make dev providers="oracle wolfi nvd"
+$ make dev provider="oracle"
+
+Entering vunnel development shell...
+• Configuring with providers: oracle ...
+• Writing grype config: /Users/wagoodman/code/vunnel/.grype.yaml ...
+• Writing grype-db config: /Users/wagoodman/code/vunnel/.grype-db.yaml ...
+• Activating poetry virtual env: /Users/wagoodman/Library/Caches/pypoetry/virtualenvs/vunnel-slR_vCr2-py3.9 ...
+• Installing editable version of vunnel ...
+• Building grype ...
+• Building grype-db ...
+
+Note: development builds grype and grype-db are now available in your path.
+To update these builds run 'make build-grype' and 'make build-grype-db' respectively.
+To run your provider and update the grype database run 'make update-db'.
+Type 'exit' to exit the development shell.
 ```
 
-To run all static-analysis and tests:
+You can now run the provider you specified in the `make dev` command, build an isolated grype DB, and import the DB into grype:
 
 ```bash
-make
+$ make update-db
+• Updating vunnel providers ...
+[0000]  INFO grype-db version: ede464c2def9c085325e18ed319b36424d71180d-adhoc-build
+...
+[0000]  INFO configured providers parallelism=1 providers=1
+[0000] DEBUG   └── oracle
+[0000] DEBUG all providers started, waiting for graceful completion...
+[0000]  INFO running vulnerability provider provider=oracle
+[0000] DEBUG oracle:  2023-03-07 15:44:13 [INFO] running oracle provider
+[0000] DEBUG oracle:  2023-03-07 15:44:13 [INFO] downloading ELSA from https://linux.oracle.com/security/oval/com.oracle.elsa-all.xml.bz2
+[0019] DEBUG oracle:  2023-03-07 15:44:31 [INFO] wrote 6298 entries
+[0019] DEBUG oracle:  2023-03-07 15:44:31 [INFO] recording workspace state
+• Building grype-db ...
+[0000]  INFO grype-db version: ede464c2def9c085325e18ed319b36424d71180d-adhoc-build
+[0000]  INFO reading all provider state
+[0000]  INFO building DB build-directory=./build providers=[oracle] schema=5
+• Packaging grype-db ...
+[0000]  INFO grype-db version: ede464c2def9c085325e18ed319b36424d71180d-adhoc-build
+[0000]  INFO packaging DB from="./build" for="https://toolbox-data.anchore.io/grype/databases"
+[0000]  INFO created DB archive path=build/vulnerability-db_v5_2023-03-07T20:44:13Z_405ae93d52ac4cde6606.tar.gz
+• Importing DB into grype ...
+Vulnerability database imported
 ```
 
-Or run them individually:
+You can now run grype that uses the newly created DB:
 
 ```bash
-make static-analysis
-make test
+$ grype oraclelinux:8.4
+ ✔ Pulled image
+ ✔ Loaded image
+ ✔ Parsed image
+ ✔ Cataloged packages      [195 packages]
+ ✔ Scanning image...       [193 vulnerabilities]
+   ├── 0 critical, 25 high, 146 medium, 22 low, 0 negligible
+   └── 193 fixed
+
+NAME                        INSTALLED                FIXED-IN                    TYPE  VULNERABILITY   SEVERITY
+bind-export-libs            32:9.11.26-4.el8_4       32:9.11.26-6.el8            rpm   ELSA-2021-4384  Medium
+bind-export-libs            32:9.11.26-4.el8_4       32:9.11.36-3.el8            rpm   ELSA-2022-2092  Medium
+bind-export-libs            32:9.11.26-4.el8_4       32:9.11.36-3.el8_6.1        rpm   ELSA-2022-6778  High
+bind-export-libs            32:9.11.26-4.el8_4       32:9.11.36-5.el8            rpm   ELSA-2022-7790  Medium
+
+# note that we're using the database we just built...
+$ grype db status
+Location:  /Users/wagoodman/code/vunnel/.cache/grype/5  # <--- this is the local DB we just built
+...
+
+# also note that we're using a development build of grype
+$ which grype
+/Users/wagoodman/code/vunnel/bin/grype
 ```
 
-To format the codebase or attempt to automatically fix linting errors:
+The development builds of grype and grype-db provided are derived from `../grype` and `../grype-db` paths relative to the vunnel project.
+If you want to use a different path, you can set the `GRYPE_PATH` and `GRYPE_DB_PATH` environment variables.
+
+To rebuild the grype and grype-db binaries from local source, run:
 
 ```bash
-make format
-make lint-fix
+make build-grype
+make build-grype-db
+```
+
+This project uses Make for running common development tasks:
+
+```bash
+
+make                  # run static analysis and unit testing
+make static-analysis  # run static analysis
+make unit             # run unit tests
+make format           # format the codebase with black
+make lint-fix         # attempt to automatically fix linting errors
+...
 ```
 
 If you want to see all of the things you can do:
@@ -66,6 +145,13 @@ If you want to see all of the things you can do:
 make help
 ```
 
+If you want to use a locally-editable copy of vunnel while you develop without the custom development shell:
+
+```bash
+poetry shell
+pip uninstall vunnel  #... if you already have vunnel installed in this virtual env
+pip install -e .
+```
 
 ## Architecture
 
@@ -189,6 +275,57 @@ Possible vulnerability schemas supported within the vunnel repo are:
 - [NVD Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/nvd)
 
 
+### Provider configurations
+
+Each provider has a configuration object defined next to the provider class. This object is used in the vunnel application
+configuration and is passed as input to the provider class. Take the debian provider configuration for example:
+
+```python
+from dataclasses import dataclass, field
+
+from vunnel import provider, result
+
+@dataclass
+class Config:
+    runtime: provider.RuntimeConfig = field(
+        default_factory=lambda: provider.RuntimeConfig(
+            result_store=result.StoreStrategy.SQLITE,
+            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        ),
+    )
+    request_timeout: int = 125
+
+```
+
+Every provider configuration must:
+- be a `dataclass`
+- have a `runtime` field that is a `provider.RuntimeConfig` field
+
+The `runtime` field is used to configure common behaviors of the provider that are enforced within the `vunnel.provider.Provider` subclass. Options include:
+
+- `on_error`: what to do when the provider fails, sub fields include:
+  - `action`: choose to `fail`, `skip`, or `retry` when the failure occurs
+  - `retry_count`: the number of times to retry the provider before failing (only applicable when `action` is `retry`)
+  - `retry_delay`: the number of seconds to wait between retries (only applicable when `action` is `retry`)
+  - `input`: what to do about the `input` data directory on failure (such as `keep` or `delete`)
+  - `results`: what to do about the `results` data directory on failure (such as `keep` or `delete`)
+
+- `existing_results`: what to do when the provider is run again and the results directory already exists. Options include:
+  - `delete-before-write`: delete the existing results just before writing the first processed (new) result
+  - `delete`: delete existing results before running the provider
+  - `keep`: keep the existing results
+
+- `existing_input`: what to do when the provider is run again and the input directory already exists. Options include:
+  - `delete`: delete the existing input before running the provider
+  - `keep`: keep the existing input
+
+- `result_store`: where to store the results. Options include:
+  - `sqlite`: store results as key-value form in a SQLite database, where keys are the record identifiers values are the json vulnerability records
+  - `flat-file`: store results in JSON files named after the record identifiers
+
+Any provider-specific config options can be added to the configuration object as needed (such as `request_timeout`, which is a common field).
+
+
 ## Adding a new provider
 
 "Vulnerability matching" is the process of taking a list of vulnerabilities and matching them against a list of packages.
@@ -201,29 +338,57 @@ To add a new provider, you will need to create a new provider class  under `/src
 - `update()`: downloads and processes the raw data, writing all results with `self.results_writer()`
 
 All results must conform to a [particular schema](https://github.com/anchore/vunnel/tree/main/schema), today there are a few kinds:
-- `os`: a generic operating system vulnerability
+- `os`: a generic operating system vulnerability (e.g redhat, debian, ubuntu, alpine, wolfi, etc.)
 - `nvd`: tailored to describe vulnerabilities from the NVD
 - `github-security-advisory`: tailored to describe vulnerabilities from GitHub
 
+Once the provider is implemented, you will need to wire it up into the application in a couple places:
+- add a new entry under the dispatch table in `src/vunnel/providers/__init__.py` mapping your provider name to the class
+- add the provider configuration to the application configuration under `src/vunnel/cli/config.py` (specifically the `Providers` dataclass)
+
+For a more detailed example on the implementation details of a provider see the ["example" provider](example/README.md).
+
 Validating this provider has different implications depending on what is being added. For example, if the provider is
-adding a new vulnerability source but is ultimately using an existing schema to express results then there is very little to do!
+adding a new vulnerability source but is ultimately using an existing schema to express results then there may be very little to do!
 If you are adding a new schema, then the downstream data pipeline will need to be altered to support reading data in the new schema.
+
+**_Please feel free to reach out to a maintainer on an incomplete draft PR and we can help you get it over the finish line!_**
+
 
 ### ...for an existing schema
 
 1. Fork Vunnel and add the new provider.
 
 Take a look at the example provider in the `example` directory. You are encouraged to copy `example/awesome/*` into
-`src/vunnel/providers/YOURPROVIDERNAME/` and modify it to fit the needs of your new provider, however, this is not required.
+`src/vunnel/providers/YOURPROVIDERNAME/` and modify it to fit the needs of your new provider, however, this is not required:
+
+```bash
+# from the root of the vunnel repo
+cp -a example/awesome src/vunnel/providers/YOURPROVIDERNAME
+
+```
+
+See the ["example" provider README](example/README.md) as well as the code comments for steps and considerations to take when implementing a new provider.
 
 Once implemented, you should be able to see the new provider in the `vunnel list` command and run it with `vunnel run <name>`.
 The entries written should write out to a specific `namespace` in the DB downstream, as indicated in the record.
 This namespace is needed when making Grype changes.
 
+While developing the provider consider using the `make dev provider="<your-provider-name>"`developer shell to run the provider and manually test the results against grype.
+
+_**At this point you can optionally open a Vunnel PR with your new provider and a Maintainer can help with the next steps.**_ Or if you'd like to get PR changes merged faster you can continue with the next steps.
+
 
 2. Fork Grype and map distro type to a specific namespace.
 
-This step might not be needed depending on the provider. Any change needed would be in the current grype db schema namespace index: https://github.com/anchore/grype/blob/main/grype/db/v5/namespace/index.go .
+This step might not be needed depending on the provider.
+
+Common reasons for needing Grype changes include:
+- Grype does not support the distro type and it needs to be added. See the [grype/distro/types.go](https://github.com/anchore/grype/blob/main/grype/distro/type.go) file to add the new distro.
+- Grype supports the distro already, but matching is disabled. See the [grype/distro/distro.go](https://github.com/anchore/grype/blob/main/grype/distro/distro.go) file to enable the distro explicitly.
+- There is a non-standard mapping of distro to namespaces (e.g. redhat and centos map to `rhel`). See the grype db schema namespace index for possible changes: https://github.com/anchore/grype/blob/main/grype/db/v5/namespace/index.go .
+
+If you're using the developer shell (`make dev ...`) then you can run `make build-grype` to get a build of grype with your changes.
 
 
 3. In Vunnel: add a new test case to `tests/quality/config.yaml` for the new provider.
@@ -355,6 +520,8 @@ This is the same process as listed above with a few additional steps:
 
 ## What might need refactoring?
 
+Looking to help out with improving the code quality of Vunnel, but not sure where to start?
+
 The best way is to look for [issues with the `refactor` label](https://github.com/anchore/vunnel/issues?q=is%3Aissue+is%3Aopen+label%3Arefactor).
 
 More general ways would be to use `radon` to search for complexity and maintainability issues:
@@ -408,6 +575,7 @@ $ wily rank
 ```
 
 Ideally we should try to get `wily diff` output into the CI pipeline and post on a sticky PR comment to show regressions (and potentially fail the CI run).
+
 
 ## Not everything has types...
 
