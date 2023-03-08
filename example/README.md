@@ -1,4 +1,4 @@
-# Example "awsome" provider
+# Example "awesome" provider
 
 This is an example of a provider for the "awesome" vulnerability data source. When writing a new provider it is
 encouraged to copy this example (within the `awesome` directory) and modify it to fit the needs of the new provider.
