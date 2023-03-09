@@ -137,13 +137,17 @@ def validate(
     verbosity: int,
     label_entries: list[artifact.LabelEntry] | None = None,
 ):
-    print(f"{bcolors.HEADER}{bcolors.BOLD}Validating with {result_set!r}", bcolors.RESET)
+    print(f"{bcolors.HEADER}{bcolors.BOLD}Validating with {result_set!r}", bcolors.RESET, "\n")
     result_set_obj = store.result_set.load(name=result_set)
 
     namespaces = get_namespaces_from_db()
     print(f"{bcolors.HEADER}{bcolors.BOLD}Restricting results to the following DB namespaces:", bcolors.RESET)
     for namespace in namespaces:
         print(f" - {namespace}")
+
+    print()
+    print(f"{bcolors.HEADER}{bcolors.BOLD}Configuration:", bcolors.RESET)
+    print("   max year limit:", cfg.default_max_year)
 
     ret = []
     for image, result_states in result_set_obj.result_state_by_image.items():
