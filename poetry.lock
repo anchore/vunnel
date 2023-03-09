@@ -1730,7 +1730,7 @@ files = [
 
 [[package]]
 name = "yardstick"
-version = "0.3.4.post23.dev0+614e32d"
+version = "0.3.4.post30.dev0+bd77dfc"
 description = "Tool for comparing the results from vulnerability scanners"
 category = "dev"
 optional = false
@@ -1757,8 +1757,8 @@ tabulate = "^0.9.0"
 [package.source]
 type = "git"
 url = "https://github.com/anchore/yardstick"
-reference = "v0.4.3"
-resolved_reference = "16257bced5cda1033b25c7f877ffdb5b80bad77d"
+reference = "v0.4.4"
+resolved_reference = "b8ca41acfb6ebef194e994f94ecc065f43b8f26c"
 
 [[package]]
 name = "zipp"
@@ -1779,4 +1779,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "e8a7e6c3492003c168ff92ce925d3d856fd50917c2a295d28942d3d771135a18"
+content-hash = "4e459f423f4f0748882b7bc9d191e84655d6d47e65856c0d529f18f90c037f34"
