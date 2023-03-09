@@ -39,10 +39,15 @@ class ResultStatePolicy(str, enum.Enum):
 
 @dataclass
 class OnErrorConfig:
+    # the action to take when an error occurs
     action: OnErrorAction = OnErrorAction.FAIL
+    # the number of times to retry an action that fails
     retry_count: int = 3
+    # the number of seconds to wait between retries
     retry_delay: int = 5
+    # what to do with the input directory when an error occurs
     input: InputStatePolicy = InputStatePolicy.KEEP  # noqa: A003
+    # what to do with the result directory when an error occurs
     results: ResultStatePolicy = ResultStatePolicy.KEEP
 
     def __post_init__(self) -> None:
@@ -56,9 +61,13 @@ class OnErrorConfig:
 
 @dataclass
 class RuntimeConfig:
+    # what to do when an error occurs while the provider is running
     on_error: OnErrorConfig = field(default_factory=OnErrorConfig)
+    # what to do with existing data in the input directory before running
     existing_input: InputStatePolicy = InputStatePolicy.KEEP
+    # what to do with existing data in the result directory before running
     existing_results: ResultStatePolicy = ResultStatePolicy.KEEP
+    # the format the results should be written in
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     def __post_init__(self) -> None:
