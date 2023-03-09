@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Amazon Linux 2023 Security Bulletins</title>
+    <description>Amazon Linux 2023 Security Bulletins</description>
+    <link>https://alas.aws.amazon.com</link>
+    <language>en-us</language>
+    <ttl>35</ttl>
+
+    <item>
+        <title>ALAS-2023-126 (important): device-mapper-multipath</title>
+        <description>
+            CVE-2022-3787, CVE-2022-41973, CVE-2022-41974
+        </description>
+        <pubDate>Tue, 07 Mar 2023 00:29:00 GMT</pubDate>
+        <lastBuildDate>Wed, 08 Mar 2023 00:51:00 GMT</lastBuildDate>
+        <guid>https://alas.aws.amazon.com/AL2023/ALAS-2023-126.html</guid>
+        <link>https://alas.aws.amazon.com/AL2023/ALAS-2023-126.html</link>
+    </item>
+</channel>
+</rss>

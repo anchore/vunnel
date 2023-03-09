@@ -21,6 +21,7 @@ amazon_security_advisories = {
     # '1': 'https://alas.aws.amazon.com/alas.rss',
     "2": "https://alas.aws.amazon.com/AL2/alas.rss",
     "2022": "https://alas.aws.amazon.com/AL2022/alas.rss",
+    "2023": "https://alas.aws.amazon.com/AL2023/alas.rss",
 }
 
 severity_map = {

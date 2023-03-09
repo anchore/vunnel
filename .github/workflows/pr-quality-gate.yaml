@@ -80,13 +80,18 @@ jobs:
     steps:
       - run: |
           echo "Validations Status: ${{ needs.validate-provider.result }}"
-          echo "Providers Changed: ${{ needs.select-providers.outputs.providers }}"
+          echo "Providers that require testing: ${{ needs.select-providers.outputs.providers }}"
+          echo
           if [ '${{ needs.select-providers.outputs.providers }}' == '[]' ]; then
-            echo "Quality gate not required: no providers changed"
+            echo "🟢 Quality gate passed! (no providers changed)"
             exit 0
           fi
           if [ "${{ needs.validate-provider.result }}" != "success" ]; then
-            echo "Quality gate failed!"
+            echo "🔴 Quality gate FAILED! 😭"
+            echo
+            echo "This could happen for a couple of reasons:"
+            echo "  - A provider test failed, in which case see the logs in previous jobs for more details"
+            echo "  - A required provider test was skipped. You might need to add the 'run-pr-quality-gate' label to your PR to prevent skipping the test.
             exit 1
           fi
-          echo "Quality gate passed!"
+          echo "🟢 Quality gate passed! (all tests passed)"

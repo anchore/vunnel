@@ -100,5 +100,5 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 2
+    assert 3 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
