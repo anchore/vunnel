@@ -1,8 +1,15 @@
 .vunnel.yaml
+.grype-db.yaml
+.grype.yaml
+.grype
+.grype-db
+
+/bin
 /data/
 /backup/
 .pytype/
 .wily/
+.cache/
 
 /.tmp/
 CHANGELOG.md
@@ -120,6 +127,7 @@ ENV/
 .DS_Store
 
 .pytest_cache
+.ruff_cache
 
 dropin.cache
 
