@@ -110,6 +110,9 @@ tests:
 #      -
 
   - provider: ubuntu
+    # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
+    # This will still test incremental updates relative to the nightly cache that is populated.
+    use_cache: true
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
 

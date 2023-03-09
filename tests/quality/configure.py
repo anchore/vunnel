@@ -51,6 +51,7 @@ class AdditionalProvider:
 @dataclass
 class Test:
     provider: str
+    use_cache: bool = False
     images: list[str] = field(default_factory=list)
     additional_providers: list[AdditionalProvider] = field(default_factory=list)
     additional_trigger_globs: list[str] = field(default_factory=list)
@@ -128,7 +129,10 @@ class Config:
 
             tests.append(test)
 
-            uncached_providers.append(test.provider)
+            if test.use_cache:
+                cached_providers.append(test.provider)
+            else:
+                uncached_providers.append(test.provider)
             if test.additional_providers:
                 for additional_provider in test.additional_providers:
                     if additional_provider.use_cache:
