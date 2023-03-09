@@ -57,6 +57,8 @@ jobs:
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          # we need submodules for the quality gate to work (requires vulnerability-match-labels repo)
+          submodules: true
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
