@@ -3,9 +3,10 @@ yardstick:
 
   tools:
     - name: syft
-      # note: don't change this version, this is really controlled by the configuration in anchore/vulnerability-match-labels
-      version: v0.68.1
+      # note: if there is ever a problem with the syft version, it can be pinned explicitly here (instead of "latest")
+      version: latest
       produces: SBOM
+      refresh: false
 
     - name: grype
       label: custom-db
