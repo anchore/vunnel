@@ -151,7 +151,7 @@ ci-promote-release: ci-check
 
 .PHONY: changelog
 changelog:
-	@$(CHRONICLE) -vvv -n . > CHANGELOG.md
+	@$(CHRONICLE) -vvv -n . --version-file VERSION > CHANGELOG.md
 	@$(GLOW) CHANGELOG.md
 
 .PHONY: release
