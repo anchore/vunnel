@@ -797,7 +797,11 @@ class Parser:
             if to_be_merged_map:
                 if self.enable_rev_history:
                     self.logger.debug("attempting to resolve patches using revision history for {}".format(cve_rel_path))
-                    (resolved_patches, pending_dpt_list, cve_latest_rev,) = self._resolve_patches_using_history(
+                    (
+                        resolved_patches,
+                        pending_dpt_list,
+                        cve_latest_rev,
+                    ) = self._resolve_patches_using_history(
                         cve_id=cve_id,
                         cve_rel_path=cve_rel_path,
                         to_be_merged_dpt_list=list(to_be_merged_map.keys()),
@@ -889,7 +893,11 @@ class Parser:
             saved_cve = self._load_merged_cve(cve_id)
 
             if self.enable_rev_history:
-                (resolved_patches, pending_dpt_list, cve_latest_rev,) = self._resolve_patches_using_history(
+                (
+                    resolved_patches,
+                    pending_dpt_list,
+                    cve_latest_rev,
+                ) = self._resolve_patches_using_history(
                     cve_id=cve_id,
                     cve_rel_path=cve_rel_path,
                     to_be_merged_dpt_list=list(to_be_merged_map.keys()),

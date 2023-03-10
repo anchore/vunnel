@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 import re
 import sys
-from typing import Optional, Any
+from dataclasses import InitVar, dataclass, field
+from typing import Any
 
 import click
-from tabulate import tabulate
-from dataclasses import dataclass, InitVar, field
-
 import yardstick
-from yardstick import store, comparison, artifact, utils
-from yardstick.cli import display, config
-
+from tabulate import tabulate
+from yardstick import artifact, comparison, store, utils
+from yardstick.cli import config, display
 
 # see the .yardstick.yaml configuration for details
 default_result_set = "pr_vs_latest_via_sbom"
@@ -19,15 +18,15 @@ yardstick.utils.grype_db.raise_on_failure(False)
 
 @dataclass
 class Gate:
-    label_comparisons: InitVar[Optional[list[comparison.AgainstLabels]]]
-    label_comparison_stats: InitVar[Optional[comparison.ImageToolLabelStats]]
+    label_comparisons: InitVar[list[comparison.AgainstLabels] | None]
+    label_comparison_stats: InitVar[comparison.ImageToolLabelStats | None]
 
     reasons: list[str] = field(default_factory=list)
 
     def __post_init__(
         self,
-        label_comparisons: Optional[list[comparison.AgainstLabels]],
-        label_comparison_stats: Optional[comparison.ImageToolLabelStats],
+        label_comparisons: list[comparison.AgainstLabels] | None,
+        label_comparison_stats: comparison.ImageToolLabelStats | None,
     ):
         if not label_comparisons and not label_comparison_stats:
             return
@@ -44,30 +43,33 @@ class Gate:
         }
         current_comparisons_by_image = {comp.config.image: comp for comp in label_comparisons if comp.config.tool == current_tool}
 
-        for image, comp in latest_release_comparisons_by_image.items():
-            if comp.summary.indeterminate_percent > 10:
-                reasons.append(
-                    f"latest indeterminate matches % is greater than 10%: {bcolors.BOLD+bcolors.UNDERLINE}current={comp.summary.indeterminate_percent:0.2f}%{bcolors.RESET} image={image}"
-                )
+        # this doesn't make sense in all cases, especially if we aren't failing any other gates against the current changes
+        # we might want this in the future to protect against no labels for images in an edge case, but that reason is not
+        # currently apparent
+        # for image, comp in latest_release_comparisons_by_image.items():
+        #     if comp.summary.indeterminate_percent > 10:
+        #         reasons.append(
+        #             f"latest indeterminate matches % is greater than 10%: {bcolors.BOLD+bcolors.UNDERLINE}current={comp.summary.indeterminate_percent:0.2f}%{bcolors.RESET} image={image}",
+        #         )
 
         for image, comp in current_comparisons_by_image.items():
             latest_f1_score = latest_release_comparisons_by_image[image].summary.f1_score
             current_f1_score = comp.summary.f1_score
             if current_f1_score < latest_f1_score:
                 reasons.append(
-                    f"current F1 score is lower than the latest release F1 score: {bcolors.BOLD+bcolors.UNDERLINE}current={current_f1_score:0.2f} latest={latest_f1_score:0.2f}{bcolors.RESET} image={image}"
+                    f"current F1 score is lower than the latest release F1 score: {bcolors.BOLD+bcolors.UNDERLINE}current={current_f1_score:0.2f} latest={latest_f1_score:0.2f}{bcolors.RESET} image={image}",
                 )
 
             if comp.summary.indeterminate_percent > 10:
                 reasons.append(
-                    f"current indeterminate matches % is greater than 10%: {bcolors.BOLD+bcolors.UNDERLINE}current={comp.summary.indeterminate_percent:0.2f}%{bcolors.RESET} image={image}"
+                    f"current indeterminate matches % is greater than 10%: {bcolors.BOLD+bcolors.UNDERLINE}current={comp.summary.indeterminate_percent:0.2f}%{bcolors.RESET} image={image}",
                 )
 
             latest_fns = latest_release_comparisons_by_image[image].summary.false_negatives
             current_fns = comp.summary.false_negatives
             if current_fns > latest_fns:
                 reasons.append(
-                    f"current false negatives is greater than the latest release false negatives: {bcolors.BOLD+bcolors.UNDERLINE}current={current_fns} latest={latest_fns}{bcolors.RESET} image={image}"
+                    f"current false negatives is greater than the latest release false negatives: {bcolors.BOLD+bcolors.UNDERLINE}current={current_fns} latest={latest_fns}{bcolors.RESET} image={image}",
                 )
 
         self.reasons = reasons
@@ -110,7 +112,7 @@ class bcolors:
 
 
 def show_results_used(results: list[artifact.ScanResult]):
-    print(f"   Results used:")
+    print("   Results used:")
     for idx, result in enumerate(results):
         branch = "├──"
         if idx == len(results) - 1:
@@ -136,15 +138,19 @@ def validate(
     images: list[str],
     always_run_label_comparison: bool,
     verbosity: int,
-    label_entries: Optional[list[artifact.LabelEntry]] = None,
+    label_entries: list[artifact.LabelEntry] | None = None,
 ):
-    print(f"{bcolors.HEADER}{bcolors.BOLD}Validating with {result_set!r}", bcolors.RESET)
+    print(f"{bcolors.HEADER}{bcolors.BOLD}Validating with {result_set!r}", bcolors.RESET, "\n")
     result_set_obj = store.result_set.load(name=result_set)
 
     namespaces = get_namespaces_from_db()
     print(f"{bcolors.HEADER}{bcolors.BOLD}Restricting results to the following DB namespaces:", bcolors.RESET)
     for namespace in namespaces:
         print(f" - {namespace}")
+
+    print()
+    print(f"{bcolors.HEADER}{bcolors.BOLD}Configuration:", bcolors.RESET)
+    print("   max year limit:", cfg.default_max_year)
 
     ret = []
     for image, result_states in result_set_obj.result_state_by_image.items():
@@ -195,7 +201,7 @@ def validate_image(
     always_run_label_comparison: bool,
     verbosity: int,
     namespaces: list[str],
-    label_entries: Optional[list[artifact.LabelEntry]] = None,
+    label_entries: list[artifact.LabelEntry] | None = None,
 ):
     def matches_filter(matches):
         return matches_filter_by_namespaces(matches, namespaces)
@@ -220,7 +226,7 @@ def validate_image(
 
     # bail if there are no differences found
     if not always_run_label_comparison and not sum(
-        [len(relative_comparison.unique[result.ID]) for result in relative_comparison.results]
+        [len(relative_comparison.unique[result.ID]) for result in relative_comparison.results],
     ):
         print("no differences found between tool results")
         return Gate(None, None)
@@ -290,7 +296,7 @@ def validate_image(
                     f"{color}{unique_match.vulnerability.id}{bcolors.RESET}",
                     f"{color}{label}{bcolors.RESET}",
                     f"{commentary}",
-                ]
+                ],
             )
 
     def escape_ansi(line):
@@ -307,9 +313,10 @@ def validate_image(
         print(
             indent
             + tabulate(
-                [["TOOL PARTITION", "PACKAGE", "VULNERABILITY", "LABEL", "COMMENTARY"]] + all_rows, tablefmt="plain"
+                [["TOOL PARTITION", "PACKAGE", "VULNERABILITY", "LABEL", "COMMENTARY"], *all_rows],
+                tablefmt="plain",
             ).replace("\n", "\n" + indent)
-            + "\n"
+            + "\n",
         )
 
     # populate the quality gate with data that can evaluate pass/fail conditions
@@ -344,7 +351,7 @@ def main(images: list[str], always_run_label_comparison: bool, breakdown_by_ecos
         result_set_obj = store.result_set.load(name=result_set)
         for state in result_set_obj.state:
             images.add(state.config.image)
-        images = sorted(list(images))
+        images = sorted(images)
 
     print("Loading label entries...", end=" ")
     label_entries = store.labels.load_for_image(images, year_max_limit=cfg.default_max_year)
@@ -361,14 +368,16 @@ def main(images: list[str], always_run_label_comparison: bool, breakdown_by_ecos
                 always_run_label_comparison=always_run_label_comparison,
                 verbosity=verbosity,
                 label_entries=label_entries,
-            )
+            ),
         )
         print()
 
         if breakdown_by_ecosystem:
             print(f"{bcolors.HEADER}Breaking down label comparison by ecosystem performance...", bcolors.RESET)
             results_by_image, label_entries, stats = yardstick.compare_results_against_labels_by_ecosystem(
-                result_set=result_set, year_max_limit=cfg.default_max_year, label_entries=label_entries
+                result_set=result_set,
+                year_max_limit=cfg.default_max_year,
+                label_entries=label_entries,
             )
             display.labels_by_ecosystem_comparison(
                 results_by_image,
@@ -377,7 +386,7 @@ def main(images: list[str], always_run_label_comparison: bool, breakdown_by_ecos
             )
             print()
 
-    failure = not all([gate.passed() for gate in gates])
+    failure = not all(gate.passed() for gate in gates)
     if failure:
         print("Reasons for quality gate failure:")
     for gate in gates:
@@ -427,7 +436,7 @@ def setup_logging(verbosity: int):
                     "level": log_level,
                 },
             },
-        }
+        },
     )
 
 

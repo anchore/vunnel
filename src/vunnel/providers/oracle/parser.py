@@ -92,8 +92,7 @@ class Parser:
         # See:https://github.com/anchore/anchore-engine/issues/1237 for details and links.
         # This approach is the minimally risk since it only impacts this driver and only ksplice-based packages.
         filterer = KspliceFilterer(logger=self.logger)
-        filtered_results = filterer.filter(raw_results)
-        return filtered_results
+        return filterer.filter(raw_results)
 
     def get(self):
         # download
@@ -120,7 +119,7 @@ class KspliceFilterer:
         epoch, version, release = rpm.split_fullversion(version)  # noqa
         return cls.ksplice_regex.match(release) is not None
 
-    def filter(self, vuln_dict: dict) -> dict:
+    def filter(self, vuln_dict: dict) -> dict:  # noqa: A003
         """
 
         Filters affected packages and ELSAs that are for ksplice packages since the matching logic for these in Grype isn't

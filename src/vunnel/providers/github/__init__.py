@@ -66,7 +66,6 @@ class Provider(provider.Provider):
             for advisory in self.parser.get():
                 all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
                 for ecosystem in advisory.ecosystems:
-
                     advisory["namespace"] = f"{namespace}:{ecosystem}"
 
                     # filter the list of fixes for this ecosystem

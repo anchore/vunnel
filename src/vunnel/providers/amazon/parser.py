@@ -78,10 +78,7 @@ class Parser:
                     sev = found.group(2)
                 elif element.tag == "description":
                     desc_str = element.text.strip()
-                    if desc_str:
-                        cves = re.sub(self._whitespace_pattern_, "", desc_str).split(",")
-                    else:
-                        cves = []
+                    cves = re.sub(self._whitespace_pattern_, "", desc_str).split(",") if desc_str else []
                 elif element.tag == "link":
                     url = element.text.strip()
                 elif element.tag == "item":
@@ -170,11 +167,10 @@ class JsonifierMixin:
                     jsonified[k] = [x.json() if hasattr(x, "json") and callable(x.json) else x for x in v]
                 elif isinstance(v, dict):
                     jsonified[k] = {x: y.json() if hasattr(y, "json") and callable(y.json) else y for x, y in v.items()}
+                elif hasattr(v, "json"):
+                    jsonified[k] = v.json()
                 else:
-                    if hasattr(v, "json"):
-                        jsonified[k] = v.json()
-                    else:
-                        jsonified[k] = v
+                    jsonified[k] = v
         return jsonified
 
 

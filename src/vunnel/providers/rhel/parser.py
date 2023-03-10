@@ -294,7 +294,6 @@ class Parser:
         return p
 
     def _init_rhsa_data(self, skip_if_exists=False):
-
         # setup workspace directory
         if not os.path.exists(self.rhsa_dir_path):
             self.logger.debug(f"creating workspace for rhsa source data at {self.rhsa_dir_path}")

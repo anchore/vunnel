@@ -25,12 +25,10 @@ from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerabi
 
 
 class TestSLESVulnerabilityParser:
-
     # flake8: noqa: E501
     @pytest.fixture
     def valid_element(self):
         def generate(with_namespace):
-
             content = (
                 "<metadata>"
                 + "<title>CVE-2021-29154</title>"

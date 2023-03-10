@@ -6,7 +6,6 @@ import tempfile
 
 import defusedxml.ElementTree as ET
 import pytest
-
 from vunnel.utils.oval_v2 import (
     Artifact,
     ArtifactParser,
@@ -27,7 +26,7 @@ Test.__test__ = False
 TestParser.__test__ = False
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_config():
     return OVALParserConfig(
         platform_regex=None,
@@ -61,7 +60,8 @@ class TestTestParser:
     def test_happy_path(self, dummy_config, element):
         xml_element = ET.fromstring(element)
         result = TestParser.parse(xml_element, dummy_config)
-        assert result and isinstance(result, Test)
+        assert result
+        assert isinstance(result, Test)
         assert result.identity == "oval:org.opensuse.security:tst:2009223735"
         assert result.artifact_id == "oval:org.opensuse.security:obj:2009042619"
         assert result.version_id == "oval:org.opensuse.security:ste:2009061809"
@@ -103,7 +103,8 @@ class TestArtifactParser:
     def test_happy_path(self, dummy_config, element):
         xml_element = ET.fromstring(element)
         result = ArtifactParser.parse(xml_element, dummy_config)
-        assert result and isinstance(result, Artifact)
+        assert result
+        assert isinstance(result, Artifact)
         assert result.identity == "oval:org.opensuse.security:obj:2009041419"
         assert result.name == "policycoreutils-python"
 
@@ -115,7 +116,7 @@ class TestArtifactParser:
             pytest.param(ET.fromstring('<rpminfo_state id="dummy"/>'), id="not-artifact"),
             pytest.param(
                 ET.fromstring(
-                    '<rpminfo_object id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'  # noqa: E501
+                    '<rpminfo_object id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>',  # noqa: E501
                 ),
                 id="invalid-artifact",
             ),
@@ -127,7 +128,7 @@ class TestArtifactParser:
 
 class TestVersionParser:
     @pytest.mark.parametrize(
-        "element, identity, op, value",
+        ("element", "identity", "op", "value"),
         [
             pytest.param(
                 '<rpminfo_state id="oval:org.opensuse.security:ste:2009079458" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
@@ -171,7 +172,8 @@ class TestVersionParser:
     def test_happy_path(self, dummy_config, element, identity, op, value):
         xml_element = ET.fromstring(element)
         result = VersionParser.parse(xml_element, dummy_config)
-        assert result and isinstance(result, Version)
+        assert result
+        assert isinstance(result, Version)
         assert result.identity == identity
         assert result.operation == op
         assert result.value == value
@@ -184,7 +186,7 @@ class TestVersionParser:
             pytest.param(ET.fromstring('<rpminfo_test id="dummy"/>'), id="not-version"),
             pytest.param(
                 ET.fromstring(
-                    '<rpminfo_state id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'  # noqa: E501
+                    '<rpminfo_state id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>',  # noqa: E501
                 ),
                 id="invalid-version",
             ),
@@ -195,26 +197,26 @@ class TestVersionParser:
 
 
 class TestParserFactory:
-    @pytest.fixture
+    @pytest.fixture()
     def invalid_parsers_error(self):
         return "Invalid input for parsers, must be a list of OVALElementParser sub-classes"
 
-    @pytest.fixture
+    @pytest.fixture()
     def invalid_enum_error(self):
         return "Invalid input for oval element enumeration, must be a python enum class"
 
-    @pytest.fixture
+    @pytest.fixture()
     def parser_enum_mismatch_error(self):
         return "Parsers are not a match for the oval element enumeration"
 
-    @pytest.fixture
+    @pytest.fixture()
     def example_enum_class(self):
         class RandomEnum(enum.Enum):
             FOO = "foo"
 
         return RandomEnum
 
-    @pytest.fixture
+    @pytest.fixture()
     def example_parser_class(self, example_enum_class):
         class RandomParser(OVALElementParser):
             oval_element = example_enum_class.FOO
@@ -226,7 +228,7 @@ class TestParserFactory:
         return RandomParser
 
     @pytest.mark.parametrize(
-        "parsers,oval_enum",
+        ("parsers", "oval_enum"),
         [
             pytest.param(
                 [
@@ -343,7 +345,7 @@ class TestParserFactory:
             pytest.param(ET.fromstring('<rpminfo_state id="dummy"/>'), id="invalid-tag"),
             pytest.param(
                 ET.fromstring(
-                    '<rpminfo_object id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>'
+                    '<rpminfo_object id="dummy" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux"/>',
                 ),
                 id="invalid-tag-with-ns",
             ),
@@ -366,7 +368,7 @@ class TestParserFactory:
 
 class TestOVALElementParser:
     @pytest.mark.parametrize(
-        "data, regex, expected",
+        ("data", "regex", "expected"),
         [
             pytest.param(
                 "{http://oval.mitre.org/XMLSchema/oval-definitions-5#linux}object",
@@ -386,7 +388,7 @@ class TestOVALElementParser:
         assert OVALElementParser._find_with_regex(data, regex) == expected
 
     @pytest.mark.parametrize(
-        "data, regex",
+        ("data", "regex"),
         [
             pytest.param(
                 None,
@@ -412,7 +414,7 @@ class TestOVALElementParser:
 
 class TestIterParse:
     @pytest.mark.parametrize(
-        "content, tag, parser_fn, expected",
+        ("content", "tag", "parser_fn", "expected"),
         [
             pytest.param(
                 '<rpminfo_test id="oval:org.opensuse.security:tst:2009223735" version="1" comment="sle-module-basesystem-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">'  # noqa: E501
@@ -460,7 +462,8 @@ class TestIterParse:
                 parser_factory=OVALParserFactory(parsers=[RandomParser], element_enum=RandomElements),
             )
 
-        assert results and isinstance(results, dict)
+        assert results
+        assert isinstance(results, dict)
         assert len(results) == 1
         assert list(results.keys())[0] == RandomElements.FOO
 

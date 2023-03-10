@@ -215,7 +215,6 @@ class Parser:
 
     @classmethod
     def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:
-
         cls.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
@@ -244,7 +243,10 @@ class Parser:
             # process impact item, each impact translates to a normalized vulnerability
             for impact_item in vulnerability_obj.impact:
                 # get the release and version
-                (release_name, release_version,) = cls._get_name_and_version_from_test(
+                (
+                    release_name,
+                    release_version,
+                ) = cls._get_name_and_version_from_test(
                     impact_item.namespace_test_id,
                     tests_dict,
                     artifacts_dict,
@@ -355,7 +357,6 @@ class Parser:
 
 @dataclass
 class SLESOVALVulnerability(Parsed):
-
     name: str
     severity: str
     description: str
@@ -370,7 +371,6 @@ class SLESVulnerabilityParser(VulnerabilityParser):
 
     @classmethod
     def parse(cls, xml_element, config: OVALParserConfig) -> SLESOVALVulnerability | None:
-
         identity = name = severity = description = link = None
         impact = cvss = []
         try:

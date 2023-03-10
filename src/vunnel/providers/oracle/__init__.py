@@ -48,9 +48,7 @@ class Provider(provider.Provider):
         return "oracle"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-
         with self.results_writer() as writer:
-
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             vuln_dict = self.parser.get()
 

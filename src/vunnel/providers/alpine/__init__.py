@@ -46,11 +46,9 @@ class Provider(provider.Provider):
         return "alpine"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for namespace, vulns in self.parser.get():
-
                 namespace = namespace.lower()
                 for vuln_id, record in vulns.items():
                     vuln_id = vuln_id.lower()

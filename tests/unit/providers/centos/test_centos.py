@@ -3,14 +3,13 @@ from __future__ import annotations
 import shutil
 
 import pytest
-
 from vunnel import result, workspace
 from vunnel.providers import centos
 from vunnel.providers.centos import Parser, parser
 
 
 @pytest.mark.parametrize(
-    "mock_data_path,full_entry",
+    ("mock_data_path", "full_entry"),
     [
         (
             "test-fixtures/centos-3-entry",
@@ -37,7 +36,7 @@ from vunnel.providers.centos import Parser, parser
                     },
                     "Name": "RHSA-0000-0000",
                     "CVSS": [],
-                }
+                },
             },
         ),
         (
@@ -53,7 +52,7 @@ from vunnel.providers.centos import Parser, parser
                             "VersionFormat": "rpm",
                             "NamespaceName": "centos:7",
                             "Module": None,
-                        }
+                        },
                     ],
                     "Link": "https://access.redhat.com/errata/RHSA-0000-0000",
                     "Description": "",
@@ -65,7 +64,7 @@ from vunnel.providers.centos import Parser, parser
                     },
                     "Name": "RHSA-0000-0000",
                     "CVSS": [],
-                }
+                },
             },
         ),
     ],
@@ -83,7 +82,7 @@ def test_parser(tmpdir, helpers, mock_data_path, full_entry):
     assert vuln == full_entry
 
 
-@pytest.fixture
+@pytest.fixture()
 def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
@@ -92,7 +91,7 @@ def disable_get_requests(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "mock_data_path,expected_written_entries",
+    ("mock_data_path", "expected_written_entries"),
     [
         ("test-fixtures/centos-3-entry", 0),
         ("test-fixtures/centos-7-entry", 1),

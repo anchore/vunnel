@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from vunnel.utils import fdb as db
 
 
@@ -42,7 +41,7 @@ class TestGetJSON:
             record = conn.create(str(i))
             record.commit({"name": str(i)})
         records = conn.get_all()
-        assert len([i for i in records]) == 9
+        assert len(list(records)) == 9
 
 
 class TestMeta:
@@ -58,7 +57,7 @@ class TestMeta:
         reloaded_meta.load()
         assert reloaded_meta.data == {"type": "json"}
         records = conn.get_all()
-        assert len([i for i in records]) == 9
+        assert len(list(records)) == 9
 
     def test_updates(self, tmpdir):
         conn = db.connection(tmpdir.strpath, serializer="json")

@@ -4,13 +4,12 @@ import shutil
 
 import pytest
 from pytest_unordered import unordered
-
 from vunnel import result, workspace
 from vunnel.providers.oracle import Config, Provider, parser
 
 
 @pytest.mark.parametrize(
-    "input_file,expected",
+    ("input_file", "expected"),
     [
         # TEST 1 ############################################################
         (
@@ -41,9 +40,9 @@ from vunnel.providers.oracle import Config, Provider, parser
                             },
                             "Name": "ELSA-2021-9151",
                             "CVSS": [],
-                        }
+                        },
                     },
-                )
+                ),
             },
         ),
         # TEST 2 ############################################################
@@ -114,7 +113,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "NamespaceName": "ol:5",
                                         "Module": None,
                                     },
-                                ]
+                                ],
                             ),
                             "Link": "http://linux.oracle.com/errata/ELSA-2007-0057.html",
                             "Description": "",
@@ -134,7 +133,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                             },
                             "Name": "ELSA-2007-0057",
                             "CVSS": [],
-                        }
+                        },
                     },
                 ),
                 ("ELSA-2018-4250", "ol:6"): (
@@ -187,7 +186,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "NamespaceName": "ol:6",
                                         "Module": None,
                                     },
-                                ]
+                                ],
                             ),
                             "Link": "http://linux.oracle.com/errata/ELSA-2018-4250.html",
                             "Description": "",
@@ -215,7 +214,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                             },
                             "Name": "ELSA-2018-4250",
                             "CVSS": [],
-                        }
+                        },
                     },
                 ),
             },
@@ -234,7 +233,7 @@ def test_parse(tmpdir, helpers, input_file, expected):
 
 class TestKspliceFilterer:
     @pytest.mark.parametrize(
-        ["input_vulnerability", "expected_output"],
+        ("input_vulnerability", "expected_output"),
         [
             (
                 {
@@ -250,11 +249,11 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.ksplice1.el8_3",
                                         "Module": None,
-                                    }
+                                    },
                                 ],
-                            }
+                            },
                         },
-                    )
+                    ),
                 },
                 {
                     ("ELSA-123", "ol:8"): (
@@ -263,9 +262,9 @@ class TestKspliceFilterer:
                             "Vulnerability": {
                                 "Name": "ELSA-123",
                                 "FixedIn": [],
-                            }
+                            },
                         },
-                    )
+                    ),
                 },
             ),
             (
@@ -282,11 +281,11 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
-                                    }
+                                    },
                                 ],
-                            }
+                            },
                         },
-                    )
+                    ),
                 },
                 {
                     ("ELSA-123", "ol:8"): (
@@ -301,11 +300,11 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
-                                    }
+                                    },
                                 ],
-                            }
+                            },
                         },
-                    )
+                    ),
                 },
             ),
             (
@@ -331,9 +330,9 @@ class TestKspliceFilterer:
                                         "Module": None,
                                     },
                                 ],
-                            }
+                            },
                         },
-                    )
+                    ),
                 },
                 {
                     ("ELSA-123", "ol:8"): (
@@ -348,11 +347,11 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
-                                    }
+                                    },
                                 ],
-                            }
+                            },
                         },
-                    )
+                    ),
                 },
             ),
         ],
@@ -362,7 +361,7 @@ class TestKspliceFilterer:
         assert f.filter(input_vulnerability) == expected_output
 
 
-@pytest.fixture
+@pytest.fixture()
 def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
@@ -387,5 +386,5 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert 2 == workspace.num_result_entries()
+    assert workspace.num_result_entries() == 2
     assert workspace.result_schemas_valid(require_entries=True)
