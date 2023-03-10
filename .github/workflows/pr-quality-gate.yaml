@@ -93,7 +93,7 @@ jobs:
             echo
             echo "This could happen for a couple of reasons:"
             echo "  - A provider test failed, in which case see the logs in previous jobs for more details"
-            echo "  - A required provider test was skipped. You might need to add the 'run-pr-quality-gate' label to your PR to prevent skipping the test.
+            echo "  - A required provider test was skipped. You might need to add the 'run-pr-quality-gate' label to your PR to prevent skipping the test."
             exit 1
           fi
           echo "🟢 Quality gate passed! (all tests passed)"
