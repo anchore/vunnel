@@ -32,6 +32,8 @@ def test_full_config(helpers):
         log=config.Log(
             slim=True,
             level="trace",
+            show_level=False,
+            show_timestamp=True,
         ),
         providers=config.Providers(
             alpine=providers.alpine.Config(
