@@ -4,6 +4,7 @@ import dataclasses
 import enum
 import logging
 import sys
+from dataclasses import dataclass
 from typing import Any
 
 import click
@@ -29,10 +30,19 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
     elif verbose >= 2:
         log_level = "TRACE"
 
-    log_format = "%(log_color)s %(asctime)s [%(levelname)s] %(message)s"
-    # log_format = "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s"
     if ctx.obj.log.slim:
-        log_format = "%(log_color)s %(message)s"
+        timestamp_format = ""
+        level_format = ""
+    else:
+        timestamp_format = "%(asctime)s "
+        if not ctx.obj.log.show_timestamp:
+            timestamp_format = ""
+
+        level_format = "[%(levelname)-5s] "
+        if not ctx.obj.log.show_level:
+            level_format = ""
+
+    log_format = f"%(log_color)s{timestamp_format}{level_format}%(message)s"
 
     logging.config.dictConfig(
         {
@@ -171,29 +181,55 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
     print(cfg.root)
     selected_names = provider_names if provider_names else providers.names()
 
-    for idx, name in enumerate(selected_names):
-        branch = "├──"
-        fill = "│"
-        if idx == len(selected_names) - 1:
-            branch = "└──"
-            fill = " "
+    @dataclass
+    class CurrentState:
+        count: int | None = None
+        date: str | None = None
+        error: str | None = None
+        enabled: bool = True
+
+        def format(self, fill: str) -> str:  # noqa: A003
+            if self.error:
+                return f"""\
+{fill}      unable to load state: {self.error}"""
+
+            if self.count is None and self.date is None:
+                return f"""\
+{fill}      (no state found)"""
+
+            return f"""\
+{fill}      results: {self.count}
+{fill}      from:    {self.date}"""
+
+    # first pass: find the results that exist (which may be fewer than what is selected)
+    results = {}
+    for _idx, name in enumerate(selected_names):
         try:
             provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
 
             state = provider.workspace.state()
             if not state:
                 raise FileNotFoundError("no state found")
-            node = f"""\
-{fill}      results: {state.result_count(provider.workspace.path)}
-{fill}      from:    {state.timestamp.strftime("%Y-%m-%d %H:%M:%S")}"""
+            results[name] = CurrentState(
+                count=state.result_count(provider.workspace.path),
+                date=state.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            )
         except FileNotFoundError:
             if not show_empty:
                 continue
-            node = f"""\
-{fill}      (no state found)"""
+            results[name] = CurrentState(enabled=False)
         except Exception as e:
-            node = f"""\
-{fill}      unable to load state: {e}"""
+            results[name] = CurrentState(enabled=False, error=str(e))
+
+    # second pass: show the state
+    for idx, (name, result) in enumerate(sorted(results.items())):
+        branch = "├──"
+        fill = "│"
+        if idx == len(results) - 1:
+            branch = "└──"
+            fill = " "
+
+        node = result.format(fill)
 
         print(f"""{branch} {name}\n{node}""")
 

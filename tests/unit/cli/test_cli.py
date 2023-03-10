@@ -116,6 +116,8 @@ def test_config(monkeypatch) -> None:
     expected_output = """
 log:
   level: INFO
+  show_level: true
+  show_timestamp: false
   slim: false
 providers:
   alpine:
