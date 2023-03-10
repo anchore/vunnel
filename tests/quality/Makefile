@@ -77,7 +77,7 @@ $(YARDSTICK_RESULT_DIR):
 
 .PHONY: update-labels
 update-labels:  ## Update vulnerability-match-labels submodule to grab the latest labels on the main branch
-	git submodule update vulnerability-match-labels
+	git submodule update --remote vulnerability-match-labels
 
 
 ## Cleanup targets #################################

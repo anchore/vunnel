@@ -38,7 +38,7 @@ ecosystem_map = {
 
 
 class Parser:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace,
         token,
@@ -156,7 +156,7 @@ class Parser:
         # determine if a run was completed by looking for a timestamp
         metadata = self.db.get_metadata()
         self.timestamp = metadata.data.get("timestamp")
-        current_timestamp = f"{datetime.datetime.utcnow().isoformat()}Z"
+        current_timestamp = f"{datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}Z"
         has_cursor = True
 
         # Process everything that was persisted first
@@ -263,10 +263,7 @@ def get_vulnerabilities(token, ghsaId, timestamp, vuln_cursor, parent_cursor):  
         # pagination using the ghsaId
         vulnerabilities = advisory.get("vulnerabilities", {})
         page_info = vulnerabilities.get("pageInfo", {})
-        if page_info.get("hasNextPage"):
-            vuln_cursor = page_info.get("endCursor")
-        else:
-            vuln_cursor = None
+        vuln_cursor = page_info.get("endCursor") if page_info.get("hasNextPage") else None
 
         for vulnerability in vulnerabilities.get("nodes", []):
             nodes.append(vulnerability)
@@ -389,13 +386,13 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     if cursor:
         after = 'after: "%s", ' % cursor
 
-    caller = "{query_func}{after}{updatedSince}first: 100)".format(query_func=query_func, after=after, updatedSince=updatedSince)
+    caller = f"{query_func}{after}{updatedSince}first: 100)"
 
     if vuln_cursor:
         vuln_after = 'after: "%s", ' % vuln_cursor
     vulnerabilities = "%sfirst: 100, orderBy: {field: UPDATED_AT, direction: ASC}" % vuln_after
 
-    query = """
+    return """
     {{
       {} {{
         nodes {{
@@ -439,11 +436,9 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
         caller,
         vulnerabilities,
     )
-    return query
 
 
 class NodeParser(dict):
-
     __parsers__ = ("_severity", "_fixedin", "_summary", "_url", "_cves", "_withdrawn")
 
     def __init__(self, data, logger=None):
@@ -538,7 +533,7 @@ class NodeParser(dict):
                         "ecosystem": ecosystem,
                         "namespace": f"github:{ecosystem}",
                         "range": version_range,
-                    }
+                    },
                 )
             else:
                 # Log vuln skipped for unknown ecosystem

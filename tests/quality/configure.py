@@ -1,30 +1,29 @@
-import logging
-import shutil
-import subprocess
-import os
+from __future__ import annotations
+import dataclasses
+import enum
+import fnmatch
 import glob
 import json
-import fnmatch
-import enum
-import dataclasses
-import requests
+import logging
+import os
 import shlex
+import shutil
+import subprocess
 import sys
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Any
 
 import click
 import mergedeep
+import requests
 import yaml
-from dataclass_wizard import asdict, fromdict, DumpMeta
-
+from dataclass_wizard import DumpMeta, asdict, fromdict
 from yardstick.cli.config import (
     Application,
-    Tool,
-    ScanMatrix,
     ResultSet,
+    ScanMatrix,
+    Tool,
 )
-
 
 BIN_DIR = "./bin"
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
@@ -52,6 +51,7 @@ class AdditionalProvider:
 @dataclass
 class Test:
     provider: str
+    use_cache: bool = False
     images: list[str] = field(default_factory=list)
     additional_providers: list[AdditionalProvider] = field(default_factory=list)
     additional_trigger_globs: list[str] = field(default_factory=list)
@@ -106,11 +106,11 @@ class Config:
                         images=images,
                         tools=self.yardstick.tools,
                     ),
-                )
+                ),
             },
         )
 
-    def test_configuration_by_provider(self, provider: str) -> Optional[Test]:
+    def test_configuration_by_provider(self, provider: str) -> Test | None:
         for test in self.tests:
             if test.provider == provider:
                 return test
@@ -129,7 +129,10 @@ class Config:
 
             tests.append(test)
 
-            uncached_providers.append(test.provider)
+            if test.use_cache:
+                cached_providers.append(test.provider)
+            else:
+                uncached_providers.append(test.provider)
             if test.additional_providers:
                 for additional_provider in test.additional_providers:
                     if additional_provider.use_cache:
@@ -185,7 +188,7 @@ def cli(ctx, verbose: bool, config_path: str):
                     "level": log_level,
                 },
             },
-        }
+        },
     )
 
 
@@ -258,7 +261,7 @@ def read_config_state(path: str = ".state.yaml"):
     logging.info(f"reading config state from {path!r}")
 
     try:
-        with open(path, "r") as f:
+        with open(path) as f:
             return fromdict(ConfigurationState, yaml.safe_load(f.read()))
     except FileNotFoundError:
         return ConfigurationState()
@@ -283,7 +286,7 @@ provider:
   root: ./data
   configs:
 """
-            + "\n".join([f"    - name: {provider}" for provider in providers])
+            + "\n".join([f"    - name: {provider}" for provider in providers]),
         )
 
 
@@ -337,7 +340,7 @@ def select_providers(cfg: Config, output_json: bool):
                     selected_providers.add(test.provider)
                     break
 
-    sorted_providers = sorted(list(selected_providers))
+    sorted_providers = sorted(selected_providers)
 
     if output_json:
         print(json.dumps(sorted_providers))
@@ -350,8 +353,8 @@ def select_providers(cfg: Config, output_json: bool):
 @click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
 @click.pass_obj
 def all_providers(cfg: Config, output_json: bool):
-    selected_providers = set(test.provider for test in cfg.tests)
-    sorted_providers = sorted(list(selected_providers))
+    selected_providers = {test.provider for test in cfg.tests}
+    sorted_providers = sorted(selected_providers)
 
     if output_json:
         print(json.dumps(sorted_providers))
@@ -450,16 +453,13 @@ def _install(version: str):
 
         logging.info(f"grype-db version derived from git is {version!r}")
 
-    if version.startswith("v"):
-        if os.path.exists(GRYPE_DB):
-            grype_db_version = (
-                subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
-            )
-            if grype_db_version == version:
-                logging.info(f"grype-db already installed at version {version!r}")
-                return
-            else:
-                logging.info(f"updating grype-db from version {grype_db_version!r} to {version!r}")
+    if version.startswith("v") and os.path.exists(GRYPE_DB):
+        grype_db_version = subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
+        if grype_db_version == version:
+            logging.info(f"grype-db already installed at version {version!r}")
+            return
+        else:
+            logging.info(f"updating grype-db from version {grype_db_version!r} to {version!r}")
 
     logging.info(f"installing grype-db at version {version!r}")
 
@@ -478,7 +478,7 @@ def build_db(cfg: Config):
     state = read_config_state()
 
     if not state.cached_providers and not state.uncached_providers:
-        logging.error(f"no providers configured")
+        logging.error("no providers configured")
         return
 
     logging.info(f"preparing data directory for uncached={state.uncached_providers!r} cached={state.cached_providers!r}")
@@ -489,7 +489,7 @@ def build_db(cfg: Config):
     db_archive = f"{build_dir}/grype-db.tar.gz"
 
     # clear data directory
-    logging.info(f"clearing existing data")
+    logging.info("clearing existing data")
     shutil.rmtree(data_dir, ignore_errors=True)
     shutil.rmtree(build_dir, ignore_errors=True)
 

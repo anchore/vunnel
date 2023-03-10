@@ -36,7 +36,6 @@ class NvdAPI:
         | None = None,  # note: if you specify a changeStartDate, you must also specify a changeEndDate
         change_end_date: str | datetime.datetime | None = None,  # note: maximum date range is 120 days
     ) -> Generator[dict[str, Any], Any, None]:
-
         parameters = {}
 
         if cve_id:
@@ -71,7 +70,6 @@ class NvdAPI:
         | None = None,  # note: if you specify a pubStartDate, you must also specify a pubEndDate
         pub_end_date: str | datetime.datetime | None = None,  # note: maximum date range is 120 days
     ) -> Generator[dict[str, Any], Any, None]:
-
         parameters = {}
 
         if cve_id:

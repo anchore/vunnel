@@ -24,7 +24,7 @@ class WorkspaceHelper:
 
     def result_files(self):
         results = []
-        for root, dirs, files in os.walk(self.results_dir):
+        for root, _dirs, files in os.walk(self.results_dir):
             for filename in files:
                 results.append(os.path.join(root, filename))
         return results
@@ -96,7 +96,7 @@ class Helpers:
         return WorkspaceHelper(root, name)
 
 
-@pytest.fixture
+@pytest.fixture()
 def helpers(request, tmpdir):
     """
     Returns a common set of helper functions for tests.
@@ -113,7 +113,7 @@ def git_root() -> str:
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def dummy_file():
     def apply(d: str, name: str = ""):
         if name == "":

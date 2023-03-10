@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from click.testing import CliRunner
-
 from vunnel import cli, provider, providers, result
 from vunnel.providers import nvd
 
@@ -79,12 +78,12 @@ def test_run(mocker, monkeypatch) -> None:
                 request_timeout=125,
                 api_key="secret",
             ),
-        )
+        ),
     ]
 
 
 @pytest.mark.parametrize(
-    "args, clear, clear_input, clear_results",
+    ("args", "clear", "clear_input", "clear_results"),
     (
         (["wolfi"], 1, 0, 0),
         (["wolfi", "-i"], 0, 1, 0),
@@ -97,7 +96,7 @@ def test_clear(mocker, monkeypatch, args, clear, clear_input, clear_results) -> 
     mocker.patch.object(providers, "create", create_mock)
 
     runner = CliRunner()
-    res = runner.invoke(cli.cli, ["clear"] + args)
+    res = runner.invoke(cli.cli, ["clear", *args])
     assert res.exit_code == 0
     assert workspace_mock.clear.call_count == clear
     assert workspace_mock.clear_input.call_count == clear_input

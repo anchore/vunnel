@@ -1,3 +1,7 @@
+[project]
+name = "vunnel"
+requires-python = ">=3.9.0"
+
 [tool.poetry.scripts]
 vunnel = "vunnel.cli:run"
 
@@ -35,7 +39,7 @@ importlib-metadata = "^6.0.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.2"
 pre-commit = "^3.1.1"
-black = "^22.10.0"
+black = "^23.1.0"
 jsonschema = "^4.17.3"
 pytest-unordered = "^0.5.2"
 pytest-sugar = "^0.9.6"
@@ -49,8 +53,8 @@ types-requests = "^2.28.11.7"
 mypy = "^1.1"
 radon = "^5.1.0"
 dunamai = "^1.15.0"
-ruff = "^0.0.243"
-yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.4.3"}
+ruff = "^0.0.254"
+yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.4.4"}
 tabulate = "0.9.0"
 
 [build-system]
@@ -185,28 +189,14 @@ select = [
 ignore = [
   "ARG001", # unused args are ok, as they communicate intent in interfaces, even if not used in impls.
   "ARG002", # unused args are ok, as they communicate intent in interfaces, even if not used in impls.
-  "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
+  "G004", # it's ok to use formatted strings for logging
   "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
   "PLR2004", # a little too agressive, not allowing any magic numbers
-  "G004", # it's ok to use formatted strings for logging
+  "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
+  "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
+  "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)` -- not compatible with python 3.9 (even with __future__ import)
 ]
 
 extend-exclude = [
-  "**/src/vunnel/providers/alpine/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/amazon/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/centos/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/debian/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/github/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/nvd/parser.py",       # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/oracle/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/rhel/parser.py",      # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/sles/parser.py",      # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/ubuntu/git.py",       # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/ubuntu/parser.py",    # ported from enterprise, never had type hints
-  "**/src/vunnel/providers/wolfi/parser.py",     # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/oval_v2.py",              # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/oval_parser.py",          # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/fdb.py",                  # ported from enterprise, never had type hints
-  "**/src/vunnel/utils/vulnerability.py",        # ported from enterprise, never had type hints
-  "**/tests/**",                                 # any tests
+  "**/tests/**",
 ]

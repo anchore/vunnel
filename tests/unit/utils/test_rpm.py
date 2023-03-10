@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import pytest
-
 from vunnel.utils import rpm
 
 
 @pytest.mark.parametrize(
-    "version1, version2, expected",
+    ("version1", "version2", "expected"),
     [
         # no epoch tests...
         ("1", "1", 0),
