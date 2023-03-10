@@ -29,10 +29,19 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
     elif verbose >= 2:
         log_level = "TRACE"
 
-    log_format = "%(log_color)s %(asctime)s [%(levelname)s] %(message)s"
-    # log_format = "%(log_color)s %(asctime)s %(name)s [%(levelname)s] %(message)s"
     if ctx.obj.log.slim:
-        log_format = "%(log_color)s %(message)s"
+        timestamp_format = ""
+        level_format = ""
+    else:
+        timestamp_format = "%(asctime)s "
+        if not ctx.obj.log.show_timestamp:
+            timestamp_format = ""
+
+        level_format = "[%(levelname)-5s] "
+        if not ctx.obj.log.show_level:
+            level_format = ""
+
+    log_format = f"%(log_color)s{timestamp_format}{level_format}%(message)s"
 
     logging.config.dictConfig(
         {
