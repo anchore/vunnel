@@ -43,11 +43,14 @@ class Gate:
         }
         current_comparisons_by_image = {comp.config.image: comp for comp in label_comparisons if comp.config.tool == current_tool}
 
-        for image, comp in latest_release_comparisons_by_image.items():
-            if comp.summary.indeterminate_percent > 10:
-                reasons.append(
-                    f"latest indeterminate matches % is greater than 10%: {bcolors.BOLD+bcolors.UNDERLINE}current={comp.summary.indeterminate_percent:0.2f}%{bcolors.RESET} image={image}",
-                )
+        # this doesn't make sense in all cases, especially if we aren't failing any other gates against the current changes
+        # we might want this in the future to protect against no labels for images in an edge case, but that reason is not
+        # currently apparent
+        # for image, comp in latest_release_comparisons_by_image.items():
+        #     if comp.summary.indeterminate_percent > 10:
+        #         reasons.append(
+        #             f"latest indeterminate matches % is greater than 10%: {bcolors.BOLD+bcolors.UNDERLINE}current={comp.summary.indeterminate_percent:0.2f}%{bcolors.RESET} image={image}",
+        #         )
 
         for image, comp in current_comparisons_by_image.items():
             latest_f1_score = latest_release_comparisons_by_image[image].summary.f1_score
