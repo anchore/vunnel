@@ -155,8 +155,15 @@ class Parser:
     def get(self):
         # determine if a run was completed by looking for a timestamp
         metadata = self.db.get_metadata()
+
+        # why rstrip(Z)? Previous code had been incorrectly adding a Z to the end of the timestamp manually
+        # instead of using the isoformat() method. This lead to a parsing problem with the github API (naturally).
+        # in the future this rstrip() should be removed when all cached data in CI is updated.
         self.timestamp = metadata.data.get("timestamp")
-        current_timestamp = f"{datetime.datetime.now(tz=datetime.timezone.utc).isoformat()}Z"
+        if self.timestamp:
+            self.timestamp = self.timestamp.rstrip("Z")
+
+        current_timestamp = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
         has_cursor = True
 
         # Process everything that was persisted first
@@ -168,6 +175,9 @@ class Parser:
             # download will retrieve advisories that have been updated from that
             # point in time, if a cursor is present, it will be used as well
             data = self._download()
+
+            if "errors" in data:
+                raise RuntimeError(f"Error downloading advisories: {data['errors']}")
 
             page_info = data["data"]["securityAdvisories"]["pageInfo"]
             if page_info["hasNextPage"]:
