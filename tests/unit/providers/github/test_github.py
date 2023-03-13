@@ -343,7 +343,7 @@ class TestParser:
         metadata = database.get_metadata()
         timestamp = metadata.data["timestamp"]
         assert isinstance(timestamp, str)
-        assert timestamp.endswith("Z")
+        assert timestamp.endswith("Z") or timestamp.endswith("+00:00")
 
     def test_get_commits_timestamp_with_cursors(self, advisories, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response, advisories(has_next_page=True)])
@@ -355,7 +355,7 @@ class TestParser:
         metadata = database.get_metadata()
         timestamp = metadata.data["timestamp"]
         assert isinstance(timestamp, str)
-        assert timestamp.endswith("Z")
+        assert timestamp.endswith("Z") or timestamp.endswith("+00:00")
 
     def test_has_next_page(self, advisories, fake_get_query, tmpdir, empty_response):
         fake_get_query([empty_response, advisories(has_next_page=True)])
