@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os.path
 import shutil
 
 import pytest
@@ -18,6 +19,7 @@ def disable_get_requests(monkeypatch):
 class TestParser:
     _sample_dsa_data_ = "test-fixtures/input/DSA"
     _sample_json_data_ = "test-fixtures/input/debian.json"
+    _sample_legacy_data = "test-fixtures/input/legacy/vulnerabilities-debian:7-0.json"
 
     def test_normalize_dsa_list(self, tmpdir, helpers, disable_get_requests):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
@@ -87,6 +89,28 @@ class TestParser:
 
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
 
+    def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests):
+        subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+
+        mock_data_path = helpers.local_dir("test-fixtures/input")
+        shutil.copytree(mock_data_path, subject.workspace.input_path, dirs_exist_ok=True)
+
+        legacy_records = subject._get_legacy_records()
+
+        assert isinstance(legacy_records, dict)
+        assert len(legacy_records) > 0
+        assert "7" in legacy_records.keys()
+        assert len(legacy_records["7"]) > 0
+
+        for _rel, vuln_dict in legacy_records.items():
+            assert isinstance(vuln_dict, dict)
+            assert len(vuln_dict) > 0
+            assert all("Vulnerability" in x for x in vuln_dict.values())
+
+            assert all(x.get("Vulnerability", {}).get("Name") for x in vuln_dict.values())
+
+            assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
+
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
@@ -109,5 +133,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 21
+    # 17 entries from the legacy records, 21 from the mock json data
+    expected = 38
+    assert workspace.num_result_entries() == expected
     assert workspace.result_schemas_valid(require_entries=True)
