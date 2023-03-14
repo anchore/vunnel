@@ -96,3 +96,8 @@ jobs:
           gh release create ${{ github.event.inputs.version }} -F CHANGELOG.md -t ${{ github.event.inputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PyPI
+        run: make ci-publish-pypi
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.VUNNEL_PYPI_TOKEN }}

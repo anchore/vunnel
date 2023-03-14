@@ -138,7 +138,7 @@ fail_under = 80
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-metadata = true
+metadata = false
 style = "semver"
 dirty = true
 

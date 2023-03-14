@@ -12,6 +12,7 @@ GRYPE_DB_PATH ?= ../grype-db
 CRANE = $(TEMP_DIR)/crane
 CHRONICLE = $(TEMP_DIR)/chronicle
 GLOW = $(TEMP_DIR)/glow
+PUBLISH_CMD = poetry publish --build -n
 
 # Tool versions #################################
 CHRONICLE_VERSION = v0.6.0
@@ -149,6 +150,15 @@ ci-promote-release: ci-check
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) $(PACKAGE_VERSION)
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) latest
 
+.PHONY: ci-publish-testpypi
+ci-publish-testpypi: clean-dist
+	poetry config repositories.testpypi https://test.pypi.org/legacy/
+	$(PUBLISH_CMD) -r testpypi
+
+.PHONY: ci-publish-pypi
+ci-publish-pypi: ci-check
+	$(PUBLISH_CMD)
+
 .PHONY: changelog
 changelog:
 	@$(CHRONICLE) -vvv -n . --version-file VERSION > CHANGELOG.md
@@ -158,6 +168,12 @@ changelog:
 release:
 	@.github/scripts/trigger-release.sh
 
+
+## Cleanup #################################
+
+.PHONY: clean-dist
+clean-dist:
+	rm -rf dist
 
 ## Halp! #################################
 

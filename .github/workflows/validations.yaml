@@ -47,3 +47,10 @@ jobs:
       - name: Publish commit image
         if: github.ref == 'refs/heads/main'
         run: make ci-publish-commit
+
+      - name: Publish to test PyPI
+        if: github.ref == 'refs/heads/main'
+        run: make ci-publish-testpypi
+        env:
+          # note: "..._TESTPYPI" suffix should match the name of the testpypi repository (see the Makefile target)
+          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.VUNNEL_TESTPYPI_TOKEN }}
