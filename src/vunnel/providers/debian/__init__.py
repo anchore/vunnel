@@ -45,6 +45,8 @@ class Provider(provider.Provider):
         )
 
         # this provider requires the previous state from former runs
+        # note: we MUST keep the input directory, since it may have out-of-band updates to support
+        # legacy vulns that are not in the Debian security tracker anymore.
         provider.disallow_existing_input_policy(config.runtime)
 
     @classmethod
