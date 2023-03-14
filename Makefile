@@ -156,7 +156,7 @@ ci-publish-testpypi: clean-dist
 	$(PUBLISH_CMD) -r testpypi
 
 .PHONY: ci-publish-pypi
-ci-publish-pypi: ci-check
+ci-publish-pypi: ci-check clean-dist
 	$(PUBLISH_CMD)
 
 .PHONY: changelog
