@@ -468,7 +468,7 @@ class Parser:
                 # ensure results are compliant with the current schema
                 cvss_metadata = record["Vulnerability"].get("Metadata", {}).get("NVD", {}).get("CVSSv2", {})
                 if cvss_metadata:
-                    if cvss_metadata["Vectors"] == None:
+                    if cvss_metadata["Vectors"] is None:
                         del cvss_metadata["Vectors"]
                     record["Vulnerability"]["Metadata"]["NVD"]["CVSSv2"] = cvss_metadata
 
@@ -476,10 +476,10 @@ class Parser:
                 legacy_records[relno][vid] = record
 
         # read every json file in the legacy directory
-        for root, dirs, files in os.walk(self.legacy_records_path):
+        for root, _dirs, files in os.walk(self.legacy_records_path):
             for file in files:
                 if file.endswith(".json") and file.startswith("vulnerabilities"):
-                    with open(os.path.join(root, file), "r") as f:
+                    with open(os.path.join(root, file)) as f:
                         process_file(json.load(f))
 
         if legacy_records:
