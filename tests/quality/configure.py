@@ -121,6 +121,7 @@ class Config:
         uncached_providers = []
 
         tests = []
+        providers_under_test_that_require_cache = set()
         for provider in providers:
             test = self.test_configuration_by_provider(provider)
             if test is None:
@@ -129,10 +130,13 @@ class Config:
 
             tests.append(test)
 
+            # note: we always include the subject in the uncached providers, but also add it to the cached providers.
+            # the subject must always be run even when cache is involved.
+            uncached_providers.append(test.provider)
             if test.use_cache:
+                providers_under_test_that_require_cache.add(test.provider)
                 cached_providers.append(test.provider)
-            else:
-                uncached_providers.append(test.provider)
+
             if test.additional_providers:
                 for additional_provider in test.additional_providers:
                     if additional_provider.use_cache:
@@ -141,7 +145,7 @@ class Config:
                         uncached_providers.append(additional_provider.name)
 
         for provider in uncached_providers:
-            if provider in cached_providers:
+            if provider in cached_providers and provider not in providers_under_test_that_require_cache:
                 cached_providers.remove(provider)
 
         return cached_providers, uncached_providers, self.yardstick_application_config(tests)
@@ -407,6 +411,8 @@ def configure(cfg: Config, provider_names: list[str]):
 
     cached_providers, uncached_providers, yardstick_app_cfg = cfg.provider_data_source(provider_names)
 
+    logging.info(f"providers uncached={uncached_providers!r} cached={cached_providers!r}")
+
     if not cached_providers and not uncached_providers:
         logging.error(f"no test configuration found for provider {provider_names!r}")
         return [], []
@@ -493,17 +499,17 @@ def build_db(cfg: Config):
     shutil.rmtree(data_dir, ignore_errors=True)
     shutil.rmtree(build_dir, ignore_errors=True)
 
-    # run providers
-    for provider in state.uncached_providers:
-        logging.info(f"running provider {provider!r}")
-        subprocess.run(["vunnel", "-v", "run", provider], check=True)
-
     # fetch cache for other providers
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
         subprocess.run(["oras", "pull", f"ghcr.io/anchore/grype-db/data/{provider}:latest"], check=True)
         subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
+
+    # run providers
+    for provider in state.uncached_providers:
+        logging.info(f"running provider {provider!r}")
+        subprocess.run(["vunnel", "-v", "run", provider], check=True)
 
     logging.info("building DB")
     subprocess.run([GRYPE_DB, "build", "-v"], check=True)

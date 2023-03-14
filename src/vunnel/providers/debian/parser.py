@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from collections import namedtuple
+from typing import Any
 
 import requests
 
@@ -51,6 +52,7 @@ class Parser:
         self.debian_distro_map = distro_map
         self.json_file_path = os.path.join(workspace.input_path, self._json_file_)
         self.dsa_file_path = os.path.join(workspace.input_path, self._dsa_file_)
+        self.legacy_records_path = os.path.join(self.workspace.input_path, "legacy")
         self.urls = [self._json_url_, self._dsa_url_]
 
         if not logger:
@@ -453,6 +455,40 @@ class Parser:
 
         return vuln_records
 
+    def _get_legacy_records(self):
+        legacy_records = {}
+
+        def process_file(contents: list[dict[str, Any]]) -> None:
+            for record in contents:
+                relno = record["Vulnerability"]["NamespaceName"].split(":")[-1]
+                vid = record["Vulnerability"]["Name"]
+                if relno not in legacy_records:
+                    legacy_records[relno] = {}
+
+                # ensure results are compliant with the current schema
+                cvss_metadata = record["Vulnerability"].get("Metadata", {}).get("NVD", {}).get("CVSSv2", {})
+                if cvss_metadata:
+                    if cvss_metadata["Vectors"] is None:
+                        del cvss_metadata["Vectors"]
+                    record["Vulnerability"]["Metadata"]["NVD"]["CVSSv2"] = cvss_metadata
+
+                # write the record back
+                legacy_records[relno][vid] = record
+
+        # read every json file in the legacy directory
+        for root, _dirs, files in os.walk(self.legacy_records_path):
+            for file in files:
+                if file.endswith(".json") and file.startswith("vulnerabilities"):
+                    with open(os.path.join(root, file)) as f:
+                        process_file(json.load(f))
+
+        if legacy_records:
+            self.logger.info(f"found existing legacy data for the following releases: {list(legacy_records.keys())}")
+        else:
+            self.logger.info("no existing legacy data found")
+
+        return legacy_records
+
     def get(self):
         # download the files
         self._download_json()
@@ -463,6 +499,10 @@ class Parser:
 
         # normalize json file
         vuln_records = self._normalize_json(ns_cve_dsalist=ns_cve_dsalist)
+
+        # fetch records from legacy (if they exist)
+        legacy_records = self._get_legacy_records()
+        vuln_records.update(legacy_records)
 
         if vuln_records:
             for relno, vuln_dict in vuln_records.items():
