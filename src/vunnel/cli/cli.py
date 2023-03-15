@@ -10,6 +10,7 @@ from typing import Any
 import click
 import yaml
 
+from vunnel import __name__ as package_name
 from vunnel import providers
 from vunnel.cli import config
 
@@ -17,6 +18,7 @@ from vunnel.cli import config
 @click.option("--verbose", "-v", default=False, help="show logs", count=True)
 @click.option("--config", "-c", "config_path", default=".vunnel.yaml", help="override config path")
 @click.group(help="Tool for pulling and parsing vulnerability data for use with grype-db.")
+@click.version_option(package_name=package_name, message="%(prog)s %(version)s")
 @click.pass_context
 def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
     import logging.config
