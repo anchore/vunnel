@@ -53,4 +53,4 @@ jobs:
         run: make ci-publish-testpypi
         env:
           # note: "..._TESTPYPI" suffix should match the name of the testpypi repository (see the Makefile target)
-          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.VUNNEL_TESTPYPI_TOKEN }}
+          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.TEST_PYPI_TOKEN }}

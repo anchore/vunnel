@@ -75,9 +75,10 @@ runs:
         python-version: ${{ inputs.python-version }}
 
     - name: Install poetry
-      uses: abatilo/actions-poetry@v2.2.0
-      with:
-        poetry-version: ${{ inputs.poetry-version }}
+      shell: bash
+      run: |
+        pipx install poetry==${{ inputs.poetry-version }}
+        poetry self add "poetry-dynamic-versioning[plugin]"
 
     - name: Cache Poetry virtualenv
       uses: actions/cache@v3

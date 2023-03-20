@@ -124,8 +124,12 @@ unit: virtual-env-check  ## Run unit tests
 
 ## Build-related targets #################################
 
+.PHONY: check-build-deps
+check-build-deps:
+	@poetry self show plugins | grep poetry-dynamic-versioning || echo "install poetry-dynamic-versioning plugin with 'poetry plugin add poetry-dynamic-versioning[plugin]'"
+
 .PHONY: build
-build:  ## Run build assets
+build: check-build-deps  ## Run build assets
 	git fetch --tags
 	rm -rf dist
 	poetry build
@@ -151,12 +155,12 @@ ci-promote-release: ci-check
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) latest
 
 .PHONY: ci-publish-testpypi
-ci-publish-testpypi: clean-dist
+ci-publish-testpypi: clean-dist check-build-deps
 	poetry config repositories.testpypi https://test.pypi.org/legacy/
 	$(PUBLISH_CMD) -r testpypi
 
 .PHONY: ci-publish-pypi
-ci-publish-pypi: ci-check clean-dist
+ci-publish-pypi: ci-check clean-dist check-build-deps
 	$(PUBLISH_CMD)
 
 .PHONY: changelog
