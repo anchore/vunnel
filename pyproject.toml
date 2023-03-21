@@ -10,10 +10,32 @@ name = "vunnel"
 version = "0.0.0" # note: this is automagically managed -- no need to manually change this
 description = "vunnel ~= 'vulnerability data funnel'"
 authors = ["Alex Goodman <alex.goodman@anchore.com>"]
-license = "Apache 2.0"
+license = "Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/anchore/vunnel"
 exclude = [
-    "tests/**/*"
+  "tests/**/*"
+]
+keywords = [
+  "vulnerability",
+  "data",
+  "aggregator",
+  "grype",
+  "vulnerability-data",
+]
+
+classifiers = [
+  # derived from https://pypi.org/classifiers/
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Natural Language :: English",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
 ]
 
 [tool.poetry.dependencies]
