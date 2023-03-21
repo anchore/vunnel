@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-20.04
     environment: release
     permissions:
-      contents: read
+      contents: write
       packages: write
       issues: read
       pull-requests: read
