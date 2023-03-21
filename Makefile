@@ -12,6 +12,7 @@ GRYPE_DB_PATH ?= ../grype-db
 CRANE = $(TEMP_DIR)/crane
 CHRONICLE = $(TEMP_DIR)/chronicle
 GLOW = $(TEMP_DIR)/glow
+PUBLISH_CMD = poetry publish --build -n
 
 # Tool versions #################################
 CHRONICLE_VERSION = v0.6.0
@@ -123,8 +124,12 @@ unit: virtual-env-check  ## Run unit tests
 
 ## Build-related targets #################################
 
+.PHONY: check-build-deps
+check-build-deps:
+	@poetry self show plugins | grep poetry-dynamic-versioning || echo "install poetry-dynamic-versioning plugin with 'poetry plugin add poetry-dynamic-versioning[plugin]'"
+
 .PHONY: build
-build:  ## Run build assets
+build: check-build-deps  ## Run build assets
 	git fetch --tags
 	rm -rf dist
 	poetry build
@@ -149,6 +154,15 @@ ci-promote-release: ci-check
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) $(PACKAGE_VERSION)
 	$(CRANE) tag $(IMAGE_NAME):$(COMMIT_TAG) latest
 
+.PHONY: ci-publish-testpypi
+ci-publish-testpypi: clean-dist check-build-deps
+	poetry config repositories.testpypi https://test.pypi.org/legacy/
+	$(PUBLISH_CMD) -r testpypi
+
+.PHONY: ci-publish-pypi
+ci-publish-pypi: ci-check clean-dist check-build-deps
+	$(PUBLISH_CMD)
+
 .PHONY: changelog
 changelog:
 	@$(CHRONICLE) -vvv -n . --version-file VERSION > CHANGELOG.md
@@ -158,6 +172,12 @@ changelog:
 release:
 	@.github/scripts/trigger-release.sh
 
+
+## Cleanup #################################
+
+.PHONY: clean-dist
+clean-dist:
+	rm -rf dist
 
 ## Halp! #################################
 

@@ -53,7 +53,7 @@ jobs:
           echo "Nightly Quality Gate Status: ${{ steps.nightly-quality-gate.conclusion }}"
           false
 
-  release:
+  tag:
     needs:
       - quality-gate
     runs-on: ubuntu-20.04
@@ -69,6 +69,48 @@ jobs:
           # in order to properly resolve the version from git
           fetch-depth: 0
 
+      - name: Tag release
+        run: |
+          git tag ${{ github.event.inputs.version }}
+          git push origin --tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-pypi:
+    needs:
+      - tag
+    runs-on: ubuntu-20.04
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Publish to PyPI
+        run: make ci-publish-pypi
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.VUNNEL_PYPI_TOKEN }}
+
+  release-docker:
+    needs:
+      - tag
+    runs-on: ubuntu-20.04
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
 
@@ -77,18 +119,30 @@ jobs:
           echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io --username ${{ github.actor }} --password-stdin
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
 
-      - name: Tag release
-        run: |
-          git tag ${{ github.event.inputs.version }}
-          git push origin --tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Promote commit image to release
         run: |
           make ci-promote-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-github:
+    needs:
+      - tag
+    runs-on: ubuntu-20.04
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
 
       - name: Create github release
         run: |
