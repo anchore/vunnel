@@ -8,11 +8,12 @@ There are two times when assets are released:
 
 - when a new commit reaches main:
     - a new `ghcr.io/anchore/vunnel:[GIT-COMMIT]` docker image is published
+    - a build is published to the [testpypi project](https://test.pypi.org/project/vunnel/)
 
 - when a release is triggered:
     - the commit on main is tagged with the given version
-    - the existing commit-based image is additionally tagged as `ghcr.io/anchore/vunnel:[VERSION]`
-
+    - the existing commit-based image is additionally tagged as `ghcr.io/anchore/vunnel:[VERSION]` and `ghcr.io/anchore/vunnel:latest`
+    - a build is published to the [pypi project](https://pypi.org/project/vunnel/)
 
 ## Creating a new release
 

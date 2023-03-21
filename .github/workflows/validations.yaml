@@ -15,8 +15,6 @@ jobs:
     runs-on: ubuntu-20.04
     permissions:
       contents: read
-      # package write permission is needed for publishing commit images
-      packages: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -39,11 +37,35 @@ jobs:
       - name: Build assets
         run: poetry run make build
 
+  Publish-PreProd:
+    runs-on: ubuntu-20.04
+    needs: [Validations]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      # package write permission is needed for publishing commit images
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
       - name: Login to ghcr.io
-        if: github.ref == 'refs/heads/main'
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
 
+      - name: Build assets
+        run: poetry run make build
+
       - name: Publish commit image
-        if: github.ref == 'refs/heads/main'
         run: make ci-publish-commit
+
+      - name: Publish to test PyPI
+        run: make ci-publish-testpypi
+        env:
+          # note: "..._TESTPYPI" suffix should match the name of the testpypi repository (see the Makefile target)
+          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.TEST_PYPI_TOKEN }}

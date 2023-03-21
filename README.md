@@ -20,10 +20,7 @@ Supported data sources:
 With pip:
 
 ```bash
-pip install git+https://github.com/anchore/vunnel@main
-
-# or use a git tag
-pip install git+https://github.com/anchore/vunnel@v0.1.0
+pip install vunnel
 ```
 
 With docker:
@@ -31,10 +28,10 @@ With docker:
 ```bash
 docker run \
   --rm -it \
-  -v $(pwd)/data:/data \                 # keep the processed data on the host
-  -v $(pwd)/.vunnel.yaml:/.vunnel.yaml   # if you have a vunnel config
-    ghcr.io/anchore/vunnel:latest        # a git tag can be used as the version
-      run nvd                            # arguments for vunnel
+  -v $(pwd)/data:/data \
+  -v $(pwd)/.vunnel.yaml:/.vunnel.yaml \
+    ghcr.io/anchore/vunnel:latest  \
+      run nvd
 ```
 Where:
   - the `data` volume keeps the processed data on the host
