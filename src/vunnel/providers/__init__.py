@@ -8,6 +8,7 @@ from vunnel.providers import (
     alpine,
     amazon,
     centos,
+    chainguard,
     debian,
     github,
     nvd,
@@ -38,6 +39,7 @@ _providers = {
     sles.Provider.name(): sles.Provider,
     ubuntu.Provider.name(): ubuntu.Provider,
     wolfi.Provider.name(): wolfi.Provider,
+    chainguard.Provider.name(): chainguard.Provider,
 }
 
 

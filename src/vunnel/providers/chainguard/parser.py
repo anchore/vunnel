@@ -6,35 +6,47 @@ import json
 import logging
 import os
 import re
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from vunnel.workspace import Workspace
 
 import requests
 
 from vunnel import utils
 from vunnel.utils import vulnerability
 
-namespace = "wolfi"
+namespace = "chainguard"
 
 
 class Parser:
-    _url_ = "https://packages.wolfi.dev"
-    _db_types = ["os"]
+    _url_ = "https://packages.cgr.dev"
+    _db_types = ["chainguard"]
     _db_filename = "security.json"
     _secdb_dir_ = "secdb"
 
-    def __init__(self, workspace, download_timeout=125, url=None, logger=None):
+    def __init__(
+        self,
+        workspace: Workspace,
+        download_timeout: int = 125,
+        url: str | None = None,
+        logger: logging.Logger | None = None,
+    ) -> None:
         self.download_timeout = download_timeout
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/") if url else Parser._url_
-        self.urls = []
+        self.urls: list[str] = []
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
     @utils.retry_with_backoff()
-    def _download(self):
+    def _download(self) -> None:
         """
-        Downloads wolfi sec db files
+        Downloads chainguard sec db files
         :return:
         """
         if not os.path.exists(self.secdb_dir_path):
@@ -49,7 +61,7 @@ class Parser:
 
                 self.urls.append(download_url)
 
-                self.logger.info(f"downloading Wolfi secdb {download_url}")
+                self.logger.info(f"downloading Chainguard secdb {download_url}")
                 r = requests.get(download_url, stream=True, timeout=self.download_timeout)
                 if r.status_code == 200:
                     file_path = os.path.join(rel_dir, self._db_filename)
@@ -61,7 +73,7 @@ class Parser:
             except:  # noqa
                 self.logger.exception(f"ignoring error processing secdb for {t}")
 
-    def _load(self):
+    def _load(self) -> Iterator[tuple[str, dict[str, Any]]]:
         """
         Loads all db json and yields it
         :return:
@@ -81,13 +93,13 @@ class Parser:
 
                 yield "rolling", dbtype_data_dict
             else:
-                raise Exception("Cannot find Wolfi sec db source ")
+                raise Exception("Cannot find Chainguard sec db source ")
         except Exception:
-            self.logger.exception("failed to load Wolfi sec db data")
+            self.logger.exception("failed to load Chainguard sec db data")
             raise
 
     # noqa
-    def _normalize(self, release, dbtype_data_dict):
+    def _normalize(self, release: str, dbtype_data_dict: dict[str, Any]) -> dict[str, Any]:
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -95,7 +107,7 @@ class Parser:
         :return:
         """
 
-        vuln_dict = {}
+        vuln_dict: Any = {}
 
         for dbtype, data in dbtype_data_dict.items():
             self.logger.debug(f"normalizing {release}:{dbtype}")
@@ -146,9 +158,9 @@ class Parser:
 
         return vuln_dict
 
-    def get(self):
+    def get(self) -> Iterator[tuple[str, dict[str, Any]]]:
         """
-        Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
+        Download, load and normalize Chainguard sec db and return a dict of release - list of vulnerability records
         :return:
         """
         # download the data
