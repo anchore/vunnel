@@ -127,3 +127,20 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
     )
 
     assert current_state == expected_state
+
+
+def test_state_schema(tmpdir, dummy_file, helpers):
+    name = "dummy"
+    ws = workspace.Workspace(root=tmpdir, name=name, create=True)
+
+    # create a dummy files
+    dummy_file(ws.input_path, "dummt-input-1.json")
+    dummy_file(ws.results_path, "dummy-00000.json")
+
+    urls = ["http://localhost:8000/dummy-input-1.json"]
+    store = result.StoreStrategy.FLAT_FILE
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1))
+
+    ws_helper = helpers.provider_workspace_helper(name=name, create=False)
+
+    assert ws_helper.metadata_schema_valid()

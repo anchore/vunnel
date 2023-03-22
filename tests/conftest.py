@@ -15,6 +15,10 @@ class WorkspaceHelper:
         self.name = name
 
     @property
+    def metadata_path(self):
+        return self.root / self.name / "metadata.json"
+
+    @property
     def input_dir(self):
         return self.root / self.name / "input"
 
@@ -45,6 +49,16 @@ class WorkspaceHelper:
 
         if require_entries and entries_validated == 0:
             raise ValueError("no entries were validated")
+
+        return True
+
+    def metadata_schema_valid(self) -> bool:
+        with open(self.metadata_path) as f:
+            item = json.load(f)
+            schema_url = item["schema"]["url"]
+
+            schema_dict = load_json_schema(get_schema_repo_path(schema_url))
+            jsonschema.validate(instance=item, schema=schema_dict)
 
         return True
 

@@ -12,152 +12,32 @@
       "items": [
         {
           "type": "string"
-        },
-        {
-          "type": "string"
         }
       ]
     },
-    "input": {
+    "store": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "listing": {
       "type": "object",
       "properties": {
-        "files": {
-          "type": "array",
-          "items": [
-            {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "digests": {
-                  "type": "array",
-                  "items": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "string"
-                    }
-                  ]
-                },
-                "modified": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "path",
-                "digests",
-                "modified"
-              ]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "digests": {
-                  "type": "array",
-                  "items": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "string"
-                    }
-                  ]
-                },
-                "modified": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "path",
-                "digests",
-                "modified"
-              ]
-            }
-          ]
+        "digest": {
+          "type": "string"
         },
-        "timestamp": {
+        "path": {
+          "type": "string"
+        },
+        "algorithm": {
           "type": "string"
         }
       },
       "required": [
-        "files",
-        "timestamp"
-      ]
-    },
-    "results": {
-      "type": "object",
-      "properties": {
-        "files": {
-          "type": "array",
-          "items": [
-            {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "digests": {
-                  "type": "array",
-                  "items": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "string"
-                    }
-                  ]
-                },
-                "modified": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "path",
-                "digests",
-                "modified"
-              ]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "digests": {
-                  "type": "array",
-                  "items": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "string"
-                    }
-                  ]
-                },
-                "modified": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "path",
-                "digests",
-                "modified"
-              ]
-            }
-          ]
-        },
-        "timestamp": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "files",
-        "timestamp"
+        "digest",
+        "path",
+        "algorithm"
       ]
     },
     "schema": {
@@ -179,8 +59,9 @@
   "required": [
     "provider",
     "urls",
-    "input",
-    "results",
+    "store",
+    "timestamp",
+    "listing",
     "schema"
   ]
 }
