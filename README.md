@@ -2,6 +2,8 @@
 
 A tool for fetching, transforming, and storing vulnerability data from a variety of sources.
 
+![vunnel-demo](https://user-images.githubusercontent.com/590471/226942827-e19742ef-e66e-4e11-8f9b-fb74c40f1dee.gif)
+
 Supported data sources:
 - Alpine (https://secdb.alpinelinux.org)
 - Amazon (https://alas.aws.amazon.com/AL2/alas.rss & https://alas.aws.amazon.com/AL2022/alas.rss)
