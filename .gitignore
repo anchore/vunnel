@@ -3,6 +3,7 @@
 .grype.yaml
 .grype
 .grype-db
+*.tar.gz
 
 /bin
 /data/
