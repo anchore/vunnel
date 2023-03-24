@@ -46,7 +46,7 @@ def test_clear_results(tmpdir, dummy_file):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1))
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
 
     assert_directory(ws.input_path, exists=True, empty=False)
     assert_directory(ws.results_path, exists=True, empty=False)
@@ -71,7 +71,7 @@ def test_record_state(tmpdir, dummy_file):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1))
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
 
     current_state = workspace.State.read(root=ws.path)
 
@@ -85,10 +85,7 @@ def test_record_state(tmpdir, dummy_file):
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="63b7adef165e430a", algorithm="xxh64", path="checksums"),
         timestamp=None,
-        schema=schema.Schema(
-            version="1.0.0",
-            url="https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json",
-        ),
+        schema=schema.ProviderStateSchema(),
     )
 
     assert current_state == expected_state
@@ -103,10 +100,10 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1))
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
 
     # this call should not clear the URLs
-    ws.record_state(urls=None, store=store.value, timestamp=datetime.datetime(2021, 1, 1))
+    ws.record_state(urls=None, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
 
     current_state = workspace.State.read(root=ws.path)
 
@@ -120,10 +117,7 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="63b7adef165e430a", algorithm="xxh64", path="checksums"),
         timestamp=None,
-        schema=schema.Schema(
-            version="1.0.0",
-            url="https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json",
-        ),
+        schema=schema.ProviderStateSchema(),
     )
 
     assert current_state == expected_state
@@ -139,7 +133,7 @@ def test_state_schema(tmpdir, dummy_file, helpers):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1))
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
 
     ws_helper = helpers.provider_workspace_helper(name=name, create=False)
 

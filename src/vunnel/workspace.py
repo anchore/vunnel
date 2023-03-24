@@ -36,6 +36,7 @@ class State:
     urls: list[str]
     store: str
     timestamp: datetime.datetime
+    version: int = 1
     listing: File | None = None
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderStateSchema)
 
@@ -135,6 +136,9 @@ class Workspace:
     def clear(self) -> None:
         self.clear_input()
         self.clear_results()
+        self._clear_metadata()
+
+    def _clear_metadata(self) -> None:
         utils.silent_remove(os.path.join(self.path, METADATA_FILENAME))
         utils.silent_remove(os.path.join(self.path, CHECKSUM_LISTING_FILENAME))
 
@@ -162,7 +166,7 @@ class Workspace:
             shutil.rmtree(self.input_path)
             os.makedirs(self.input_path, exist_ok=True)
 
-    def record_state(self, timestamp: datetime.datetime, urls: list[str], store: str) -> None:
+    def record_state(self, version: int, timestamp: datetime.datetime, urls: list[str], store: str) -> None:
         try:
             current_state = State.read(root=self.path)
         except FileNotFoundError:
@@ -176,7 +180,7 @@ class Workspace:
 
         self.logger.info("recording workspace state")
 
-        state = State(provider=self.name, urls=urls, store=store, timestamp=timestamp)
+        state = State(provider=self.name, version=version, urls=urls, store=store, timestamp=timestamp)
         metadata_path = state.write(self.path, self.results_path)
 
         self.logger.debug(f"wrote workspace state to {metadata_path}")

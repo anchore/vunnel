@@ -285,6 +285,11 @@ Possible vulnerability schemas supported within the vunnel repo are:
 - [GitHub Security Advisories](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/github-security-advisory)
 - [NVD Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/nvd)
 
+If at any point a breaking change needs to be made to a provider (and say the schema remains the same), then you
+can set the `__version__` attribute on the provider class to a new integer value (incrementing from `1` onwards). This
+is a way to indicate that the cached input/results are not compatible with the output of the current version of the
+provider, in which case the next invocation of the provider will delete the previous input and results before running.
+
 
 ### Provider configurations
 

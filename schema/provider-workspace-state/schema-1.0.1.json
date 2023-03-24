@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "provider-workspace-state",
+  "description": "describes the filesystem state of a provider workspace directory",
+  "properties": {
+    "provider": {
+      "type": "string"
+    },
+    "urls": {
+      "type": "array",
+      "items": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "store": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "listing": {
+      "type": "object",
+      "properties": {
+        "digest": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "algorithm": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "digest",
+        "path",
+        "algorithm"
+      ]
+    },
+    "version": {
+      "type": "integer"
+    },
+    "schema": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "url"
+      ]
+    }
+  },
+  "required": [
+    "provider",
+    "urls",
+    "store",
+    "timestamp",
+    "listing",
+    "version",
+    "schema"
+  ]
+}
