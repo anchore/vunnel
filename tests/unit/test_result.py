@@ -22,7 +22,7 @@ def test_result_writer_flat_file(tmpdir):
             payload={"Vulnerability": {"dummy": "result-2"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
 
     state = ws.state()
 
@@ -50,7 +50,7 @@ def test_result_writer_sqlite(tmpdir):
             payload={"Vulnerability": {"dummy": "result-2"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
 
     state = ws.state()
 
