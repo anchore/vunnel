@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from vunnel import provider, result, schema, workspace
@@ -91,6 +91,47 @@ def test_clear_existing_state(dummy_provider):
 
     assert subject.workspace.clear_input.call_count == 1
     assert subject.workspace.clear_results.call_count == 1
+
+
+def test_clear_existing_state_from_mismatched_versions(dummy_provider):
+    policy = provider.RuntimeConfig(
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+    )
+
+    subject = dummy_provider(populate=True, runtime_cfg=policy)
+
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace._clear_metadata = MagicMock(side_effect=subject.workspace._clear_metadata)
+    subject.version = MagicMock(return_value=2)
+
+    subject.run()
+
+    assert subject.workspace.clear_input.call_count == 1
+    assert subject.workspace.clear_results.call_count == 1
+    assert subject.workspace._clear_metadata.call_count == 1
+
+
+def test_keep_existing_state_from_matching_versions(dummy_provider):
+    policy = provider.RuntimeConfig(
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+    )
+
+    subject = dummy_provider(populate=True, runtime_cfg=policy)
+
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace._clear_metadata = MagicMock(side_effect=subject.workspace._clear_metadata)
+
+    subject.run()
+
+    assert subject.workspace.clear_input.call_count == 0
+    assert subject.workspace.clear_results.call_count == 0
+    assert subject.workspace._clear_metadata.call_count == 0
 
 
 def test_keep_existing_state(dummy_provider, dummy_file):
@@ -276,10 +317,7 @@ def assert_dummy_workspace_state(ws):
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="1e119ae45b38b28f", algorithm="xxh64", path="checksums"),
         timestamp=None,
-        schema=schema.Schema(
-            version="1.0.0",
-            url="https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-1.0.0.json",
-        ),
+        schema=schema.ProviderStateSchema(),
     )
 
     assert current_state == expected_state

@@ -91,11 +91,20 @@ def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
 
 
 class Provider(abc.ABC):
+    # a breaking change to the semantics or values that the provider writes out should incur a version bump here.
+    # this is used to determine if the provider can be run on an existing workspace or if it must be cleared first
+    # (regardless of the existing_input and existing_result policy is).
+    __version__: int = 1
+
     def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):  # noqa: B008
         self.logger = logging.getLogger(self.name())
         self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
         self.urls: list[str] = []
         self.runtime_cfg = runtime_cfg
+
+    @classmethod
+    def version(cls) -> int:
+        return cls.__version__
 
     @classmethod
     @abc.abstractmethod
@@ -110,30 +119,45 @@ class Provider(abc.ABC):
         """Populates the input directory from external sources, processes the data, places results into the output directory."""
         raise NotImplementedError("'update()' must be implemented")
 
+    def read_state(self) -> workspace.State | None:
+        try:
+            return workspace.State.read(root=self.workspace.path)
+        except FileNotFoundError:
+            return None
+
     def _update(self) -> None:
         start = datetime.datetime.now(tz=datetime.timezone.utc)
 
         last_updated = None
-        try:
-            current_state = workspace.State.read(root=self.workspace.path)
+        current_state = self.read_state()
+        if current_state:
             last_updated = current_state.timestamp
-        except FileNotFoundError:
-            last_updated = None
 
         urls, count = self.update(last_updated=last_updated)
         if count > 0:
-            self.workspace.record_state(timestamp=start, urls=urls, store=self.runtime_cfg.result_store.value)
+            self.workspace.record_state(
+                version=self.version(),
+                timestamp=start,
+                urls=urls,
+                store=self.runtime_cfg.result_store.value,
+            )
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 
     def run(self) -> None:
         self.logger.debug(f"using {self.workspace.path!r} as workspace")
 
-        if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:
-            self.workspace.clear_results()
+        current_state = self.read_state()
+        if current_state and current_state.version != self.version():
+            self.logger.warning(f"provider version has changed from {current_state.version} to {self.version()}")
+            self.logger.warning("clearing workspace to ensure consistency of existing input and results")
+            self.workspace.clear()
+        else:
+            if self.runtime_cfg.existing_results == ResultStatePolicy.DELETE:
+                self.workspace.clear_results()
 
-        if self.runtime_cfg.existing_input == InputStatePolicy.DELETE:
-            self.workspace.clear_input()
+            if self.runtime_cfg.existing_input == InputStatePolicy.DELETE:
+                self.workspace.clear_input()
 
         self.workspace.create()
         try:
