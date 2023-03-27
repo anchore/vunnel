@@ -50,6 +50,10 @@ def test_full_config(helpers):
                 skip_namespaces=["centos:8"],
                 request_timeout=20,
             ),
+            chainguard=providers.chainguard.Config(
+                runtime=runtime_cfg,
+                request_timeout=20,
+            ),
             debian=providers.debian.Config(
                 releases={
                     "trixie": "13",

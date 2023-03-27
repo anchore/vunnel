@@ -74,89 +74,88 @@ class TestParser:
         """
         release = "rolling"
         dbtype_data_dict = {
-            "os": {
-                "apkurl": "{{urlprefix}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk",
-                "archs": ["x86_64"],
-                "reponame": "os",
-                "urlprefix": "https://packages.wolfi.dev",
-                "packages": [
-                    {
-                        "pkg": {
-                            "name": "binutils",
-                            "secfixes": {
-                                "2.39-r1": ["CVE-2022-38126"],
-                                "2.39-r2": ["CVE-2022-38533"],
-                                "2.39-r3": ["CVE-2022-38128"],
-                            },
+            "apkurl": "{{urlprefix}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk",
+            "archs": ["x86_64"],
+            "reponame": "os",
+            "urlprefix": "https://packages.wolfi.dev",
+            "packages": [
+                {
+                    "pkg": {
+                        "name": "binutils",
+                        "secfixes": {
+                            "2.39-r1": ["CVE-2022-38126"],
+                            "2.39-r2": ["CVE-2022-38533"],
+                            "2.39-r3": ["CVE-2022-38128"],
                         },
                     },
-                    {
-                        "pkg": {
-                            "name": "brotli",
-                            "secfixes": {"1.0.9-r0": ["CVE-2020-8927"]},
+                },
+                {
+                    "pkg": {
+                        "name": "brotli",
+                        "secfixes": {"1.0.9-r0": ["CVE-2020-8927"]},
+                    },
+                },
+                {
+                    "pkg": {
+                        "name": "busybox",
+                        "secfixes": {"1.35.0-r3": ["CVE-2022-28391", "CVE-2022-30065"]},
+                    },
+                },
+                {
+                    "pkg": {
+                        "name": "coreutils",
+                        "secfixes": {"0": ["CVE-2016-2781"]},
+                    },
+                },
+                {
+                    "pkg": {
+                        "name": "cups",
+                        "secfixes": {"2.4.2-r0": ["CVE-2022-26691"]},
+                    },
+                },
+                {
+                    "pkg": {
+                        "name": "dbus",
+                        "secfixes": {
+                            "1.14.4-r0": [
+                                "CVE-2022-42010",
+                                "CVE-2022-42011",
+                                "CVE-2022-42012",
+                            ],
                         },
                     },
-                    {
-                        "pkg": {
-                            "name": "busybox",
-                            "secfixes": {"1.35.0-r3": ["CVE-2022-28391", "CVE-2022-30065"]},
-                        },
-                    },
-                    {
-                        "pkg": {
-                            "name": "coreutils",
-                            "secfixes": {"0": ["CVE-2016-2781"]},
-                        },
-                    },
-                    {
-                        "pkg": {
-                            "name": "cups",
-                            "secfixes": {"2.4.2-r0": ["CVE-2022-26691"]},
-                        },
-                    },
-                    {
-                        "pkg": {
-                            "name": "dbus",
-                            "secfixes": {
-                                "1.14.4-r0": [
-                                    "CVE-2022-42010",
-                                    "CVE-2022-42011",
-                                    "CVE-2022-42012",
-                                ],
-                            },
-                        },
-                    },
-                ],
-            },
+                },
+            ],
         }
         return release, dbtype_data_dict
 
     def test_load(self, mock_raw_data, tmpdir):
-        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        p = Parser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.wolfi.dev/os/security.json",
+            namespace="wolfi",
+        )
 
-        a = os.path.join(p.secdb_dir_path, "rolling/os")
-        os.makedirs(a, exist_ok=True)
-        b = os.path.join(a, "security.json")
+        os.makedirs(p.secdb_dir_path, exist_ok=True)
+        b = os.path.join(p.secdb_dir_path, "security.json")
         with open(b, "w") as fp:
             fp.write(mock_raw_data)
 
         counter = 0
         for release, dbtype_data_dict in p._load():
             counter += 1
-            # print(
-            #     "got secdb data for release {}, db types: {}".format(
-            #         release, list(dbtype_data_dict.keys())
-            #     )
-            # )
             assert release == "rolling"
             assert isinstance(dbtype_data_dict, dict)
-            assert list(dbtype_data_dict.keys()) == ["os"]
-            assert all("packages" in x for x in dbtype_data_dict.values())
+            assert "packages" in dbtype_data_dict
 
         assert counter == 1
 
     def test_normalize(self, mock_parsed_data, tmpdir):
-        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        p = Parser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.wolfi.dev/os/security.json",
+            namespace="wolfi",
+        )
         release = mock_parsed_data[0]
         dbtype_data_dict = mock_parsed_data[1]
 

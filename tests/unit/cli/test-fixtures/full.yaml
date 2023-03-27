@@ -26,6 +26,9 @@ providers:
     request_timeout: 20
     skip_namespaces:
       - centos:8
+  chainguard:
+    runtime: *runtime
+    request_timeout: 20
   debian:
     runtime: *runtime
     request_timeout: 20

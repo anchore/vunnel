@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 
-from .parser import Parser, namespace
+from .parser import Parser
 
 if TYPE_CHECKING:
     import datetime
@@ -24,6 +24,9 @@ class Config:
 
 
 class Provider(provider.Provider):
+    _url = "https://packages.wolfi.dev/os/security.json"
+    _namespace = "wolfi"
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
@@ -35,6 +38,8 @@ class Provider(provider.Provider):
         self.schema = schema.OSSchema()
         self.parser = Parser(
             workspace=self.workspace,
+            url=self._url,
+            namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
@@ -52,9 +57,9 @@ class Provider(provider.Provider):
             for release, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
                     writer.write(
-                        identifier=os.path.join(f"{namespace.lower()}:{release.lower()}", vuln_id),
+                        identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
                         schema=self.schema,
                         payload=record,
                     )
 
-        return self.parser.urls, len(writer)
+        return [self._url], len(writer)
