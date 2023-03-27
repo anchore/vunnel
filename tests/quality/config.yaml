@@ -18,7 +18,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: latest+import-db=build/grype-db.tar.gz
+      version: luhring/grype@chainguard-linux+import-db=build/grype-db.tar.gz
       takes: SBOM
 
     - name: grype
@@ -29,7 +29,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: latest
+      version: luhring/grype@chainguard-linux
       takes: SBOM
 
 grype-db:
@@ -39,7 +39,7 @@ grype-db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: latest
+  version: luhring/grype-db@chainguard-linux
 
 tests:
 
@@ -63,6 +63,16 @@ tests:
 #  - provider: centos
 #    images:
 #      - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
+
+  - provider: chainguard
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    additional-trigger-globs:
+      # this provider imports and uses the wolfi provider code
+      - src/vunnel/providers/wolfi/**
+    images:
+      - ghcr.io/chainguard-images/scanner-test:latest@sha256:59bddc101fba0c45d5c093575c6bc5bfee7f0e46ff127e6bb4e5acaaafb525f9
 
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
