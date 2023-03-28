@@ -6,6 +6,7 @@ import glob
 import json
 import logging
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -424,7 +425,7 @@ def configure(cfg: Config, provider_names: list[str]):
 
     write_config_state(cached_providers, uncached_providers)
 
-    _install(cfg.grype_db.version)
+    _install_grype_db(cfg.grype_db.version)
 
     return cached_providers, uncached_providers
 
@@ -432,18 +433,33 @@ def configure(cfg: Config, provider_names: list[str]):
 @cli.command(name="install", help="install tooling (currently only grype-db)")
 @click.pass_obj
 def install(cfg: Config):
-    _install(cfg.grype_db.version)
+    _install_grype_db(cfg.grype_db.version)
 
 
-def _install(version: str):
+def _install_grype_db(input: str):
     os.makedirs(BIN_DIR, exist_ok=True)
 
-    if not os.path.exists(CLONE_DIR):
-        subprocess.run(["git", "clone", "https://github.com/anchore/grype-db", CLONE_DIR], check=True)
-    else:
-        subprocess.run(["git", "fetch", "--all"], cwd=CLONE_DIR, check=True)
+    version = input
+    is_semver = re.match(r"v\d+\.\d+\.\d+", input)
+    repo_user_and_name = "anchore/grype-db"
+    using_local_file = input.startswith("file://")
+    clone_dir = CLONE_DIR
 
-    if version == "latest":
+    if using_local_file:
+        clone_dir = os.path.expanduser(input.replace("file://", ""))
+    else:
+        if "/" in input:
+            # this is a fork...
+            if "@" in input:
+                # ... with a branch specification
+                repo_user_and_name, version = input.split("@")
+            else:
+                repo_user_and_name = input
+                version = "main"
+
+    repo_url = f"https://github.com/{repo_user_and_name}"
+
+    if input == "latest":
         version = (
             requests.get("https://github.com/anchore/grype-db/releases/latest", headers={"Accept": "application/json"})
             .json()
@@ -451,31 +467,62 @@ def _install(version: str):
         )
         logging.info(f"latest released grype-db version is {version!r}")
 
-    elif not version.startswith("v"):
-        # assume it's a git branch
-        subprocess.run(["git", "checkout", version], cwd=CLONE_DIR, check=True)
+    elif is_semver:
+        install_version = version
+        if os.path.exists(GRYPE_DB):
+            existing_version = (
+                subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
+            )
+            if existing_version == install_version:
+                logging.info(f"grype-db already installed at version {install_version!r}")
+                return
+            else:
+                logging.info(f"updating grype-db from version {existing_version!r} to {install_version!r}")
 
-        version = subprocess.check_output(["git", "describe", "--tags"], cwd=CLONE_DIR).decode("utf-8").strip()
+    if using_local_file:
+        _install_from_user_source(bin_dir=BIN_DIR, clone_dir=clone_dir)
+    else:
+        _install_from_clone(
+            bin_dir=BIN_DIR, checkout=version, clone_dir=clone_dir, repo_url=repo_url, repo_user_and_name=repo_user_and_name
+        )
 
-        logging.info(f"grype-db version derived from git is {version!r}")
 
-    if version.startswith("v") and os.path.exists(GRYPE_DB):
-        grype_db_version = subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
-        if grype_db_version == version:
-            logging.info(f"grype-db already installed at version {version!r}")
-            return
-        else:
-            logging.info(f"updating grype-db from version {grype_db_version!r} to {version!r}")
+def _install_from_clone(bin_dir: str, checkout: str, clone_dir: str, repo_url: str, repo_user_and_name: str):
+    logging.info(f"creating grype-db repo at {clone_dir!r}")
 
-    logging.info(f"installing grype-db at version {version!r}")
+    if os.path.exists(clone_dir):
+        remote_url = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=clone_dir).decode().strip()
+        if not remote_url.endswith(repo_user_and_name) or remote_url.endswith(repo_user_and_name + ".git"):
+            logging.info(f"removing grype-db clone at {clone_dir!r} because remote url does not match {repo_url!r}")
+            shutil.rmtree(clone_dir)
 
-    subprocess.run(["git", "checkout", version], cwd=CLONE_DIR, check=True)
+    if not os.path.exists(clone_dir):
+        subprocess.run(["git", "clone", repo_url, clone_dir], check=True)
+    else:
+        subprocess.run(["git", "fetch", "--all"], cwd=clone_dir, check=True)
 
-    cmd = f"go build -v -ldflags=\"-X 'github.com/anchore/grype-db/cmd/grype-db/application.version={version}'\" -o ../grype-db ./cmd/grype-db"
+    subprocess.run(["git", "checkout", checkout], cwd=clone_dir, check=True)
+
+    install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
+
+    _build_grype_db(bin_dir=bin_dir, install_version=install_version, clone_dir=clone_dir)
+
+
+def _install_from_user_source(bin_dir: str, clone_dir: str):
+    logging.info(f"using user grype-db repo at {clone_dir!r}")
+    install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
+    _build_grype_db(bin_dir=bin_dir, install_version=install_version, clone_dir=clone_dir)
+
+
+def _build_grype_db(bin_dir: str, install_version: str, clone_dir: str):
+    logging.info(f"installing grype-db at version {install_version!r}")
+
+    abs_bin_path = os.path.abspath(bin_dir)
+    cmd = f"go build -v -ldflags=\"-X 'github.com/anchore/grype-db/cmd/grype-db/application.version={install_version}'\" -o {abs_bin_path} ./cmd/grype-db"
 
     logging.info(f"building grype-db: {cmd}")
 
-    subprocess.run(shlex.split(cmd), cwd=CLONE_DIR, env=os.environ, check=True)
+    subprocess.run(shlex.split(cmd), cwd=clone_dir, env=os.environ, check=True)
 
 
 @cli.command(name="build-db", help="build a DB consisting of one or more providers")
