@@ -79,11 +79,11 @@ dev:  ## Get a development shell with locally editable grype, grype-db, and vunn
 	@DEV_VUNNEL_BIN_DIR=$(ABS_BIN_DIR) .github/scripts/dev-shell.sh $(provider) $(providers)
 
 .PHONY: build-grype
-build-grype: $(TEMP_DIR) ## Build grype for local development
+build-grype: $(BIN_DIR) ## Build grype for local development
 	@cd $(GRYPE_PATH) && go build -o $(ABS_BIN_DIR)/grype .
 
 .PHONY: build-grype-db
-build-grype-db: $(TEMP_DIR) ## Build grype-db for local development
+build-grype-db: $(BIN_DIR) ## Build grype-db for local development
 	@cd $(GRYPE_DB_PATH) && go build -o $(ABS_BIN_DIR)/grype-db ./cmd/grype-db
 
 .PHONY: update-db

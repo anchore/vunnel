@@ -16,6 +16,7 @@ class Providers:
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
     centos: providers.centos.Config = field(default_factory=providers.centos.Config)
+    chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
