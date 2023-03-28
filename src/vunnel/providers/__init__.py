@@ -26,7 +26,7 @@ else:
 if TYPE_CHECKING:
     from vunnel import provider
 
-_providers = {
+_providers: dict[str, type[provider.Provider]] = {
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
     centos.Provider.name(): centos.Provider,
@@ -47,6 +47,10 @@ def create(name: str, workspace_path: str, *args: Any, **kwargs: Any) -> provide
 
 def names() -> list[str]:
     return sorted(_providers.keys())
+
+
+def versions() -> dict[str, int]:
+    return {n: p.version() for (n, p) in _providers.items()}
 
 
 def register(name: str, cls: type[provider.Provider]) -> None:
