@@ -5,8 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-
-from .parser import Parser
+from vunnel.providers.wolfi.parser import Parser
 
 if TYPE_CHECKING:
     import datetime
@@ -24,8 +23,8 @@ class Config:
 
 
 class Provider(provider.Provider):
-    _url = "https://packages.wolfi.dev/os/security.json"
-    _namespace = "wolfi"
+    _url = "https://packages.cgr.dev/chainguard/security.json"
+    _namespace = "chainguard"
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -49,7 +48,7 @@ class Provider(provider.Provider):
 
     @classmethod
     def name(cls) -> str:
-        return "wolfi"
+        return "chainguard"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
