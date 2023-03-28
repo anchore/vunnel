@@ -14,11 +14,11 @@ yardstick:
       #  - "latest" to use the latest released grype
       #  - a released version name (e.g. "v0.52.1")
       #  - a branch name (e.g. "dev-fix-foo")
-      #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype@dev-fix-foo")
+      #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: luhring/grype@chainguard-linux+import-db=build/grype-db.tar.gz
+      version: github.com/luhring/grype@chainguard-linux+import-db=build/grype-db.tar.gz
       takes: SBOM
 
     - name: grype
@@ -26,10 +26,10 @@ yardstick:
       #  - "latest" to use the latest released grype
       #  - a released version name (e.g. "v0.52.1")
       #  - a branch name (e.g. "dev-fix-foo")
-      #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype@dev-fix-foo")
+      #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: luhring/grype@chainguard-linux
+      version: github.com/luhring/grype@chainguard-linux
       takes: SBOM
 
 grype-db:
@@ -39,7 +39,7 @@ grype-db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: luhring/grype-db@chainguard-linux
+  version: file://~/code/grype-db
 
 tests:
 

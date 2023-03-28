@@ -163,6 +163,18 @@ providers:
     skip_namespaces:
       - centos:3
       - centos:4
+  chainguard:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
   debian:
     releases:
       bookworm: '12'
