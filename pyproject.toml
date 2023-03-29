@@ -73,7 +73,7 @@ pytest-xdist = "^3.2.1"
 types-PyYAML = "^6.0.12.5"
 types-requests = "^2.28.11.7"
 mypy = "^1.1"
-radon = "^5.1.0"
+radon = ">=5.1,<7.0"
 dunamai = "^1.15.0"
 ruff = "^0.0.254"
 yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.4.4"}
