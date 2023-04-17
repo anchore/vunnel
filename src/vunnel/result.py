@@ -117,34 +117,34 @@ class SQLiteStore(Store):
         return os.path.join(self.workspace.results_path, self.filename)
 
     def _create_table(self) -> db.Table:
-        metadata = db.MetaData(self.engine)
+        metadata = db.MetaData()
         table = db.Table(
             self.table_name,
             metadata,
             db.Column("id", db.String(), primary_key=True, index=True),
             db.Column("record", db.LargeBinary()),
         )
-        metadata.create_all()
+        metadata.create_all(self.engine)
         return table
 
     def store(self, identifier: str, record: Envelope) -> None:
         record_str = orjson.dumps(asdict(record))
         conn, table = self.connection()
 
-        # upsert the record conditionally based on the skip_duplicates configuration
+        with conn.begin():
+            # upsert the record conditionally based on the skip_duplicates configuration
+            existing = conn.execute(table.select().where(table.c.id == identifier)).first()
+            if existing:
+                if self.skip_duplicates:
+                    self.logger.warning(f"{identifier!r} entry already written (skipping)")
+                    return
+                self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore[attr-defined]
+                statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
+            else:
+                self.logger.trace(f"writing record to {identifier!r} key")  # type: ignore[attr-defined]
+                statement = db.insert(table).values(id=identifier, record=record_str)
 
-        existing = conn.execute(table.select().where(table.c.id == identifier)).first()
-        if existing:
-            if self.skip_duplicates:
-                self.logger.warning(f"{identifier!r} entry already written (skipping)")
-                return
-            self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore[attr-defined]
-            statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
-        else:
-            self.logger.trace(f"writing record to {identifier!r} key")  # type: ignore[attr-defined]
-            statement = db.insert(table).values(id=identifier, record=record_str)
-
-        conn.execute(statement)
+            conn.execute(statement)
 
     def close(self) -> None:
         if self.conn:
