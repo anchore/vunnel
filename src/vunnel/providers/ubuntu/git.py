@@ -65,6 +65,10 @@ class GitWrapper:
 
     def _check(self, destination):
         try:
+            if not os.path.exists(destination):
+                self.logger.debug(f"git working tree not found at {destination}")
+                return False
+
             cmd = self._is_git_repo_cmd_
             out = self._exec_cmd(cmd, cwd=destination)
             self.logger.debug("check for git repository, cmd: {}, output: {}".format(cmd, out.decode()))
