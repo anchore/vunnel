@@ -109,7 +109,7 @@ class Parser:
 
         test_obj = tests_dict.get(test_id)
         if not test_obj:
-            cls.logger.warning(
+            cls.logger.debug(
                 "test reference not found for %s",
                 test_id,
             )
@@ -117,7 +117,7 @@ class Parser:
 
         name_obj = artifacts_dict.get(test_obj.artifact_id)
         if not name_obj:
-            cls.logger.warning(
+            cls.logger.debug(
                 "object reference not found for %s",
                 test_obj.artifact_id,
             )
@@ -125,7 +125,7 @@ class Parser:
 
         version_obj = versions_dict.get(test_obj.version_id)
         if not version_obj:
-            cls.logger.warning(
+            cls.logger.debug(
                 "state reference not found for %s",
                 test_obj.version_id,
             )
@@ -204,7 +204,7 @@ class Parser:
                 results.append(result)
                 continue
 
-            cls.logger.warning(
+            cls.logger.debug(
                 "multiple unrecognized release names %s for %s, skipping %s for this namespace",
                 list(release_feed.keys()),
                 version,
@@ -255,7 +255,7 @@ class Parser:
 
                 # validate release
                 if not release_name:
-                    cls.logger.warning(
+                    cls.logger.debug(
                         "release name is invalid, skipping %s",
                         vulnerability_obj.name,
                     )
@@ -263,7 +263,7 @@ class Parser:
 
                 # validate version is inline with major version
                 if not release_version or not release_version.startswith(major_version):
-                    cls.logger.warning(
+                    cls.logger.debug(
                         "%s %s is an unsupported namespace for major version %s, skipping %s for this namespace",
                         release_name,
                         release_version,
@@ -283,7 +283,7 @@ class Parser:
                         pkg_version,
                     ) = cls._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
                     if not pkg_name or not pkg_version:
-                        cls.logger.warning(
+                        cls.logger.debug(
                             "package name and or version invalid, skipping fixed-in for %s",
                             test_id,
                         )

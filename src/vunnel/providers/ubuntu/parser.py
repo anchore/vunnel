@@ -513,7 +513,7 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):
                 # anchore_engine.services.policy_engine.engine.util.deb.DpkgVersion.from_string(p.get('status'))
                 pkg.Version = p.version
                 if pkg.Version is None:
-                    logger.warn(
+                    logger.debug(
                         'found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(
                             r.Name, r.NamespaceName, pkg.Name
                         )
@@ -641,13 +641,13 @@ class Parser:
         self._save_last_processed_rev(current_rev)
 
         # load merged state and map it to vulnerabilities
-        self.logger.debug("loading processed CVE content and transforming into vulnerabilities")
+        self.logger.info("loading processed CVE content and transforming into vulnerabilities")
 
         for merged_cve in self._merged_cve_iterator():
             yield from map_parsed(merged_cve, self.logger)
 
     def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):
-        self.logger.debug(f"processing data from git repository: {vc_dir}, from revision: {from_rev}, to revision: {to_rev}")
+        self.logger.info(f"processing data from git repository: {vc_dir}, from revision: {from_rev}, to revision: {to_rev}")
 
         self.git_wrapper.prepare_cve_revision_history()
 
@@ -783,7 +783,7 @@ class Parser:
         saved_state = self._load_merged_cve(cve_id)
 
         if not saved_state:
-            self.logger.warning(f"no saved state found for {cve_id}")
+            self.logger.debug(f"no saved state found for {cve_id}")
             return
 
         # reprocess only ignored patches
