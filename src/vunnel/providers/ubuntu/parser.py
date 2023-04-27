@@ -641,10 +641,10 @@ class Parser:
         self._save_last_processed_rev(current_rev)
 
         # load merged state and map it to vulnerabilities
-        self.logger.info("loading processed CVE content and transforming into vulnerabilities")
-
+        self.logger.info("begin loading processed CVE content and transforming into vulnerabilities")
         for merged_cve in self._merged_cve_iterator():
             yield from map_parsed(merged_cve, self.logger)
+        self.logger.info("finish loading processed CVE content and transforming into vulnerabilities")
 
     def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):
         self.logger.info(f"processing data from git repository: {vc_dir}, from revision: {from_rev}, to revision: {to_rev}")
@@ -659,13 +659,14 @@ class Parser:
             modified, removed = self.git_wrapper.get_merged_change_set(from_rev=from_rev, to_rev=to_rev)
             updated_paths = list(modified.values()) if modified else []
             deleted_ids = list(removed.keys()) if removed else []
-            self.logger.debug("detected {} CVE updates (add/modify/rename)".format(len(updated_paths)))
-            self.logger.debug("detected {} CVE deletions".format(len(deleted_ids)))
+            self.logger.info("detected {} CVE updates (add/modify/rename)".format(len(updated_paths)))
+            self.logger.info("detected {} CVE deletions".format(len(deleted_ids)))
 
         # Load cves from active and retired directories and spool merged state to disk
         # note: this is an IO bound operation, so a thread pool will suffice for now
         # but look to a process pool if this becomes a bottleneck
         proc_exception = None
+        self.logger.info("begin processing updates")
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_workers) as executor:
 
             def worker(fn, cve_id: str, *args, **kwargs):
@@ -702,10 +703,14 @@ class Parser:
         if proc_exception:
             raise proc_exception
 
+        self.logger.info("finish processing updates")
+
         # Remove merged state of deleted cves
+        self.logger.info("begin processing deletes")
         for cve_id in deleted_ids:
             self.logger.debug("{} is no longer relevant, deleting merged CVE state if any".format(cve_id))
             self._delete_merged_cve(cve_id)
+        self.logger.info("finish processing deletes")
 
     def _process_cve(self, cve_id: str, cve_rel_path: str, f: str, to_rev: str, updated_paths: list[str]):
         if cve_rel_path in updated_paths:
