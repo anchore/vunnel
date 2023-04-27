@@ -280,7 +280,7 @@ class Parser:
                     [None, None],
                 )
             else:
-                self.logger.warning(f"{rhsa_id} not found for platform {platform}")
+                self.logger.debug(f"{rhsa_id} not found for platform {platform}")
         except:
             self.logger.exception(f"error looking up {package} in {rhsa_id} for {platform}")
 
@@ -378,7 +378,6 @@ class Parser:
             colon_comps = package.split(":", 1)
 
             if colon_comps[0].isdigit():  # epoch in the beginning 1:foo-bar-2.3.4-5.el6_7.8
-                # logger.warning('compliant rpm name with epoch in the beginning')
                 name_other_comps = colon_comps[1].rsplit("-", 2)  # split name-version-release.arch.rpm into max 3 chunks
                 name = name_other_comps[0]  # only the name matters
                 if len(name_other_comps) > 1:  # defaults to rhsa lookup otherwise
@@ -386,21 +385,17 @@ class Parser:
             else:
                 name_comps = colon_comps[0].rsplit("-", 1)
                 if len(name_comps) > 1 and name_comps[1].isdigit():  # epoch in the middle foo-bar-1:2.3.4-5.el6_7.8
-                    # logger.warning('compliant rpm name with epoch in the middle')
                     name = name_comps[0]
                     version = name_comps[1] + ":" + colon_comps[1]
                 else:  # not compliant with rpm filename spec, could be an app stream
-                    # logger.warning('non-compliant rpm name with colons and hyphens')
                     name = colon_comps[0]  # best guess for name, fall back to rhsa for version lookup
 
         else:  # no epoch foo-bar-2.3.4-5.el6_7.8 or something else totally different
             if package.count("-") >= 2:  #
-                # logger.warning('may be compliant rpm name without epoch')
                 name_other_comps = package.rsplit("-", 2)  # split name-version-release.arch.rpm into max 3 chunks
                 name = name_other_comps[0]  # only the name matters
                 version = "-".join(name_other_comps[1:])  # join the rest
             else:
-                # logger.warning('non-compliant rpm name without colons and less than 2 hyphens')
                 name = package  # best guess for name, fall back to rhsa for version lookup
 
         return name, version
@@ -510,7 +505,7 @@ class Parser:
                         final_m = None
 
                     if not ar_obj.name or not final_v:
-                        self.logger.warning(
+                        self.logger.debug(
                             f"{cve_id}, platform={ar_obj.platform} : skipping affected release record as all attempts to deduce package name and or version were futile"
                         )
                         continue
@@ -521,12 +516,12 @@ class Parser:
                     prev_ar_obj = final_ar_objs.get((ar_obj.name, ar_obj.platform, ar_obj.module), None)
                     if prev_ar_obj:
                         if rpm.compare_versions(prev_ar_obj.version, ar_obj.version) < 0:
-                            self.logger.warning(
+                            self.logger.debug(
                                 f"{cve_id}, platform={prev_ar_obj.platform}, package={prev_ar_obj.name}, module={prev_ar_obj.module} : multiple fix versions found, {ar_obj.version} > {prev_ar_obj.version}"
                             )
                             final_ar_objs[(ar_obj.name, ar_obj.platform, ar_obj.module)] = ar_obj
                         else:
-                            self.logger.warning(
+                            self.logger.debug(
                                 f"{cve_id}, platform={prev_ar_obj.platform}, package={prev_ar_obj.name}, module={prev_ar_obj.module} : multiple fix versions found, {ar_obj.version} <= {prev_ar_obj.version}"
                             )
                     else:
@@ -594,7 +589,7 @@ class Parser:
                     module = components[0]
 
                 if not package_name:
-                    self.logger.warning(f"package state package_name missing for {cve_id} platform {platform}")
+                    self.logger.debug(f"package state package_name missing for {cve_id} platform {platform}")
                     continue
 
                 state = item.get("fix_state", None)
@@ -718,7 +713,7 @@ class Parser:
                     item.package,
                     item.module,
                 ) in platform_package_module_tuples:
-                    self.logger.warning(
+                    self.logger.debug(
                         f"{cve_id}, platform={item.platform}, package={item.package}, module={item.module} : partial fix found but package is still vulnerable. Ignoring fix version {item.version}"
                     )
                     continue

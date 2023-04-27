@@ -69,7 +69,7 @@ class GitWrapper:
             out = self._exec_cmd(cmd, cwd=destination)
             self.logger.debug("check for git repository, cmd: {}, output: {}".format(cmd, out.decode()))
         except:
-            self.logger.warning(f"git working tree not found at {destination}")
+            self.logger.debug(f"git working tree not found at {destination}")
             return False
 
         return True
@@ -112,7 +112,7 @@ class GitWrapper:
         return hist
 
     def prepare_cve_revision_history(self):
-        self.logger.info("building full revision history for all CVEs")
+        self.logger.info("building full revision history for all CVEs.  This may take quite some time.")
         self.cve_rev_history = {}
         out = self._exec_cmd("git log --name-status --no-merges --format=oneline -- retired/ active/", cwd=self.dest)
         self.cve_rev_history = self.parse_full_cve_revision_history(out.decode())
@@ -332,7 +332,7 @@ class GitWrapper:
                         updated[cve_id] = components[2]
                 else:
                     # either not a commit line or an irrelevant file, ignore it
-                    self.logger.warning("encountered unknown change symbol {}".format(components[0]))
+                    self.logger.debug("skipping unknown change symbol {}".format(components[0]))
             else:
                 # not a match
                 pass

@@ -44,7 +44,7 @@ class Manager:
         days_since_last_sync = (now - last_updated).days
 
         if days_since_last_sync >= NvdAPI.max_date_range_days:
-            self.logger.warning(
+            self.logger.info(
                 f"last sync was {days_since_last_sync} days ago (more than {NvdAPI.max_date_range_days} days, the max range value of the NVD API), downloading all data"
             )
             return False
