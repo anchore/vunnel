@@ -71,6 +71,8 @@ bootstrap: $(TEMP_DIR)  ## Download and install all tooling dependencies
 $(TEMP_DIR):
 	mkdir -p $(TEMP_DIR)
 
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
 
 ## Development targets #################################
 
