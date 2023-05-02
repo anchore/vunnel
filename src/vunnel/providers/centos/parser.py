@@ -230,10 +230,10 @@ class Parser:
         vuln_dict = {}
 
         for file_path in self.xml_paths():
-            self.logger.debug(f"begin parsing OVAL file {file_path}")
+            self.logger.info(f"begin parsing OVAL file {file_path}")
             partial_results = parse(file_path, self.config, vuln_dict=vuln_dict)
             vuln_dict.update(partial_results)
-            self.logger.debug(f"finish parsing OVAL file {file_path}")
+            self.logger.info(f"finish parsing OVAL file {file_path}")
 
         return vuln_dict
 
