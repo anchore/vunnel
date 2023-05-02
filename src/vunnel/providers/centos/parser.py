@@ -211,9 +211,8 @@ class Parser:
 
         return None
 
-    def parse(self):
-        vuln_dict = {}
-
+    def xml_paths(self):
+        paths = []
         for m in self._url_mappings_:
             oval_paths = m["oval_paths"]
             skip_download = m.get("skip_download", False)
@@ -224,9 +223,18 @@ class Parser:
                 if skip_download and not os.path.exists(file_path):
                     self.logger.warning(f"skip processing OVAL file {p}")
                     continue
-                self.logger.info(f"begin parsing OVAL file {file_path}")
-                vuln_dict = parse(file_path, self.config, vuln_dict=vuln_dict)
-                self.logger.info(f"finish parsing OVAL file {file_path}")
+                paths.append(file_path)
+        return paths
+
+    def parse(self):
+        vuln_dict = {}
+
+        for file_path in self.xml_paths():
+            self.logger.debug(f"begin parsing OVAL file {file_path}")
+            partial_results = parse(file_path, self.config, vuln_dict=vuln_dict)
+            vuln_dict.update(partial_results)
+            self.logger.debug(f"finish parsing OVAL file {file_path}")
+
         return vuln_dict
 
     def get(self):
