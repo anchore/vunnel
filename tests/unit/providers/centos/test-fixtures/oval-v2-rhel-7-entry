@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:red-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+<generator>
+  <oval:product_name>Red Hat OVAL Patch Definition Merger</oval:product_name>
+  <oval:product_version>3</oval:product_version>
+  <oval:schema_version>5.10</oval:schema_version>
+  <oval:timestamp>2023-05-02T13:14:52</oval:timestamp>
+  <oval:content_version>1683033292</oval:content_version>
+</generator>
+<definitions>
+  <definitions>
+    <definition class="patch" id="oval:com.redhat.rhsa:def:20231333" version="635">
+     <metadata>
+      <title>RHSA-2023:1333: firefox security update (Important)</title>
+      <affected family="unix">
+       <platform>Red Hat Enterprise Linux 7</platform>
+      </affected>
+      <reference ref_id="RHSA-2023:1333" ref_url="https://access.redhat.com/errata/RHSA-2023:1333" source="RHSA"/>
+      <reference ref_id="CVE-2023-25751" ref_url="https://access.redhat.com/security/cve/CVE-2023-25751" source="CVE"/>
+      <reference ref_id="CVE-2023-25752" ref_url="https://access.redhat.com/security/cve/CVE-2023-25752" source="CVE"/>
+      <reference ref_id="CVE-2023-28162" ref_url="https://access.redhat.com/security/cve/CVE-2023-28162" source="CVE"/>
+      <reference ref_id="CVE-2023-28164" ref_url="https://access.redhat.com/security/cve/CVE-2023-28164" source="CVE"/>
+      <reference ref_id="CVE-2023-28176" ref_url="https://access.redhat.com/security/cve/CVE-2023-28176" source="CVE"/>
+      <description>Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.
+
+    This update upgrades Firefox to version 102.9.0 ESR.
+
+    Security Fix(es):
+
+    * Mozilla: Incorrect code generation during JIT compilation (CVE-2023-25751)
+
+    * Mozilla: Memory safety bugs fixed in Firefox 111 and Firefox ESR 102.9 (CVE-2023-28176)
+
+    * Mozilla: Potential out-of-bounds when accessing throttled streams (CVE-2023-25752)
+
+    * Mozilla: Invalid downcast in Worklets (CVE-2023-28162)
+
+    * Mozilla: URL being dragged from a removed cross-origin iframe into the same tab triggered navigation (CVE-2023-28164)
+
+    For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+      <advisory from="secalert@redhat.com">
+       <severity>Important</severity>
+       <rights>Copyright 2023 Red Hat, Inc.</rights>
+       <issued date="2023-03-20"/>
+       <updated date="2023-03-20"/>
+       <cve cvss3="7.5/CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-94" href="https://access.redhat.com/security/cve/CVE-2023-25751" impact="important" public="20230314">CVE-2023-25751</cve>
+       <cve cvss3="6.1/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" cwe="CWE-125" href="https://access.redhat.com/security/cve/CVE-2023-25752" impact="moderate" public="20230314">CVE-2023-25752</cve>
+       <cve cvss3="6.1/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" cwe="CWE-704" href="https://access.redhat.com/security/cve/CVE-2023-28162" impact="moderate" public="20230314">CVE-2023-28162</cve>
+       <cve cvss3="6.1/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" cwe="CWE-829" href="https://access.redhat.com/security/cve/CVE-2023-28164" impact="moderate" public="20230314">CVE-2023-28164</cve>
+       <cve cvss3="7.5/CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-28176" impact="important" public="20230314">CVE-2023-28176</cve>
+       <bugzilla href="https://bugzilla.redhat.com/2178458" id="2178458">CVE-2023-25751 Mozilla: Incorrect code generation during JIT compilation</bugzilla>
+       <bugzilla href="https://bugzilla.redhat.com/2178460" id="2178460">CVE-2023-25752 Mozilla: Potential out-of-bounds when accessing throttled streams</bugzilla>
+       <bugzilla href="https://bugzilla.redhat.com/2178466" id="2178466">CVE-2023-28162 Mozilla: Invalid downcast in Worklets</bugzilla>
+       <bugzilla href="https://bugzilla.redhat.com/2178470" id="2178470">CVE-2023-28164 Mozilla: URL being dragged from a removed cross-origin iframe into the same tab triggered navigation</bugzilla>
+       <bugzilla href="https://bugzilla.redhat.com/2178472" id="2178472">CVE-2023-28176 Mozilla: Memory safety bugs fixed in Firefox 111 and Firefox ESR 102.9</bugzilla>
+       <affected_cpe_list>
+        <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+        <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+        <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+        <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+        <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+        <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+        <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+        <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+        <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+        <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+       </affected_cpe_list>
+      </advisory>
+     </metadata>
+     <criteria operator="OR">
+      <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+      <criteria operator="AND">
+       <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+       <criterion comment="firefox is earlier than 0:102.9.0-3.el7_9" test_ref="oval:com.redhat.rhsa:tst:20231333001"/>
+       <criterion comment="firefox is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140741002"/>
+      </criteria>
+     </criteria>
+    </definition>
+  </definitions>
+</oval_definitions>
