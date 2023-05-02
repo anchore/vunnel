@@ -47,7 +47,7 @@ class Config:
     ns_format = None
 
 
-def parse(dest_file: str, config: Config):
+def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
     """
     Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
     and tuple (version, vulnerability-dictionary) as the value
@@ -62,7 +62,9 @@ def parse(dest_file: str, config: Config):
         raise TypeError("Invalid config")
 
     logger.debug("Parsing {}".format(dest_file))
-    vuln_dict = {}
+
+    if not vuln_dict:
+        vuln_dict = {}
 
     if os.path.exists(dest_file):
         processing = False
