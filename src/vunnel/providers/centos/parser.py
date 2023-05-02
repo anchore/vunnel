@@ -59,11 +59,13 @@ driver_workspace = None
 
 class Parser:
     _url_mappings_ = [
-        # Legacy data for RHEL:5
+        # Legacy data for RHEL:5 - no longer available from endpoint after 1st July, 2023; however, it is available in the
+        # preload archive.
         {
             "base_url": "https://www.redhat.com/security/data/oval",
             "manifest_path": "PULP_MANIFEST",
             "oval_paths": ["com.redhat.rhsa-all.xml.bz2"],
+            "skip_download": True,
         },
         {
             "base_url": "https://www.redhat.com/security/data/oval/v2",
@@ -92,6 +94,9 @@ class Parser:
     def urls(self) -> list[str]:
         return list(self._urls)
 
+    def _get_workspace_xml_filepath(self, oval_url_path: str) -> str:
+        return os.path.join(self.workspace.input_path, oval_url_path.rstrip(".bz2"))
+
     def _get_sha256_map(self, base_url: str, manifest_path: str, oval_paths: list[str]) -> dict[str, str]:
         try:
             manifest_url = f"{base_url}/{manifest_path}"
@@ -104,12 +109,7 @@ class Parser:
                 for line in r.text.splitlines():
                     matched_path = None
                     for p in unmatched_oval_paths:
-                        # Legacy all file doesn't have sha in manifest for compressed data
-                        if p == "com.redhat.rhsa-all.xml.bz2":
-                            pattern = re.compile(rf"com.redhat.rhsa-all.xml,([^,]+),.*")
-                        else:
-                            pattern = re.compile(rf"{p},([^,]+),.*")
-
+                        pattern = re.compile(rf"{p},([^,]+),.*")
                         match = pattern.match(line.strip())
                         if match:
                             path_to_sha[p] = match.group(1)
@@ -139,10 +139,10 @@ class Parser:
     @utils.retry_with_backoff()
     def _download_oval_file(self, base_url: str, oval_url_path: str, path_to_sha: dict[str, str]) -> str:
         download = True
-        xml_file_path = os.path.join(self.workspace.input_path, oval_url_path)
+        xml_file_path = self._get_workspace_xml_filepath(oval_url_path=oval_url_path)
         xml_sha256_file_path = f"{xml_file_path}.sha256sum"
         previous_sha256 = None
-        self.logger.info(f"begin processing oval file {xml_file_path}")
+        self.logger.info(f"comparing hashes for oval file {xml_file_path}")
 
         if os.path.exists(xml_file_path) and os.path.exists(xml_sha256_file_path):
             with open(xml_sha256_file_path) as fp:
@@ -195,12 +195,19 @@ class Parser:
             base_url = m["base_url"]
             manifest_path = m["manifest_path"]
             oval_paths = m["oval_paths"]
-            path_to_sha = self._get_sha256_map(base_url, manifest_path, oval_paths)
+            skip_download = m.get("skip_download", False)
+            path_to_sha = None
+
+            if not skip_download:
+                path_to_sha = self._get_sha256_map(base_url, manifest_path, oval_paths)
+
             self._urls.add(f"{base_url}/{manifest_path}")
 
             for p in oval_paths:
                 self._urls.add(f"{base_url}/{p}")
-                self._download_oval_file(base_url, p, path_to_sha)
+
+                if not skip_download:
+                    self._download_oval_file(base_url, p, path_to_sha)
 
         return None
 
@@ -209,11 +216,17 @@ class Parser:
 
         for m in self._url_mappings_:
             oval_paths = m["oval_paths"]
+            skip_download = m.get("skip_download", False)
+
             for p in oval_paths:
                 # normalize and return results
-                file_path = os.path.join(self.workspace.input_path, p)
+                file_path = self._get_workspace_xml_filepath(p)
+                if skip_download and not os.path.exists(file_path):
+                    self.logger.warning(f"skip processing OVAL file {p}")
+                    continue
+                self.logger.info(f"begin parsing OVAL file {file_path}")
                 vuln_dict = parse(file_path, self.config, vuln_dict=vuln_dict)
-
+                self.logger.info(f"finish parsing OVAL file {file_path}")
         return vuln_dict
 
     def get(self):
