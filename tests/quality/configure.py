@@ -338,6 +338,9 @@ def select_providers(cfg: Config, output_json: bool):
         for additional_provider in test.additional_providers:
             search_globs.append(f"src/vunnel/providers/{additional_provider.name}/**")
 
+        for g in test.additional_trigger_globs:
+            search_globs.append(g)
+
         for search_glob in search_globs:
             for changed_file in changed_files:
                 if fnmatch.fnmatch(changed_file, search_glob):
