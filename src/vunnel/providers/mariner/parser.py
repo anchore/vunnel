@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 LTE = "less than or equal"
 
+
 class MarinerXmlFile:
     def __init__(self, oval_file_path: str, logger: logging.Logger):
         parser_config = ParserConfig(
@@ -107,7 +108,9 @@ class MarinerXmlFile:
     def make_fixed_in(self, definition: Definition) -> FixedIn | None:
         state = self.get_state(definition)
         obj = self.get_object(definition)
-        if state is None or obj is None or state.evr is None:
+        if state is None or state.evr is None:
+            return None
+        if obj is None or obj.name is None:
             return None
         version = state.evr.value
         if state.evr.operation == LTE:
@@ -115,11 +118,9 @@ class MarinerXmlFile:
         return FixedIn(Name=obj.name, NamespaceName=self.namespace_name(), VersionFormat="rpm", Version=version)
 
     def vulnerability_id(self, definition: Definition) -> str | None:
-        try:
-            return definition.metadata.reference.ref_id
-        except Exception as ex:
-            self.logger.warning(f"exception {ex} trying to parse definition {definition}")
+        if definition.metadata is None or definition.metadata.reference is None or definition.metadata.reference.ref_id is None:
             return None
+        return definition.metadata.reference.ref_id
 
     def description(self, definition: Definition) -> str | None:
         if not definition.metadata:
