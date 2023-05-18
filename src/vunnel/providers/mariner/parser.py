@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from vunnel.workspace import Workspace
 
+LTE = "less than or equal"
 
 class MarinerXmlFile:
     def __init__(self, oval_file_path: str, logger: logging.Logger):
@@ -86,39 +87,74 @@ class MarinerXmlFile:
     def namespace_name(self) -> str:
         return f"mariner:{self.mariner_version}"
 
+    def get_test(self, definition: Definition) -> RpminfoTest | None:
+        if definition is None or definition.criteria is None or definition.criteria.criterion is None:
+            return None
+        return self.tests_by_id.get(definition.criteria.criterion.test_ref, None)
+
+    def get_state(self, definition: Definition) -> RpminfoState | None:
+        test = self.get_test(definition)
+        if test is None or test.state is None or test.state.state_ref is None:
+            return None
+        return self.states_by_id.get(test.state.state_ref, None)
+
+    def get_object(self, definition: Definition) -> RpminfoObject | None:
+        test = self.get_test(definition)
+        if test is None or test.object_value is None or test.object_value.object_ref is None:
+            return None
+        return self.objects_by_id.get(test.object_value.object_ref, None)
+
+    def make_fixed_in(self, definition: Definition) -> FixedIn | None:
+        state = self.get_state(definition)
+        obj = self.get_object(definition)
+        if state is None or obj is None or state.evr is None:
+            return None
+        version = state.evr.value
+        if state.evr.operation == LTE:
+            version = "None"  # legacy API needs the string "None" instead of None
+        return FixedIn(Name=obj.name, NamespaceName=self.namespace_name(), VersionFormat="rpm", Version=version)
+
+    def vulnerability_id(self, definition: Definition) -> str | None:
+        try:
+            return definition.metadata.reference.ref_id
+        except Exception as ex:
+            self.logger.warning(f"exception {ex} trying to parse definition {definition}")
+            return None
+
+    def description(self, definition: Definition) -> str | None:
+        if not definition.metadata:
+            return None
+        return definition.metadata.description
+
     def vulnerabilities(self) -> Generator[Vulnerability, None, None]:
-        ns = self.namespace_name()
         for d in self.definitions:
-            if d.criteria is None or d.criteria.criterion is None or d.criteria.criterion.test_ref is None:
-                self.logger.warning("skipping definition it is missing criteria to identify package")
-                continue
-            name, version = self.name_and_version(d.criteria.criterion.test_ref)
-            if name is None:
-                self.logger.warning("skipping definition because package name could not be found")
-                continue
-            if version is None:
-                self.logger.warning("skipping definition because package version could not be found")
-                continue
             if d.metadata is None or d.metadata.severity is None:
                 self.logger.warning("skipping definition because severity could not be found")
                 continue
-            description = ""
             if d.metadata.description:
-                description = d.metadata.description
+                pass
             link = ""
             if d.metadata.reference and d.metadata.reference.ref_url:
                 link = d.metadata.reference.ref_url
+            fixed_in = self.make_fixed_in(d)
+            if not fixed_in:
+                continue
+            vulnerability_id = self.vulnerability_id(d)
+            if not vulnerability_id:
+                continue
             yield Vulnerability(
-                Name=name,
+                Name=vulnerability_id,  # intentional; legacy API uses Name as field for vulnerability ID.
                 NamespaceName=self.namespace_name(),
-                Description=description,
+                Description=self.description(d) or "",
                 Severity=d.metadata.severity,
                 Link=link,
-                CVSS=[],
-                FixedIn=[
-                    FixedIn(Name=name, NamespaceName=ns, VersionFormat="rpm", Version=version),
-                ],
-                Metadata={},
+                CVSS=[],  # NOTE: this is not present in OVAL XML.
+                # This is a list because because there are several versions
+                # Each version is a vector of info about the vulnerability
+                # serialized as a string like CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H
+                # TODO: add test image to https://github.com/anchore/test-images
+                FixedIn=[fixed_in],
+                Metadata={},  # Ideally, there's no metadata here.
             )
 
 
