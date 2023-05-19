@@ -16,10 +16,11 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
-from vunnel.providers import centos
 from vunnel.utils import rpm
 from vunnel.utils.oval_parser import Config
 from vunnel.utils.vulnerability import vulnerability_element
+
+from .oval_parser import Parser as RHELOvalParser
 
 namespace = "rhel"
 
@@ -335,16 +336,16 @@ class Parser:
         cc.ns_format = "{}"
 
         # initialize provider
-        rhsa_provider = centos.Parser(
+        rhsa_provider = RHELOvalParser(
             # workspace=os.path.join(self.rhsa_dir_path),
             workspace=self.workspace,
             config=cc,
             download_timeout=self.download_timeout,
-            logger=logging.getLogger("centos.Parser"),
+            logger=logging.getLogger("rhel.oval_parser.Parser"),
         )
 
         # get all data
-        self.logger.debug("parsing RHSA data using centos driver")
+        self.logger.debug("parsing RHSA data using RHEL oval parser")
         self.rhsa_dict = rhsa_provider.get()
 
         self.urls.extend(rhsa_provider.urls)

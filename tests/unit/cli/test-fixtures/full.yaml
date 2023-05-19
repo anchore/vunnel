@@ -21,11 +21,6 @@ providers:
     request_timeout: 20
     security_advisories:
       42: "https://alas.aws.amazon.com/AL2/alas-42.rss"
-  centos:
-    runtime: *runtime
-    request_timeout: 20
-    skip_namespaces:
-      - centos:8
   chainguard:
     runtime: *runtime
     request_timeout: 20
