@@ -12,50 +12,6 @@ import requests
 from vunnel import utils
 from vunnel.utils.oval_parser import Config, parse
 
-namespace = "centos"
-feedtype = "vulnerabilities"
-
-# One time initialization of driver specific configuration
-centos_config = Config()
-
-# regexes
-centos_config.tag_pattern = re.compile(r"\{http://oval.mitre.org/XMLSchema/.*\}(\w*)")
-centos_config.ns_pattern = re.compile(r"(\{http://oval.mitre.org/XMLSchema/.*\})\w*")
-centos_config.is_installed_pattern = re.compile(r"Red Hat Enterprise Linux (\d+).*is installed")
-centos_config.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
-centos_config.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
-centos_config.signed_with_pattern = re.compile(r"(.*) is signed with (.*) key")
-centos_config.platform_version_pattern = re.compile(r"Red Hat Enterprise Linux (\d+)")
-
-# xpath queries
-centos_config.title_xpath_query = "{0}metadata/{0}title"
-centos_config.severity_xpath_query = "{0}metadata/{0}advisory/{0}severity"
-centos_config.platform_xpath_query = "{0}metadata/{0}affected/{0}platform"
-centos_config.date_issued_xpath_query = "{0}metadata/{0}advisory/{0}issued"
-centos_config.date_updated_xpath_query = "{0}metadata/{0}advisory/{0}updated"
-centos_config.description_xpath_query = "{0}metadata/{0}description"
-centos_config.sa_ref_xpath_query = '{0}metadata/{0}reference[@source="RHSA"]'
-centos_config.cve_xpath_query = "{0}metadata/{0}advisory/{0}cve"
-centos_config.criteria_xpath_query = "{0}criteria"
-centos_config.criterion_xpath_query = ".//{0}criterion"
-
-# maps
-centos_config.severity_dict = {
-    "low": "Low",
-    "moderate": "Medium",
-    "important": "High",
-    "critical": "Critical",
-}
-
-# string formats
-centos_config.ns_format = "centos:{}"
-
-# read and connect time out for requests.get
-requests_timeout = 125
-
-# driver workspace
-driver_workspace = None
-
 
 class Parser:
     _url_mappings_ = [
@@ -79,8 +35,8 @@ class Parser:
         },
     ]
 
-    def __init__(self, workspace, logger=None, config=None, download_timeout=125):
-        self.config = config if config else centos_config
+    def __init__(self, workspace, config: Config, logger=None, download_timeout=125):
+        self.config = config
         self.download_timeout = download_timeout
         self.workspace = workspace
 
