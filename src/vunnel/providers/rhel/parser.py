@@ -66,7 +66,7 @@ class Parser:
     def _download_minimal_cves(self, page, limit=100):
         path_params = {"per_page": str(limit), "page": page}
 
-        self.logger.debug(
+        self.logger.info(
             f"downloading CVE list from url={self.__summary_url__} count={path_params['per_page']} page={path_params['page']}"
         )
         r = requests.get(
@@ -167,7 +167,7 @@ class Parser:
             do_full_sync = True
 
         if do_full_sync:
-            self.logger.info("full sync triggered, downloading all CVEs")
+            self.logger.info("full sync triggered, downloading all CVEs.  This may take quite some time.")
         else:
             self.logger.info("incremental sync triggered, computing and downloading updated CVEs")
 
