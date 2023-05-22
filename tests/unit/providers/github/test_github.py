@@ -4,6 +4,7 @@ import pytest
 from vunnel import result, workspace
 from vunnel.providers.github import Config, Provider, parser
 from vunnel.utils import fdb as db
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
 
 @pytest.fixture()
@@ -45,6 +46,7 @@ def advisories():
                             "ghsaId": "GHSA-mh6f-8j2x-4483",
                             "summary": "Critical severity vulnerability that affects flatmap-stream and event-stream",
                             "severity": "CRITICAL",
+                            "cvss": {"score": 9.8, "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"},
                             "identifiers": [{"type": "GHSA", "value": "GHSA-mh6f-8j2x-4483"}],
                             "references": [{"url": "https://github.com/dominictarr/event-stream/issues/116"}],
                             "vulnerabilities": {
@@ -79,6 +81,8 @@ def advisories():
                                     },
                                 ],
                             },
+                            "publishedAt": "2018-11-26T23:58:21Z",
+                            "updatedAt": "2023-01-12T05:08:40Z",
                             "withdrawnAt": None,
                         },
                     ],
@@ -116,9 +120,16 @@ def empty_response():
 def node():
     return {
         "ghsaId": "GHSA-73m2-3pwg-5fgc",
+        "classification": "GENERAL",
         "summary": "Critical severity vulnerability that affects waitress",
         "severity": "CRITICAL",
+        "cvss": {
+            "score": 9.8,
+            "vectorString": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        },
         "publishedAt": "2020-02-04T03:07:31Z",
+        "updatedAt": "2020-02-04T03:07:32Z",
+        "withdrawnAt": "2020-02-04T03:07:33Z",
         "identifiers": [
             {"type": "GHSA", "value": "GHSA-73m2-3pwg-5fgc"},
             {"type": "CVE", "value": "CVE-2020-5236"},
@@ -167,10 +178,42 @@ class TestNodeParser:
         with pytest.raises(AttributeError):
             result.foo
 
+    def test_gets_classification(self, node):
+        result = parser.NodeParser(node).parse()
+        assert result["Classification"] == "GENERAL"
+        assert result.Classification == "GENERAL"
+
     def test_gets_severity(self, node):
         result = parser.NodeParser(node).parse()
         assert result["Severity"] == "Critical"
         assert result.Severity == "Critical"
+
+    def test_gets_cvss(self, node):
+        result = parser.NodeParser(node).parse()
+        expected = CVSS(
+            version="3.0",
+            vector_string="CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            base_metrics=CVSSBaseMetrics(base_score=9.8, exploitability_score=3.9, impact_score=5.9, base_severity="Critical"),
+            status="N/A",
+        )
+
+        assert result["CVSS"] == expected
+        assert result.CVSS == expected
+
+    def test_gets_published(self, node):
+        result = parser.NodeParser(node).parse()
+        result["published"] = "2020-02-04T03:07:31Z"
+        result.published = "2020-02-04T03:07:31Z"
+
+    def test_gets_updated(self, node):
+        result = parser.NodeParser(node).parse()
+        result["updated"] = "2020-02-04T03:07:32Z"
+        result.updated = "2020-02-04T03:07:32Z"
+
+    def test_gets_withdrawn(self, node):
+        result = parser.NodeParser(node).parse()
+        result["withdrawn"] = "2020-02-04T03:07:33Z"
+        result.withdrawn = "2020-02-04T03:07:33Z"
 
     def test_gets_fixedin(self, node):
         result = parser.NodeParser(node).parse()
@@ -225,7 +268,10 @@ class TestCreateGraphQLQuery:
         # a.k.a. first query ever
         result = parser.graphql_advisories()
         line = result.split("\n")[2].strip()
-        assert line == "securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, first: 100) {"  # noqa
+        assert (
+            line
+            == "securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, classifications: [GENERAL, MALWARE], first: 100) {"
+        )  # noqa
 
     def test_no_cursor_with_timestamp_changes_field(self):
         # first run after a successful run
@@ -236,14 +282,17 @@ class TestCreateGraphQLQuery:
     def test_no_cursor_with_timestamp_adds_updatedsince(self):
         result = parser.graphql_advisories(timestamp="2019-02-06T20:44:12.371565")
         line = result.split("\n")[2].strip().split("}")[-1]
-        assert line == ', updatedSince: "2019-02-06T20:44:12.371565", first: 100) {'
+        assert line == ', updatedSince: "2019-02-06T20:44:12.371565", classifications: [GENERAL, MALWARE], first: 100) {'
 
     def test_cursor_no_timestamp(self):
         # subsequent request in the first run ever: no timestamp has been recorded
         # because this is the first run that hasn't completed
         result = parser.graphql_advisories(cursor="FXXF==")
         line = result.split("\n")[2].strip()
-        assert line == 'securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, after: "FXXF==", first: 100) {'  # noqa
+        assert (
+            line
+            == 'securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, after: "FXXF==", classifications: [GENERAL, MALWARE], first: 100) {'
+        )  # noqa
 
     def test_cursor_with_timestamp(self):
         # subsequent request after a successful run(s) because a timestamp has
@@ -251,7 +300,10 @@ class TestCreateGraphQLQuery:
         result = parser.graphql_advisories(cursor="FXXF==", timestamp="2019-02-06T20:44:12.371565")
         line = result.split("\n")[2].strip()
         line = line.split("}")[-1]
-        assert line == ', after: "FXXF==", updatedSince: "2019-02-06T20:44:12.371565", first: 100) {'  # noqa
+        assert (
+            line
+            == ', after: "FXXF==", updatedSince: "2019-02-06T20:44:12.371565", classifications: [GENERAL, MALWARE], first: 100) {'
+        )  # noqa
 
     def test_cursor_with_timestamp_changes_field(self):
         # subsequent request after a successful run(s) because a timestamp has
