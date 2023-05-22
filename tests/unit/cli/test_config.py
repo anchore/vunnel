@@ -45,11 +45,6 @@ def test_full_config(helpers):
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
-            centos=providers.centos.Config(
-                runtime=runtime_cfg,
-                skip_namespaces=["centos:8"],
-                request_timeout=20,
-            ),
             chainguard=providers.chainguard.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
