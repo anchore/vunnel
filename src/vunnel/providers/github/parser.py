@@ -19,11 +19,15 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+from decimal import Decimal, DecimalException
 
 import requests
+from cvss import CVSS3
+from cvss.exceptions import CVSS3MalformedError
 
 from vunnel import utils
 from vunnel.utils import fdb as db
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
 ecosystem_map = {
     "COMPOSER": "composer",
@@ -338,11 +342,20 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     Example GraphQL query (use: https://developer.github.com/v4/explorer/) ::
 
         {
-          securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, first: 10){
+          securityAdvisories(
+            classifications: [GENERAL, MALWARE]
+            orderBy: {field: PUBLISHED_AT, direction: ASC}
+            first: 10
+          ) {
             nodes {
               ghsaId
+              classification
               summary
               severity
+              cvss {
+                score
+                vectorString
+              }
               identifiers {
                 type
                 value
@@ -350,7 +363,11 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
               references {
                 url
               }
-              vulnerabilities(first: 100, orderBy: {field: UPDATED_AT, direction: ASC}) {
+              vulnerabilities(
+                classifications: [GENERAL, MALWARE]
+                first: 100
+                orderBy: {field: UPDATED_AT, direction: ASC}
+              ) {
                 pageInfo {
                   endCursor
                   hasNextPage
@@ -366,6 +383,8 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
                   vulnerableVersionRange
                 }
               }
+              publishedAt
+              updatedAt
               withdrawnAt
             }
             pageInfo {
@@ -380,8 +399,12 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     If trying to get a single GHSA, the `securityAdvisories` field needs to be updated
     with and identifier, to::
 
-      securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, first: 10,
-        identifier: {type: GHSA, value: "GHSA-pp7h-53gx-mx7r"}) {
+      securityAdvisories(
+        classifications: [GENERAL, MALWARE]
+        orderBy: {field: PUBLISHED_AT
+        direction: ASC}, first: 10
+        identifier: {type: GHSA, value: "GHSA-pp7h-53gx-mx7r"}
+      ) {
     """
     query_func = "securityAdvisories(orderBy: {field: %s, direction: ASC}, "
     updatedSince = ""
@@ -396,19 +419,26 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     if cursor:
         after = 'after: "%s", ' % cursor
 
-    caller = f"{query_func}{after}{updatedSince}first: 100)"
+    caller = f"{query_func}{after}{updatedSince}classifications: [GENERAL, MALWARE], first: 100)"
 
     if vuln_cursor:
         vuln_after = 'after: "%s", ' % vuln_cursor
-    vulnerabilities = "%sfirst: 100, orderBy: {field: UPDATED_AT, direction: ASC}" % vuln_after
+    vulnerabilities = (
+        "%sclassifications: [GENERAL, MALWARE], first: 100, orderBy: {field: UPDATED_AT, direction: ASC}" % vuln_after
+    )
 
     return """
     {{
       {} {{
         nodes {{
           ghsaId
+          classification
           summary
           severity
+          cvss {{
+            score
+            vectorString
+          }}
           identifiers {{
             type
             value
@@ -432,6 +462,8 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
               vulnerableVersionRange
             }}
           }}
+          publishedAt
+          updatedAt
           withdrawnAt
         }}
         pageInfo {{
@@ -449,7 +481,18 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
 
 
 class NodeParser(dict):
-    __parsers__ = ("_severity", "_fixedin", "_summary", "_url", "_cves", "_withdrawn")
+    __parsers__ = (
+        "_classification",
+        "_severity",
+        "_cvss",
+        "_fixedin",
+        "_summary",
+        "_url",
+        "_cves",
+        "_published",
+        "_updated",
+        "_withdrawn",
+    )
 
     def __init__(self, data, logger=None):
         self.description = None
@@ -471,6 +514,10 @@ class NodeParser(dict):
         if attr in self:
             return self[attr]
         raise AttributeError(f"No such attribute: {attr}")
+
+    def _classification(self):
+        classification = self.data.get("classification", "GENERAL")
+        self["Classification"] = classification
 
     def _severity(self):
         """
@@ -499,6 +546,40 @@ class NodeParser(dict):
         }
         severity = self.data.get("severity")
         self["Severity"] = severity_map.get(severity, "Unknown")
+
+    def _make_cvss(self, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
+        try:
+            cvss3_obj = CVSS3(cvss_vector)
+
+            cvss_object = CVSS(
+                version=f"3.{cvss3_obj.minor_version}",
+                vector_string=cvss_vector,
+                base_metrics=CVSSBaseMetrics(
+                    base_score=float(cvss3_obj.base_score.quantize(Decimal("0.1"))),
+                    exploitability_score=float(cvss3_obj.esc.quantize(Decimal("0.1"))),
+                    impact_score=float(cvss3_obj.isc.quantize(Decimal("0.1"))),
+                    base_severity=cvss3_obj.severities()[0],
+                ),
+                status="N/A",
+            )
+        except (CVSS3MalformedError, DecimalException, AttributeError):
+            self.logger.exception(
+                "error transforming CVSS vector %s, skipping it for %s",
+                cvss_vector,
+                vulnerability_id,
+            )
+            cvss_object = None
+
+        return cvss_object
+
+    def _cvss(self):
+        cvss = self.data.get("cvss")
+
+        if cvss:
+            vector = cvss.get("vectorString")
+
+            if vector:
+                self["CVSS"] = self._make_cvss(vector, self.data.get("ghsaId"))
 
     def _fixedin(self):
         """
@@ -551,6 +632,12 @@ class NodeParser(dict):
 
     def _summary(self):
         self["Summary"] = self.data.get("summary")
+
+    def _published(self):
+        self["published"] = self.data.get("publishedAt")
+
+    def _updated(self):
+        self["updated"] = self.data.get("updatedAt")
 
     def _withdrawn(self):
         self["withdrawn"] = self.data.get("withdrawnAt")
