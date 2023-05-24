@@ -197,6 +197,7 @@ providers:
     token: secret
   mariner:
     allow_versions:
+      - '1.0'
       - '2.0'
     request_timeout: 125
     runtime:
