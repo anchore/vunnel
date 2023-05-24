@@ -100,7 +100,7 @@ tests:
 
   - provider: mariner
     images:
-      - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-arm64@sha256:51101e635f56032d5afd3fb56d66c7b93b34d5a39ddac01695d62b94473cc34e
+      - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
 
   - provider: nvd
     images:
