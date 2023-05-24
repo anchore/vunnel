@@ -23,7 +23,7 @@ def main() -> None:
     for v in versions:
         download_version(v, dest_path.name)
 
-    we_are_here = os.path.realpath(os.path.dirname(__file__))
+    script_dir = os.path.realpath(os.path.dirname(__file__))
     args = [
         "xsdata",
         "generate",
@@ -36,7 +36,7 @@ def main() -> None:
         "--structure-style",
         "single-package",
     ]
-    process = Popen(args=args, stderr=PIPE, stdout=PIPE, cwd=we_are_here)
+    process = Popen(args=args, stderr=PIPE, stdout=PIPE, cwd=script_dir)
     stdout, stderr = process.communicate()
     print(stdout)
     print(stderr)

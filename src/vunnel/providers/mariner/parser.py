@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from vunnel.workspace import Workspace
 
-LTE = "less than or equal"
+LESS_THAN_OR_EQUAL_TO = "less than or equal"
 
 
 class MarinerXmlFile:
@@ -71,7 +71,7 @@ class MarinerXmlFile:
                 self.states_by_id[state_obj.id] = state_obj
             except Exception as ex:
                 self.logger.warning(f"skipping rpminfo_object element in {oval_file_path} due to {ex}")
-        self.mariner_version = oval_file_path.split("-")[-2]  # TODO: less brittle way?
+        self.mariner_version = oval_file_path.split("-")[-2]
 
     def name_and_version(self, test_id: str) -> tuple[str | None, str | None]:
         test = self.tests_by_id.get(test_id, None)
@@ -113,7 +113,14 @@ class MarinerXmlFile:
         if obj is None or obj.name is None:
             return None
         version = state.evr.value
-        if state.evr.operation == LTE:
+        # There are 2 choices for state.ever.operation: "less than" or "less than or equal to".
+        # So for this vulnerability, either the statement, "versions < 3.2.1 are vulernable"
+        # or the statement "versions <= 3.2.1 are vulnerable". In the second statement,
+        # the data has no information about any fixed version, so we report "None"
+        # as the fixed version, meaning we consider all version vulnerable.
+        # For example, if version 3.2.1 of a library is vulnerable, and is the latest version
+        # mariner data might have "versions <= 3.2.1" is vulnerable.
+        if state.evr.operation == LESS_THAN_OR_EQUAL_TO:
             version = "None"  # legacy API needs the string "None" instead of None
         return FixedIn(Name=obj.name, NamespaceName=self.namespace_name(), VersionFormat="rpm", Version=version)
 
@@ -149,11 +156,7 @@ class MarinerXmlFile:
                 Description=self.description(d) or "",
                 Severity=d.metadata.severity,
                 Link=link,
-                CVSS=[],  # NOTE: this is not present in OVAL XML.
-                # This is a list because because there are several versions
-                # Each version is a vector of info about the vulnerability
-                # serialized as a string like CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H
-                # TODO: add test image to https://github.com/anchore/test-images
+                CVSS=[],
                 FixedIn=[fixed_in],
                 Metadata={},  # Ideally, there's no metadata here.
             )
@@ -169,7 +172,7 @@ class Parser:
     def __init__(self, workspace: Workspace, download_timeout: int, allow_versions: list[Any], logger: logging.Logger):
         self.workspace = workspace
         self.download_timeout = download_timeout
-        self.allow_versions = allow_versions  # TODO: use this to pass in "2.0"?
+        self.allow_versions = allow_versions
         self._urls: set[str] = set()
 
     def _download(self) -> list[str]:

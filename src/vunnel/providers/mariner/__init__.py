@@ -21,21 +21,6 @@ class Config:
     )
     request_timeout: int = 125
     allow_versions: list[str] = field(default_factory=lambda: ["2.0"])
-    # api_key: str = "env:NVD_API_KEY"
-
-    def __post_init__(self) -> None:
-        pass
-        # if self.api_key.startswith("env:"):
-        #     self.api_key = os.environ.get(self.api_key[4:], "")
-
-    def __str__(self) -> str:
-        # sanitize secrets from any output
-        # api_value = self.api_key
-        # str_value = super().__str__()
-        # if not api_value:
-        #     return str_value
-        # return str_value.replace(api_value, "********")
-        return super().__str__()
 
 
 class Provider(provider.Provider):
@@ -65,7 +50,6 @@ class Provider(provider.Provider):
         return "mariner"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        self.logger.info("updating results in Mariner provider")
         with self.results_writer() as writer:
             for namespace, vuln_id, record in self.parser.get():
                 writer.write(
