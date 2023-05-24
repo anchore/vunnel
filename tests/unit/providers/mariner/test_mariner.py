@@ -59,3 +59,32 @@ def test_parse(tmpdir, helpers, input_file, expected):
     vulnerabilities = [v for v in subject.vulnerabilities()]
     assert len(vulnerabilities) == len(expected)
     assert vulnerabilities == expected
+
+
+@pytest.fixture()
+def disable_get_requests(monkeypatch):
+    def disabled(*args, **kwargs):
+        raise RuntimeError("requests disabled but HTTP GET attempted")
+
+    monkeypatch.setattr(parser.requests, "get", disabled)
+
+
+def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    c = Config(allow_versions=["2.0"])
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    mock_data_path = helpers.local_dir("test-fixtures/mariner-truncated-2.0-oval.xml")
+    shutil.copy(mock_data_path, workspace.input_dir / "mariner-truncated-2.0-oval.xml")
+
+    def mock_download(*args, **kwargs):
+        return [mock_data_path]
+
+    monkeypatch.setattr(p.parser, "_download", mock_download)
+
+    p.update(None)
+
+    assert 3 == workspace.num_result_entries()
+    assert workspace.result_schemas_valid(require_entries=True)
