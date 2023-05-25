@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +12,7 @@ from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoSta
 from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 if TYPE_CHECKING:
+    import logging
     from collections.abc import Generator
 
     from vunnel.workspace import Workspace
@@ -167,13 +167,12 @@ MARINER_URL_FILENAME = "cbl-mariner-{}-oval.xml"
 
 
 class Parser:
-    logger = logging.getLogger("mariner-parser")
-
     def __init__(self, workspace: Workspace, download_timeout: int, allow_versions: list[Any], logger: logging.Logger):
         self.workspace = workspace
         self.download_timeout = download_timeout
         self.allow_versions = allow_versions
         self._urls: set[str] = set()
+        self.logger = logger
 
     def _download(self) -> list[str]:
         return [self._download_version(v) for v in self.allow_versions]

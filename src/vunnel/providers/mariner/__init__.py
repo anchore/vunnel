@@ -39,12 +39,6 @@ class Provider(provider.Provider):
             logger=self.logger,
         )
 
-        if self.config.runtime.skip_if_exists and config.runtime.existing_results != provider.ResultStatePolicy.KEEP:
-            raise ValueError(
-                "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' "
-                "(otherwise incremental updates will fail)",
-            )
-
     @classmethod
     def name(cls) -> str:
         return "mariner"
