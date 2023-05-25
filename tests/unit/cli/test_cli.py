@@ -195,6 +195,21 @@ providers:
         retry_delay: 5
       result_store: sqlite
     token: secret
+  mariner:
+    allow_versions:
+      - '1.0'
+      - '2.0'
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: keep
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
   nvd:
     api_key: secret
     request_timeout: 125
