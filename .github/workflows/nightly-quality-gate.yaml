@@ -10,7 +10,7 @@ on:
 jobs:
 
   select-providers:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
@@ -33,7 +33,7 @@ jobs:
           echo "providers=$content" >> $GITHUB_OUTPUT
 
   validate-provider:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: select-providers
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Nightly-Quality-Gate:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: validate-provider
     if: ${{ always() && !cancelled() }}
     steps:
