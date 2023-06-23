@@ -295,6 +295,8 @@ class Parser:
                             NamespaceName=feed_ns,
                             VersionFormat="rpm",
                             Version=pkg_version,
+                            Module=None,
+                            VendorAdvisory=None,
                         )
                     )
 
