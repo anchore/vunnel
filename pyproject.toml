@@ -1,6 +1,6 @@
 [project]
 name = "vunnel"
-requires-python = ">=3.9.0"
+requires-python = "^3.9"
 
 [tool.poetry.scripts]
 vunnel = "vunnel.cli:run"
