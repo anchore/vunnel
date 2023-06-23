@@ -12,7 +12,7 @@ on:
 jobs:
 
   select-providers:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
@@ -39,7 +39,7 @@ jobs:
           echo "providers=$content" >> $GITHUB_OUTPUT
 
   validate-provider:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate')
 
@@ -74,7 +74,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   evaluate-quality-gate:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
      - validate-provider
      - select-providers
