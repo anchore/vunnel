@@ -26,6 +26,15 @@ class GitRevision:
     file: str
 
 
+class UbuntuGitServer503Error(Exception):
+    """Exception raised when the ubuntu git server returns a 503"""
+
+    def __init__(self):
+        super().__init__(
+            "The ubuntu git server is unavailable, try again later or switch to the git protocol endpoint git://git.launchpad.net/ubuntu-cve-tracker"
+        )
+
+
 class GitWrapper:
     __active_retired_filename_regex__ = re.compile(r"(active|retired)/CVE-\S+")
     __cve_id_regex__ = re.compile(r"CVE-\S+")
@@ -36,12 +45,14 @@ class GitWrapper:
     _check_out_cmd_ = "git checkout {branch}"
     _pull_cmd_ = "git pull -f"
     _fetch_cmd_ = "git fetch --all"
+    _clean_cmd_ = "git clean --force -d"
     _reset_cmd_ = "git reset --hard HEAD"
     _pull_ff_only_cmd_ = "git pull --ff-only"
     _write_graph_ = "git commit-graph write --reachable --changed-paths"
     _change_set_cmd_ = "git log --no-renames --no-merges --name-status --format=oneline {from_rev}..{to_rev}"
     _get_rev_content_cmd_ = "git show {sha}:{file}"
     _head_rev_cmd_ = "git rev-parse HEAD"
+    _ubuntu_server_503_message = "error: RPC failed; HTTP 503 curl 22 The requested URL returned error: 503"
 
     def __init__(
         self, source: str, branch: str, checkout_dest: str, workspace: str | None = None, logger: logging.Logger | None = None
@@ -78,29 +89,33 @@ class GitWrapper:
 
         return True
 
+    def _delete_repo(self):
+        if os.path.exists(self.dest):
+            self.logger.debug("deleting existing repository")
+            shutil.rmtree(self.dest, ignore_errors=True)
+
+    def _clone_repo(self):
+        try:
+            self.logger.info(f"cloning git repository {self.src} branch {self.branch} to {self.dest}")
+            cmd = self._clone_cmd_.format(src=self.src, dest=self.dest, branch=self.branch)
+            out = self._exec_cmd(cmd)
+            self.logger.debug("initialized git repo, cmd: {}, output: {}".format(cmd, out.decode()))
+            self._write_graph()
+        except:
+            self.logger.exception(f"failed to clone git repository {self.src} branch {self.branch} to {self.dest}")
+            raise
+
     @utils.retry_with_backoff()
     def init_repo(self, force=False):
         if force:
-            if os.path.exists(self.dest):
-                self.logger.debug("deleting existing repository")
-                shutil.rmtree(self.dest, ignore_errors=True)
+            self._delete_repo()
 
         if self._check(self.dest):
             self.logger.debug("found git repository at {}".format(self.dest))
             self.sync_with_upstream()
             return
 
-        try:
-            self.logger.info(f"cloning git repository {self.src} branch {self.branch} to {self.dest}")
-
-            cmd = self._clone_cmd_.format(src=self.src, dest=self.dest, branch=self.branch)
-            out = self._exec_cmd(cmd)
-
-            self.logger.debug("initialized git repo, cmd: {}, output: {}".format(cmd, out.decode()))
-            self._write_graph()
-        except:
-            self.logger.exception(f"failed to clone git repository {self.src} branch {self.branch} to {self.dest}")
-            raise
+        self._clone_repo()
 
     def parse_full_cve_revision_history(self, git_log_output: str) -> dict[str, list[GitRevision]]:
         hist = {}
@@ -126,13 +141,29 @@ class GitWrapper:
         try:
             try:
                 self._exec_cmd(self._set_remote_cmd_.format(src=self.src), cwd=self.dest)
+
+                # Cleanup any untracked files which might be present and reset any changes on the current branch
+                try:
+                    self._exec_cmd(self._clean_cmd_, cwd=self.dest)
+                    self._exec_cmd(self._reset_cmd_, cwd=self.dest)
+                except:
+                    pass
+
                 self._exec_cmd(self._check_out_cmd_.format(branch=self.branch), cwd=self.dest)
-                self._exec_cmd(self._reset_cmd_, cwd=self.dest)
             except:  # nosec
                 pass
-            out = self._exec_cmd(self._pull_ff_only_cmd_, cwd=self.dest)
-            self.logger.debug("synced with upstream git repo, output: {}".format(out.decode()))
-            self._write_graph()
+
+            try:
+                out = self._exec_cmd(self._pull_ff_only_cmd_, cwd=self.dest)
+                self.logger.debug("synced with upstream git repo, output: {}".format(out.decode()))
+                self._write_graph()
+            except UbuntuGitServer503Error:
+                raise
+            except:  # nosec
+                # if something other than 503 occurred at this point just remove the repo and re-clone
+                self._delete_repo()
+                self._clone_repo()
+
         except:
             self.logger.exception("failed to git pull")
             raise
@@ -358,7 +389,12 @@ class GitWrapper:
         try:
             self.logger.trace("running: {}".format(cmd))
             cmd_list = shlex.split(cmd)
-            return subprocess.check_output(cmd_list, *args, **kwargs)  # nosec
+            return subprocess.check_output(cmd_list, *args, **kwargs, stderr=subprocess.PIPE)  # nosec
         except Exception as e:
             self.logger.exception("error executing command: {}".format(cmd))
+
+            if isinstance(e, subprocess.CalledProcessError):
+                if e.stderr and self._ubuntu_server_503_message in e.stderr.decode():
+                    raise UbuntuGitServer503Error()
+
             raise e
