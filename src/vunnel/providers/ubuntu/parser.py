@@ -51,8 +51,10 @@ patch_states = {
 
 patch_merge_criteria = {
     "status": re.compile(r"ignored"),
-    "version": re.compile(r"(^|.*\s+)end[\s-]of[\s-]life($|\s+.*)")
-    # match 'end-of-life' or 'end of life' anywhere in the line
+    # match end-of-life, end-of-standard-support, out-of-standard-support anywhere in the line
+    "version": re.compile(
+        r"(^|.*\s+)(end[\s-]of[\s-]life|end[\s-]of[\s-]standard[\s-]support|out[\s-]of[\s-]standard[\s-]support)($|\s+|\,.*)"
+    ),
 }
 
 # Only releases present in this mapping will be output by the driver, so it must be maintained with new releases.
@@ -712,23 +714,24 @@ class Parser:
             self._delete_merged_cve(cve_id)
         self.logger.info("finish processing deletes")
 
-    def _process_cve(self, cve_id: str, cve_rel_path: str, f: str, to_rev: str, updated_paths: list[str]):
+    def _process_cve(self, cve_id: str, cve_rel_path: str, f: str, to_rev: str, updated_paths: list[str]) -> CVEFile | None:
+        self.logger.debug(f"begin processing {cve_id} to rev {to_rev}")
+
         if cve_rel_path in updated_paths:
             # merge cves updated since last revision or all if the last processed revision is not available
             # self.logger.debug("CVE updated since last run, processing {}".format(cve_rel_path))
-
-            return self._merge_cve(cve_id, cve_rel_path, f, to_rev)
-
-        if not self._merged_cve_exists(cve_id):
+            result = self._merge_cve(cve_id, cve_rel_path, f, to_rev)
+        elif not self._merged_cve_exists(cve_id):
             # merge may be required since the saved state is not found
             # self.logger.debug("CVE merged state not found, processing {}".format(cve_rel_path))
+            result = self._merge_cve(cve_id, cve_rel_path, f, to_rev)
+        else:
+            # merge may be required if new distros were added
+            # self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
+            result = self._reprocess_merged_cve(cve_id, cve_rel_path)
 
-            return self._merge_cve(cve_id, cve_rel_path, f, to_rev)
-
-        # merge may be required if new distros were added
-        # self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
-
-        return self._reprocess_merged_cve(cve_id, cve_rel_path)
+        self.logger.debug(f"finish processing {cve_id} to rev {to_rev}")
+        return result
 
     def _load_last_processed_rev(self):
         last_processed_rev_path = os.path.join(self.norm_workspace, self._last_processed_rev_file_git)
