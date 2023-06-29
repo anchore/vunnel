@@ -148,6 +148,8 @@ class TestSLESParser:
                         NamespaceName="sles:15",
                         VersionFormat="rpm",
                         Version="0:4.12.14-150.72.1",
+                        Module=None,
+                        VendorAdvisory=None,
                     )
                 ],
                 Metadata={},
@@ -177,6 +179,8 @@ class TestSLESParser:
                         NamespaceName="sles:15.1",
                         VersionFormat="rpm",
                         Version="0:4.12.14-197.89.2",
+                        Module=None,
+                        VendorAdvisory=None,
                     )
                 ],
                 Metadata={},

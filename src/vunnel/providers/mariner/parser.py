@@ -122,7 +122,14 @@ class MarinerXmlFile:
         # mariner data might have "versions <= 3.2.1" is vulnerable.
         if state.evr.operation == LESS_THAN_OR_EQUAL_TO:
             version = "None"  # legacy API needs the string "None" instead of None
-        return FixedIn(Name=obj.name, NamespaceName=self.namespace_name(), VersionFormat="rpm", Version=version)
+        return FixedIn(
+            Name=obj.name,
+            NamespaceName=self.namespace_name(),
+            VersionFormat="rpm",
+            Version=version,
+            Module=None,
+            VendorAdvisory=None,
+        )
 
     def vulnerability_id(self, definition: Definition) -> str | None:
         if definition.metadata is None or definition.metadata.reference is None or definition.metadata.reference.ref_id is None:

@@ -24,7 +24,16 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                     Severity="High",
                     Link="https://nvd.nist.gov/vuln/detail/CVE-2023-21980",
                     CVSS=[],
-                    FixedIn=[FixedIn(Name="mysql", NamespaceName="mariner:2.0", VersionFormat="rpm", Version="0:8.0.33-1.cm2")],
+                    FixedIn=[
+                        FixedIn(
+                            Name="mysql",
+                            NamespaceName="mariner:2.0",
+                            VersionFormat="rpm",
+                            Version="0:8.0.33-1.cm2",
+                            Module=None,
+                            VendorAdvisory=None,
+                        )
+                    ],
                     Metadata={},
                 ),
                 Vulnerability(
@@ -34,7 +43,16 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                     Severity="Medium",
                     Link="https://nvd.nist.gov/vuln/detail/CVE-2023-21977",
                     CVSS=[],
-                    FixedIn=[FixedIn(Name="mysql", NamespaceName="mariner:2.0", VersionFormat="rpm", Version="0:8.0.33-1.cm2")],
+                    FixedIn=[
+                        FixedIn(
+                            Name="mysql",
+                            NamespaceName="mariner:2.0",
+                            VersionFormat="rpm",
+                            Version="0:8.0.33-1.cm2",
+                            Module=None,
+                            VendorAdvisory=None,
+                        )
+                    ],
                     Metadata={},
                 ),
                 Vulnerability(
@@ -45,7 +63,14 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                     Link="https://nvd.nist.gov/vuln/detail/CVE-2022-3736",
                     CVSS=[],
                     FixedIn=[
-                        FixedIn(Name="bind", NamespaceName="mariner:2.0", VersionFormat="rpm", Version="None"),
+                        FixedIn(
+                            Name="bind",
+                            NamespaceName="mariner:2.0",
+                            VersionFormat="rpm",
+                            Version="None",
+                            Module=None,
+                            VendorAdvisory=None,
+                        ),
                     ],
                 ),
             ],
