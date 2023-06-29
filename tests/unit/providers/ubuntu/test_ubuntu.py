@@ -311,12 +311,18 @@ class TestUbuntuParser:
             (Patch(distro="foo", package="bar", status="ignored ftw", version="end-of-life now but something else before"), True),
             (Patch(distro="foo", package="bar", status="ignored", version="reached end-of-life"), True),
             (Patch(distro="foo", package="bar", status="ignored", version="end-of-life"), True),
+            (Patch(distro="foo", package="bar", status="ignored", version="end-of-life, was needed"), True),
             (Patch(distro="foo", package="bar", status="ignored", version="was pending now end-of-life"), True),
             (Patch(distro="foo", package="bar", status="ignored", version="end_of_life"), False),
             (Patch(distro="foo", package="bar", status="ignored", version="bleddyend-of-lifeas we know"), False),
             (Patch(distro="foo", package="bar", status="ignored", version="end times of all life"), False),
             (Patch(distro="foo", package="bar", status="some-invalid-state", version="end-of-life"), False),
             (Patch(distro="foo", package="bar", status="ignored", version="oh so end-of-lifed"), False),
+            (Patch(distro="foo", package="bar", status="ignored", version="end of standard support"), True),
+            (Patch(distro="foo", package="bar", status="ignored", version="out of standard support"), True),
+            (Patch(distro="foo", package="bar", status="ignored", version="end-of-standard-support"), True),
+            (Patch(distro="foo", package="bar", status="ignored", version="out-of-standard-support"), True),
+            (Patch(distro="foo", package="bar", status="ignored", version="end of standard support, was needed"), True),
         ],
     )
     def test_check_merge(self, patch: Patch, expected: bool):
