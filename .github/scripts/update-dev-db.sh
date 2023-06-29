@@ -27,7 +27,7 @@ ${GRYPE_DB} pull -v
 rm -rf build
 
 step "Building grype-db"
-${GRYPE_DB} build
+${GRYPE_DB} build -vvv
 
 step "Packaging grype-db"
 ${GRYPE_DB} package
