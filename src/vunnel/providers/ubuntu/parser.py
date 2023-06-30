@@ -81,6 +81,8 @@ ubuntu_version_names = {
     "impish": "21.10",
     "jammy": "22.04",
     "kinetic": "22.10",
+    "lunar": "23.04",
+    "mantic": "23.10",
 }
 
 # driver workspace
