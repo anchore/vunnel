@@ -29,6 +29,9 @@ class Config:
 
 
 class Provider(provider.Provider):
+    # Bumping to version 2 because upstream changed the values of some data which requires reprocessing all of the history
+    __version__ = 2
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
