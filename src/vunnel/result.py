@@ -4,6 +4,7 @@ import abc
 import enum
 import logging
 import os
+import shutil
 import time
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
@@ -18,6 +19,15 @@ if TYPE_CHECKING:
     from .workspace import Workspace
 
 
+class ResultStatePolicy(str, enum.Enum):
+    KEEP = "keep"
+    DELETE = "delete"
+    DELETE_BEFORE_WRITE = "delete-before-write"  # treat like "KEEP" in error cases
+
+    def __repr__(self) -> str:
+        return self.value
+
+
 @dataclass
 class Envelope:
     schema: str
@@ -29,10 +39,12 @@ class Store:
     def __init__(
         self,
         workspace: Workspace,
+        result_state_policy: ResultStatePolicy,
         skip_duplicates: bool = False,
         logger: logging.Logger | None = None,
     ):
         self.workspace = workspace
+        self.result_state_policy = result_state_policy
         self.skip_duplicates = skip_duplicates
         self.start = time.time()
 
@@ -45,7 +57,11 @@ class Store:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def close(self) -> None:
+    def prepare(self) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def close(self, successful: bool) -> None:
         raise NotImplementedError
 
 
@@ -83,12 +99,17 @@ class FlatFileStore(Store):
             self.logger.trace(f"writing record to {filepath!r}")  # type: ignore[attr-defined]
             f.write(orjson.dumps(asdict(record), f))  # type: ignore[arg-type]
 
-    def close(self) -> None:
+    def prepare(self) -> None:
+        if self.result_state_policy == ResultStatePolicy.DELETE_BEFORE_WRITE:
+            self.workspace.clear_results()
+
+    def close(self, successful: bool) -> None:
         pass
 
 
 class SQLiteStore(Store):
     filename = "results.db"
+    temp_filename = "results.db.tmp"
     table_name = "results"
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -107,7 +128,7 @@ class SQLiteStore(Store):
 
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
-            self.engine = db.create_engine(f"sqlite:///{self.db_file_path}")
+            self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
             self.conn = self.engine.connect()  # type: ignore[attr-defined]
             self.table = self._create_table()
         return self.conn, self.table
@@ -115,6 +136,10 @@ class SQLiteStore(Store):
     @property
     def db_file_path(self) -> str:
         return os.path.join(self.workspace.results_path, self.filename)
+
+    @property
+    def temp_db_file_path(self) -> str:
+        return os.path.join(self.workspace.results_path, self.temp_filename)
 
     def _create_table(self) -> db.Table:
         metadata = db.MetaData()
@@ -146,7 +171,15 @@ class SQLiteStore(Store):
 
             conn.execute(statement)
 
-    def close(self) -> None:
+    def prepare(self) -> None:
+        if os.path.exists(self.temp_db_file_path):
+            self.logger.warning("removing unexpected partial result state")
+            os.remove(self.temp_db_file_path)
+
+        if self.result_state_policy == ResultStatePolicy.KEEP and os.path.exists(self.db_file_path):
+            shutil.copy2(self.db_file_path, self.temp_db_file_path)
+
+    def close(self, successful: bool) -> None:
         if self.conn:
             self.conn.close()
             self.engine.dispose()
@@ -155,28 +188,35 @@ class SQLiteStore(Store):
             self.engine = None
             self.table = None
 
+        if successful:
+            os.rename(self.temp_db_file_path, self.db_file_path)
+        elif os.path.exists(self.temp_db_file_path):
+            os.remove(self.temp_db_file_path)
+
 
 class Writer:
-    written: list[str]
-
     def __init__(  # noqa
         self,
         workspace: Workspace,
+        result_state_policy: ResultStatePolicy,
         logger: logging.Logger | None = None,
         skip_duplicates: bool = False,
-        clear_results_before_writing: bool = False,
         store_strategy: StoreStrategy = StoreStrategy.FLAT_FILE,
     ):
         self.workspace = workspace
         self.skip_duplicates = skip_duplicates
-        self.clear_results_before_writing = clear_results_before_writing
 
         if not logger:
             logger = logging.getLogger("results-writer")
         self.logger = logger
 
         self.wrote = 0
-        self.store = store_strategy.store(workspace=workspace, skip_duplicates=skip_duplicates, logger=logger)
+        self.store = store_strategy.store(
+            workspace=workspace,
+            result_state_policy=result_state_policy,
+            skip_duplicates=skip_duplicates,
+            logger=logger,
+        )
 
     def __enter__(self) -> Writer:
         return self
@@ -187,21 +227,18 @@ class Writer:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        self.store.close()
+        self.store.close(successful=exc_val is None)
         self.logger.info(f"wrote {len(self)} entries")
 
     def __len__(self) -> int:
         return self.wrote
 
     def write(self, identifier: str, schema: Schema, payload: Any) -> None:
-        self._clear_existing_results()
+        if self.wrote == 0:
+            self.store.prepare()
 
         envelope = Envelope(identifier=identifier, schema=schema.url, item=payload)
 
         self.store.store(identifier, envelope)
 
         self.wrote += 1
-
-    def _clear_existing_results(self) -> None:
-        if len(self) == 0 and self.clear_results_before_writing:
-            self.workspace.clear_results()
