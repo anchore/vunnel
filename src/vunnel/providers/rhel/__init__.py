@@ -17,7 +17,7 @@ class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
-            existing_results=provider.ResultStatePolicy.KEEP,
+            existing_results=result.ResultStatePolicy.KEEP,
         ),
     )
     request_timeout: int = 125
