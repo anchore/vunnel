@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from . import result, workspace
+from .result import ResultStatePolicy
 
 
 class OnErrorAction(str, enum.Enum):
@@ -23,15 +24,6 @@ class OnErrorAction(str, enum.Enum):
 class InputStatePolicy(str, enum.Enum):
     KEEP = "keep"
     DELETE = "delete"
-
-    def __repr__(self) -> str:
-        return self.value
-
-
-class ResultStatePolicy(str, enum.Enum):
-    KEEP = "keep"
-    DELETE = "delete"
-    DELETE_BEFORE_WRITE = "delete-before-write"  # treat like "KEEP" in error cases
 
     def __repr__(self) -> str:
         return self.value
@@ -215,8 +207,8 @@ class Provider(abc.ABC):
     def results_writer(self, **kwargs: Any) -> result.Writer:
         return result.Writer(
             workspace=self.workspace,
+            result_state_policy=self.runtime_cfg.existing_results,
             logger=self.logger,
             store_strategy=self.runtime_cfg.result_store,
-            clear_results_before_writing=self.runtime_cfg.existing_results == ResultStatePolicy.DELETE_BEFORE_WRITE,
             **kwargs,
         )
