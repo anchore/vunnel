@@ -87,21 +87,18 @@ class Parser:
                 os.makedirs(self.secdb_dir_path, exist_ok=True)
 
             self.logger.info("downloading alpine secdb metadata from: {}".format(self.metadata_url))
-            r = requests.get(self.metadata_url, timeout=self.download_timeout)
-            if r.status_code == 200:
-                try:
-                    self.logger.debug("HTML parsing secdb landing page content for links")
-                    parser = SecdbLandingParser()
-                    parser.feed(r.text)
-                    links = parser.links
-                except:
-                    self.logger.warning("unable to html parse secdb landing page content for links")
+            r = self._download_metadata_url()
+            try:
+                self.logger.debug("HTML parsing secdb landing page content for links")
+                parser = SecdbLandingParser()
+                parser.feed(r.text)
+                links = parser.links
+            except:
+                self.logger.warning("unable to html parse secdb landing page content for links")
 
-                if not links:
-                    self.logger.debug("string parsing secdb landing page content for links")
-                    links = re.findall(self._link_finder_regex_, r.text)
-            else:
-                r.raise_for_status()
+            if not links:
+                self.logger.debug("string parsing secdb landing page content for links")
+                links = re.findall(self._link_finder_regex_, r.text)
         except Exception:
             self.logger.exception("error downloading or parsing alpine secdb metadata")
             raise
@@ -140,6 +137,12 @@ class Parser:
                     raise
                 except:
                     self.logger.exception("ignoring error processing secdb for {}".format(link))
+
+    @utils.retry_with_backoff()
+    def _download_metadata_url(self) -> requests.Response:
+        r = requests.get(self.metadata_url, timeout=self.download_timeout)
+        r.raise_for_status()
+        return r
 
     @utils.retry_with_backoff()
     def _download_url(self, url) -> requests.Response:
