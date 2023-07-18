@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 LESS_THAN_OR_EQUAL_TO = "less than or equal"
 
+IGNORED_PATCHABLE_VALUES = ["Not Applicable"]
 
 class MarinerXmlFile:
     def __init__(self, oval_file_path: str, logger: logging.Logger):
@@ -146,6 +147,8 @@ class MarinerXmlFile:
         for d in self.definitions:
             if d.metadata is None or d.metadata.severity is None:
                 self.logger.warning("skipping definition because severity could not be found")
+                continue
+            if d.metadata and d.metadata.patchable and d.metadata.patchable in IGNORED_PATCHABLE_VALUES:
                 continue
             if d.metadata.description:
                 pass
