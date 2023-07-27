@@ -1261,17 +1261,17 @@ dev = ["pre-commit", "pytest-asyncio", "tox"]
 
 [[package]]
 name = "pytest-picked"
-version = "0.4.6"
+version = "0.5.0"
 description = "Run the tests related to the changed files"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.7"
 files = [
-    {file = "pytest-picked-0.4.6.tar.gz", hash = "sha256:e1ec7aee5d2cd3a91f676fd0afd7620a26c0ccc21e604152bbc5137f430e6c00"},
-    {file = "pytest_picked-0.4.6-py3-none-any.whl", hash = "sha256:8bc744222a39ecc84cbcb87251fb69810ee576a80f84cc77fc47222818b3fa7c"},
+    {file = "pytest-picked-0.5.0.tar.gz", hash = "sha256:b39cd43b1f5e6efd2fc896f318e23c2c77effde8dd6efa58653a2940d8a384d9"},
+    {file = "pytest_picked-0.5.0-py3-none-any.whl", hash = "sha256:6d22771a857a2cd8691fc0802f3e1371fe4063fa1ecbd216d9584bbe089fcfd3"},
 ]
 
 [package.dependencies]
-pytest = ">=3.5.0"
+pytest = ">=3.7.0"
 
 [[package]]
 name = "pytest-sugar"
@@ -2070,4 +2070,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "e4443f93f14caa1a513e0fdc6be75d601e7d42e19c44b0bd9c0b1889b3bf684a"
+content-hash = "26f42c13f138b04e1bf7df0741a95735f0705d9fac1732d9094be69c61e3d10d"
