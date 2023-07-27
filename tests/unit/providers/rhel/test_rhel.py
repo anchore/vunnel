@@ -444,7 +444,7 @@ class TestParser:
 
     def test_parse_package_state(self, tmpdir, mock_cve):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        results = driver._parse_package_state(mock_cve.get("name"), mock_cve)
+        results = driver._parse_package_state([], mock_cve.get("name"), mock_cve)
 
         assert results and isinstance(results, list) and len(results) == 1
         fixed_in = results[0]
@@ -512,9 +512,10 @@ class TestParser:
 
 
 @pytest.mark.parametrize(
-    "affected, out_of_support, expected",
+    "fixed, affected, out_of_support, expected",
     [
         (
+            [],
             [
                 FixedIn(
                     module=None,
@@ -551,6 +552,7 @@ class TestParser:
             ],
         ),
         (
+            [],
             [
                 FixedIn(
                     module=None,
@@ -580,6 +582,7 @@ class TestParser:
             ],
         ),
         (
+            [],
             [
                 FixedIn(
                     module=None,
@@ -602,6 +605,7 @@ class TestParser:
         ),
         (
             [],
+            [],
             [
                 FixedIn(
                     module=None,
@@ -614,6 +618,7 @@ class TestParser:
             [],
         ),
         (
+            [],
             [
                 FixedIn(
                     module=None,
@@ -642,10 +647,54 @@ class TestParser:
                 ),
             ],
         ),
+        (
+            [
+                FixedIn(
+                    module=None,
+                    platform="8",
+                    package="foobar",
+                    advisory=None,
+                    version="1.2.3.4",
+                )
+            ],
+            [],
+            [
+                FixedIn(
+                    module=None,
+                    platform="6",
+                    package="foobar",
+                    advisory=None,
+                    version=None,
+                ),
+                FixedIn(
+                    module=None,
+                    platform="7",
+                    package="foobar",
+                    advisory=None,
+                    version=None,
+                ),
+            ],
+            [
+                FixedIn(
+                    module=None,
+                    platform="6",
+                    package="foobar",
+                    advisory=None,
+                    version=None,
+                ),
+                FixedIn(
+                    module=None,
+                    platform="7",
+                    package="foobar",
+                    advisory=None,
+                    version=None,
+                ),
+            ],
+        ),
     ],
 )
-def test_out_of_support(affected, out_of_support, expected):
-    assert Parser._merge_out_of_support_affected(affected, out_of_support) == expected
+def test_out_of_support(fixed, affected, out_of_support, expected):
+    assert Parser._merge_out_of_support_affected(fixed, affected, out_of_support) == expected
 
 
 @pytest.fixture
