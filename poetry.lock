@@ -1891,13 +1891,13 @@ files = [
 
 [[package]]
 name = "xsdata"
-version = "23.6"
+version = "23.7"
 description = "Python XML Binding"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "xsdata-23.6-py3-none-any.whl", hash = "sha256:5a8df1211642c79949ab4eab31dfc383993ef2c2eb9253613f131048b7bfd735"},
-    {file = "xsdata-23.6.tar.gz", hash = "sha256:695a38de23d270a772d803e260c17eef65d98354884a955e30f08075c0f574a8"},
+    {file = "xsdata-23.7-py3-none-any.whl", hash = "sha256:ccfc72098275dcb65c558cf7850d71e01af3e1c212483f4df4e5d273f6d0e1dc"},
+    {file = "xsdata-23.7.tar.gz", hash = "sha256:8d79e9078d8ff4f8c4830ecda1208613a4b5e283a41e4cd304561bf6fca96aac"},
 ]
 
 [package.dependencies]
