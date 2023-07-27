@@ -241,7 +241,7 @@ providers:
     request_timeout: 125
     runtime:
       existing_input: keep
-      existing_results: keep
+      existing_results: delete-before-write
       on_error:
         action: fail
         input: keep

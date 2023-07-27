@@ -401,7 +401,7 @@ class Parser:
 
         return name, version
 
-    def _parse_affected_release(self, cve_id, content):
+    def _parse_affected_release(self, cve_id: str, content) -> list[FixedIn]:
         fixed_ins = []
         ars = content.get("affected_release", [])
 
@@ -563,9 +563,9 @@ class Parser:
 
         return fixed_ins
 
-    def _parse_package_state(self, cve_id, content):
-        fixed_ins = []
-        out_of_support = []  # Track items out of support to be able to add them if others are affected
+    def _parse_package_state(self, cve_id: str, fixed: list[FixedIn], content) -> list[FixedIn]:
+        affected: list[FixedIn] = []
+        out_of_support: list[FixedIn] = []  # Track items out of support to be able to add them if others are affected
         pss = content.get("package_state", [])
 
         for item in pss:
@@ -595,7 +595,7 @@ class Parser:
 
                 state = item.get("fix_state", None)
                 if state in ["Affected", "Fix deferred"]:
-                    fixed_ins.append(
+                    affected.append(
                         FixedIn(
                             platform=platform,
                             package=package_name,
@@ -605,7 +605,7 @@ class Parser:
                         )
                     )
                 elif state in ["Will not fix"]:
-                    fixed_ins.append(
+                    affected.append(
                         FixedIn(
                             platform=platform,
                             package=package_name,
@@ -636,18 +636,24 @@ class Parser:
             except:
                 self.logger.exception(f"error parsing {cve_id} package state entity: {item}")
 
-        merged_fixed_ins = Parser._merge_out_of_support_affected(fixed_ins, out_of_support)
+        merged_fixed_ins = Parser._merge_out_of_support_affected(fixed, affected, out_of_support)
         return merged_fixed_ins
 
     @staticmethod
-    def _merge_out_of_support_affected(affected_fixed_ins: list[FixedIn], out_of_support: list[FixedIn]) -> list[FixedIn]:
-        if out_of_support and affected_fixed_ins:
-            merged = copy.deepcopy(affected_fixed_ins)
+    def _merge_out_of_support_affected(
+        fixed: list[FixedIn], affected: list[FixedIn], out_of_support: list[FixedIn]
+    ) -> list[FixedIn]:
+        if not out_of_support:
+            return affected
+
+        if affected or fixed:
+            merged = copy.deepcopy(affected)
+
             for oos in out_of_support:
-                for affected in affected_fixed_ins:
+                for r in affected + fixed:
                     # A newer release is impacted, so assume out-of-support version is as well
                     try:
-                        if oos.package == affected.package and int(oos.platform) < int(affected.platform):
+                        if oos.package == r.package and int(oos.platform) < int(r.platform):
                             merged.append(oos)
                             break
                     except ValueError:
@@ -655,7 +661,8 @@ class Parser:
                         merged.append(oos)
                         break
             return merged
-        return affected_fixed_ins
+
+        return affected
 
     def _parse_cve(self, cve_id, content):
         # logger.debug('Parsing {}'.format(cve_id))
@@ -663,7 +670,7 @@ class Parser:
         results = []
         platform_artifacts = {}
         fins = self._parse_affected_release(cve_id, content)
-        nfins = self._parse_package_state(cve_id, content)
+        nfins = self._parse_package_state(cve_id, fins, content)
         platform_package_module_tuples = set()
 
         if fins or nfins:
