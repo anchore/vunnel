@@ -636,36 +636,7 @@ class Parser:
             except:
                 self.logger.exception(f"error parsing {cve_id} package state entity: {item}")
 
-        merged_fixed_ins = Parser._merge_out_of_support_affected(fixed, affected, out_of_support)
-        return merged_fixed_ins
-
-    @staticmethod
-    def _merge_out_of_support_affected(
-        fixed: list[FixedIn], affected: list[FixedIn], out_of_support: list[FixedIn]
-    ) -> list[FixedIn]:
-        if not out_of_support:
-            return affected
-
-        if affected or fixed:
-            merged = copy.deepcopy(affected)
-
-            for oos in out_of_support:
-                for r in affected + fixed:
-                    # A newer release is impacted, so assume out-of-support version is as well
-                    try:
-                        if oos.package == r.package and int(oos.platform) < int(r.platform):
-                            merged.append(oos)
-                            break
-                    except ValueError:
-                        # Be conservative if we cannot tell if it is <
-                        merged.append(oos)
-                        break
-            return merged
-
-        for oos in out_of_support:
-            affected.append(oos)
-
-        return affected
+        return affected + out_of_support
 
     def _parse_cve(self, cve_id, content):
         # logger.debug('Parsing {}'.format(cve_id))
