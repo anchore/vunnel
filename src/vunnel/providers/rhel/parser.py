@@ -662,6 +662,9 @@ class Parser:
                         break
             return merged
 
+        for oos in out_of_support:
+            affected.append(oos)
+
         return affected
 
     def _parse_cve(self, cve_id, content):

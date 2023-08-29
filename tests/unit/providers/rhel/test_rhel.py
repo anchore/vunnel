@@ -615,7 +615,15 @@ class TestParser:
                     version=None,
                 )
             ],
-            [],
+            [
+                FixedIn(
+                    module=None,
+                    platform="7",
+                    package="foobar",
+                    advisory=None,
+                    version=None,
+                )
+            ],
         ),
         (
             [],
