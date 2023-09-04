@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -46,7 +46,7 @@ jobs:
       # package write permission is needed for publishing commit images
       packages: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
