@@ -17,7 +17,7 @@ PUBLISH_CMD = poetry publish --build -n
 # Tool versions #################################
 CHRONICLE_VERSION = v0.6.0
 GLOW_VERSION = v1.4.1
-CRANE_VERSION = v0.12.1
+CRANE_VERSION = v0.16.1
 
 # Formatting variables #################################
 BOLD := $(shell tput -T linux bold)
