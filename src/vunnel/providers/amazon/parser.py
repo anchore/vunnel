@@ -154,8 +154,11 @@ class Parser:
                 # split the package name and version of the fixed in packages and construct a set
                 fixed_in = {self.get_package_name_version(pkg_name) for pkg_name in parser.fixes}
 
+                # concat the descriptions paragraph
+                description = ''.join(parser.issue_overview_text)
+
                 # construct a vulnerability object and yield it
-                yield map_to_vulnerability(version, alas, fixed_in)
+                yield map_to_vulnerability(version, alas, fixed_in, description)
 
 
 class JsonifierMixin:
@@ -211,6 +214,9 @@ class PackagesHTMLParser(HTMLParser):
 
     def __init__(self):
         self.fixes = []
+        self.issue_overview_text = []
+        self.issue_overview_tag = None
+        self.issue_overview_hit = False
         self.fix_tag = None
         self.fix_hit = False
         self.arch_hit = False
@@ -221,6 +227,9 @@ class PackagesHTMLParser(HTMLParser):
             # print('Encountered element with ID new_packages, start tag: {}'.format(tag))
             self.fix_hit = True
             self.fix_tag = tag
+        if tag == 'div' and ('id', 'issue_overview') in attrs:
+            self.issue_overview_hit = True
+            self.issue_overview_tag = tag
         # else:
         #     print('Ignoring start tag: {}'.format(tag))
 
@@ -229,6 +238,8 @@ class PackagesHTMLParser(HTMLParser):
             # print('Encountered end tag for element with ID new_packages')
             self.fix_hit = False
             self.arch_hit = False
+        if self.issue_overview_hit and self.issue_overview_tag == tag:
+            self.issue_overview_hit = False
         # else:
         #     print('Ignoring end tag: {}'.format(tag))
 
@@ -247,18 +258,21 @@ class PackagesHTMLParser(HTMLParser):
                 # print('Found relevant package: {}'.format(data))
                 self.fixes.append(data)
 
+        if self.issue_overview_hit and data:
+            if not data.__contains__("Issue Overview:"):
+                self.issue_overview_text.append(data)
         # else:
         #     print('Ignoring data: {}'.format(data.strip()))
 
 
-def map_to_vulnerability(version, alas, fixed_in):
+def map_to_vulnerability(version, alas, fixed_in, description):
     if not alas:
         raise ValueError("Invalid reference to AlasSummary")
 
     v = Vulnerability()
     v.Name = alas.id
     v.NamespaceName = namespace + ":" + version
-    v.Description = ""
+    v.Description = description
     v.Severity = severity_map.get(alas.sev, "Unknown")
     v.Metadata = {
         "CVE": [],
