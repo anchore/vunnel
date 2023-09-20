@@ -55,6 +55,7 @@ class TestParser:
 
         assert p.fixes is not None
         assert new_packages == p.fixes
+        assert p.issue_overview_text is not None
         # TODO: beef up these assertions (should cover the full data shape)
 
     def test_get_pkg_name_version(self):
