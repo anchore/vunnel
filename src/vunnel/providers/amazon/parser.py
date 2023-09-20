@@ -155,7 +155,7 @@ class Parser:
                 fixed_in = {self.get_package_name_version(pkg_name) for pkg_name in parser.fixes}
 
                 # concat the descriptions paragraph
-                description = ''.join(parser.issue_overview_text)
+                description = "".join(parser.issue_overview_text)
 
                 # construct a vulnerability object and yield it
                 yield map_to_vulnerability(version, alas, fixed_in, description)
@@ -227,7 +227,7 @@ class PackagesHTMLParser(HTMLParser):
             # print('Encountered element with ID new_packages, start tag: {}'.format(tag))
             self.fix_hit = True
             self.fix_tag = tag
-        if tag == 'div' and ('id', 'issue_overview') in attrs:
+        if tag == "div" and ("id", "issue_overview") in attrs:
             self.issue_overview_hit = True
             self.issue_overview_tag = tag
         # else:
@@ -258,9 +258,8 @@ class PackagesHTMLParser(HTMLParser):
                 # print('Found relevant package: {}'.format(data))
                 self.fixes.append(data)
 
-        if self.issue_overview_hit and data:
-            if not data.__contains__("Issue Overview:"):
-                self.issue_overview_text.append(data)
+        if self.issue_overview_hit and data and not data.__contains__("Issue Overview:"):
+            self.issue_overview_text.append(data)
         # else:
         #     print('Ignoring data: {}'.format(data.strip()))
 
