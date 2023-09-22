@@ -289,18 +289,14 @@ class Parser:
 
         return vuln_records
 
-    def get_vuln_records(self, ns_cve_dsalist, adv_mets, data):
+    def get_vuln_records(self, ns_cve_dsalist, adv_mets, data):  # noqa: PLR0912, C901
         vuln_records = {}
-        # TODO: refactor such that each loop iteration sets a key in vuln records
         for pkg in data:
-            for vid in data[pkg]:
-                # skip non CVE vids
-                if not re.match("^CVE.*", vid):
-                    continue
-
+            # only process CVEs
+            for vid in filter(lambda x: re.match("^CVE.*", x), data[pkg]):
                 # gather NVD data for this CVE. Pulling this logic out of the for loop as NVD data remains the same
                 # regardless of the debian release.
-                nvd_severity = None
+                # nvd_severity = None
                 # if session:
                 #     try:
                 #         nvd_severity = nvd.get_severity(vid, session=session)
@@ -341,7 +337,7 @@ class Parser:
 
                             # set severity
                             # from https://anonscm.debian.org/viewvc/secure-testing/bin/tracker_service.py
-                            sev = self.get_severity(nvd_severity, distro_record)
+                            sev = self.get_severity(distro_record)
 
                             if (
                                 sev
@@ -356,21 +352,19 @@ class Parser:
                             if not skip_fixedin:
                                 # collect metrics for vendor advisory
                                 met_ns, met_sev = self.collect_vuln_metrics(adv_mets, vuln_record)
+                                sev_dict = adv_mets[met_ns][met_sev]
 
                                 # find DSAs associated with the CVE and package in the namespace
                                 matched_dsas = [dsa for dsa in ns_cve_dsalist.get(rel, {}).get(vid, []) if dsa.pkg == pkg]
                                 sev_count_key = "notfixed" if fixed_el["Version"] == "None" else "fixed"
 
                                 # add vendor advisory information to the fixed in record
-                                vendor_advisory = self.add_advisory_info(
-                                    adv_mets,
+                                fixed_el["VendorAdvisory"] = self.add_advisory_info(
+                                    sev_dict,
                                     distro_record,
-                                    met_ns,
-                                    met_sev,
                                     matched_dsas,
                                     sev_count_key,
                                 )
-                                fixed_el["VendorAdvisory"] = vendor_advisory
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
@@ -389,7 +383,7 @@ class Parser:
         self.logger.debug(f"metrics for advisory information: {json.dumps(adv_mets)}")
         return vuln_records
 
-    def add_advisory_info(self, adv_mets, distro_record, met_ns, met_sev, matched_dsas, sev_count_key):
+    def add_advisory_info(self, sev_dict, distro_record, matched_dsas, sev_count_key):
         vendor_advisory = None
         if matched_dsas:
             vendor_advisory = {
@@ -397,16 +391,16 @@ class Parser:
                 "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
             }
             # all_matched_dsas |= set([x.dsa for x in matched_dsas])
-            adv_mets[met_ns][met_sev]["dsa"][sev_count_key] += 1
+            sev_dict["dsa"][sev_count_key] += 1
         elif "nodsa" in distro_record:
             vendor_advisory = {"NoAdvisory": True}
-            adv_mets[met_ns][met_sev]["nodsa"][sev_count_key] += 1
+            sev_dict["nodsa"][sev_count_key] += 1
         else:
             vendor_advisory = {
                 "NoAdvisory": False,
                 "AdvisorySummary": [],
             }
-            adv_mets[met_ns][met_sev]["neither"][sev_count_key] += 1
+            sev_dict["neither"][sev_count_key] += 1
         return vendor_advisory
 
     def collect_vuln_metrics(self, adv_mets, vuln_record):
