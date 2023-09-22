@@ -5,6 +5,7 @@ import os
 import re
 from collections import namedtuple
 from html.parser import HTMLParser
+from typing import ClassVar
 
 import defusedxml.ElementTree as ET
 import requests
@@ -206,7 +207,7 @@ class FixedIn(JsonifierMixin):
 
 class PackagesHTMLParser(HTMLParser):
     _new_packages_tuple_ = ("id", "new_packages")
-    _arch_list_ = ["x86_64:", "noarch:", "src:"]
+    _arch_list_: ClassVar[list[str]] = ["x86_64:", "noarch:", "src:"]
 
     def __init__(self):
         self.fixes = []

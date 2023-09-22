@@ -281,7 +281,6 @@ class Parser:
         if ns_cve_dsalist is None:
             ns_cve_dsalist = {}
 
-
         vuln_records = self.get_vuln_records(ns_cve_dsalist, adv_mets, data)
 
         adv_mets.clear()
@@ -363,7 +362,14 @@ class Parser:
                                 sev_count_key = "notfixed" if fixed_el["Version"] == "None" else "fixed"
 
                                 # add vendor advisory information to the fixed in record
-                                vendor_advisory = self.add_advisory_info(adv_mets, distro_record, met_ns, met_sev, matched_dsas, sev_count_key)
+                                vendor_advisory = self.add_advisory_info(
+                                    adv_mets,
+                                    distro_record,
+                                    met_ns,
+                                    met_sev,
+                                    matched_dsas,
+                                    sev_count_key,
+                                )
                                 fixed_el["VendorAdvisory"] = vendor_advisory
 
                                 # append fixed in record to vulnerability
@@ -387,19 +393,19 @@ class Parser:
         vendor_advisory = None
         if matched_dsas:
             vendor_advisory = {
-                                            "NoAdvisory": False,
-                                            "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
-                                        }
-                                        # all_matched_dsas |= set([x.dsa for x in matched_dsas])
+                "NoAdvisory": False,
+                "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
+            }
+            # all_matched_dsas |= set([x.dsa for x in matched_dsas])
             adv_mets[met_ns][met_sev]["dsa"][sev_count_key] += 1
         elif "nodsa" in distro_record:
             vendor_advisory = {"NoAdvisory": True}
             adv_mets[met_ns][met_sev]["nodsa"][sev_count_key] += 1
         else:
             vendor_advisory = {
-                                        "NoAdvisory": False,
-                                        "AdvisorySummary": [],
-                                    }
+                "NoAdvisory": False,
+                "AdvisorySummary": [],
+            }
             adv_mets[met_ns][met_sev]["neither"][sev_count_key] += 1
         return vendor_advisory
 
@@ -409,42 +415,42 @@ class Parser:
 
         if met_ns not in adv_mets:
             adv_mets[met_ns] = {
-                                        met_sev: {
-                                            "dsa": {"fixed": 0, "notfixed": 0},
-                                            "nodsa": {"fixed": 0, "notfixed": 0},
-                                            "neither": {"fixed": 0, "notfixed": 0},
-                                        },
-                                    }
+                met_sev: {
+                    "dsa": {"fixed": 0, "notfixed": 0},
+                    "nodsa": {"fixed": 0, "notfixed": 0},
+                    "neither": {"fixed": 0, "notfixed": 0},
+                },
+            }
 
         if met_sev not in adv_mets[met_ns]:
             adv_mets[met_ns][met_sev] = {
-                                        "dsa": {"fixed": 0, "notfixed": 0},
-                                        "nodsa": {"fixed": 0, "notfixed": 0},
-                                        "neither": {"fixed": 0, "notfixed": 0},
-                                    }
+                "dsa": {"fixed": 0, "notfixed": 0},
+                "nodsa": {"fixed": 0, "notfixed": 0},
+                "neither": {"fixed": 0, "notfixed": 0},
+            }
 
-        return met_ns,met_sev
+        return met_ns, met_sev
 
     def add_fixedin_info(self, pkg, distro_record, relno):
         skip_fixedin = False
         fixed_el = {
-                                "Name": pkg,
-                                "NamespaceName": "debian:" + str(relno),
-                                "VersionFormat": "dpkg",
-                            }
+            "Name": pkg,
+            "NamespaceName": "debian:" + str(relno),
+            "VersionFormat": "dpkg",
+        }
 
         if "fixed_version" in distro_record:
             fixed_el["Version"] = distro_record["fixed_version"]
             if distro_record["fixed_version"] == "0":
-                                    # version == 0 should mean that the
-                                    # package was determined to not be
-                                    # vulnerable in the distro namespace
-                                    # (from reviewing
-                                    # https://security-tracker.debian.org/tracker/)
+                # version == 0 should mean that the
+                # package was determined to not be
+                # vulnerable in the distro namespace
+                # (from reviewing
+                # https://security-tracker.debian.org/tracker/)
                 skip_fixedin = True
         else:
             fixed_el["Version"] = "None"
-        return skip_fixedin,fixed_el
+        return skip_fixedin, fixed_el
 
     def populate_static_information(self, vid, vulnerability_data, relno, vuln_record):
         vuln_record["Vulnerability"]["Description"] = vulnerability_data.get("description", "")
@@ -463,9 +469,9 @@ class Parser:
             elif distro_record["urgency"] in ["high", "high**"]:
                 sev = "High"
             elif distro_record["urgency"] in [
-                                    "unimportant",
-                                    "end-of-life",
-                                ]:
+                "unimportant",
+                "end-of-life",
+            ]:
                 sev = "Negligible"
             elif nvd_severity:  # no match to urgency found
                 sev = nvd_severity  # fallback to nvd severity
