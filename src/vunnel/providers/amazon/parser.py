@@ -5,6 +5,7 @@ import os
 import re
 from collections import namedtuple
 from html.parser import HTMLParser
+from typing import ClassVar
 
 import defusedxml.ElementTree as ET
 import requests
@@ -96,8 +97,7 @@ class Parser:
         if skip_if_exists and os.path.exists(alas_file):  # read alas from disk if its available
             self.logger.debug(f"loading existing ALAS from {alas_file}")
             with open(alas_file, encoding="utf-8") as fp:
-                content = fp.read()
-            return content
+                return fp.read()
 
         try:
             self.logger.debug(f"downloading ALAS from {alas_url}")
@@ -210,7 +210,7 @@ class FixedIn(JsonifierMixin):
 
 class PackagesHTMLParser(HTMLParser):
     _new_packages_tuple_ = ("id", "new_packages")
-    _arch_list_ = ["x86_64:", "noarch:", "src:"]
+    _arch_list_: ClassVar[list[str]] = ["x86_64:", "noarch:", "src:"]
 
     def __init__(self):
         self.fixes = []
