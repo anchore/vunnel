@@ -32,7 +32,7 @@ def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callabl
                         logger.exception(f"failed after {retries} retries")
                         raise
 
-                sleep = backoff_in_seconds * 2**attempt + random.uniform(0, 1)  # nosec
+                sleep = backoff_in_seconds * 2**attempt + random.uniform(0, 1)  # nosec  # noqa: S311
                 logger.warning(f"{f} failed. Retrying in {int(sleep)} seconds (attempt {attempt+1} of {retries})")
                 time.sleep(sleep)
                 attempt += 1

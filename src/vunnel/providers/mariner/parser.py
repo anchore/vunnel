@@ -31,7 +31,7 @@ class MarinerXmlFile:
             fail_on_unknown_properties=False,
         )
         xml_parser = XmlParser(config=parser_config)
-        root = etree.parse(oval_file_path)
+        root = etree.parse(oval_file_path)  # noqa: S320 # not parsing untrusted input
         nsmap = etree.XPath("/*")(root)[0].nsmap
         default = nsmap[None]
         nsmap["default"] = default
