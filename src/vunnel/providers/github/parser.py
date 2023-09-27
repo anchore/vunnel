@@ -36,8 +36,10 @@ ecosystem_map = {
     "NPM": "npm",
     "NUGET": "nuget",
     "PIP": "python",
+    "PUB": "dart",
     "RUBYGEMS": "gem",
     "RUST": "rust",
+    "SWIFT": "swift",
 }
 
 
