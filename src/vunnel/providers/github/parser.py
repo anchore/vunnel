@@ -30,14 +30,17 @@ from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
 ecosystem_map = {
+    "ERLANG": "erlang",
     "COMPOSER": "composer",
     "GO": "go",
     "MAVEN": "java",
     "NPM": "npm",
     "NUGET": "nuget",
     "PIP": "python",
+    "PUB": "dart",
     "RUBYGEMS": "gem",
     "RUST": "rust",
+    "SWIFT": "swift",
 }
 
 
