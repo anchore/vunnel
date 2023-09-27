@@ -30,6 +30,14 @@ make validate
 A pass/fail result is shown in the output with reasons for the failure being
 listed explicitly.
 
+### But I don't want to run all of the providers...
+
+While developing it may be useful to only run one provider for rapid troubleshooting. You can do this with:
+
+```
+make capture provider=github
+make validate
+```
 
 ## What is the quality gate criteria
 
