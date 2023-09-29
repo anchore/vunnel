@@ -10,6 +10,7 @@ import yardstick
 from tabulate import tabulate
 from yardstick import artifact, comparison, store, utils
 from yardstick.cli import config, display
+from configure import Config, read_config_state
 
 # see the .yardstick.yaml configuration for details
 default_result_set = "pr_vs_latest_via_sbom"
@@ -129,7 +130,24 @@ def get_namespaces_from_db() -> list[str]:
     conn = sqlite3.connect("build/vulnerability.db")
     c = conn.cursor()
     c.execute("SELECT DISTINCT namespace FROM vulnerability")
-    return [row[0] for row in c.fetchall()]
+    actual_namespaces = [row[0] for row in c.fetchall()]
+
+    # validate that the namespaces we got are 100% what we expect. If there are any missing or extra namespaces we should fail
+    config = Config.load()
+    state = read_config_state()
+    providers = state.cached_providers + state.uncached_providers
+
+    expected_namespaces = []
+    for test in config.tests:
+        if test.provider in providers:
+            expected_namespaces.extend(test.expected_namespaces)
+
+    extra = set(actual_namespaces) - set(expected_namespaces)
+    missing = set(expected_namespaces) - set(actual_namespaces)
+    if extra or missing:
+        raise RuntimeError(f"mismatched namespaces:\nextra:   {extra}\nmissing: {missing}")
+
+    return actual_namespaces
 
 
 def validate(
