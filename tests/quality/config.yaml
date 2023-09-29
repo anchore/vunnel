@@ -73,6 +73,7 @@ tests:
     use_cache: true
     images:
       - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
+      - docker.io/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
 
   - provider: github
     additional_providers:
