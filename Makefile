@@ -15,7 +15,7 @@ GLOW = $(TEMP_DIR)/glow
 PUBLISH_CMD = poetry publish --build -n
 
 # Tool versions #################################
-CHRONICLE_VERSION = v0.6.0
+CHRONICLE_VERSION = v0.8.0
 GLOW_VERSION = v1.4.1
 CRANE_VERSION = v0.16.1
 
