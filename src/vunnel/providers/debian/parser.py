@@ -18,7 +18,7 @@ DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
 
 
 # Only releases presenting this mapping will be output by the driver, maintain it with new releases.
-# Can also be extended via configuration
+# Can also be extended via configuration.
 debian_distro_map = {
     "trixie": "13",
     "bookworm": "12",
@@ -129,7 +129,7 @@ class Parser:
         return ns_cve_dsalist
 
     # noqa
-    def _parse_dsa_record(self, dsa_lines):  # noqa: C901
+    def _parse_dsa_record(self, dsa_lines):
         """
 
         :param dsa_lines:
@@ -281,22 +281,17 @@ class Parser:
         if ns_cve_dsalist is None:
             ns_cve_dsalist = {}
 
-        vuln_records = self.get_vuln_records(ns_cve_dsalist, adv_mets, data)
-
-        adv_mets.clear()
-        # all_dsas.clear()
-        # all_matched_dsas.clear()
-
-        return vuln_records
-
-    def get_vuln_records(self, ns_cve_dsalist, adv_mets, data):  # noqa: PLR0912, C901
         vuln_records = {}
+
         for pkg in data:
-            # only process CVEs
-            for vid in filter(lambda x: re.match("^CVE.*", x), data[pkg]):
+            for vid in data[pkg]:
+                # skip non CVE vids
+                if not re.match("^CVE.*", vid):
+                    continue
+
                 # gather NVD data for this CVE. Pulling this logic out of the for loop as NVD data remains the same
                 # regardless of the debian release.
-                # nvd_severity = None
+                nvd_severity = None
                 # if session:
                 #     try:
                 #         nvd_severity = nvd.get_severity(vid, session=session)
@@ -331,13 +326,37 @@ class Parser:
                                 vuln_record = vuln_records[relno][vid]
 
                                 # populate the static information about the new vuln record
-                                self.populate_static_information(vid, vulnerability_data, relno, vuln_record)
+                                vuln_record["Vulnerability"]["Description"] = vulnerability_data.get("description", "")
+                                vuln_record["Vulnerability"]["Name"] = str(vid)
+                                vuln_record["Vulnerability"]["NamespaceName"] = "debian:" + str(relno)
+                                vuln_record["Vulnerability"]["Link"] = "https://security-tracker.debian.org/tracker/" + str(vid)
+                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
                             else:
                                 vuln_record = vuln_records[relno][vid]
 
                             # set severity
                             # from https://anonscm.debian.org/viewvc/secure-testing/bin/tracker_service.py
-                            sev = self.get_severity(distro_record)
+                            sev = None
+                            if "urgency" in distro_record:
+                                if distro_record["urgency"] in ["low", "low**"]:
+                                    sev = "Low"
+                                elif distro_record["urgency"] in ["medium", "medium**"]:
+                                    sev = "Medium"
+                                elif distro_record["urgency"] in ["high", "high**"]:
+                                    sev = "High"
+                                elif distro_record["urgency"] in [
+                                    "unimportant",
+                                    "end-of-life",
+                                ]:
+                                    sev = "Negligible"
+                                elif nvd_severity:  # no match to urgency found
+                                    sev = nvd_severity  # fallback to nvd severity
+                                else:
+                                    sev = "Unknown"
+                            elif nvd_severity:  # urgency element is not present
+                                sev = nvd_severity  # fallback to nvd severity
+                            else:
+                                sev = "Unknown"
 
                             if (
                                 sev
@@ -347,24 +366,72 @@ class Parser:
                                 vuln_record["Vulnerability"]["Severity"] = sev
 
                             # add fixedIn
-                            skip_fixedin, fixed_el = self.add_fixedin_info(pkg, distro_record, relno)
+                            skip_fixedin = False
+                            fixed_el = {
+                                "Name": pkg,
+                                "NamespaceName": "debian:" + str(relno),
+                                "VersionFormat": "dpkg",
+                            }
+
+                            if "fixed_version" in distro_record:
+                                fixed_el["Version"] = distro_record["fixed_version"]
+                                if distro_record["fixed_version"] == "0":
+                                    # version == 0 should mean that the
+                                    # package was determined to not be
+                                    # vulnerable in the distro namespace
+                                    # (from reviewing
+                                    # https://security-tracker.debian.org/tracker/)
+                                    skip_fixedin = True
+                            else:
+                                fixed_el["Version"] = "None"
 
                             if not skip_fixedin:
                                 # collect metrics for vendor advisory
-                                met_ns, met_sev = self.collect_vuln_metrics(adv_mets, vuln_record)
-                                sev_dict = adv_mets[met_ns][met_sev]
+                                met_ns = vuln_record["Vulnerability"]["NamespaceName"]
+                                met_sev = vuln_record["Vulnerability"]["Severity"]
+
+                                if met_ns not in adv_mets:
+                                    adv_mets[met_ns] = {
+                                        met_sev: {
+                                            "dsa": {"fixed": 0, "notfixed": 0},
+                                            "nodsa": {"fixed": 0, "notfixed": 0},
+                                            "neither": {"fixed": 0, "notfixed": 0},
+                                        },
+                                    }
+
+                                if met_sev not in adv_mets[met_ns]:
+                                    adv_mets[met_ns][met_sev] = {
+                                        "dsa": {"fixed": 0, "notfixed": 0},
+                                        "nodsa": {"fixed": 0, "notfixed": 0},
+                                        "neither": {"fixed": 0, "notfixed": 0},
+                                    }
 
                                 # find DSAs associated with the CVE and package in the namespace
                                 matched_dsas = [dsa for dsa in ns_cve_dsalist.get(rel, {}).get(vid, []) if dsa.pkg == pkg]
-                                sev_count_key = "notfixed" if fixed_el["Version"] == "None" else "fixed"
 
                                 # add vendor advisory information to the fixed in record
-                                fixed_el["VendorAdvisory"] = self.add_advisory_info(
-                                    sev_dict,
-                                    distro_record,
-                                    matched_dsas,
-                                    sev_count_key,
-                                )
+                                if matched_dsas:
+                                    fixed_el["VendorAdvisory"] = {
+                                        "NoAdvisory": False,
+                                        "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
+                                    }
+                                    # all_matched_dsas |= set([x.dsa for x in matched_dsas])
+                                    adv_mets[met_ns][met_sev]["dsa"][
+                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
+                                    ] += 1
+                                elif "nodsa" in distro_record:
+                                    fixed_el["VendorAdvisory"] = {"NoAdvisory": True}
+                                    adv_mets[met_ns][met_sev]["nodsa"][
+                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
+                                    ] += 1
+                                else:
+                                    fixed_el["VendorAdvisory"] = {
+                                        "NoAdvisory": False,
+                                        "AdvisorySummary": [],
+                                    }
+                                    adv_mets[met_ns][met_sev]["neither"][
+                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
+                                    ] += 1
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
@@ -381,101 +448,12 @@ class Parser:
                         self.logger.exception(f"ignoring error parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
 
         self.logger.debug(f"metrics for advisory information: {json.dumps(adv_mets)}")
+
+        adv_mets.clear()
+        # all_dsas.clear()
+        # all_matched_dsas.clear()
+
         return vuln_records
-
-    def add_advisory_info(self, sev_dict, distro_record, matched_dsas, sev_count_key):
-        vendor_advisory = None
-        if matched_dsas:
-            vendor_advisory = {
-                "NoAdvisory": False,
-                "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
-            }
-            # all_matched_dsas |= set([x.dsa for x in matched_dsas])
-            sev_dict["dsa"][sev_count_key] += 1
-        elif "nodsa" in distro_record:
-            vendor_advisory = {"NoAdvisory": True}
-            sev_dict["nodsa"][sev_count_key] += 1
-        else:
-            vendor_advisory = {
-                "NoAdvisory": False,
-                "AdvisorySummary": [],
-            }
-            sev_dict["neither"][sev_count_key] += 1
-        return vendor_advisory
-
-    def collect_vuln_metrics(self, adv_mets, vuln_record):
-        met_ns = vuln_record["Vulnerability"]["NamespaceName"]
-        met_sev = vuln_record["Vulnerability"]["Severity"]
-
-        if met_ns not in adv_mets:
-            adv_mets[met_ns] = {
-                met_sev: {
-                    "dsa": {"fixed": 0, "notfixed": 0},
-                    "nodsa": {"fixed": 0, "notfixed": 0},
-                    "neither": {"fixed": 0, "notfixed": 0},
-                },
-            }
-
-        if met_sev not in adv_mets[met_ns]:
-            adv_mets[met_ns][met_sev] = {
-                "dsa": {"fixed": 0, "notfixed": 0},
-                "nodsa": {"fixed": 0, "notfixed": 0},
-                "neither": {"fixed": 0, "notfixed": 0},
-            }
-
-        return met_ns, met_sev
-
-    def add_fixedin_info(self, pkg, distro_record, relno):
-        skip_fixedin = False
-        fixed_el = {
-            "Name": pkg,
-            "NamespaceName": "debian:" + str(relno),
-            "VersionFormat": "dpkg",
-        }
-
-        if "fixed_version" in distro_record:
-            fixed_el["Version"] = distro_record["fixed_version"]
-            if distro_record["fixed_version"] == "0":
-                # version == 0 should mean that the
-                # package was determined to not be
-                # vulnerable in the distro namespace
-                # (from reviewing
-                # https://security-tracker.debian.org/tracker/)
-                skip_fixedin = True
-        else:
-            fixed_el["Version"] = "None"
-        return skip_fixedin, fixed_el
-
-    def populate_static_information(self, vid, vulnerability_data, relno, vuln_record):
-        vuln_record["Vulnerability"]["Description"] = vulnerability_data.get("description", "")
-        vuln_record["Vulnerability"]["Name"] = str(vid)
-        vuln_record["Vulnerability"]["NamespaceName"] = "debian:" + str(relno)
-        vuln_record["Vulnerability"]["Link"] = "https://security-tracker.debian.org/tracker/" + str(vid)
-        vuln_record["Vulnerability"]["Severity"] = "Unknown"
-
-    def get_severity(self, nvd_severity, distro_record):
-        sev = None
-        if "urgency" in distro_record:
-            if distro_record["urgency"] in ["low", "low**"]:
-                sev = "Low"
-            elif distro_record["urgency"] in ["medium", "medium**"]:
-                sev = "Medium"
-            elif distro_record["urgency"] in ["high", "high**"]:
-                sev = "High"
-            elif distro_record["urgency"] in [
-                "unimportant",
-                "end-of-life",
-            ]:
-                sev = "Negligible"
-            elif nvd_severity:  # no match to urgency found
-                sev = nvd_severity  # fallback to nvd severity
-            else:
-                sev = "Unknown"
-        elif nvd_severity:  # urgency element is not present
-            sev = nvd_severity  # fallback to nvd severity
-        else:
-            sev = "Unknown"
-        return sev
 
     def _get_legacy_records(self):
         legacy_records = {}

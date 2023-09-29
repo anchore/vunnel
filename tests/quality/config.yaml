@@ -50,11 +50,34 @@ tests:
     images:
       - docker.io/alpine:3.2@sha256:ddac200f3ebc9902fb8cfcd599f41feb2151f1118929da21bcef57dc276975f9
       - docker.io/anchore/test_images:alpine-package-cpe-vuln-match-bd0aaef@sha256:0825acea611c7c5cc792bc7cc20de44d7413fd287dc5afc4aab9c1891d037b4f
+    expected-namespaces:
+      - alpine:distro:alpine:3.2
+      - alpine:distro:alpine:3.3
+      - alpine:distro:alpine:3.4
+      - alpine:distro:alpine:3.5
+      - alpine:distro:alpine:3.6
+      - alpine:distro:alpine:3.7
+      - alpine:distro:alpine:3.8
+      - alpine:distro:alpine:3.9
+      - alpine:distro:alpine:3.10
+      - alpine:distro:alpine:3.11
+      - alpine:distro:alpine:3.12
+      - alpine:distro:alpine:3.13
+      - alpine:distro:alpine:3.14
+      - alpine:distro:alpine:3.15
+      - alpine:distro:alpine:3.16
+      - alpine:distro:alpine:3.17
+      - alpine:distro:alpine:3.18
+      - alpine:distro:alpine:edge
 
   - provider: amazon
     images:
       - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
       - docker.io/anchore/test_images:vulnerabilities-amazonlinux-2-5c26ce9@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
+    expected-namespaces:
+      - amazon:distro:amazonlinux:2
+      - amazon:distro:amazonlinux:2022
+      - amazon:distro:amazonlinux:2023
 
   - provider: chainguard
     additional_providers:
@@ -65,6 +88,8 @@ tests:
       - src/vunnel/providers/wolfi/**
     images:
       - ghcr.io/chainguard-images/scanner-test:latest@sha256:59bddc101fba0c45d5c093575c6bc5bfee7f0e46ff127e6bb4e5acaaafb525f9
+    expected-namespaces:
+      - chainguard:distro:chainguard:rolling
 
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
@@ -73,6 +98,16 @@ tests:
     use_cache: true
     images:
       - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
+      - docker.io/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
+    expected-namespaces:
+      - debian:distro:debian:7
+      - debian:distro:debian:8
+      - debian:distro:debian:9
+      - debian:distro:debian:10
+      - debian:distro:debian:11
+      - debian:distro:debian:12
+      - debian:distro:debian:13
+      - debian:distro:debian:unstable
 
   - provider: github
     additional_providers:
@@ -97,19 +132,41 @@ tests:
       - docker.io/anchore/test_images:grype-quality-java-d89207b@sha256:b3534fc2e37943136d5b54e3a58b55d4ccd4363d926cf7aa5bf55a524cf8275b
       - docker.io/anchore/test_images:grype-quality-golang-d89207b@sha256:7536ee345532f674ec9e448e3768db4e546c48220ba2b6ec9bc9cfbfb3b7b74a
       - docker.io/anchore/test_images:grype-quality-ruby-d89207b@sha256:1a5a5f870924e88a6f0f2b8089cf276ef0a79b5244a052cdfe4a47bb9e5a2c10
+    expected-namespaces:
+      - github:language:dart
+      - github:language:dotnet
+      - github:language:go
+      - github:language:java
+      - github:language:javascript
+      - github:language:php
+      - github:language:python
+      - github:language:ruby
+      - github:language:rust
+      - github:language:swift
 
   - provider: mariner
     images:
       - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
+    expected-namespaces:
+      - mariner:distro:mariner:1.0
+      - mariner:distro:mariner:2.0
 
   - provider: nvd
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
+    expected-namespaces:
+      - nvd:cpe
 
   - provider: oracle
     images:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
       - docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
+    expected-namespaces:
+      - oracle:distro:oraclelinux:5
+      - oracle:distro:oraclelinux:6
+      - oracle:distro:oraclelinux:7
+      - oracle:distro:oraclelinux:8
+      - oracle:distro:oraclelinux:9
 
   - provider: rhel
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -124,11 +181,36 @@ tests:
       - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
 
+    expected-namespaces:
+      - redhat:distro:redhat:5
+      - redhat:distro:redhat:6
+      - redhat:distro:redhat:7
+      - redhat:distro:redhat:8
+      - redhat:distro:redhat:9
+
 # TODO: add sles test images and labels once there is a capability in grype to do so
 #  - providers:
 #      - name: sles
 #    images:
 #      -
+#    expected-namespaces:
+#      - sles:distro:sles:11
+#      - sles:distro:sles:11.1
+#      - sles:distro:sles:11.2
+#      - sles:distro:sles:11.3
+#      - sles:distro:sles:11.4
+#      - sles:distro:sles:12
+#      - sles:distro:sles:12.1
+#      - sles:distro:sles:12.2
+#      - sles:distro:sles:12.3
+#      - sles:distro:sles:12.4
+#      - sles:distro:sles:12.5
+#      - sles:distro:sles:15
+#      - sles:distro:sles:15.1
+#      - sles:distro:sles:15.2
+#      - sles:distro:sles:15.3
+#      - sles:distro:sles:15.4
+#      - sles:distro:sles:15.5
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -136,6 +218,23 @@ tests:
     use_cache: true
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
+    expected-namespaces:
+      - ubuntu:distro:ubuntu:12.04
+      - ubuntu:distro:ubuntu:14.04
+      - ubuntu:distro:ubuntu:16.04
+      - ubuntu:distro:ubuntu:16.10
+      - ubuntu:distro:ubuntu:17.04
+      - ubuntu:distro:ubuntu:17.10
+      - ubuntu:distro:ubuntu:18.04
+      - ubuntu:distro:ubuntu:18.10
+      - ubuntu:distro:ubuntu:19.04
+      - ubuntu:distro:ubuntu:19.10
+      - ubuntu:distro:ubuntu:20.04
+      - ubuntu:distro:ubuntu:20.10
+      - ubuntu:distro:ubuntu:21.04
+      - ubuntu:distro:ubuntu:21.10
+      - ubuntu:distro:ubuntu:22.04
+      - ubuntu:distro:ubuntu:22.10
 
   - provider: wolfi
     additional_providers:
@@ -143,3 +242,5 @@ tests:
         use_cache: true
     images:
       - cgr.dev/chainguard/wolfi-base:latest-20221001@sha256:be3834598c3c4b76ace6a866edcbbe1fa18086f9ee238b57769e4d230cd7d507
+    expected-namespaces:
+      - wolfi:distro:wolfi:rolling
