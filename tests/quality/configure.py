@@ -56,6 +56,7 @@ class Test:
     images: list[str] = field(default_factory=list)
     additional_providers: list[AdditionalProvider] = field(default_factory=list)
     additional_trigger_globs: list[str] = field(default_factory=list)
+    expected_namespaces: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -70,7 +71,10 @@ class Config:
     tests: list[Test] = field(default_factory=list)
 
     @classmethod
-    def load(cls, path: str = "config.yaml") -> "Config":
+    def load(cls, path: str = "") -> "Config":
+        if not path:
+            path = "config.yaml"
+
         try:
             with open(path, encoding="utf-8") as f:
                 app_object = yaml.safe_load(f.read()) or {}
