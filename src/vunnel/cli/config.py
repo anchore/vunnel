@@ -40,8 +40,7 @@ class Providers:
 @dataclass
 class Log:
     slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
-    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")  # noqa: RUF009, str is immutable so RUF009 does not apply
-    # see https://docs.astral.sh/ruff/rules/function-call-in-dataclass-default-argument/
+    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
     show_timestamp: bool = os.environ.get("VUNNEL_LOG_SHOW_TIMESTAMP", default="false") == "true"
     show_level: bool = os.environ.get("VUNNEL_LOG_SHOW_LEVEL", default="true") == "true"
 
