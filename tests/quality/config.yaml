@@ -74,7 +74,7 @@ tests:
     images:
       - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
       - docker.io/anchore/test_images:vulnerabilities-amazonlinux-2-5c26ce9@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
-    expected-namespacges:
+    expected-namespaces:
       - amazon:distro:amazonlinux:2
       - amazon:distro:amazonlinux:2022
       - amazon:distro:amazonlinux:2023
