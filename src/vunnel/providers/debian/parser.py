@@ -18,7 +18,7 @@ DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
 
 
 # Only releases presenting this mapping will be output by the driver, maintain it with new releases.
-# Can also be extended via configuration
+# Can also be extended via configuration.
 debian_distro_map = {
     "trixie": "13",
     "bookworm": "12",
