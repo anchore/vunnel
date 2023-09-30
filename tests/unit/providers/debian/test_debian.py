@@ -80,7 +80,7 @@ class TestParser:
         vuln_records = subject._normalize_json(ns_cve_dsalist=ns_cve_dsalist)
 
         assert isinstance(vuln_records, dict)
-        assert len(vuln_records) > 0
+        assert len(vuln_records) == 6
 
         for _rel, vuln_dict in vuln_records.items():
             assert isinstance(vuln_dict, dict)
@@ -90,6 +90,9 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Name") for x in vuln_dict.values())
 
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
+            assert all(x.get("Vulnerability", {}).get("FixedIn") is not None for x in vuln_dict.values())
+            assert all(x.get("Vulnerability", {}).get("Severity") is not None for x in vuln_dict.values())
+            assert all(x.get("Vulnerability", {}).get("NamespaceName") is not None for x in vuln_dict.values())
         assert not subject.logger.exception.called, "no exceptions should be logged"
 
     def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests):
