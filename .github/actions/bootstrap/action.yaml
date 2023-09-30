@@ -17,10 +17,6 @@ inputs:
     description: "Restore poetry cache"
     required: true
     default: "true"
-  use-go-cache:
-    description: "Restore go cache"
-    required: true
-    default: "true"
   go:
     description: "Install go"
     required: true
@@ -41,34 +37,10 @@ runs:
   using: "composite"
   steps:
 
-    - uses: actions/setup-go@v3
-      if: inputs.go == 'true'
+    # note: go mod and build is automatically cached on default with v4+
+    - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe #v4.1.0
       with:
         go-version: ${{ inputs.go-version }}
-
-    # note: we need to keep restoring the go mod cache before bootstrapping tools since `go install` is used in
-    # some installations of project tools.
-    - name: Restore go module cache
-      id: go-mod-cache
-      if: inputs.go == 'true' && inputs.use-go-cache == 'true'
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/go/pkg/mod
-        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-go-module-${{ inputs.go-version }}-${{ hashFiles('Makefile') }}
-        restore-keys: |
-          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-go-module-${{ inputs.go-version }}-
-
-    - name: Restore go build cache
-      id: go-cache
-      if: inputs.go == 'true' && inputs.use-go-cache == 'true'
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/go-build
-        key: ${{ inputs.cache-key-prefix }}-${{ inputs.build-cache-key-prefix }}-${{ runner.os }}-go-build-${{ inputs.go-version }}-${{ hashFiles('Makefile') }}
-        restore-keys: |
-          ${{ inputs.cache-key-prefix }}-${{ inputs.build-cache-key-prefix }}-${{ runner.os }}-go-build-${{ inputs.go-version }}-
 
     - uses: actions/setup-python@v4
       with:
