@@ -6,8 +6,10 @@ on:
         description: tag the latest commit on main with the given version (prefixed with v)
         required: true
 
-jobs:
+permissions:
+  contents: read
 
+jobs:
   quality-gate:
     runs-on: ubuntu-22.04
     steps:
@@ -71,7 +73,9 @@ jobs:
 
       - name: Tag release
         run: |
-          git tag ${{ github.event.inputs.version }}
+          git config --global user.name "anchoreci"
+          git config --global user.email "anchoreci@users.noreply.github.com"
+          git tag -a ${{ github.event.inputs.version }} -m "Release ${{ github.event.inputs.version }}"
           git push origin --tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
