@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os.path
 import shutil
+from unittest.mock import MagicMock
 
 import pytest
 from vunnel import result, workspace
@@ -68,6 +69,7 @@ class TestParser:
 
     def test_normalize_json(self, tmpdir, helpers, disable_get_requests):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        subject.logger = MagicMock()
 
         dsa_mock_data_path = helpers.local_dir(self._sample_dsa_data_)
         json_mock_data_path = helpers.local_dir(self._sample_json_data_)
@@ -88,6 +90,7 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Name") for x in vuln_dict.values())
 
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
+        assert not subject.logger.exception.called, "no exceptions should be logged"
 
     def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
