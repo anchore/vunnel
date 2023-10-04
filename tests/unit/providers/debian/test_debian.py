@@ -143,3 +143,4 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     expected = 38
     assert workspace.num_result_entries() == expected
     assert workspace.result_schemas_valid(require_entries=True)
+    assert all("/debian:" in f for f in workspace.result_files())
