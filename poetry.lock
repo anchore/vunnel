@@ -1303,6 +1303,20 @@ files = [
 pytest = ">=3.7.0"
 
 [[package]]
+name = "pytest-snapshot"
+version = "0.9.0"
+description = "A plugin for snapshot testing with pytest."
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "pytest-snapshot-0.9.0.tar.gz", hash = "sha256:c7013c3abc3e860f9feff899f8b4debe3708650d8d8242a61bf2625ff64db7f3"},
+    {file = "pytest_snapshot-0.9.0-py3-none-any.whl", hash = "sha256:4b9fe1c21c868fe53a545e4e3184d36bc1c88946e3f5c1d9dd676962a9b3d4ab"},
+]
+
+[package.dependencies]
+pytest = ">=3.0.0"
+
+[[package]]
 name = "pytest-sugar"
 version = "0.9.7"
 description = "pytest-sugar is a plugin for pytest that changes the default look and feel of pytest (e.g. progressbar, show tests that fail instantly)."
@@ -2093,4 +2107,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "26f42c13f138b04e1bf7df0741a95735f0705d9fac1732d9094be69c61e3d10d"
+content-hash = "7e22045902b3f4932bc804edb4dd0cf606b1a5cbdfc6969eceda446249e37738"
