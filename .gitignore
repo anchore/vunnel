@@ -148,3 +148,6 @@ Sessionx.vim
 
 # Persistent undo
 [._]*.un~
+# ignore snapshot test workspaces, but not the snapshot files themselves
+tests/unit/providers/debian/test-fixtures/snapshots/debian/input/
+tests/unit/providers/debian/test-fixtures/snapshots/debian/results/
