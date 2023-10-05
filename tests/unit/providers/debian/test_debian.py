@@ -175,7 +175,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, snaps
         files_asserted[result_file] = False
     for result_file in workspace.result_files():
         with open(result_file) as f:
-            snapshot.assert_match(f.read(), f.name.replace("results", "snaps"))
+            snapshot.assert_match(f.read() + "\n", f.name.replace("results", "snaps"))
             files_asserted[result_file] = True
     for result_file, asserted in files_asserted.items():
         assert asserted, f"snapshot not asserted for {result_file}"

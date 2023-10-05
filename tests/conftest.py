@@ -110,7 +110,6 @@ class Helpers:
             os.makedirs(root / name / "results")
         return WorkspaceHelper(root, name)
 
-
     def provider_workspace_snapshot_helper(self, root_dir: str, test_name: str, create=True) -> WorkspaceHelper:
         root = Path(root_dir)
         os.makedirs(root, exist_ok=True)
@@ -118,6 +117,7 @@ class Helpers:
             os.makedirs(root / test_name / "input", exist_ok=True)
             os.makedirs(root / test_name / "results", exist_ok=True)
         return WorkspaceHelper(root, test_name)
+
 
 @pytest.fixture()
 def helpers(request, tmpdir):
