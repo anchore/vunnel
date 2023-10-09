@@ -52,9 +52,10 @@ $ vunnel list
 
 alpine
 amazon
-centos
+chainguard
 debian
 github
+mariner
 nvd
 oracle
 rhel
