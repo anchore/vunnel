@@ -139,7 +139,9 @@ class NvdAPI:
 
             index += results_per_page
 
-    @utils.retry_with_backoff()
+    # NVD rate-limiting is detailed at https://nvd.nist.gov/developers/start-here and currently resets on a 30 second
+    # rolling window, so setting retry to start trying again after 30 seconds.
+    @utils.retry_with_backoff(backoff_in_seconds=30)
     def _request(self, url: str, parameters: dict[str, str], headers: dict[str, str]) -> requests.Response:
         # this is to prevent from encoding the ':' in any timestamps passed
         # (e.g. prevent pubStartDate=2002-01-01T00%3A00%3A00 , want pubStartDate=2002-01-01T00:00:00)
