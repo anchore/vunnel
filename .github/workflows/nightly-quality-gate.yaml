@@ -69,10 +69,21 @@ jobs:
     needs: validate-provider
     if: ${{ always() && !cancelled() }}
     steps:
+      # based on https://docs.github.com/en/actions/learn-github-actions/contexts#steps-context
+      # the valid result values are: success, failure, cancelled, skipped
       - run: |
           echo "Validations Status: ${{ needs.run-provider-validation.result }}"
-          if [ "${{ needs.run-provider-validation.result }}" == "failure" ]; then
-            echo "Quality gate failed!"
+          if [ "${{ needs.run-provider-validation.result }}" != "success" ]; then
+            echo "🔴 Quality gate FAILED! 😭"
             exit 1
           fi
-          echo "Quality gate passed!"
+          echo "🟢 Quality gate passed!"
+
+      - uses: 8398a7/action-slack@fbd6aa58ba854a740e11a35d0df80cb5d12101d8 #v3.15.1
+        if: ${{ failure() }}
+        with:
+          status: ${{ job.status }}
+          fields: repo,workflow,action,eventName
+          text: "Vunnel nightly quality gate has failed: https://github.com/anchore/vunnel/actions/workflows/nightly-quality-gate.yaml"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_TOOLBOX_WEBHOOK_URL }}
