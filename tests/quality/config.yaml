@@ -220,7 +220,12 @@ tests:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
     expected-namespaces:
       - ubuntu:distro:ubuntu:12.04
+      - ubuntu:distro:ubuntu:12.10
+      - ubuntu:distro:ubuntu:13.04
       - ubuntu:distro:ubuntu:14.04
+      - ubuntu:distro:ubuntu:14.10
+      - ubuntu:distro:ubuntu:15.04
+      - ubuntu:distro:ubuntu:15.10
       - ubuntu:distro:ubuntu:16.04
       - ubuntu:distro:ubuntu:16.10
       - ubuntu:distro:ubuntu:17.04
@@ -235,6 +240,7 @@ tests:
       - ubuntu:distro:ubuntu:21.10
       - ubuntu:distro:ubuntu:22.04
       - ubuntu:distro:ubuntu:22.10
+      - ubuntu:distro:ubuntu:23.04
 
   - provider: wolfi
     additional_providers:
