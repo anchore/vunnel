@@ -37,6 +37,13 @@ class WorkspaceHelper:
                 results.append(os.path.join(root, filename))
         return results
 
+    def _snapshot_files(self):
+        snapshot_files = []
+        for root, _dirs, files in os.walk(self.snapshot.snapshot_dir):
+            for filename in files:
+                snapshot_files.append(os.path.join(root, filename))
+        return snapshot_files
+
     def num_result_entries(self):
         return len(self.result_files())
 
@@ -70,6 +77,8 @@ class WorkspaceHelper:
         shutil.copytree(mock_data_path, self.input_dir, dirs_exist_ok=True)
 
     def assert_result_snapshots(self):
+        expected_files_to_test = set(self._snapshot_files())
+
         for result_file in self.result_files():
             # protection against test configuration not swapping to the flat file store strategy
             assert result_file.endswith(".json")
@@ -77,6 +86,12 @@ class WorkspaceHelper:
             with open(result_file) as f:
                 snapshot_path = result_file.split("results/")[-1]
                 self.snapshot.assert_match(f.read() + "\n", snapshot_path)
+
+                snapshot_abs_path = os.path.join(self.snapshot.snapshot_dir, snapshot_path)
+                expected_files_to_test.remove(snapshot_abs_path)
+
+        for expected_snapshot_path in expected_files_to_test:
+            assert False, f"snapshot not asserted for {expected_snapshot_path}"
 
 
 def load_json_schema(path: str) -> dict:
