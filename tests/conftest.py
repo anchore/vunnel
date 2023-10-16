@@ -5,15 +5,18 @@ import os
 from pathlib import Path
 import subprocess
 import uuid
+import os.path
+import shutil
 
 import jsonschema
 import pytest
 
 
 class WorkspaceHelper:
-    def __init__(self, root: str, name: str):
+    def __init__(self, root: str, name: str, snapshot):
         self.root = root
         self.name = name
+        self.snapshot = snapshot
 
     @property
     def metadata_path(self):
@@ -63,6 +66,18 @@ class WorkspaceHelper:
 
         return True
 
+    def copy_input_fixtures(self, mock_data_path: str):
+        shutil.copytree(mock_data_path, self.input_dir, dirs_exist_ok=True)
+
+    def assert_result_snapshots(self):
+        for result_file in self.result_files():
+            # protection against test configuration not swapping to the flat file store strategy
+            assert result_file.endswith(".json")
+
+            with open(result_file) as f:
+                snapshot_path = result_file.split("results/")[-1]
+                self.snapshot.assert_match(f.read() + "\n", snapshot_path)
+
 
 def load_json_schema(path: str) -> dict:
     with open(path) as f:
@@ -78,11 +93,15 @@ def get_schema_repo_path(url: str):
 
 
 class Helpers:
-    def __init__(self, request, tmpdir):
+    def __init__(self, request, tmpdir, snapshot):
         # current information about the running test
         # docs: https://docs.pytest.org/en/6.2.x/reference.html#std-fixture-request
         self.request = request
         self.tmpdir = tmpdir
+
+        # any snapshot tests should be stored in the same place
+        snapshot.snapshot_dir = self.local_dir("test-fixtures/snapshots")
+        self.snapshot = snapshot
 
     def local_dir(self, path: str):
         """
@@ -103,28 +122,26 @@ class Helpers:
         parent = os.path.realpath(os.path.dirname(current_test_filepath))
         return os.path.join(parent, path)
 
-    def provider_workspace_helper(self, name: str, create=True) -> WorkspaceHelper:
+    def provider_workspace_helper(self, name: str, create: bool = True, input_fixture: str | None = None) -> WorkspaceHelper:
         root = self.tmpdir
         if create:
             os.makedirs(root / name / "input")
             os.makedirs(root / name / "results")
-        return WorkspaceHelper(root, name)
 
-    def provider_workspace_snapshot_helper(self, root_dir: str, test_name: str, create=True) -> WorkspaceHelper:
-        root = Path(root_dir)
-        os.makedirs(root, exist_ok=True)
-        if create:
-            os.makedirs(root / test_name / "input", exist_ok=True)
-            os.makedirs(root / test_name / "results", exist_ok=True)
-        return WorkspaceHelper(root, test_name)
+        h = WorkspaceHelper(root, name, self.snapshot)
+
+        if input_fixture:
+            h.copy_input_fixtures(self.local_dir(input_fixture))
+
+        return h
 
 
 @pytest.fixture()
-def helpers(request, tmpdir):
+def helpers(request, tmpdir, snapshot):
     """
     Returns a common set of helper functions for tests.
     """
-    return Helpers(request, tmpdir)
+    return Helpers(request, tmpdir, snapshot)
 
 
 def git_root() -> str:

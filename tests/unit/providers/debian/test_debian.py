@@ -116,17 +116,18 @@ class TestParser:
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
-    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/input",
+    )
 
     c = Config()
+    # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(
         root=workspace.root,
         config=c,
     )
-
-    mock_data_path = helpers.local_dir("test-fixtures/input")
-    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
 
     def mock_download():
         return None
@@ -142,40 +143,26 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, snapshot):
-    root_dir = helpers.local_dir("test-fixtures/snapshots")
-    test_name = "debian"
-    workspace = helpers.provider_workspace_snapshot_helper(root_dir=root_dir, test_name=test_name)
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/input",
+    )
 
     c = Config()
+    # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(
         root=workspace.root,
         config=c,
     )
 
-    mock_data_path = helpers.local_dir("test-fixtures/input")
-    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
-
     def mock_download():
         return None
 
     monkeypatch.setattr(p.parser, "_download_json", mock_download)
     monkeypatch.setattr(p.parser, "_download_dsa", mock_download)
-    snapshot.snapshot_dir = os.path.abspath(os.path.join(workspace.results_dir, "..", "snaps"))
 
     p.update(None)
 
-    # 17 entries from the legacy records, 21 from the mock json data
-    expected = 38
-    assert workspace.num_result_entries() == expected
-    assert workspace.result_schemas_valid(require_entries=True)
-    files_asserted = {}
-    for result_file in workspace.result_files():
-        files_asserted[result_file] = False
-    for result_file in workspace.result_files():
-        with open(result_file) as f:
-            snapshot.assert_match(f.read() + "\n", f.name.replace("results", "snaps"))
-            files_asserted[result_file] = True
-    for result_file, asserted in files_asserted.items():
-        assert asserted, f"snapshot not asserted for {result_file}"
+    workspace.assert_result_snapshots()
