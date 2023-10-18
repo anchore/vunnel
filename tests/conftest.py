@@ -39,6 +39,7 @@ class WorkspaceHelper:
 
     def _snapshot_files(self):
         snapshot_files = []
+
         for root, _dirs, files in os.walk(self.snapshot.snapshot_dir):
             for filename in files:
                 snapshot_files.append(os.path.join(root, filename))
@@ -133,9 +134,6 @@ class Helpers:
         # docs: https://docs.pytest.org/en/6.2.x/reference.html#std-fixture-request
         self.request = request
         self.tmpdir = tmpdir
-
-        # any snapshot tests should be stored in the same place
-        snapshot.snapshot_dir = self.local_dir("test-fixtures/snapshots")
         self.snapshot = snapshot
 
     def local_dir(self, path: str):
@@ -157,11 +155,19 @@ class Helpers:
         parent = os.path.realpath(os.path.dirname(current_test_filepath))
         return os.path.join(parent, path)
 
-    def provider_workspace_helper(self, name: str, create: bool = True, input_fixture: str | None = None) -> WorkspaceHelper:
+    def provider_workspace_helper(
+        self, name: str, create: bool = True, input_fixture: str | None = None, snapshot_prefix: str = ""
+    ) -> WorkspaceHelper:
         root = self.tmpdir
         if create:
             os.makedirs(root / name / "input")
             os.makedirs(root / name / "results")
+
+        # any snapshot tests should be stored in the same place
+        snapshot_path = "test-fixtures/snapshots"
+        if snapshot_prefix:
+            snapshot_path = os.path.join(snapshot_path, snapshot_prefix)
+        self.snapshot.snapshot_dir = self.local_dir(snapshot_path)
 
         h = WorkspaceHelper(root, name, self.snapshot)
 
