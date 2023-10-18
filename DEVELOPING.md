@@ -164,6 +164,22 @@ pip uninstall vunnel  #... if you already have vunnel installed in this virtual 
 pip install -e .
 ```
 
+### Snapshot Tests
+
+In order to ensure that the same feed state from providers would make the same
+set of vulnerabilities, snapshot testing is used.
+
+Snapshot tests are run as part of ordinary unit tests, and will run during
+`make unit`.
+
+To update snapshots, run the following pytest command. (Note that this example
+is for the debian provider, and the test name and path will be different for
+other providers):
+
+``` sh
+pytest ./tests/unit/providers/debian/test_debian.py -k test_provider_via_snapshot --snapshot-update
+```
+
 ## Architecture
 
 Vunnel is a CLI tool that downloads and processes vulnerability data from various sources (in the codebase, these are called "providers").
