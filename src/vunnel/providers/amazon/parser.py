@@ -89,7 +89,7 @@ class Parser:
             if not processing and event == "end":
                 element.clear()
 
-        return alas_summaries
+        return sorted(alas_summaries)
 
     @utils.retry_with_backoff()
     def _get_alas_html(self, alas_url, alas_file, skip_if_exists=True):
@@ -164,12 +164,12 @@ class Parser:
 class JsonifierMixin:
     def json(self):
         jsonified = {}
-        for k, v in vars(self).items():
+        for k, v in sorted(vars(self).items()):
             if k[0] != "_":
                 if isinstance(v, (list, set)):
                     jsonified[k] = [x.json() if hasattr(x, "json") and callable(x.json) else x for x in v]
                 elif isinstance(v, dict):
-                    jsonified[k] = {x: y.json() if hasattr(y, "json") and callable(y.json) else y for x, y in v.items()}
+                    jsonified[k] = {x: y.json() if hasattr(y, "json") and callable(y.json) else y for x, y in sorted(v.items())}
                 elif hasattr(v, "json"):
                     jsonified[k] = v.json()
                 else:
@@ -281,7 +281,7 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         v.Metadata["CVE"] = [{"Name": cve} for cve in alas.cves]
 
     v.Link = alas.url
-    for item in fixed_in:
+    for item in sorted(fixed_in):
         f = FixedIn()
         f.Name = item.pkg
         f.NamespaceName = v.NamespaceName
