@@ -388,3 +388,27 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     assert workspace.num_result_entries() == 2
     assert workspace.result_schemas_valid(require_entries=True)
+
+
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    c = Config()
+    # keep all of the default values for the result store, but override the strategy
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(
+        root=workspace.root,
+        config=c,
+    )
+
+    mock_data_path = helpers.local_dir("test-fixtures/mock_data")
+    shutil.copy(mock_data_path, workspace.input_dir / "com.oracle.elsa-all.xml")
+
+    def mock_download():
+        return None
+
+    monkeypatch.setattr(p.parser, "_download", mock_download)
+
+    p.update(None)
+
+    workspace.assert_result_snapshots()
