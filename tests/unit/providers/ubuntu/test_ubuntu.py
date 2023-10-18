@@ -489,3 +489,17 @@ def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_wri
 
     assert expected_written_entries == ws.num_result_entries()
     assert ws.result_schemas_valid(require_entries=expected_written_entries > 0)
+
+
+def test_provider_via_snapshot(helpers, hydrate_git_repo, mocker):
+    path = hydrate_git_repo("test-fixtures/repo-fast-export")
+
+    c = ubuntu.Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = ubuntu.Provider(root=path, config=c)
+    p.parser.git_wrapper.init_repo = mocker.Mock()
+    p.update(None)
+
+    ws = helpers.provider_workspace_helper("ubuntu", create=False)
+
+    ws.assert_result_snapshots()
