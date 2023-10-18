@@ -432,3 +432,15 @@ def test_provider_schema(helpers, fake_get_query, advisories):
     provider.update(None)
 
     assert workspace.result_schemas_valid(require_entries=True)
+
+
+def test_provider_via_snapshot(helpers, fake_get_query, advisories):
+    fake_get_query([advisories(), advisories(has_next_page=True)])
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    c = Config(token="secret", api_url="https://localhost")
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    provider = Provider(root=workspace.root, config=c)
+    provider.update(None)
+
+    workspace.assert_result_snapshots()
