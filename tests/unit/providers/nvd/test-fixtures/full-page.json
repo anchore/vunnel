@@ -1,0 +1,3458 @@
+{
+    "resultsPerPage": 38,
+    "startIndex": 0,
+    "totalResults": 38,
+    "format": "NVD_CVE",
+    "version": "2.0",
+    "timestamp": "2023-10-18T18:04:18.493",
+    "vulnerabilities": [
+        {
+            "cve": {
+                "id": "CVE-2023-27314",
+                "sourceIdentifier": "security-alert@netapp.com",
+                "published": "2023-10-12T19:15:11.747",
+                "lastModified": "2023-10-18T18:00:24.900",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "ONTAP 9 versions prior to 9.8P19, 9.9.1P16, 9.10.1P12, 9.11.1P8, \n9.12.1P2 and 9.13.1 are susceptible to a vulnerability which could allow\n a remote unauthenticated attacker to cause a crash of the HTTP service."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Las versiones de ONTAP 9 anteriores a 9.8P19, 9.9.1P16, 9.10.1P12, 9.11.1P8, 9.12.1P2 y 9.13.1 son susceptibles a una vulnerabilidad que podría permitir que un atacante remoto no autenticado provoque una falla del servicio HTTP."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:N\/I:N\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 7.5,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 3.6
+                        },
+                        {
+                            "source": "security-alert@netapp.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:N\/I:N\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 7.5,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 3.6
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "NVD-CWE-noinfo"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "security-alert@netapp.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-400"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:*:*:*:*:*:*:*:*",
+                                        "versionStartIncluding": "9.0",
+                                        "versionEndExcluding": "9.8",
+                                        "matchCriteriaId": "D9342DC4-2928-49B6-AACA-95B3DE9C994A"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.8:-:*:*:*:*:*:*",
+                                        "matchCriteriaId": "BE523D87-B51F-41F2-9B6F-A85AB28FF3DC"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.8:p7:*:*:*:*:*:*",
+                                        "matchCriteriaId": "B353C687-391F-476E-9199-2D769842E019"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.9.1:-:*:*:*:*:*:*",
+                                        "matchCriteriaId": "E0284DC1-9FAA-4979-82C3-AB7347614C80"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.9.1:p3:*:*:*:*:*:*",
+                                        "matchCriteriaId": "76CBFD8A-CE4C-4337-8F22-397DDCC1B074"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.10.0:-:*:*:*:*:*:*",
+                                        "matchCriteriaId": "E932E75A-46F0-47AA-9EFE-11D7127D4015"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.10.1:-:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F1A4278F-D9A9-4C39-AC53-AB35DB921E02"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.12.0:-:*:*:*:*:*:*",
+                                        "matchCriteriaId": "CABEEE42-6098-4259-ABAA-8D8D7BEEB0A0"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:netapp:clustered_data_ontap:9.13.0:-:*:*:*:*:*:*",
+                                        "matchCriteriaId": "BE4AE3BB-685A-466F-B4FA-D49D366C6598"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/security.netapp.com\/advisory\/ntap-20231009-0001\/",
+                        "source": "security-alert@netapp.com",
+                        "tags": [
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45109",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-13T14:15:10.193",
+                "lastModified": "2023-10-18T16:05:00.017",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Cross-Site Request Forgery (CSRF) vulnerability in ZAKSTAN WhitePage plugin <= 1.1.5 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Cross-Site Request Forgery (CSRF) en el complemento ZAKSTAN WhitePage en versiones &lt;= 1.1.5."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        },
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:N\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 5.4,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 2.5
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:myback.link:whitepage:*:*:*:*:*:wordpress:*:*",
+                                        "versionEndIncluding": "1.1.5",
+                                        "matchCriteriaId": "DFF5644D-0359-48E0-9E97-98EAFE8543BF"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/white-page-publication\/wordpress-whitepage-plugin-1-1-5-cross-site-request-forgery-csrf-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com",
+                        "tags": [
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45391",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-13T14:15:10.587",
+                "lastModified": "2023-10-18T15:06:56.997",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "A stored cross-site scripting (XSS) vulnerability in the Create A New Employee function of Granding UTime Master v9.0.7-Build:Apr 4,2023 allows authenticated attackers to execute arbitrary web scripts or HTML via a crafted payload injected into the First Name parameter."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Una vulnerabilidad de Cross-Site Scripting (XSS) Almacenada en la función Create A New Employee de Granding UTime Master v9.0.7-Build:Apr 4,2023 permite a atacantes autenticados ejecutar scripts web o HTML arbitrarios a través de un payload manipulado inyectado en el parámetro First Name."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:R\/S:C\/C:L\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.8,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.7,
+                            "impactScore": 2.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:grandingteco:utime_master:9.0.7:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A0A22621-1A83-4F7F-BDDF-6E29F9C73DA9"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/the-it-wonders.blogspot.com\/2023\/10\/granding-utime-master-stored-xss.html",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-3706",
+                "sourceIdentifier": "contact@wpscan.com",
+                "published": "2023-10-16T20:15:14.780",
+                "lastModified": "2023-10-18T17:56:56.103",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "The ActivityPub WordPress plugin before 1.0.0 does not ensure that post titles to be displayed are public and belong to the plugin, allowing any authenticated user, such as subscriber to retrieve the title of arbitrary post (such as draft and private) via an IDOR vector"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "El complemento ActivityPub de WordPress anterior a 1.0.0 no garantiza que los títulos de las publicaciones que se mostrarán sean públicos y pertenezcan al complemento, lo que permite a cualquier usuario autenticado, como un suscriptor, recuperar el título de una publicación arbitraria (como borrador y privada) a través de un IDOR vector"
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "contact@wpscan.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-639"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:automattic:activitypub:*:*:*:*:*:wordpress:*:*",
+                                        "versionEndExcluding": "1.0.0",
+                                        "matchCriteriaId": "78ADABE4-21BE-4F20-BE6D-BB12EDBCD26F"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/wpscan.com\/vulnerability\/daa4d93a-f8b1-4809-a18e-8ab63a05de5a",
+                        "source": "contact@wpscan.com",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-3707",
+                "sourceIdentifier": "contact@wpscan.com",
+                "published": "2023-10-16T20:15:14.883",
+                "lastModified": "2023-10-18T17:57:04.757",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "The ActivityPub WordPress plugin before 1.0.0 does not ensure that post contents to be displayed are public and belong to the plugin, allowing any authenticated user, such as subscriber to retrieve the content of arbitrary post (such as draft and private) via an IDOR vector. Password protected posts are not affected by this issue."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "El complemento ActivityPub de WordPress anterior a 1.0.0 no garantiza que los contenidos de las publicaciones que se mostrarán sean públicos y pertenezcan al complemento, lo que permite a cualquier usuario autenticado, como un suscriptor, recuperar el contenido de una publicación arbitraria (como borrador y privada) a través de un IDOR vector. Las publicaciones protegidas con contraseña no se ven afectadas por este problema."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "contact@wpscan.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-639"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:automattic:activitypub:*:*:*:*:*:wordpress:*:*",
+                                        "versionEndExcluding": "1.0.0",
+                                        "matchCriteriaId": "78ADABE4-21BE-4F20-BE6D-BB12EDBCD26F"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/wpscan.com\/vulnerability\/541bbe4c-3295-4073-901d-763556269f48",
+                        "source": "contact@wpscan.com",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-3746",
+                "sourceIdentifier": "contact@wpscan.com",
+                "published": "2023-10-16T20:15:15.010",
+                "lastModified": "2023-10-18T17:57:14.660",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "The ActivityPub WordPress plugin before 1.0.0 does not sanitize and escape some data from post content, which could allow contributor and above role to perform Stored Cross-Site Scripting attacks"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "El complemento ActivityPub de WordPress anterior a 1.0.0 no sanitiza ni escapa algunos datos del contenido de la publicación, lo que podría permitir que el colaborador y el rol superior realicen ataques de Cross-Site Scripting almacenados."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:R\/S:C\/C:L\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.4,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.3,
+                            "impactScore": 2.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "contact@wpscan.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:automattic:activitypub:*:*:*:*:*:wordpress:*:*",
+                                        "versionEndExcluding": "1.0.0",
+                                        "matchCriteriaId": "78ADABE4-21BE-4F20-BE6D-BB12EDBCD26F"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/wpscan.com\/vulnerability\/c15a6032-6495-47a8-828c-37e55ed9665a",
+                        "source": "contact@wpscan.com",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-22377",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T01:15:09.687",
+                "lastModified": "2023-10-18T17:57:47.170",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 could allow a remote attacker to obtain sensitive information, caused by the failure to properly enable HTTP Strict Transport Security. An attacker could exploit this vulnerability to obtain sensitive information using man in the middle techniques.  IBM X-Force ID:  221827."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir que un atacante remoto obtenga información confidencial, causada por no habilitar correctamente HTTP Strict Transport Security. Un atacante podría aprovechar esta vulnerabilidad para obtener información confidencial utilizando técnicas de intermediario. ID de IBM X-Force: 221827."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:H\/PR:N\/UI:R\/S:U\/C:H\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "HIGH",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.6,
+                            "impactScore": 3.6
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:H\/PR:N\/UI:R\/S:U\/C:H\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "HIGH",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.6,
+                            "impactScore": 3.6
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-311"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-311"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/221827",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-22384",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T01:15:09.773",
+                "lastModified": "2023-10-18T17:58:36.670",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow an attacker to modify messages returned from the server due to hazardous input validation. IBM X-Force ID: 221961.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir a un atacante modificar los mensajes devueltos por el servidor debido a una validación de entrada peligrosa. ID de IBM X-Force: 221961."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:N\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:N\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-20"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-20"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/221961",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2021-20581",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:09.813",
+                "lastModified": "2023-10-18T17:58:51.443",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow a user to obtain sensitive information due to insufficient session expiration.  IBM X-Force ID:  199324.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir a un usuario obtener información confidencial debido a una expiración insuficiente de la sesión. ID de IBM X-Force: 199324."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-613"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-613"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/199324",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2021-29913",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:09.910",
+                "lastModified": "2023-10-18T17:59:20.763",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premise 11.5 could allow an authenticated user to obtain sensitive information or perform unauthorized actions due to improper input validation.  IBM X-Force ID:  207898.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premise 11.5 podría permitir que un usuario autenticado obtenga información confidencial o realice acciones no autorizadas debido a una validación de entrada incorrecta. ID de IBM X-Force: 207898."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:H\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 7.1,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 4.2
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:H\/PR:L\/UI:R\/S:C\/C:H\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "HIGH",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 6.5,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.3,
+                            "impactScore": 4.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-20"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-20"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/207898",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2021-38859",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:10.000",
+                "lastModified": "2023-10-18T17:59:31.703",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow a user to obtain version number information using a specially crafted HTTP request that could be used in further attacks against the system.  IBM X-Force ID:  207899.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir a un usuario obtener información del número de versión mediante una solicitud HTTP especialmente manipulada que podría usarse en futuros ataques contra el System. ID de IBM X-Force: 207899."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 1.4
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:A\/AC:L\/PR:N\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "ADJACENT_NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "NVD-CWE-noinfo"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-200"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/207899",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-22375",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:10.090",
+                "lastModified": "2023-10-18T17:59:45.190",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow a remote authenticated attacker to execute arbitrary commands on the system by sending a specially crafted request.  IBM X-Force ID:  221681.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir que un atacante remoto autenticado ejecute comandos arbitrarios en el System enviando una solicitud especialmente manipulada. ID de IBM X-Force: 221681."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:N\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 7.2,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 1.2,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-434"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-434"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/221681",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-22380",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:10.177",
+                "lastModified": "2023-10-18T18:00:02.107",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow an attacker to spoof a trusted entity due to improperly validating certificates.  IBM X-Force ID:  221957.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir a un atacante falsificar una entidad de confianza debido a una validación incorrecta de los certificados. ID de IBM X-Force: 221957."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:N\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 4.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 1.4
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:H\/PR:N\/UI:R\/S:U\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "HIGH",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 5.0,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.6,
+                            "impactScore": 3.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-295"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-295"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/221957",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-22385",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:10.257",
+                "lastModified": "2023-10-18T18:00:15.817",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could disclose sensitive information to an attacked due to the transmission of data in clear text.  IBM X-Force ID:  221962.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría revelar información confidencial a un atacante debido a la transmisión de datos en texto plano. ID de IBM X-Force: 221962."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:H\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 7.5,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 3.6
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:H\/PR:N\/UI:N\/S:U\/C:H\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "HIGH",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.9,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.2,
+                            "impactScore": 3.6
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-319"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-319"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/221962",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-43889",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:10.427",
+                "lastModified": "2023-10-18T18:04:04.597",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could disclose sensitive information through an HTTP request that could aid an attacker in further attacks against the system.  IBM X-Force ID:  240452.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría revelar información confidencial a través de una solicitud HTTP que podría ayudar a un atacante en futuros ataques contra el System. ID de IBM X-Force: 240452."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 1.4
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "NVD-CWE-noinfo"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-200"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/240452",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-43893",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T02:15:10.507",
+                "lastModified": "2023-10-18T18:03:11.993",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow a privileged user to cause by using a malicious payload.  IBM X-Force ID:  240634.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir que un usuario privilegiado cause una vulnerabilidad por el consumo de recursos de un payload malicioso. ID de IBM X-Force: 240634."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:L\/AC:L\/PR:H\/UI:N\/S:U\/C:N\/I:N\/A:H",
+                                "attackVector": "LOCAL",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 4.4,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 0.8,
+                            "impactScore": 3.6
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:N\/S:U\/C:N\/I:N\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 2.7,
+                                "baseSeverity": "LOW"
+                            },
+                            "exploitabilityScore": 1.2,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-400"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-400"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/240534",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2022-43891",
+                "sourceIdentifier": "psirt@us.ibm.com",
+                "published": "2023-10-17T03:15:09.520",
+                "lastModified": "2023-10-18T18:02:44.460",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nIBM Security Verify Privilege On-Premises 11.5 could allow a remote attacker to obtain sensitive information when a detailed technical error message is returned in the browser.  This information could be used in further attacks against the system.  IBM X-Force ID:  240454.\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "IBM Security Verify Privilege On-Premises 11.5 podría permitir a un atacante remoto obtener información confidencial cuando se devuelve un mensaje de error técnico detallado en el navegador. Esta información podría usarse en futuros ataques contra el System. ID de IBM X-Force: 240454."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 5.3,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 1.4
+                        },
+                        {
+                            "source": "psirt@us.ibm.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:N\/S:U\/C:L\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 2.7,
+                                "baseSeverity": "LOW"
+                            },
+                            "exploitabilityScore": 1.2,
+                            "impactScore": 1.4
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-209"
+                            }
+                        ]
+                    },
+                    {
+                        "source": "psirt@us.ibm.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-209"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "operator": "AND",
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:ibm:security_verify_privilege_on-premises:*:*:*:*:*:*:*:*",
+                                        "versionEndExcluding": "11.5",
+                                        "matchCriteriaId": "CEE9CBED-455C-4B83-A735-76EE4C7E331A"
+                                    }
+                                ]
+                            },
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:apple:macos:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "387021A0-AF36-463C-A605-32EA7DAC172E"
+                                    },
+                                    {
+                                        "vulnerable": false,
+                                        "criteria": "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "A2572D17-1DE6-457B-99CC-64AFD54487EA"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/exchange.xforce.ibmcloud.com\/vulnerabilities\/240454",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "VDB Entry",
+                            "Vendor Advisory"
+                        ]
+                    },
+                    {
+                        "url": "https:\/\/www.ibm.com\/support\/pages\/node\/7047202",
+                        "source": "psirt@us.ibm.com",
+                        "tags": [
+                            "Patch",
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45901",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.033",
+                "lastModified": "2023-10-18T17:55:22.477",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/admin\\\/category\\\/add."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contiene Cross-Site Request Forgery (CSRF) a través del componente \/admin\\\/category\\\/add."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20in%20the%20newly%20added%20column%20of%20column%20management.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45902",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.083",
+                "lastModified": "2023-10-18T17:55:36.060",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/admin\/attachment\/delete."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contenía Cross-Site Request Forgery (CSRF) a través del componente \/admin\/attachment\/delete."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20in%20the%20attachment%20management%20deletion%20function.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45903",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.140",
+                "lastModified": "2023-10-18T17:55:51.257",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/admin\/label\/delete."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contenía Cross-Site Request Forgery (CSRF) a través del componente \/admin\/label\/delete."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20vulnerability%20in%20the%20label%20management%20deletion%20function.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45904",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.193",
+                "lastModified": "2023-10-18T17:55:56.933",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/variable\/update."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contenía Cross-Site Request Forgery (CSRF) a través del componente \/variable\/update."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20vulnerability%20in%20the%20variable%20management%20modification%20function.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45905",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.247",
+                "lastModified": "2023-10-18T17:56:02.937",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/admin\/variable\/add."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contenía Cross-Site Request Forgery (CSRF) a través del componente \/admin\/variable\/add."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20vulnerability%20in%20variable%20management%20with%20added%20functionality.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45906",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.307",
+                "lastModified": "2023-10-18T17:56:08.690",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/admin\/user\/add."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contenía Cross-Site Request Forgery (CSRF) a través del componente \/admin\/user\/add."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20in%20the%20user%20added%20function.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45907",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-17T14:15:10.360",
+                "lastModified": "2023-10-18T17:56:13.600",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Dreamer CMS v4.1.3 was discovered to contain a Cross-Site Request Forgery (CSRF) via the component \/admin\/variable\/delete."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Se descubrió que Dreamer CMS v4.1.3 contenía Cross-Site Request Forgery (CSRF) a través del componente \/admin\/variable\/delete."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "nvd@nist.gov",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 8.8,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-352"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:dreamer_cms_project:dreamer_cms:4.1.3:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "F8278D9D-0CD5-4659-8BD6-8A4557D57C2C"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/moonsabc123\/dreamer_cms\/blob\/main\/There%20is%20a%20csrf%20vulnerability%20in%20the%20variable%20management%20deletion%20function.md",
+                        "source": "cve@mitre.org",
+                        "tags": [
+                            "Exploit",
+                            "Third Party Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-22068",
+                "sourceIdentifier": "secalert_us@oracle.com",
+                "published": "2023-10-17T22:15:12.617",
+                "lastModified": "2023-10-18T17:56:38.083",
+                "vulnStatus": "Analyzed",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Vulnerability in the MySQL Server product of Oracle MySQL (component: InnoDB).  Supported versions that are affected are 8.0.34 and prior and  8.1.0. Easily exploitable vulnerability allows high privileged attacker with network access via multiple protocols to compromise MySQL Server.  Successful attacks of this vulnerability can result in unauthorized ability to cause a hang or frequently repeatable crash (complete DOS) of MySQL Server. CVSS 3.1 Base Score 4.9 (Availability impacts).  CVSS Vector: (CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:N\/S:U\/C:N\/I:N\/A:H)."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad en el producto MySQL Server de Oracle MySQL (componente: InnoDB). Las versiones compatibles que se ven afectadas son la 8.0.34 y anteriores y la 8.1.0. Una vulnerabilidad fácilmente explotable permite que un atacante con altos privilegios y acceso a la red a través de múltiples protocolos comprometa el servidor MySQL. Los ataques exitosos a esta vulnerabilidad pueden resultar en una capacidad no autorizada de provocar un bloqueo o una falla frecuentemente repetible (DOS completo) del servidor MySQL. CVSS 3.1 Puntuación base 4.9 (impactos en la disponibilidad). Vector CVSS: (CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:N\/S:U\/C:N\/I:N\/A:H)."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "secalert_us@oracle.com",
+                            "type": "Primary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:N\/S:U\/C:N\/I:N\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "NONE",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 4.9,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.2,
+                            "impactScore": 3.6
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "NVD-CWE-noinfo"
+                            }
+                        ]
+                    }
+                ],
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "negate": false,
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:oracle:mysql:*:*:*:*:*:*:*:*",
+                                        "versionStartIncluding": "8.0",
+                                        "versionEndIncluding": "8.0.34",
+                                        "matchCriteriaId": "F5D3C348-07C4-4E6E-9E47-CECBEBA4223B"
+                                    },
+                                    {
+                                        "vulnerable": true,
+                                        "criteria": "cpe:2.3:a:oracle:mysql:8.1.0:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "16FFE86C-A164-406B-93DA-A6A75D380FDF"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/www.oracle.com\/security-alerts\/cpuoct2023.html",
+                        "source": "secalert_us@oracle.com",
+                        "tags": [
+                            "Vendor Advisory"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-30781",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.237",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Unauth. Reflected Cross-Site Scripting (XSS) vulnerability in Theme Blvd Tweeple plugin <= 0.9.5 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Cross-Site Scripting (XSS) Reflejada No Autenticada en el complemento Theme Blvd Tweeple en versiones &lt;= 0.9.5."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 7.1,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/tweeple\/wordpress-tweeple-plugin-0-9-5-reflected-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45602",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.333",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Unauth. Reflected Cross-Site Scripting (XSS) vulnerability in Shopfiles Ltd Ebook Store plugin <= 5.785 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Cross-Site Scripting (XSS) Reflejada No Autenticada en el complemento Shopfiles Ltd Ebook Store en versiones&lt;= 5.785."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 7.1,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/ebook-store\/wordpress-ebook-store-plugin-5-784-reflected-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45604",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.407",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Auth. (admin+) Stored Cross-Site Scripting (XSS) vulnerability in Scott Reilly Get Custom Field Values plugin <= 4.0.1 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Coss-Site Scripting (XSS) autenticada (con permisos de admin o superiores) almacenada en el complemento Scott Reilly Get Custom Field Values en versiones &lt;= 4.0.1."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:H\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "HIGH",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 5.9,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 1.7,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/get-custom-field-values\/wordpress-get-custom-field-values-plugin-4-0-1-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45607",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.483",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Auth. (contributor+) Stored Cross-Site Scripting (XSS) vulnerability in Hector Cabrera WordPress Popular Posts plugin <= 6.3.2 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Coss-Site Scripting (XSS) autenticada (con permisos de colaboradores o superiores) almacenada en el complemento Hector Cabrera WordPress Popular Posts en versiones &lt;= 6.3.2."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 6.5,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.3,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/wordpress-popular-posts\/wordpress-popular-posts-plugin-6-3-2-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45628",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.557",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Auth. (contributor+) Stored Cross-Site Scripting (XSS) vulnerability in QROkes QR Twitter Widget plugin <= 0.2.3 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Coss-Site Scripting (XSS) autenticada (con permisos de colaboradores o superiores) almacenada en el complemento QROkes QR Twitter Widget en versiones &lt;= 0.2.3."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 6.5,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.3,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/qr-twitter-widget\/wordpress-qr-twitter-widget-plugin-0-2-3-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45630",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.637",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Unauth. Stored Cross-Site Scripting (XSS) vulnerability in wpdevart Gallery – Image and Video Gallery with Thumbnails plugin <= 2.0.3 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Cross-Site Scripting (XSS) Almacenada No Autenticada en el complemento  wpdevart Gallery – Image and Video Gallery with Thumbnails en versiones &lt;= 2.0.3."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 7.1,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/gallery-album\/wordpress-gallery-image-and-video-gallery-with-thumbnails-plugin-2-0-3-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45632",
+                "sourceIdentifier": "audit@patchstack.com",
+                "published": "2023-10-18T14:15:09.710",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Unauth. Reflected Cross-Site Scripting (XSS) vulnerability in WebDorado SpiderVPlayer plugin <= 1.5.22 versions."
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Vulnerabilidad de Cross-Site Scripting (XSS) Reflejada No Autenticada en el complemento WebDorado SpiderVPlayer en versiones &lt;= 1.5.22."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "audit@patchstack.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:C\/C:L\/I:L\/A:L",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "LOW",
+                                "baseScore": 7.1,
+                                "baseSeverity": "HIGH"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 3.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "audit@patchstack.com",
+                        "type": "Primary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/patchstack.com\/database\/vulnerability\/player\/wordpress-spidervplayer-plugin-1-5-22-reflected-cross-site-scripting-xss-vulnerability?_s_id=cve",
+                        "source": "audit@patchstack.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-5631",
+                "sourceIdentifier": "security@eset.com",
+                "published": "2023-10-18T15:15:08.727",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "\nRoundcube before 1.4.15, 1.5.x before 1.5.5, and 1.6.x before 1.6.4 allows stored XSS via an HTML e-mail message with a crafted SVG document because of program\/lib\/Roundcube\/rcube_washtml.php behavior. This could allow a remote attacker\n\nto load arbitrary JavaScript code.\n\n\n\n\n\n\n\n"
+                    },
+                    {
+                        "lang": "es",
+                        "value": "Roundcube anterior a 1.4.15, 1.5.x anterior a 1.5.5 y 1.6.x anterior a 1.6.4 permiten almacenar XSS a través de un mensaje de correo electrónico HTML con un documento SVG manipulado debido al comportamiento de program\/lib\/Roundcube\/rcube_washtml.php. Esto podría permitir que un atacante remoto cargue código JavaScript arbitrario."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "security@eset.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:R\/S:C\/C:L\/I:L\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "REQUIRED",
+                                "scope": "CHANGED",
+                                "confidentialityImpact": "LOW",
+                                "integrityImpact": "LOW",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 6.1,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 2.7
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "security@eset.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-79"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/roundcube\/roundcubemail\/commit\/6ee6e7ae301e165e2b2cb703edf75552e5376613",
+                        "source": "security@eset.com"
+                    },
+                    {
+                        "url": "https:\/\/github.com\/roundcube\/roundcubemail\/releases\/tag\/1.4.15",
+                        "source": "security@eset.com"
+                    },
+                    {
+                        "url": "https:\/\/github.com\/roundcube\/roundcubemail\/releases\/tag\/1.5.5",
+                        "source": "security@eset.com"
+                    },
+                    {
+                        "url": "https:\/\/github.com\/roundcube\/roundcubemail\/releases\/tag\/1.6.4",
+                        "source": "security@eset.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-43250",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-18T16:15:08.790",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "XNSoft Nconvert 7.136 is vulnerable to Buffer Overflow. There is a User Mode Write AV via a crafted image file. Attackers could exploit this issue for a Denial of Service (DoS) or possibly to achieve code execution."
+                    }
+                ],
+                "metrics": {},
+                "references": [
+                    {
+                        "url": "http:\/\/packetstormsecurity.com\/files\/175145\/XNSoft-Nconvert-7.136-Buffer-Overflow-Denial-Of-Service.html",
+                        "source": "cve@mitre.org"
+                    },
+                    {
+                        "url": "http:\/\/seclists.org\/fulldisclosure\/2023\/Oct\/15",
+                        "source": "cve@mitre.org"
+                    },
+                    {
+                        "url": "https:\/\/github.com\/mrtouch93\/exploits\/tree\/main\/NConvert7.136\/User%20Mode%20Write%20AV",
+                        "source": "cve@mitre.org"
+                    },
+                    {
+                        "url": "https:\/\/www.xnview.com\/en\/nconvert\/",
+                        "source": "cve@mitre.org"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-45383",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-18T16:15:08.853",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "In the module \"SoNice etiquetage\" (sonice_etiquetage) up to version 2.5.9 from Common-Services for PrestaShop, a guest can download personal information without restriction by performing a path traversal attack. Due to a lack of permissions control and a lack of control in the path name construction, a guest can perform a path traversal to view all files on the information system."
+                    }
+                ],
+                "metrics": {},
+                "references": [
+                    {
+                        "url": "https:\/\/common-services.com\/fr\/home-fr\/",
+                        "source": "cve@mitre.org"
+                    },
+                    {
+                        "url": "https:\/\/security.friendsofpresta.org\/modules\/2023\/10\/17\/sonice_etiquetage.html",
+                        "source": "cve@mitre.org"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-46009",
+                "sourceIdentifier": "cve@mitre.org",
+                "published": "2023-10-18T16:15:08.900",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "gifsicle-1.94 was found to have a floating point exception (FPE) vulnerability via resize_stream at src\/xform.c."
+                    }
+                ],
+                "metrics": {},
+                "references": [
+                    {
+                        "url": "https:\/\/github.com\/kohler\/gifsicle\/issues\/196",
+                        "source": "cve@mitre.org"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-5642",
+                "sourceIdentifier": "vulnreport@tenable.com",
+                "published": "2023-10-18T16:15:08.943",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "Advantech R-SeeNet v2.4.23 allows an unauthenticated remote attacker to read from and write to the snmpmon.ini file, which contains sensitive information."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "vulnreport@tenable.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:N\/UI:N\/S:U\/C:H\/I:H\/A:H",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "NONE",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "HIGH",
+                                "availabilityImpact": "HIGH",
+                                "baseScore": 9.8,
+                                "baseSeverity": "CRITICAL"
+                            },
+                            "exploitabilityScore": 3.9,
+                            "impactScore": 5.9
+                        }
+                    ]
+                },
+                "weaknesses": [
+                    {
+                        "source": "vulnreport@tenable.com",
+                        "type": "Secondary",
+                        "description": [
+                            {
+                                "lang": "en",
+                                "value": "CWE-200"
+                            }
+                        ]
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https:\/\/tenable.com\/security\/research\/tra-2023-33",
+                        "source": "vulnreport@tenable.com"
+                    }
+                ]
+            }
+        },
+        {
+            "cve": {
+                "id": "CVE-2023-20261",
+                "sourceIdentifier": "ykramarz@cisco.com",
+                "published": "2023-10-18T17:15:08.467",
+                "lastModified": "2023-10-18T17:41:28.250",
+                "vulnStatus": "Awaiting Analysis",
+                "descriptions": [
+                    {
+                        "lang": "en",
+                        "value": "A vulnerability in the web UI of Cisco Catalyst SD-WAN Manager could allow an authenticated, remote attacker to retrieve arbitrary files from an affected system.\r\n\r This vulnerability is due to improper validation of parameters that are sent to the web UI. An attacker could exploit this vulnerability by logging in to Cisco Catalyst SD-WAN Manager and issuing crafted requests using the web UI. A successful exploit could allow the attacker to obtain arbitrary files from the underlying Linux file system of an affected system. To exploit this vulnerability, the attacker must be an authenticated user."
+                    }
+                ],
+                "metrics": {
+                    "cvssMetricV31": [
+                        {
+                            "source": "ykramarz@cisco.com",
+                            "type": "Secondary",
+                            "cvssData": {
+                                "version": "3.1",
+                                "vectorString": "CVSS:3.1\/AV:N\/AC:L\/PR:L\/UI:N\/S:U\/C:H\/I:N\/A:N",
+                                "attackVector": "NETWORK",
+                                "attackComplexity": "LOW",
+                                "privilegesRequired": "LOW",
+                                "userInteraction": "NONE",
+                                "scope": "UNCHANGED",
+                                "confidentialityImpact": "HIGH",
+                                "integrityImpact": "NONE",
+                                "availabilityImpact": "NONE",
+                                "baseScore": 6.5,
+                                "baseSeverity": "MEDIUM"
+                            },
+                            "exploitabilityScore": 2.8,
+                            "impactScore": 3.6
+                        }
+                    ]
+                },
+                "references": [
+                    {
+                        "url": "https:\/\/sec.cloudapps.cisco.com\/security\/center\/content\/CiscoSecurityAdvisory\/cisco-sa-sdwan-lfi-OWLbKUGe",
+                        "source": "ykramarz@cisco.com"
+                    }
+                ]
+            }
+        }
+    ]
+}
