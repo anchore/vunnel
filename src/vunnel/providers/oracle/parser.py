@@ -140,6 +140,9 @@ class KspliceFilterer:
             if fixes:
                 pre_filter_fix_count = len(fixes)
 
+                # sort dictionary by "Name" and "Version" keys
+                fixes = sorted(fixes, key=lambda k: (k["Name"], k["Version"]))
+
                 vuln["Vulnerability"]["FixedIn"] = [fix for fix in fixes if not self._is_ksplice_version(fix.get("Version", ""))]
 
                 post_filter_count = len(vuln["Vulnerability"]["FixedIn"])
