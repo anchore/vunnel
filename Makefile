@@ -82,7 +82,7 @@ dev:  ## Get a development shell with locally editable grype, grype-db, and vunn
 
 .PHONY: build-grype
 build-grype: $(BIN_DIR) ## Build grype for local development
-	@cd $(GRYPE_PATH) && go build -o $(ABS_BIN_DIR)/grype .
+	@cd $(GRYPE_PATH) && go build -o $(ABS_BIN_DIR)/grype ./cmd/grype
 
 .PHONY: build-grype-db
 build-grype-db: $(BIN_DIR) ## Build grype-db for local development
