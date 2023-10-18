@@ -496,7 +496,8 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):
             r = Vulnerability()
             try:
                 r.Severity = getattr(Severity, parsed_cve.priority.capitalize())
-            except:
+            except Exception:
+                logger.exception("setting unknown severity due to exception getting severity")
                 r.Severity = Severity.Unknown
 
             r.Name = parsed_cve.name

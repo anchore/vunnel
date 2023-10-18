@@ -59,7 +59,7 @@ class Parser:
                         fp.write(chunk)
             else:
                 r.raise_for_status()
-        except:  # noqa
+        except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
     def _load(self):
