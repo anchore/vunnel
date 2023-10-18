@@ -520,7 +520,10 @@ def disable_get_requests(monkeypatch):
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
-    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/input",
+    )
 
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
@@ -534,9 +537,6 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
     monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
-
-    mock_data_path = helpers.local_dir("test-fixtures/input")
-    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
 
     p.update(None)
 
@@ -562,3 +562,27 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     #   "CVE-2017-3511" (rhel 7)
 
     assert workspace.result_schemas_valid(require_entries=True)
+
+
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/input",
+    )
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    def mock_sync_cves(*args, **kwargs):
+        return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
+
+    def mock_init_rhsa_data(*args, **kwargs):
+        return {}
+
+    monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
+    monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
+
+    p.update(None)
+
+    workspace.assert_result_snapshots()
