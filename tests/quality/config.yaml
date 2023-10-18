@@ -241,6 +241,7 @@ tests:
       - ubuntu:distro:ubuntu:22.04
       - ubuntu:distro:ubuntu:22.10
       - ubuntu:distro:ubuntu:23.04
+      - ubuntu:distro:ubuntu:23.10
 
   - provider: wolfi
     additional_providers:
