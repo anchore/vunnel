@@ -88,7 +88,8 @@ class WorkspaceHelper:
                 self.snapshot.assert_match(f.read() + "\n", snapshot_path)
 
                 snapshot_abs_path = os.path.join(self.snapshot.snapshot_dir, snapshot_path)
-                expected_files_to_test.remove(snapshot_abs_path)
+                if snapshot_abs_path in expected_files_to_test:
+                    expected_files_to_test.remove(snapshot_abs_path)
 
         for expected_snapshot_path in expected_files_to_test:
             assert False, f"snapshot not asserted for {expected_snapshot_path}"
