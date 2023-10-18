@@ -78,6 +78,7 @@ class WorkspaceHelper:
 
     def assert_result_snapshots(self):
         expected_files_to_test = set(self._snapshot_files())
+        missing_snapshot_files = []
 
         for result_file in self.result_files():
             # protection against test configuration not swapping to the flat file store strategy
@@ -85,14 +86,32 @@ class WorkspaceHelper:
 
             with open(result_file) as f:
                 snapshot_path = result_file.split("results/")[-1]
-                self.snapshot.assert_match(f.read() + "\n", snapshot_path)
 
                 snapshot_abs_path = os.path.join(self.snapshot.snapshot_dir, snapshot_path)
-                if snapshot_abs_path in expected_files_to_test:
-                    expected_files_to_test.remove(snapshot_abs_path)
 
-        for expected_snapshot_path in expected_files_to_test:
-            assert False, f"snapshot not asserted for {expected_snapshot_path}"
+                if not self.snapshot._snapshot_update and not os.path.exists(snapshot_abs_path):
+                    missing_snapshot_files.append(snapshot_abs_path)
+                else:
+                    self.snapshot.assert_match(f.read() + "\n", snapshot_path)
+
+                    if snapshot_abs_path in expected_files_to_test:
+                        expected_files_to_test.remove(snapshot_abs_path)
+
+        message_lines = []
+        if expected_files_to_test:
+            message_lines.append("existing snapshot files that were not asserted:")
+            for expected_snapshot_path in expected_files_to_test:
+                message_lines.append(f"  - {expected_snapshot_path}")
+
+        if missing_snapshot_files:
+            if message_lines:
+                message_lines.append("")
+            message_lines.append("missing snapshot files:")
+            for missing_snapshot_file in missing_snapshot_files:
+                message_lines.append(f"  - {missing_snapshot_file}")
+
+        if message_lines:
+            pytest.fail("\n".join(message_lines), pytrace=False)
 
 
 def load_json_schema(path: str) -> dict:
