@@ -1,15 +1,17 @@
-# flake8: noqa
 from __future__ import annotations
 
 import datetime
 import logging
 import urllib.parse
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
 
 import orjson
 import requests
 
 from vunnel import utils
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class NvdAPI:
@@ -58,7 +60,7 @@ class NvdAPI:
             message="fetching CVE history",
         )
 
-    def cve(
+    def cve(  # noqa: PLR0913
         self,
         cve_id: str | None = None,
         results_per_page: int
@@ -99,7 +101,10 @@ class NvdAPI:
         )
 
     def _request_all_pages(
-        self, url: str, parameters: dict[str, str], message: str = "fetching results"
+        self,
+        url: str,
+        parameters: dict[str, str],
+        message: str = "fetching results",
     ) -> Generator[dict[str, Any], Any, None]:
         headers = {
             "content-type": "application/json",
@@ -157,4 +162,4 @@ class NvdAPI:
 def clean_date(dt: datetime.datetime | str) -> str:
     if isinstance(dt, datetime.datetime):
         return dt.isoformat()
-    return datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M").isoformat()
+    return datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M").isoformat()  # noqa: DTZ007
