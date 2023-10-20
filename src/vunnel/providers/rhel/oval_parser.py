@@ -1,4 +1,3 @@
-# flake8: noqa
 from __future__ import annotations
 
 import bz2
@@ -14,7 +13,7 @@ from vunnel.utils.oval_parser import Config, parse
 
 
 class Parser:
-    _url_mappings_ = [
+    _url_mappings_ = [  # noqa: RUF012
         # Legacy data for RHEL:5 - no longer available from endpoint after 1st July, 2023; however, it is available in the
         # preload archive.
         {
@@ -85,12 +84,12 @@ class Parser:
 
                 self.logger.info(f"finish processing manifest from {manifest_url}")
                 return path_to_sha
-            else:
+            else:  # noqa: RET505
                 error = f"GET {manifest_url} failed with HTTP error {r.status_code}"
                 self.logger.error(error)
                 raise Exception(error)
-        except:
-            raise Exception("Error fetching/processing sha256")
+        except Exception:
+            raise Exception("Error fetching/processing sha256")  # noqa: B904
 
     @utils.retry_with_backoff()
     def _download_oval_file(self, base_url: str, oval_url_path: str, path_to_sha: dict[str, str]) -> str:
@@ -136,11 +135,11 @@ class Parser:
                         fp.write(sha256sum)
 
                     return sha256sum
-                else:
+                else:  # noqa: RET505
                     raise Exception(f"GET {oval_url} failed with HTTP error {r.status_code}")
             except Exception:
                 self.logger.exception("error downloading OVAL file")
-                raise Exception("error downloading OVAL file")
+                raise Exception("error downloading OVAL file")  # noqa: B904
         else:
             self.logger.info(f"stored checksum matches server checksum for {xml_file_path}. Skipping download")
             return latest_sha256
@@ -164,8 +163,6 @@ class Parser:
 
                 if not skip_download:
                     self._download_oval_file(base_url, p, path_to_sha)
-
-        return None
 
     def xml_paths(self):
         paths = []
