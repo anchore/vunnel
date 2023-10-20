@@ -40,7 +40,6 @@ def main() -> None:
     stdout, stderr = process.communicate()
     print(stdout)
     print(stderr)
-    pass
 
 
 if __name__ == "__main__":

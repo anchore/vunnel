@@ -47,7 +47,6 @@ class MarinerXmlFile:
                 self.definitions.append(definition)
             except Exception as ex:
                 self.logger.warning(f"skipping definition element in {oval_file_path} due to {ex}")
-                pass
 
         self.tests_by_id = {}
         for test_element in etree.XPath("//linux-def:rpminfo_test", namespaces=nsmap)(root):
