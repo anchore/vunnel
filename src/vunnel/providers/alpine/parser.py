@@ -1,4 +1,3 @@
-# flake8: noqa
 from __future__ import annotations
 
 import copy
@@ -11,7 +10,7 @@ from html.parser import HTMLParser
 import requests
 import yaml
 
-from vunnel import workspace, utils
+from vunnel import utils, workspace
 from vunnel.utils.vulnerability import vulnerability_element
 
 namespace = "alpine"
@@ -35,7 +34,7 @@ class SecdbLandingParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         for attr, value in attrs:
-            if attr == "href" and SecdbLandingParser._valid_link_.match(value):
+            if attr == "href" and SecdbLandingParser._valid_link_.match(value):  # noqa: SIM102
                 if value not in ignore_links:
                     self.links.append(value)
                     break
@@ -44,7 +43,7 @@ class SecdbLandingParser(HTMLParser):
 class Parser:
     _url_ = "https://secdb.alpinelinux.org"
     _secdb_dir_ = "secdb"
-    _db_types = ["main", "community"]
+    _db_types = ["main", "community"]  # noqa: RUF012
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
 
@@ -57,7 +56,9 @@ class Parser:
     ):
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
-            workspace.input_path, self._secdb_dir_, "alpine-secdb-master"
+            workspace.input_path,
+            self._secdb_dir_,
+            "alpine-secdb-master",
         )  # no longer used except for cleanup, leaving it here for backwards compatibility
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/") if url else Parser._url_
@@ -70,7 +71,7 @@ class Parser:
     def urls(self) -> list[str]:
         return list(self._urls)
 
-    def _download(self):
+    def _download(self):  # noqa: C901, PLR0912
         """
         Downloads alpine sec db files
         :return:
@@ -104,7 +105,7 @@ class Parser:
             raise
 
         if links:
-            self.logger.debug("found release specific secdb links: {}".format(links))
+            self.logger.debug(f"found release specific secdb links: {links}")
         else:
             raise Exception("unable to find release specific secdb links")
 
@@ -122,10 +123,10 @@ class Parser:
                             # future enhancement could add semver processing for something like "<3.3 continue"
                             continue
 
-                        file_name = "{}.yaml".format(db_type)
+                        file_name = f"{db_type}.yaml"
                         download_url = "/".join([self.metadata_url, rel, file_name])
 
-                        self.logger.info("Downloading secdb {} {}".format(rel, db_type))
+                        self.logger.info(f"Downloading secdb {rel} {db_type}")
                         r = self._download_url(download_url)
 
                         file_path = os.path.join(rel_dir, file_name)
@@ -173,9 +174,9 @@ class Parser:
                         dbtype_data_dict = {}
 
                         for dbtype in self._db_types:
-                            secdb_yaml_path = os.path.join(self.secdb_dir_path, f, "{}.yaml".format(dbtype))
+                            secdb_yaml_path = os.path.join(self.secdb_dir_path, f, f"{dbtype}.yaml")
                             if os.path.exists(secdb_yaml_path):
-                                self.logger.debug("loading secdb data from: {}".format(secdb_yaml_path))
+                                self.logger.debug(f"loading secdb data from: {secdb_yaml_path}")
                                 with open(secdb_yaml_path) as FH:
                                     yaml_data = yaml.safe_load(FH)
                                     dbtype_data_dict[dbtype] = yaml_data
@@ -188,7 +189,7 @@ class Parser:
             self.logger.exception("Failed to load alpine sec db data")
             raise
 
-    def _normalize(self, release, dbtype_data_dict):
+    def _normalize(self, release, dbtype_data_dict):  # noqa: C901
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -199,7 +200,7 @@ class Parser:
         vuln_dict = {}
 
         for dbtype, data in dbtype_data_dict.items():
-            self.logger.info("processing {}:{}".format(release, dbtype))
+            self.logger.info(f"processing {release}:{dbtype}")
 
             if data["packages"]:
                 for el in data["packages"]:
