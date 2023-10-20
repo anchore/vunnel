@@ -129,7 +129,7 @@ class Parser:
         return ns_cve_dsalist
 
     # noqa
-    def _parse_dsa_record(self, dsa_lines):
+    def _parse_dsa_record(self, dsa_lines):  # noqa: C901
         """
 
         :param dsa_lines:
@@ -259,7 +259,7 @@ class Parser:
 
         return ns_cve_dsalist
 
-    def _normalize_json(self, ns_cve_dsalist=None):  # noqa: PLR0912,PLR0915
+    def _normalize_json(self, ns_cve_dsalist=None):  # noqa: PLR0912,PLR0915,C901
         adv_mets = {}
         # all_matched_dsas = set()
         # all_dsas = set()

@@ -97,7 +97,7 @@ class Parser:
             self.logger.debug(f"loading existing ALAS from {alas_file}")
             with open(alas_file, encoding="utf-8") as fp:
                 content = fp.read()
-            return content
+            return content  # noqa: RET504
 
         try:
             self.logger.debug(f"downloading ALAS from {alas_url}")
@@ -210,7 +210,7 @@ class FixedIn(JsonifierMixin):
 
 class PackagesHTMLParser(HTMLParser):
     _new_packages_tuple_ = ("id", "new_packages")
-    _arch_list_ = ["x86_64:", "noarch:", "src:"]
+    _arch_list_ = ["x86_64:", "noarch:", "src:"]  # noqa: RUF012
 
     def __init__(self):
         self.fixes = []
