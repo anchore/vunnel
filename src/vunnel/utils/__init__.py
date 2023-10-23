@@ -22,20 +22,21 @@ def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callabl
             logger = logging.getLogger("utils:retry-with-backoff")
             attempt = 0
             while attempt < retries:
+                err = None
                 try:
                     return f(*args, **kwargs)
                 except KeyboardInterrupt:
                     logger.warning("keyboard interrupt, cancelling request...")
                     raise
-                except Exception:
+                except Exception as e:
+                    err = e
                     if attempt >= retries:
                         logger.exception(f"failed after {retries} retries")
                         raise
-                    logger.warning("caught exception in retry_with_backoff; will be retried", exc_info=True)
 
                 # explanation of S311 disable: random number is not used for cryptography
                 sleep = backoff_in_seconds * 2**attempt + random.uniform(0, 1)  # noqa: S311
-                logger.warning(f"{f} failed. Retrying in {int(sleep)} seconds (attempt {attempt+1} of {retries})")
+                logger.warning(f"{f} failed with {err}. Retrying in {int(sleep)} seconds (attempt {attempt+1} of {retries})")
                 time.sleep(sleep)
                 attempt += 1
 
