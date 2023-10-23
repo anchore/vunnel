@@ -1,10 +1,10 @@
-# flake8: noqa
 from __future__ import annotations
 
 import datetime
 import logging
 import os
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 from vunnel.workspace import Workspace
 
@@ -29,7 +29,7 @@ class Manager:
         self.urls = [self.api._cve_api_url_]
 
     def get(
-        self, last_updated: datetime.datetime | None, skip_if_exists: bool = False
+        self, last_updated: datetime.datetime | None, skip_if_exists: bool = False,
     ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         if skip_if_exists and self._can_update_incrementally(last_updated):
             yield from self._download_updates(last_updated)  # type: ignore
@@ -45,7 +45,7 @@ class Manager:
 
         if days_since_last_sync >= NvdAPI.max_date_range_days:
             self.logger.info(
-                f"last sync was {days_since_last_sync} days ago (more than {NvdAPI.max_date_range_days} days, the max range value of the NVD API), downloading all data"
+                f"last sync was {days_since_last_sync} days ago (more than {NvdAPI.max_date_range_days} days, the max range value of the NVD API), downloading all data",
             )
             return False
 
