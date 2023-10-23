@@ -53,8 +53,13 @@ class GitWrapper:
     _head_rev_cmd_ = "git rev-parse HEAD"
     _ubuntu_server_503_message = "error: RPC failed; HTTP 503 curl 22 The requested URL returned error: 503"
 
-    def __init__(
-        self, source: str, branch: str, checkout_dest: str, workspace: str | None = None, logger: logging.Logger | None = None,
+    def __init__(  # noqa: PLR0913
+        self,
+        source: str,
+        branch: str,
+        checkout_dest: str,
+        workspace: str | None = None,
+        logger: logging.Logger | None = None,
     ):
         self.src = source
         self.branch = branch
@@ -375,8 +380,7 @@ class GitWrapper:
         if updated or deleted:
             deleted = {key: value for key, value in deleted.items() if key not in updated}
             return GitCommitSummary(sha=commit_lines[0][0], updated=updated, deleted=deleted)
-        else:
-            return None
+        return None
 
     def _exec_cmd(self, cmd, *args, **kwargs) -> bytes:
         """
@@ -389,12 +393,12 @@ class GitWrapper:
         try:
             self.logger.trace(f"running: {cmd}")
             cmd_list = shlex.split(cmd)
-            return subprocess.check_output(cmd_list, *args, **kwargs, stderr=subprocess.PIPE)  # nosec
+            # S603 disable exaplanation: running git commands by design
+            return subprocess.check_output(cmd_list, *args, **kwargs, stderr=subprocess.PIPE)  # noqa: S603
         except Exception as e:
             self.logger.exception(f"error executing command: {cmd}")
 
-            if isinstance(e, subprocess.CalledProcessError):
-                if e.stderr and self._ubuntu_server_503_message in e.stderr.decode():
-                    raise UbuntuGitServer503Error
+            if isinstance(e, subprocess.CalledProcessError) and e.stderr and self._ubuntu_server_503_message in e.stderr.decode():
+                raise UbuntuGitServer503Error from e
 
             raise e
