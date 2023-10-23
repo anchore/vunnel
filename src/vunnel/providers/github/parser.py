@@ -429,9 +429,9 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
         "%sclassifications: [GENERAL, MALWARE], first: 100, orderBy: {field: UPDATED_AT, direction: ASC}" % vuln_after
     )
 
-    return """
+    return f"""
     {{
-      {} {{
+      {caller} {{
         nodes {{
           ghsaId
           classification
@@ -448,7 +448,7 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
           references {{
             url
           }}
-          vulnerabilities({}) {{
+          vulnerabilities({vulnerabilities}) {{
             pageInfo {{
               endCursor
               hasNextPage
@@ -476,10 +476,7 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
         }}
       }}
     }}
-    """.format(
-        caller,
-        vulnerabilities,
-    )
+    """
 
 
 class NodeParser(dict):
