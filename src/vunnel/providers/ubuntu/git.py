@@ -82,9 +82,9 @@ class GitWrapper:
 
             cmd = self._is_git_repo_cmd_
             out = self._exec_cmd(cmd, cwd=destination)
-            self.logger.debug("check for git repository, cmd: {}, output: {}".format(cmd, out.decode()))
-        except:
-            self.logger.debug(f"git working tree not found at {destination}")
+            self.logger.debug(f"check for git repository, cmd: {cmd}, output: {out.decode()}")
+        except Exception:
+            self.logger.debug(f"git working tree not found at {destination}", exc_info=True)
             return False
 
         return True
@@ -146,21 +146,22 @@ class GitWrapper:
                 try:
                     self._exec_cmd(self._clean_cmd_, cwd=self.dest)
                     self._exec_cmd(self._reset_cmd_, cwd=self.dest)
-                except:
-                    pass
+                except Exception:
+                    self.logger.info("failed to clean and reset", exc_info=True)
 
                 self._exec_cmd(self._check_out_cmd_.format(branch=self.branch), cwd=self.dest)
-            except:  # nosec
-                pass
+            except Exception:
+                self.logger.info(f"failed to run git checkout of {self.branch}", exc_info=True)
 
             try:
                 out = self._exec_cmd(self._pull_ff_only_cmd_, cwd=self.dest)
-                self.logger.debug("synced with upstream git repo, output: {}".format(out.decode()))
+                self.logger.debug(f"synced with upstream git repo, output: {out.decode()}")
                 self._write_graph()
             except UbuntuGitServer503Error:
                 raise
-            except:  # nosec
+            except Exception:
                 # if something other than 503 occurred at this point just remove the repo and re-clone
+                self.logger.exception("unexpected exception syncing with upstream; will delete and re-clone")
                 self._delete_repo()
                 self._clone_repo()
 
@@ -207,14 +208,14 @@ class GitWrapper:
             cmd = self._get_rev_content_cmd_.format(sha=git_rev.sha, file=git_rev.file)
             out = self._exec_cmd(cmd, cwd=self.dest)
             return out.decode().splitlines()
-        except:
-            self.logger.exception("failed to get content for {} from git commit {}".format(git_rev.file, git_rev.sha))
+        except Exception:
+            self.logger.exception(f"failed to get content for {git_rev.file} from git commit {git_rev.sha}")
 
     def get_current_rev(self) -> str:
         try:
             rev = self._exec_cmd(self._head_rev_cmd_, cwd=self.dest)
             return rev.decode().strip() if isinstance(rev, bytes) else rev
-        except:
+        except Exception:
             self.logger.exception("unable to get current git revision")
 
     @staticmethod

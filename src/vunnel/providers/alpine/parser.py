@@ -86,15 +86,15 @@ class Parser:
             if not os.path.exists(self.secdb_dir_path):
                 os.makedirs(self.secdb_dir_path, exist_ok=True)
 
-            self.logger.info("downloading alpine secdb metadata from: {}".format(self.metadata_url))
+            self.logger.info(f"downloading alpine secdb metadata from: {self.metadata_url}")
             r = self._download_metadata_url()
             try:
                 self.logger.debug("HTML parsing secdb landing page content for links")
                 parser = SecdbLandingParser()
                 parser.feed(r.text)
                 links = parser.links
-            except:
-                self.logger.warning("unable to html parse secdb landing page content for links")
+            except Exception:
+                self.logger.warning("unable to html parse secdb landing page content for links", exc_info=True)
 
             if not links:
                 self.logger.debug("string parsing secdb landing page content for links")
@@ -135,8 +135,8 @@ class Parser:
 
                 except KeyboardInterrupt:
                     raise
-                except:
-                    self.logger.exception("ignoring error processing secdb for {}".format(link))
+                except Exception:
+                    self.logger.exception(f"ignoring error processing secdb for {link}")
 
     @utils.retry_with_backoff()
     def _download_metadata_url(self) -> requests.Response:

@@ -81,7 +81,7 @@ def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
                 elif event == "end" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
                     try:
                         _process_definition(element, vuln_dict, config)
-                    except:
+                    except Exception:
                         logger.exception("Error parsing oval record. Logging error and continuing")
                     finally:
                         processing = False

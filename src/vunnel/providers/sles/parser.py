@@ -379,17 +379,15 @@ class SLESVulnerabilityParser(VulnerabilityParser):
             identity = xml_element.attrib["id"]
 
             oval_ns_match = re.search(config.namespace_regex, xml_element.tag)
-            if oval_ns_match and len(oval_ns_match.groups()) > 0:
-                oval_ns = oval_ns_match.group(1)
-            else:
-                oval_ns = ""
+            oval_ns = oval_ns_match.group(1) if oval_ns_match and len(oval_ns_match.groups()) > 0 else ""
 
             # def_version = xml_element.attrib["version"]
             name = xml_element.find(config.title_xpath_query.format(oval_ns)).text
             severity_element = xml_element.find(config.severity_xpath_query.format(oval_ns))
             try:
                 severity = config.severity_map.get(severity_element.text.lower())
-            except:
+            except Exception:
+                cls.logger.info("unknown severity due to exception", exc_info=True)
                 severity = "Unknown"
                 # TODO temporary hack! sles 15 data was tripping this, figure out a better way
             description = xml_element.find(config.description_xpath_query.format(oval_ns)).text.strip()

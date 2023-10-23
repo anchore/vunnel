@@ -163,7 +163,7 @@ class Parser:
                     last_full_sync = dt_parser.parse(fp.read())
                 if (now - last_full_sync).days < self.full_sync_interval:
                     do_full_sync = False
-        except:
+        except Exception:
             self.logger.debug("ignoring error loading last_full_sync timestamp from disk", exc_info=True)
             do_full_sync = True
 
@@ -282,7 +282,7 @@ class Parser:
                 )
             else:
                 self.logger.debug(f"{rhsa_id} not found for platform {platform}")
-        except:
+        except Exception:
             self.logger.exception(f"error looking up {package} in {rhsa_id} for {platform}")
 
         return fixed_ver, module_name
@@ -633,7 +633,7 @@ class Parser:
                 else:
                     self.logger.debug(f"{state!r} is an unknown state")
                     continue
-            except:
+            except Exception:
                 self.logger.exception(f"error parsing {cve_id} package state entity: {item}")
 
         return affected + out_of_support
@@ -679,7 +679,8 @@ class Parser:
                     cvssv3.get("cvss3_base_score", None),
                     cvssv3.get("status", None),
                 )
-            except:
+            except Exception:
+                self.logger.info("unable to make cvss3, defaulting to None", exc_info=True)
                 cvssv3_obj = None
 
             for item in nfins:  # process not fixed in packages first as that trumps fixes
