@@ -76,6 +76,6 @@ def load_plugins() -> None:
         try:
             logging.debug(f"loading provider plugin {tool.name!r}")
             tool.load()
-        except:  # noqa: E722
+        except Exception:
             # note: this should not be fatal. Log and move on.
             logging.exception(f"failed loading provider plugin {tool.name!r}")

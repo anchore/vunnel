@@ -177,6 +177,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
         </criteria>
         """
         results = []
+        logger = logging.getLogger("oval-v2-parser")
 
         # further parsing makes the assumption that this element has 2 children, bail out of here if that's not true
         if len(criteria_element) != 2:
@@ -190,7 +191,8 @@ class VulnerabilityParser(OVALElementParser, ABC):
 
         try:
             test_ids = VulnerabilityParser._parse_sub_group(criteria_element[1], config, config.artifact_regex)
-        except:
+        except Exception:
+            logger.exception("returning results early due to exception in _parse_sub_group")
             return results
 
         if not test_ids:
