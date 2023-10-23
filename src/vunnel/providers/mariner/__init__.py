@@ -51,5 +51,4 @@ class Provider(provider.Provider):
                     schema=self.schema,
                     payload=record,
                 )
-                pass
         return self.parser.urls, len(writer)

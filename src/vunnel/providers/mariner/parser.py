@@ -31,7 +31,8 @@ class MarinerXmlFile:
             fail_on_unknown_properties=False,
         )
         xml_parser = XmlParser(config=parser_config)
-        root = etree.parse(oval_file_path)
+        # S320 disable explanation: the mariner linux vulnerability feed is not untrusted xml
+        root = etree.parse(oval_file_path)  # noqa: S320
         nsmap = etree.XPath("/*")(root)[0].nsmap
         default = nsmap[None]
         nsmap["default"] = default
@@ -47,7 +48,6 @@ class MarinerXmlFile:
                 self.definitions.append(definition)
             except Exception as ex:
                 self.logger.warning(f"skipping definition element in {oval_file_path} due to {ex}")
-                pass
 
         self.tests_by_id = {}
         for test_element in etree.XPath("//linux-def:rpminfo_test", namespaces=nsmap)(root):
