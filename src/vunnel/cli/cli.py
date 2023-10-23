@@ -179,7 +179,7 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1)
 @click.option("--show-empty", default=False, is_flag=True, help="show providers with no state")
 @click.pass_obj
-def status_provider(cfg: config.Application, provider_names: str, show_empty: bool) -> None:
+def status_provider(cfg: config.Application, provider_names: str, show_empty: bool) -> None:  # noqa: C901
     print(cfg.root)
     selected_names = provider_names if provider_names else providers.names()
 

@@ -23,7 +23,7 @@ class Parser:
         url: str,
         namespace: str,
         download_timeout: int = 125,
-        logger: logging.Logger = None,  # noqa: PLR0913
+        logger: logging.Logger | None = None,  # noqa: PLR0913
     ):
         self.download_timeout = download_timeout
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
