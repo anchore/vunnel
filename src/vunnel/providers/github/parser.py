@@ -548,6 +548,7 @@ class NodeParser(dict):
 
     def _make_cvss(self, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
         try:
+            cvss_vector = cvss_vector.removesuffix("/")
             cvss3_obj = CVSS3(cvss_vector)
 
             cvss_object = CVSS(
