@@ -88,8 +88,8 @@ class Parser:
                 error = f"GET {manifest_url} failed with HTTP error {r.status_code}"
                 self.logger.error(error)
                 raise Exception(error)
-        except Exception:
-            raise Exception("Error fetching/processing sha256")  # noqa: B904
+        except Exception as e:
+            raise Exception("Error fetching/processing sha256") from e
 
     @utils.retry_with_backoff()
     def _download_oval_file(self, base_url: str, oval_url_path: str, path_to_sha: dict[str, str]) -> str:
