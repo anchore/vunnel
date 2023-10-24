@@ -200,6 +200,19 @@ class TestNodeParser:
         assert result["CVSS"] == expected
         assert result.CVSS == expected
 
+    def test_trailing_slash_cvss(self, node):
+        node["cvss"]["vectorString"] = node["cvss"]["vectorString"] + "/"
+        result = parser.NodeParser(node).parse()
+        expected = CVSS(
+            version="3.0",
+            vector_string="CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            base_metrics=CVSSBaseMetrics(base_score=9.8, exploitability_score=3.9, impact_score=5.9, base_severity="Critical"),
+            status="N/A",
+        )
+
+        assert result["CVSS"] == expected
+        assert result.CVSS == expected
+
     def test_gets_published(self, node):
         result = parser.NodeParser(node).parse()
         result["published"] = "2020-02-04T03:07:31Z"
