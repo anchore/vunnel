@@ -333,24 +333,35 @@ def select_providers(cfg: Config, output_json: bool):
     changed_files = changes()
 
     selected_providers = set()
-    for test in cfg.tests:
-        if not test.provider:
-            continue
 
-        search_globs = [f"src/vunnel/providers/{test.provider}/**"]
+    # look for gate changes, if any, then run all providers
+    gate_globs = ["tests/quality/*.py", "tests/quality/*.yaml", "tests/quality/vulnerability-match-labels/**"]
 
-        for additional_provider in test.additional_providers:
-            search_globs.append(f"src/vunnel/providers/{additional_provider.name}/**")
+    for search_glob in gate_globs:
+        for changed_file in changed_files:
+            if fnmatch.fnmatch(changed_file, search_glob):
+                selected_providers = {test.provider for test in cfg.tests}
 
-        for g in test.additional_trigger_globs:
-            search_globs.append(g)
+    if not selected_providers:
+        # there are no gate changes, so look for provider-specific changes
+        for test in cfg.tests:
+            if not test.provider:
+                continue
 
-        for search_glob in search_globs:
-            for changed_file in changed_files:
-                if fnmatch.fnmatch(changed_file, search_glob):
-                    logging.debug(f"provider {test.provider} is affected by file change {changed_file}")
-                    selected_providers.add(test.provider)
-                    break
+            search_globs = [f"src/vunnel/providers/{test.provider}/**"]
+
+            for additional_provider in test.additional_providers:
+                search_globs.append(f"src/vunnel/providers/{additional_provider.name}/**")
+
+            for g in test.additional_trigger_globs:
+                search_globs.append(g)
+
+            for search_glob in search_globs:
+                for changed_file in changed_files:
+                    if fnmatch.fnmatch(changed_file, search_glob):
+                        logging.debug(f"provider {test.provider} is affected by file change {changed_file}")
+                        selected_providers.add(test.provider)
+                        break
 
     sorted_providers = sorted(selected_providers)
 
