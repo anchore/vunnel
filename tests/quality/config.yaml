@@ -32,7 +32,7 @@ yardstick:
       version: latest
       takes: SBOM
 
-grype-db:
+grype_db:
   # values:
   #  - "latest" to use the latest released grype-db
   #  - a released version name (e.g. "v0.15.2")
@@ -50,7 +50,7 @@ tests:
     images:
       - docker.io/alpine:3.2@sha256:ddac200f3ebc9902fb8cfcd599f41feb2151f1118929da21bcef57dc276975f9
       - docker.io/anchore/test_images:alpine-package-cpe-vuln-match-bd0aaef@sha256:0825acea611c7c5cc792bc7cc20de44d7413fd287dc5afc4aab9c1891d037b4f
-    expected-namespaces:
+    expected_namespaces:
       - alpine:distro:alpine:3.2
       - alpine:distro:alpine:3.3
       - alpine:distro:alpine:3.4
@@ -74,7 +74,7 @@ tests:
     images:
       - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
       - docker.io/anchore/test_images:vulnerabilities-amazonlinux-2-5c26ce9@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
-    expected-namespaces:
+    expected_namespaces:
       - amazon:distro:amazonlinux:2
       - amazon:distro:amazonlinux:2022
       - amazon:distro:amazonlinux:2023
@@ -83,12 +83,12 @@ tests:
     additional_providers:
       - name: nvd
         use_cache: true
-    additional-trigger-globs:
+    additional_trigger_globs:
       # this provider imports and uses the wolfi provider code
       - src/vunnel/providers/wolfi/**
     images:
       - ghcr.io/chainguard-images/scanner-test:latest@sha256:59bddc101fba0c45d5c093575c6bc5bfee7f0e46ff127e6bb4e5acaaafb525f9
-    expected-namespaces:
+    expected_namespaces:
       - chainguard:distro:chainguard:rolling
 
   - provider: debian
@@ -99,7 +99,7 @@ tests:
     images:
       - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
       - docker.io/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
-    expected-namespaces:
+    expected_namespaces:
       - debian:distro:debian:7
       - debian:distro:debian:8
       - debian:distro:debian:9
@@ -114,10 +114,7 @@ tests:
       # we need to convert GHSAs to CVEs so that we can filter based on date
       - name: nvd
         use_cache: true
-      # note: the base images for most of the test images are alpine and we are including the NVD namespace. The alpine
-      # matcher in grype is unique in the sense that it searches the NVD namespace first for results and filters
-      # out any fixes found in the alpine namespace. For this reason it is important to keep alpine and alpine-adjacent
-      # namespaces (e.g. wolfi) when building the grype database.
+      # note: the base images for most of the github test images are alpine and we are including the NVD namespace.
       - name: alpine
         use_cache: true
       - name: wolfi
@@ -132,7 +129,7 @@ tests:
       - docker.io/anchore/test_images:grype-quality-java-d89207b@sha256:b3534fc2e37943136d5b54e3a58b55d4ccd4363d926cf7aa5bf55a524cf8275b
       - docker.io/anchore/test_images:grype-quality-golang-d89207b@sha256:7536ee345532f674ec9e448e3768db4e546c48220ba2b6ec9bc9cfbfb3b7b74a
       - docker.io/anchore/test_images:grype-quality-ruby-d89207b@sha256:1a5a5f870924e88a6f0f2b8089cf276ef0a79b5244a052cdfe4a47bb9e5a2c10
-    expected-namespaces:
+    expected_namespaces:
       - github:language:dart
       - github:language:dotnet
       - github:language:go
@@ -147,21 +144,21 @@ tests:
   - provider: mariner
     images:
       - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
-    expected-namespaces:
+    expected_namespaces:
       - mariner:distro:mariner:1.0
       - mariner:distro:mariner:2.0
 
   - provider: nvd
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
-    expected-namespaces:
+    expected_namespaces:
       - nvd:cpe
 
   - provider: oracle
     images:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
       - docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
-    expected-namespaces:
+    expected_namespaces:
       - oracle:distro:oraclelinux:5
       - oracle:distro:oraclelinux:6
       - oracle:distro:oraclelinux:7
@@ -181,7 +178,7 @@ tests:
       - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
 
-    expected-namespaces:
+    expected_namespaces:
       - redhat:distro:redhat:5
       - redhat:distro:redhat:6
       - redhat:distro:redhat:7
@@ -193,7 +190,7 @@ tests:
 #      - name: sles
 #    images:
 #      -
-#    expected-namespaces:
+#    expected_namespaces:
 #      - sles:distro:sles:11
 #      - sles:distro:sles:11.1
 #      - sles:distro:sles:11.2
@@ -218,7 +215,7 @@ tests:
     use_cache: true
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
-    expected-namespaces:
+    expected_namespaces:
       - ubuntu:distro:ubuntu:12.04
       - ubuntu:distro:ubuntu:12.10
       - ubuntu:distro:ubuntu:13.04
@@ -249,5 +246,5 @@ tests:
         use_cache: true
     images:
       - cgr.dev/chainguard/wolfi-base:latest-20221001@sha256:be3834598c3c4b76ace6a866edcbbe1fa18086f9ee238b57769e4d230cd7d507
-    expected-namespaces:
+    expected_namespaces:
       - wolfi:distro:wolfi:rolling
