@@ -37,26 +37,25 @@ runs:
       if: ${{ failure() }}
       shell: bash
       run: |
-        ARCHIVE_NAME=qg-capture-state-${{ inputs.provider }}.zip
-        WORKFLOW_RUN_LINK=https://github.com/anchore/vunnel/actions/runs/${{ github.run_id }}
+        ARCHIVE_BASENAME=qg-capture-state-${{ inputs.provider }}
+        ARCHIVE_NAME=$ARCHIVE_BASENAME.zip
 
         cat << EOF >> $GITHUB_STEP_SUMMARY
-        ## Troubleshooting ${{ inputs.provider }} failed run
+        ## Troubleshooting '${{ inputs.provider }}' failed run
 
-        Download the archive from CI for the failed provider: $WORKFLOW_RUN_LINK
-        Specifically the artifact: $ARCHIVE_NAME
+        Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
         Then run the following commands to debug:
-        ```bash
+        \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality
-        tar -xzvf $ARCHIVE_NAME
-        ```
+        unzip $ARCHIVE_NAME && tar -xzf $ARCHIVE_BASENAME.tar.gz
+        \`\`\`
 
         Now you can debug the provider with yardstick:
-        ```bash
+        \`\`\`bash
         poetry shell
         yardstick result list
         yardstick label explore
-        ```
+        \`\`\`
         EOF
