@@ -15,7 +15,48 @@ runs:
       working-directory: tests/quality
       run: poetry run make capture provider=${{ inputs.provider }}
 
+
     - name: Validate provider results
       shell: bash
       working-directory: tests/quality
       run: poetry run make validate
+
+    - name: Archive the provider state (${{ inputs.provider }})
+      if: ${{ failure() }}
+      shell: bash
+      run: tar -czvf qg-capture-state-${{ inputs.provider }}.tar.gz -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
+
+    - name: Upload the provider state archive (${{ inputs.provider }})
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: qg-capture-state-${{ inputs.provider }}
+        path: qg-capture-state-${{ inputs.provider }}.tar.gz
+
+    - name: Show instructions to debug
+      if: ${{ failure() }}
+      shell: bash
+      run: |
+        ARCHIVE_NAME=qg-capture-state-${{ inputs.provider }}.zip
+        WORKFLOW_RUN_LINK=https://github.com/anchore/vunnel/actions/runs/${{ github.run_id }}
+
+        cat << EOF >> $GITHUB_STEP_SUMMARY
+        ## Troubleshooting ${{ inputs.provider }} failed run
+
+        Download the archive from CI for the failed provider: $WORKFLOW_RUN_LINK
+        Specifically the artifact: $ARCHIVE_NAME
+
+        Then run the following commands to debug:
+        ```bash
+        # copy the archive to the tests/quality directory
+        cd tests/quality
+        tar -xzvf $ARCHIVE_NAME
+        ```
+
+        Now you can debug the provider with yardstick:
+        ```bash
+        poetry shell
+        yardstick result list
+        yardstick label explore
+        ```
+        EOF
