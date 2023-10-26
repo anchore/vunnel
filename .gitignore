@@ -4,6 +4,7 @@
 .grype
 .grype-db
 *.tar.gz
+*.zip
 
 /bin
 /data/
