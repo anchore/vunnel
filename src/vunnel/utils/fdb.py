@@ -1,5 +1,3 @@
-# noqa
-
 """
 A file-based database, requires a writeable directory (path), which is usually
 a requirement for drivers. It can store any additional metadata, accessible  as
