@@ -1,4 +1,3 @@
-# flake8: noqa
 from __future__ import annotations
 
 import logging
@@ -7,6 +6,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, DecimalException
+from typing import TYPE_CHECKING
 
 import requests
 from cvss import CVSS3
@@ -26,7 +26,9 @@ from vunnel.utils.oval_v2 import (
     iter_parse_vulnerability_file,
 )
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
-from vunnel.workspace import Workspace
+
+if TYPE_CHECKING:
+    from vunnel.workspace import Workspace
 
 namespace = "sles"
 
@@ -54,7 +56,11 @@ class Parser:
     logger = logging.getLogger("sles-parser")
 
     def __init__(
-        self, workspace: Workspace, allow_versions: list[str], download_timeout: int = 125, logger: logging.Logger | None = None
+        self,
+        workspace: Workspace,
+        allow_versions: list[str],
+        download_timeout: int = 125,
+        logger: logging.Logger | None = None,
     ):
         self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
@@ -102,7 +108,11 @@ class Parser:
 
     @classmethod
     def _get_name_and_version_from_test(
-        cls, test_id: str, tests_dict: dict, artifacts_dict: dict, versions_dict: dict
+        cls,
+        test_id: str,
+        tests_dict: dict,
+        artifacts_dict: dict,
+        versions_dict: dict,
     ) -> tuple[str | None, str | None]:
         name = None
         version = None
@@ -214,7 +224,7 @@ class Parser:
         return results
 
     @classmethod
-    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:
+    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901
         cls.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
@@ -297,7 +307,7 @@ class Parser:
                             Version=pkg_version,
                             Module=None,
                             VendorAdvisory=None,
-                        )
+                        ),
                     )
 
                 # create the normalized vulnerability
@@ -406,7 +416,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
                         _, vector = cvss_v3.split("/", 1)
                     cvss.append(vector)
 
-            impact = VulnerabilityParser._parse_criteria(xml_element, oval_ns, config)
+            impact = VulnerabilityParser._parse_criteria(xml_element, oval_ns, config)  # noqa: SLF001
         except Exception:
             cls.logger.exception("ignoring error and skip parsing vulnerability definition element")
             identity = name = severity = description = link = None
