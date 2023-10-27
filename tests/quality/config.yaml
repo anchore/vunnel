@@ -120,7 +120,6 @@ tests:
       - name: wolfi
         use_cache: true
     additional_trigger_globs:
-      # this provider imports and uses the wolfi provider code
       - src/vunnel/utils/fdb.py
     images:
       - docker.io/anchore/test_images:java-56d52bc@sha256:10008791acbc5866de04108746a02a0c4029ce3a4400a9b3dad45d7f2245f9da
