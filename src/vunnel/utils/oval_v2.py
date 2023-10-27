@@ -1,5 +1,3 @@
-# flake8: noqa
-
 """
 A generic framework for parsing an OVAL xml file. Design is based on separate collections/sections in an OVAL schema.
 Each section is associated with a parser that can be overridden by the driver. Parsed output represents a view of the
@@ -107,8 +105,7 @@ class OVALElementParser(ABC):
         regex_match = re.search(regex, data)
         if regex_match and len(regex_match.groups()) > 0:
             return regex_match.group(1)
-        else:
-            return data
+        return data
 
 
 class VulnerabilityParser(OVALElementParser, ABC):
@@ -142,7 +139,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
               <criterion test_ref="oval:org.opensuse.security:tst:2009624165" comment="sqlite3-3.36.0-3.12.1 is installed"/>
             </criteria>
           </criteria
-        """
+        """  # noqa: E501
         criteria_element = xml_element.find(config.criteria_xpath_query.format(oval_ns))
         results = []
 
@@ -175,7 +172,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
             <criterion test_ref="oval:org.opensuse.security:tst:2009624166" comment="sqlite3-devel-3.36.0-3.12.1 is installed"/>
           </criteria>
         </criteria>
-        """
+        """  # noqa: E501
         results = []
         logger = logging.getLogger("oval-v2-parser")
 
@@ -203,7 +200,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
                 Impact(
                     namespace_test_id=item,
                     affected_test_ids=test_ids,
-                )
+                ),
             )
 
         return results
@@ -223,7 +220,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
 
         """
         test_ids = []
-        crit_tag = OVALElementParser._find_with_regex(crit_element.tag, config.tag_regex)
+        crit_tag = OVALElementParser._find_with_regex(crit_element.tag, config.tag_regex)  # noqa: SLF001
 
         if crit_tag == "criterion":
             regex_match = re.search(regex, crit_element.attrib["comment"])
@@ -261,7 +258,7 @@ class TestParser(OVALElementParser):
         try:
             identity = xml_element.attrib["id"]
             for child in xml_element:
-                child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)
+                child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)  # noqa: SLF001
                 if child_tag == "object":
                     artifact_id = child.attrib["object_ref"]
                 elif child_tag == "state":
@@ -272,8 +269,7 @@ class TestParser(OVALElementParser):
 
         if identity and artifact_id and version_id:
             return Test(identity=identity, artifact_id=artifact_id, version_id=version_id)
-        else:
-            return None
+        return None
 
 
 class ArtifactParser(OVALElementParser):
@@ -298,7 +294,7 @@ class ArtifactParser(OVALElementParser):
         try:
             identity = xml_element.attrib["id"]
             for child in xml_element:
-                child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)
+                child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)  # noqa: SLF001
 
                 if child_tag in ["name"]:
                     name = child.text
@@ -309,8 +305,7 @@ class ArtifactParser(OVALElementParser):
 
         if identity and name:
             return Artifact(identity=identity, name=name)
-        else:
-            return None
+        return None
 
 
 class VersionParser(OVALElementParser):
@@ -340,7 +335,7 @@ class VersionParser(OVALElementParser):
         try:
             identity = xml_element.attrib["id"]
             for child in xml_element:
-                child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)
+                child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)  # noqa: SLF001
                 if child_tag in ["version", "evr"]:
                     op = child.attrib["operation"]
                     value = child.text
@@ -351,8 +346,7 @@ class VersionParser(OVALElementParser):
 
         if identity and op and value:
             return Version(identity=identity, operation=op, value=value)
-        else:
-            return None
+        return None
 
 
 class OVALParserFactory:
@@ -382,8 +376,7 @@ class OVALParserFactory:
         """
         if oval_element and isinstance(oval_element, self.element_enum):
             return self.parser_map.get(oval_element)
-        else:
-            return None
+        return None
 
     def get_oval_element(self, xml_element: ET.Element, config: OVALParserConfig) -> enum.Enum | None:
         """
@@ -393,7 +386,7 @@ class OVALParserFactory:
         if not ET.iselement(xml_element):
             return result
 
-        tag = OVALElementParser._find_with_regex(xml_element.tag, config.tag_regex)
+        tag = OVALElementParser._find_with_regex(xml_element.tag, config.tag_regex)  # noqa: SLF001
 
         try:
             result = self.element_enum(tag)
