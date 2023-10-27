@@ -1,4 +1,3 @@
-# flake8: noqa
 from __future__ import annotations
 
 import copy
@@ -47,7 +46,7 @@ class Config:
     ns_format = None
 
 
-def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
+def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901
     """
     Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
     and tuple (version, vulnerability-dictionary) as the value
@@ -61,7 +60,7 @@ def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
         logger.warning("Invalid config found, expected an instance of Config class")
         raise TypeError("Invalid config")
 
-    logger.debug("Parsing {}".format(dest_file))
+    logger.debug("Parsing {}".format(dest_file))  # noqa: UP032, G001
 
     if not vuln_dict:
         vuln_dict = {}
@@ -73,7 +72,7 @@ def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
         if dest_file.endswith(".gz"):
             opener = gzip.open
 
-        with opener(dest_file, "rb") as f:
+        with opener(dest_file, "rb") as f:  # noqa: F841
             for event, element in ET.iterparse(dest_file, events=("start", "end")):
                 # gather definition
                 if event == "start" and re.search(config.tag_pattern, element.tag).group(1) == "definition":
@@ -100,7 +99,7 @@ def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
     return vuln_dict
 
 
-def _process_definition(def_element, vuln_dict, config: Config):
+def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912
     logger = logging.getLogger("oval-parser")
     oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
 
@@ -114,7 +113,7 @@ def _process_definition(def_element, vuln_dict, config: Config):
         severity = "Unknown"
     issued = def_element.find(config.date_issued_xpath_query.format(oval_ns)).attrib["date"]
     # check for xpath query first since oracle does not provide this and its not initialized in the config
-    if config.date_updated_xpath_query:
+    if config.date_updated_xpath_query:  # noqa: SIM108
         updated = def_element.find(config.date_updated_xpath_query.format(oval_ns)).attrib["date"]
     else:
         updated = None
@@ -130,7 +129,7 @@ def _process_definition(def_element, vuln_dict, config: Config):
                     "Name": cve.text,
                     "Link": cve.attrib["href"],
                     "cvss2": cve.attrib["cvss2"],
-                }
+                },
             )
         else:
             cves.append({"Name": cve.text, "Link": cve.attrib["href"]})
@@ -170,9 +169,12 @@ def _process_definition(def_element, vuln_dict, config: Config):
         if (name, ns_name) in vuln_dict:
             existing_version, _ = vuln_dict[(name, ns_name)]
             logger.debug(
-                "Found an existing record for {} under {}. Version attribute of definition oval element: existing: {}, new: {}".format(
-                    name, ns_name, existing_version, def_version
-                )
+                "Found an existing record for {} under {}. Version attribute of definition oval element: existing: {}, new: {}".format(  # noqa: G001
+                    name,
+                    ns_name,
+                    existing_version,
+                    def_version,
+                ),
             )
             # lexicographic comparison of versions to choose which vulnerability record wins
             if def_version > existing_version:
@@ -212,7 +214,7 @@ def _process_criteria(element_a, oval_ns, config: Config):
 
         if ns_name:  # proceed only if a platform is found
             # Filter out duplicate (package, version) tuples
-            ns_pkgs_dict[ns_name] = {tuple(list(x) + [ns_module]) for x in group if isinstance(x, tuple)}
+            ns_pkgs_dict[ns_name] = {tuple(list(x) + [ns_module]) for x in group if isinstance(x, tuple)}  # noqa: RUF005
         else:
             # logger.debug('Namespace for the criteria not found, ignoring criteria')
             continue  # ignore this group of conditions if namespace is not found

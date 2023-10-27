@@ -155,6 +155,8 @@ tests:
       - nvd:cpe
 
   - provider: oracle
+    additional_trigger_globs:
+      - src/vunnel/utils/oval_parser.py
     images:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
       - docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
@@ -168,6 +170,8 @@ tests:
   - provider: rhel
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
     # This will still test incremental updates relative to the nightly cache that is populated.
+    additional_trigger_globs:
+      - src/vunnel/utils/oval_parser.py
     use_cache: true
     images:
       - registry.access.redhat.com/ubi8@sha256:68fecea0d255ee253acbf0c860eaebb7017ef5ef007c25bee9eeffd29ce85b29
