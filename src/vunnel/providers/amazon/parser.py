@@ -120,7 +120,7 @@ class Parser:
         if not pkg.endswith(".rpm"):
             pkg = pkg + ".rpm"
 
-        name, version, release, epoch, arch = rpm.split_rpm_filename(pkg)  # noqa
+        name, version, release, epoch, arch = rpm.split_rpm_filename(pkg)
 
         if release:
             return AlasFixedIn(pkg=name, ver=(version + "-" + release))
