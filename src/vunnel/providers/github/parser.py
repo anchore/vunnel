@@ -224,8 +224,13 @@ def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql
             current_time = int(time.time())
             sleep_time = reset_time - current_time
             # note that the rate limit resets 1x / hour, so this could be a long time
-            logger.info(f"sleeping for {sleep_time} seconds to allow GitHub rate limit to reset")
-            time.sleep(sleep_time)
+            if sleep_time > 1 and sleep_time < 3600:  # never sleep for more than 1 hour
+                logger.info(f"sleeping for {sleep_time} seconds to allow GitHub rate limit to reset")
+                time.sleep(sleep_time)
+            elif sleep_time > 3600:
+                raise Exception(
+                    f"github rate limit exhaused and not expected to reset for {sleep_time} seconds. Try again later.",
+                )
     response.raise_for_status()
     if response.status_code == 200:
         return response.json()
