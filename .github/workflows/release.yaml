@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   quality-gate:
+    environment: release
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
@@ -59,7 +60,6 @@ jobs:
     needs:
       - quality-gate
     runs-on: ubuntu-22.04
-    environment: release
     permissions:
       contents: write
       packages: write
@@ -84,7 +84,6 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-22.04
-    environment: release
     permissions:
       contents: read
     steps:
@@ -105,7 +104,6 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-22.04
-    environment: release
     permissions:
       contents: read
       packages: write
@@ -133,7 +131,6 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-22.04
-    environment: release
     permissions:
       contents: write
       packages: write
