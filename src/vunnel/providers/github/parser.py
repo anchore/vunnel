@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+import time
 from decimal import Decimal, DecimalException
 
 import requests
@@ -41,6 +42,9 @@ ecosystem_map = {
     "RUST": "rust",
     "SWIFT": "swift",
 }
+
+GITHUB_RATE_LIMIT_REMAINING_HEADER = "x-ratelimit-remaining"
+GITHUB_RATE_LIMIT_RESET_HEADER = "x-ratelimit-reset"
 
 
 class Parser:
@@ -207,9 +211,21 @@ def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql
     logger = logging.getLogger("get-query")
 
     headers = {"Authorization": f"token {token}"}
-    logger.debug(f"downloading github advisories from {api_url}")
+    logger.info(f"downloading github advisories from {api_url}")
 
     response = requests.post(api_url, json={"query": query}, timeout=timeout, headers=headers)
+    if GITHUB_RATE_LIMIT_REMAINING_HEADER in response.headers and GITHUB_RATE_LIMIT_RESET_HEADER in response.headers:
+        remaining = int(response.headers[GITHUB_RATE_LIMIT_REMAINING_HEADER])
+        # reset time is the time in UNIX Epoch Seconds at which
+        # the rate limit will reset.
+        reset_time = int(response.headers[GITHUB_RATE_LIMIT_RESET_HEADER])
+        logger.debug(f"github rate limit has {remaining} requests left {reset_time}")
+        if remaining < 10:
+            current_time = int(time.time())
+            sleep_time = reset_time - current_time
+            # note that the rate limit resets 1x / hour, so this could be a long time
+            logger.info(f"sleeping for {sleep_time} seconds to allow GitHub rate limit to reset")
+            time.sleep(sleep_time)
     response.raise_for_status()
     if response.status_code == 200:
         return response.json()
