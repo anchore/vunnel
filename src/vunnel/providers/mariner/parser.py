@@ -191,6 +191,7 @@ class Parser:
     def _download_version(self, version: str) -> str:
         filename = MARINER_URL_FILENAME.format(version)
         url = MARINER_URL_BASE.format(filename)
+        self.logger.info(f"downloading mariner file from {url}")
         r = requests.get(url, timeout=self.download_timeout)
         destination = os.path.join(self.workspace.input_path, filename)
         with open(destination, "wb") as writer:

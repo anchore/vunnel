@@ -100,7 +100,7 @@ class Parser:
             return content  # noqa: RET504
 
         try:
-            self.logger.debug(f"downloading ALAS from {alas_url}")
+            self.logger.info(f"downloading ALAS from {alas_url}")
             r = requests.get(alas_url, timeout=self.download_timeout)
             if r.status_code == 200:
                 content = r.text

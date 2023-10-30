@@ -264,7 +264,7 @@ class Parser:
 
     @utils.retry_with_backoff()
     def _download_entity(self, url, destination):
-        self.logger.trace(f"downloading {url}")
+        self.logger.info(f"downloading {url}")
         r = requests.get(url, timeout=self.download_timeout)
 
         if r.status_code == 200:

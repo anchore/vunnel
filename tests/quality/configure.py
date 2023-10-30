@@ -500,11 +500,9 @@ def _install_grype_db(input: str):
     repo_url = f"https://github.com/{repo_user_and_name}"
 
     if input == "latest":
-        version = (
-            requests.get("https://github.com/anchore/grype-db/releases/latest", headers={"Accept": "application/json"})
-            .json()
-            .get("tag_name", "")
-        )
+        latest_url = "https://github.com/anchore/grype-db/releases/latest"
+        logging.info(f"fetching latest release from {latest_url}")
+        version = requests.get(latest_url, headers={"Accept": "application/json"}).json().get("tag_name", "")
         logging.info(f"latest released grype-db version is {version!r}")
 
     elif is_semver:
