@@ -116,7 +116,7 @@ class KspliceFilterer:
         :param version:
         :return:
         """
-        epoch, version, release = rpm.split_fullversion(version)  # noqa
+        epoch, version, release = rpm.split_fullversion(version)
         return cls.ksplice_regex.match(release) is not None
 
     def filter(self, vuln_dict: dict) -> dict:  # noqa: A003
@@ -135,7 +135,7 @@ class KspliceFilterer:
         :param vuln_dict: dict of vulns where key is distro and version and value is the list of vulns for that version
         :return:
         """
-        for version, vuln in vuln_dict.values():  # noqa
+        for version, vuln in vuln_dict.values():  # noqa: B007
             fixes = vuln.get("Vulnerability", {}).get("FixedIn", [])
             if fixes:
                 pre_filter_fix_count = len(fixes)

@@ -284,7 +284,7 @@ class TestCreateGraphQLQuery:
         assert (
             line
             == "securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, classifications: [GENERAL, MALWARE], first: 100) {"
-        )  # noqa
+        )
 
     def test_no_cursor_with_timestamp_changes_field(self):
         # first run after a successful run
@@ -305,7 +305,7 @@ class TestCreateGraphQLQuery:
         assert (
             line
             == 'securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, after: "FXXF==", classifications: [GENERAL, MALWARE], first: 100) {'
-        )  # noqa
+        )
 
     def test_cursor_with_timestamp(self):
         # subsequent request after a successful run(s) because a timestamp has
@@ -316,7 +316,7 @@ class TestCreateGraphQLQuery:
         assert (
             line
             == ', after: "FXXF==", updatedSince: "2019-02-06T20:44:12.371565", classifications: [GENERAL, MALWARE], first: 100) {'
-        )  # noqa
+        )
 
     def test_cursor_with_timestamp_changes_field(self):
         # subsequent request after a successful run(s) because a timestamp has
@@ -324,7 +324,7 @@ class TestCreateGraphQLQuery:
         result = parser.graphql_advisories(cursor="FXXF==", timestamp="2019-02-06T20:44:12.371565")
         line = result.split("\n")[2].strip()
         line = line.split("}")[0]
-        assert line == "securityAdvisories(orderBy: {field: UPDATED_AT, direction: ASC"  # noqa
+        assert line == "securityAdvisories(orderBy: {field: UPDATED_AT, direction: ASC"
 
 
 class TestNeedsSubquery:
