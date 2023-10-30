@@ -79,7 +79,6 @@ class Parser:
             self.logger.exception(f"failed to load {self.namespace} sec db data")
             raise
 
-    # noqa
     def _normalize(self, release, data):
         """
         Normalize all the sec db entries into vulnerability payload records

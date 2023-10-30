@@ -206,7 +206,6 @@ def cli(ctx, verbose: bool, config_path: str):
 def show_config(cfg: Config):
     logging.info("showing application config")
 
-    # noqa
     class IndentDumper(yaml.Dumper):
         def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:  # noqa: ARG002
             return super().increase_indent(flow, False)

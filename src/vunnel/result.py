@@ -195,7 +195,7 @@ class SQLiteStore(Store):
 
 
 class Writer:
-    def __init__(  # noqa
+    def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
         result_state_policy: ResultStatePolicy,
