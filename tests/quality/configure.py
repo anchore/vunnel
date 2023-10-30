@@ -326,6 +326,25 @@ def changes():
     return changed_files
 
 
+def yardstick_version_changed():
+    logging.info("determining whether yardstick version changed")
+
+    base_ref = os.environ.get("GITHUB_BASE_REF", "origin/main")
+    if not base_ref:
+        base_ref = "origin/main"
+
+    if "/" not in base_ref:
+        base_ref = f"origin/{base_ref}"
+
+    # get list of files changed with git diff
+    changes = subprocess.check_output(["git", "diff", base_ref]).decode("utf-8").splitlines()
+    for line in changes:
+        if 'git = "https://github.com/anchore/yardstick"' in line:
+            return True
+
+    return False
+
+
 @cli.command(name="select-providers", help="determine the providers to test from a file changeset")
 @click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
 @click.pass_obj
@@ -341,6 +360,9 @@ def select_providers(cfg: Config, output_json: bool):
         for changed_file in changed_files:
             if fnmatch.fnmatch(changed_file, search_glob):
                 selected_providers = {test.provider for test in cfg.tests}
+
+    if yardstick_version_changed():
+        selected_providers = {test.provider for test in cfg.tests}
 
     if not selected_providers:
         # there are no gate changes, so look for provider-specific changes
