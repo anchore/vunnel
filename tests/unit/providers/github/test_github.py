@@ -453,7 +453,7 @@ def test_provider_schema(helpers, fake_get_query, advisories):
 @patch("requests.post")
 def test_provider_respects_github_rate_limit(mock_post, mock_sleep):
     response = Mock()
-    in_five_seconds = int(time.time())
+    in_five_seconds = int(time.time()) + 5
     response.headers = {"x-ratelimit-remaining": 9, "x-ratelimit-reset": in_five_seconds}
     response.status_code = 200
     mock_post.return_value = response
@@ -474,7 +474,7 @@ def test_provider_respects_github_rate_limit(mock_post, mock_sleep):
 @patch("requests.post")
 def test_provider_respects_github_rate_limit(mock_post, mock_sleep):
     response = Mock()
-    in_five_seconds = int(time.time())
+    in_five_seconds = int(time.time()) + 5
     response.headers = {"x-ratelimit-remaining": 11, "x-ratelimit-reset": in_five_seconds}
     response.status_code = 200
     mock_post.return_value = response
