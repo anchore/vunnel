@@ -239,7 +239,7 @@ class Parser:
         if not vulnerabilities_dict or not tests_dict or not artifacts_dict or not versions_dict:
             return results
 
-        for identity, vulnerability_obj in vulnerabilities_dict.items():  # noqa
+        for identity, vulnerability_obj in vulnerabilities_dict.items():  # noqa: B007
             # version->release->feed map
             version_release_feed = defaultdict()
 

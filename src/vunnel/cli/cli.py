@@ -91,7 +91,6 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
 def show_config(cfg: config.Application) -> None:
     logging.info("showing application config")
 
-    # noqa
     class IndentDumper(yaml.Dumper):
         def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:  # noqa: ARG002
             return super().increase_indent(flow, False)

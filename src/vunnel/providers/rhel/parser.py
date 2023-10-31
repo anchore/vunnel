@@ -134,7 +134,7 @@ class Parser:
             raise  # raise the original exception
 
     # TODO: ALEX, should skip_if_exists be hooked up here? (currently unused)
-    def _sync_cves(self, skip_if_exists=False, do_full_sync=True):  # noqa
+    def _sync_cves(self, skip_if_exists=False, do_full_sync=True):  # noqa: PLR0915, PLR0912, C901
         """
         Download minimal or summary cve and compare it to persisted state on disk. If no persisted state is found or a
         a change is detected, full cve is downloaded

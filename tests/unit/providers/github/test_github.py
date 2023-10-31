@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pytest
+import time
+from unittest.mock import patch, Mock
 from vunnel import result, workspace
 from vunnel.providers.github import Config, Provider, parser
 from vunnel.utils import fdb as db
@@ -284,7 +286,7 @@ class TestCreateGraphQLQuery:
         assert (
             line
             == "securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, classifications: [GENERAL, MALWARE], first: 100) {"
-        )  # noqa
+        )
 
     def test_no_cursor_with_timestamp_changes_field(self):
         # first run after a successful run
@@ -305,7 +307,7 @@ class TestCreateGraphQLQuery:
         assert (
             line
             == 'securityAdvisories(orderBy: {field: PUBLISHED_AT, direction: ASC}, after: "FXXF==", classifications: [GENERAL, MALWARE], first: 100) {'
-        )  # noqa
+        )
 
     def test_cursor_with_timestamp(self):
         # subsequent request after a successful run(s) because a timestamp has
@@ -316,7 +318,7 @@ class TestCreateGraphQLQuery:
         assert (
             line
             == ', after: "FXXF==", updatedSince: "2019-02-06T20:44:12.371565", classifications: [GENERAL, MALWARE], first: 100) {'
-        )  # noqa
+        )
 
     def test_cursor_with_timestamp_changes_field(self):
         # subsequent request after a successful run(s) because a timestamp has
@@ -324,7 +326,7 @@ class TestCreateGraphQLQuery:
         result = parser.graphql_advisories(cursor="FXXF==", timestamp="2019-02-06T20:44:12.371565")
         line = result.split("\n")[2].strip()
         line = line.split("}")[0]
-        assert line == "securityAdvisories(orderBy: {field: UPDATED_AT, direction: ASC"  # noqa
+        assert line == "securityAdvisories(orderBy: {field: UPDATED_AT, direction: ASC"
 
 
 class TestNeedsSubquery:
@@ -445,6 +447,48 @@ def test_provider_schema(helpers, fake_get_query, advisories):
     provider.update(None)
 
     assert workspace.result_schemas_valid(require_entries=True)
+
+
+@patch("time.sleep")
+@patch("requests.post")
+def test_provider_respects_github_rate_limit(mock_post, mock_sleep):
+    response = Mock()
+    in_five_seconds = int(time.time()) + 5
+    response.headers = {"x-ratelimit-remaining": 9, "x-ratelimit-reset": in_five_seconds}
+    response.status_code = 200
+    mock_post.return_value = response
+
+    def mock_json():
+        return "{}"
+
+    def mock_raise_for_status():
+        pass
+
+    response.json = mock_json
+    response.raise_for_status = mock_raise_for_status
+    parser.get_query("some-token", "some-query")
+    mock_sleep.assert_called_once()
+
+
+@patch("time.sleep")
+@patch("requests.post")
+def test_provider_respects_github_rate_limit(mock_post, mock_sleep):
+    response = Mock()
+    in_five_seconds = int(time.time()) + 5
+    response.headers = {"x-ratelimit-remaining": 11, "x-ratelimit-reset": in_five_seconds}
+    response.status_code = 200
+    mock_post.return_value = response
+
+    def mock_json():
+        return "{}"
+
+    def mock_raise_for_status():
+        pass
+
+    response.json = mock_json
+    response.raise_for_status = mock_raise_for_status
+    parser.get_query("some-token", "some-query")
+    mock_sleep.assert_not_called()
 
 
 def test_provider_via_snapshot(helpers, fake_get_query, advisories):

@@ -128,7 +128,6 @@ class Parser:
 
         return ns_cve_dsalist
 
-    # noqa
     def _parse_dsa_record(self, dsa_lines):  # noqa: C901
         """
 
@@ -188,7 +187,7 @@ class Parser:
                     continue
 
             return dsa
-        except Exception:  # noqa
+        except Exception:
             self.logger.exception("failed to parse dsa record")
 
     def _get_dsa_map(self):
@@ -444,7 +443,7 @@ class Parser:
 
                             # retlists[relno].append(final_record)
 
-                    except Exception:  # noqa
+                    except Exception:
                         self.logger.exception(f"ignoring error parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
 
         self.logger.debug(f"metrics for advisory information: {json.dumps(adv_mets)}")
