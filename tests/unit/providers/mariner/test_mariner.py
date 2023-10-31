@@ -5,7 +5,7 @@ import shutil
 
 import pytest
 from pytest_unordered import unordered
-from vunnel import result, workspace
+from vunnel import result, workspace, utils
 from vunnel.providers.mariner import Config, Provider, parser
 from vunnel.providers.mariner.parser import MarinerXmlFile
 from vunnel.utils.vulnerability import Vulnerability, FixedIn
@@ -91,7 +91,7 @@ def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
 
-    monkeypatch.setattr(parser.requests, "get", disabled)
+    monkeypatch.setattr(utils.http, "get", disabled)
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
