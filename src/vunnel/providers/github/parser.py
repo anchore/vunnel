@@ -55,7 +55,7 @@ class Parser:
         download_timeout=125,
         api_url="https://api.github.com/graphql",
         logger=None,
-    ):  # noqa
+    ):
         self.db = db.connection(workspace.input_path, serializer="json")
         self.download_timeout = download_timeout
         self.api_url = api_url
@@ -253,7 +253,7 @@ def get_advisory(ghsaId, data):
     return {}
 
 
-def get_vulnerabilities(token, ghsaId, timestamp, vuln_cursor, parent_cursor):  # noqa
+def get_vulnerabilities(token, ghsaId, timestamp, vuln_cursor, parent_cursor):
     """
     In the improbable case that an Advisory is associated with more than 100
     (Github's GraphQL limit) these will need to get fetched until the cursor is
@@ -343,7 +343,6 @@ def needs_subquery(data):
     return False
 
 
-# noqa
 def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     """
     The cursor needs to be the `endCursor` for the last successful query. The
