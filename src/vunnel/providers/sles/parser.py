@@ -26,6 +26,7 @@ from vunnel.utils.oval_v2 import (
     iter_parse_vulnerability_file,
 )
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
+from vunnel.utils import http
 
 if TYPE_CHECKING:
     from vunnel.workspace import Workspace
@@ -73,7 +74,6 @@ class Parser:
         # this is pretty odd, but there are classmethods that need logging
         Parser.logger = logger
 
-    @utils.retry_with_backoff()
     def _download(self, major_version: str) -> str:
         if not os.path.exists(self.oval_dir_path):
             self.logger.debug(f"creating workspace for OVAL source data at {self.oval_dir_path}")
@@ -83,20 +83,12 @@ class Parser:
         download_url = self.__oval_url__.format(major_version)
         self.urls.append(download_url)
 
-        self.logger.info(
+        self.logger.debug(
             "downloading OVAL file for SLES %s from %s",
             major_version,
             download_url,
         )
-        r = requests.get(download_url, stream=True, timeout=self.download_timeout)
-        if r.status_code != 200:
-            self.logger.error(
-                "GET %s failed with HTTP %s. Unable to download OVAL file for SLES %s",
-                download_url,
-                r.status_code,
-                major_version,
-            )
-            r.raise_for_status()
+        r = http.get(download_url, self.logger, stream=True, timeout=self.download_timeout)
 
         with open(oval_file_path, "wb") as fp:
             for chunk in r.iter_content(chunk_size=1024):

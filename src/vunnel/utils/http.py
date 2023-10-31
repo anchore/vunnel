@@ -29,7 +29,7 @@ def get(
             if attempt + 1 < retries:
                 will_retry = f" (will retry in {backoff_in_seconds} seconds) "
             # HTTPError includes the attempted request, so don't include it redundantly here
-            logger.warning(f"attempt {attempt + 1} of {retries}{will_retry} failed: {e}")
+            logger.warning(f"attempt {attempt + 1} of {retries} failed:{will_retry}{e}")
         except Exception as e:
             last_exception = e
             will_retry = ""
