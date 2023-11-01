@@ -16,7 +16,7 @@ def get(
 ) -> requests.Response:
     logger.debug(f"attempting get request on {url}")
     last_exception = None
-    for attempt in range(retries):
+    for attempt in range(retries + 1):
         if last_exception:
             time.sleep(backoff_in_seconds)
         try:
