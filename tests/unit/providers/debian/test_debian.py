@@ -6,16 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from vunnel import result, workspace
-from vunnel.utils import http
 from vunnel.providers.debian import Config, Provider, parser
-
-
-@pytest.fixture()
-def disable_get_requests(monkeypatch):
-    def disabled(*args, **kwargs):
-        raise RuntimeError("requests disabled but HTTP GET attempted")
-
-    monkeypatch.setattr(http, "get", disabled)
 
 
 class TestParser:
