@@ -72,5 +72,6 @@ class TestGetRequests:
     @patch("requests.get")
     def test_it_log_warns_errors(self, mock_requests, mock_sleep, mock_logger, error_response, success_response):
         mock_requests.side_effect = [error_response, success_response]
-        http.get("http://example.com/some-path", mock_logger, retries=1)
+        http.get("http://example.com/some-path", mock_logger, retries=1, backoff_in_seconds=33)
         assert "HTTP ERROR" in mock_logger.warning.call_args.args[0]
+        assert "will retry in 33 seconds" in mock_logger.warning.call_args.args[0]
