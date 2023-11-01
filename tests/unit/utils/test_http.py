@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pytest
 import requests
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from vunnel.utils import http
 
 
@@ -34,8 +34,6 @@ class TestGetRequests:
         mock_requests.side_effect = [Exception("could not attempt request"), error_response, error_response]
         with pytest.raises(requests.HTTPError):
             http.get("http://example.com/some-path", mock_logger, retries=2, backoff_in_seconds=3)
-        mock_sleep.assert_called_with(3)
-        mock_sleep.assert_called_with(3)
         mock_logger.error.assert_called()
 
     @patch("time.sleep")
@@ -55,6 +53,13 @@ class TestGetRequests:
 
     @patch("time.sleep")
     @patch("requests.get")
+    def test_sleeps_right_amount_between_retries(self, mock_requests, mock_sleep, mock_logger, error_response, success_response):
+        mock_requests.side_effect = [error_response, error_response, error_response, success_response]
+        http.get("http://example.com/some-path", mock_logger, backoff_in_seconds=123, retries=3)
+        assert mock_sleep.call_args_list == [call(123), call(123), call(123)]
+
+    @patch("time.sleep")
+    @patch("requests.get")
     def test_it_logs_the_url_on_failure(self, mock_requests, mock_sleep, mock_logger, error_response):
         mock_requests.side_effect = [error_response, error_response, error_response]
         url = "http://example.com/some-path"
@@ -62,3 +67,10 @@ class TestGetRequests:
             http.get(url, mock_logger, retries=2)
 
         assert url in mock_logger.error.call_args.args[0]
+
+    @patch("time.sleep")
+    @patch("requests.get")
+    def test_it_log_warns_errors(self, mock_requests, mock_sleep, mock_logger, error_response, success_response):
+        mock_requests.side_effect = [error_response, success_response]
+        http.get("http://example.com/some-path", mock_logger, retries=1)
+        assert "HTTP ERROR" in mock_logger.warning.call_args.args[0]
