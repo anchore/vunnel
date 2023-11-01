@@ -7,10 +7,8 @@ from collections import namedtuple
 from html.parser import HTMLParser
 
 import defusedxml.ElementTree as ET
-import requests
 
-from vunnel import utils
-from vunnel.utils import rpm
+from vunnel.utils import http, rpm
 
 namespace = "amzn"
 
@@ -48,17 +46,13 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    @utils.retry_with_backoff()
     def _download_rss(self, rss_url, rss_file):
         try:
             self.logger.info(f"downloading amazon security advisory from {rss_url}")
             self.urls.append(rss_url)
-            r = requests.get(rss_url, timeout=self.download_timeout)
-            if r.status_code == 200:
-                with open(rss_file, "w", encoding="utf-8") as fp:
-                    fp.write(r.text)
-            else:
-                raise Exception(f"GET {rss_url} failed with HTTP error {r.status_code}")
+            r = http.get(rss_url, self.logger, timeout=self.download_timeout)
+            with open(rss_file, "w", encoding="utf-8") as fp:
+                fp.write(r.text)
         except Exception:
             self.logger.exception("error downloading amazon linux vulnerability feeds")
             raise
@@ -91,23 +85,18 @@ class Parser:
 
         return sorted(alas_summaries)
 
-    @utils.retry_with_backoff()
     def _get_alas_html(self, alas_url, alas_file, skip_if_exists=True):
         if skip_if_exists and os.path.exists(alas_file):  # read alas from disk if its available
             self.logger.debug(f"loading existing ALAS from {alas_file}")
             with open(alas_file, encoding="utf-8") as fp:
                 content = fp.read()
             return content  # noqa: RET504
-
         try:
-            self.logger.debug(f"downloading ALAS from {alas_url}")
-            r = requests.get(alas_url, timeout=self.download_timeout)
-            if r.status_code == 200:
-                content = r.text
-                with open(alas_file, "w", encoding="utf-8") as fp:
-                    fp.write(content)
-                return content
-            raise Exception(f"GET {alas_url} failed with HTTP error {r.status_code}")
+            r = http.get(alas_url, self.logger, timeout=self.download_timeout)
+            content = r.text
+            with open(alas_file, "w", encoding="utf-8") as fp:
+                fp.write(content)
+            return content
         except Exception:
             self.logger.exception(f"error downloading data from {alas_url}")
             raise
