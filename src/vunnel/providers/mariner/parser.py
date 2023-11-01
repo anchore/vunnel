@@ -3,13 +3,12 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
-import requests
 from lxml import etree
 from xsdata.formats.dataclass.parsers import XmlParser
 from xsdata.formats.dataclass.parsers.config import ParserConfig
 
 from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoState, RpminfoTest
-from vunnel.utils import retry_with_backoff
+from vunnel.utils import http
 from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 if TYPE_CHECKING:
@@ -187,11 +186,10 @@ class Parser:
     def _download(self) -> list[str]:
         return [self._download_version(v) for v in self.allow_versions]
 
-    @retry_with_backoff()
     def _download_version(self, version: str) -> str:
         filename = MARINER_URL_FILENAME.format(version)
         url = MARINER_URL_BASE.format(filename)
-        r = requests.get(url, timeout=self.download_timeout)
+        r = http.get(url, self.logger, timeout=self.download_timeout)
         destination = os.path.join(self.workspace.input_path, filename)
         with open(destination, "wb") as writer:
             writer.write(r.content)
