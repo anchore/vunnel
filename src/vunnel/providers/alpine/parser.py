@@ -6,13 +6,17 @@ import os
 import re
 import shutil
 from html.parser import HTMLParser
+from typing import TYPE_CHECKING
 
-import requests
 import yaml
 
-from vunnel import utils, workspace
 from vunnel.utils import http
 from vunnel.utils.vulnerability import vulnerability_element
+
+if TYPE_CHECKING:
+    import requests
+
+    from vunnel import workspace
 
 namespace = "alpine"
 feedtype = "vulnerabilities"
