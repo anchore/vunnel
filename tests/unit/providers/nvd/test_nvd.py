@@ -5,6 +5,7 @@ import json
 
 import pytest
 from vunnel import provider, result
+from vunnel.utils import http
 from vunnel.providers import nvd
 from vunnel.providers.nvd import api as nvd_api
 
@@ -14,7 +15,7 @@ def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
 
-    monkeypatch.setattr(nvd_api.requests, "get", disabled)
+    monkeypatch.setattr(http, "get", disabled)
 
 
 @pytest.mark.parametrize(
