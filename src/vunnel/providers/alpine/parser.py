@@ -11,6 +11,7 @@ import requests
 import yaml
 
 from vunnel import utils, workspace
+from vunnel.utils import http
 from vunnel.utils.vulnerability import vulnerability_element
 
 namespace = "alpine"
@@ -139,18 +140,12 @@ class Parser:
                 except Exception:
                     self.logger.exception(f"ignoring error processing secdb for {link}")
 
-    @utils.retry_with_backoff()
     def _download_metadata_url(self) -> requests.Response:
-        r = requests.get(self.metadata_url, timeout=self.download_timeout)
-        r.raise_for_status()
-        return r
+        return http.get(self.metadata_url, self.logger, timeout=self.download_timeout)
 
-    @utils.retry_with_backoff()
     def _download_url(self, url) -> requests.Response:
         self._urls.add(url)
-        r = requests.get(url, stream=True, timeout=self.download_timeout)
-        r.raise_for_status()
-        return r
+        return http.get(url, self.logger, stream=True, timeout=self.download_timeout)
 
     def _load(self):
         """
