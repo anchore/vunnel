@@ -141,7 +141,6 @@ class Parser:
 
     @utils.retry_with_backoff()
     def _download_metadata_url(self) -> requests.Response:
-        self.logger.info(f"downloading metadata from {self.metadata_url}")
         r = requests.get(self.metadata_url, timeout=self.download_timeout)
         r.raise_for_status()
         return r
@@ -149,7 +148,6 @@ class Parser:
     @utils.retry_with_backoff()
     def _download_url(self, url) -> requests.Response:
         self._urls.add(url)
-        self.logger.info(f"downloading {url}")
         r = requests.get(url, stream=True, timeout=self.download_timeout)
         r.raise_for_status()
         return r

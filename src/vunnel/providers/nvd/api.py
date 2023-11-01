@@ -152,7 +152,6 @@ class NvdAPI:
         # (e.g. prevent pubStartDate=2002-01-01T00%3A00%3A00 , want pubStartDate=2002-01-01T00:00:00)
         payload_str = urllib.parse.urlencode(parameters, safe=":")
 
-        self.logger.info(f"downloading {url}")
         response = requests.get(url, params=payload_str, headers=headers, timeout=self.timeout)
         response.encoding = "utf-8"
         response.raise_for_status()

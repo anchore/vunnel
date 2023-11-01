@@ -66,7 +66,7 @@ class Parser:
         :return:
         """
         try:
-            self.logger.info(f"downloading debian security tracker data from {self._json_url_}")
+            self.logger.info(f"downloading debian security tracker data from {self._dsa_url_}")
 
             r = requests.get(self._json_url_, timeout=self.download_timeout)
             if r.status_code != 200:

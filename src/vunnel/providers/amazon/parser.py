@@ -10,7 +10,7 @@ import defusedxml.ElementTree as ET
 import requests
 
 from vunnel import utils
-from vunnel.utils import http, rpm
+from vunnel.utils import rpm
 
 namespace = "amzn"
 
@@ -48,12 +48,17 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
+    @utils.retry_with_backoff()
     def _download_rss(self, rss_url, rss_file):
         try:
+            self.logger.info(f"downloading amazon security advisory from {rss_url}")
             self.urls.append(rss_url)
-            r = http.get(rss_url, self.logger, timeout=self.download_timeout)
-            with open(rss_file, "w", encoding="utf-8") as fp:
-                fp.write(r.text)
+            r = requests.get(rss_url, timeout=self.download_timeout)
+            if r.status_code == 200:
+                with open(rss_file, "w", encoding="utf-8") as fp:
+                    fp.write(r.text)
+            else:
+                raise Exception(f"GET {rss_url} failed with HTTP error {r.status_code}")
         except Exception:
             self.logger.exception("error downloading amazon linux vulnerability feeds")
             raise
@@ -95,7 +100,7 @@ class Parser:
             return content  # noqa: RET504
 
         try:
-            self.logger.info(f"downloading ALAS from {alas_url}")
+            self.logger.debug(f"downloading ALAS from {alas_url}")
             r = requests.get(alas_url, timeout=self.download_timeout)
             if r.status_code == 200:
                 content = r.text

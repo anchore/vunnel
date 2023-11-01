@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
+import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
-from vunnel.utils import http
+from vunnel import utils
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     Impact,
@@ -72,6 +73,7 @@ class Parser:
         # this is pretty odd, but there are classmethods that need logging
         Parser.logger = logger
 
+    @utils.retry_with_backoff()
     def _download(self, major_version: str) -> str:
         if not os.path.exists(self.oval_dir_path):
             self.logger.debug(f"creating workspace for OVAL source data at {self.oval_dir_path}")
@@ -81,12 +83,20 @@ class Parser:
         download_url = self.__oval_url__.format(major_version)
         self.urls.append(download_url)
 
-        self.logger.debug(
+        self.logger.info(
             "downloading OVAL file for SLES %s from %s",
             major_version,
             download_url,
         )
-        r = http.get(download_url, self.logger, stream=True, timeout=self.download_timeout)
+        r = requests.get(download_url, stream=True, timeout=self.download_timeout)
+        if r.status_code != 200:
+            self.logger.error(
+                "GET %s failed with HTTP %s. Unable to download OVAL file for SLES %s",
+                download_url,
+                r.status_code,
+                major_version,
+            )
+            r.raise_for_status()
 
         with open(oval_file_path, "wb") as fp:
             for chunk in r.iter_content(chunk_size=1024):
