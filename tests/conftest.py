@@ -207,3 +207,13 @@ def dummy_file():
         return path
 
     return apply
+
+
+@pytest.fixture()
+def disable_get_requests(monkeypatch):
+    def disabled(*args, **kwargs):
+        raise RuntimeError("disabled!")
+
+    from vunnel import utils
+
+    return monkeypatch.setattr(utils.http, "get", disabled)

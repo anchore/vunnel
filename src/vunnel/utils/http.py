@@ -15,7 +15,7 @@ def get(
     timeout: int = DEFAULT_TIMEOUT,
     **kwargs: Any,
 ) -> requests.Response:
-    logger.debug(f"attempting get request on {url}")
+    logger.debug(f"http GET {url}")
     last_exception: Exception | None = None
     for attempt in range(retries + 1):
         if last_exception:
@@ -39,7 +39,7 @@ def get(
             # this is an unexpected exception type, so include the attempted request in case the
             # message from the unexpected exception doesn't.
             logger.warning(f"attempt {attempt + 1} of {retries}{will_retry}: unexpected exception during GET {url}: {e}")
-    if isinstance(last_exception, BaseException):
+    if last_exception:
         logger.error(f"last retry of GET {url} failed with {last_exception}")
         raise last_exception
     raise Exception("unreachable")
