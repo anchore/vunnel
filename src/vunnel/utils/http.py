@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Any
 
 import requests
 
@@ -7,15 +8,15 @@ DEFAULT_TIMEOUT = 30
 
 
 def get(
-    url,
+    url: str,
     logger: logging.Logger,
     retries: int = 5,
     backoff_in_seconds: int = 3,
     timeout: int = DEFAULT_TIMEOUT,
-    **kwargs,
+    **kwargs: Any,
 ) -> requests.Response:
     logger.debug(f"attempting get request on {url}")
-    last_exception = None
+    last_exception: Exception | None = None
     for attempt in range(retries + 1):
         if last_exception:
             time.sleep(backoff_in_seconds)
