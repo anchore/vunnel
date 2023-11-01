@@ -10,7 +10,7 @@ import defusedxml.ElementTree as ET
 import requests
 
 from vunnel import utils
-from vunnel.utils import rpm, http
+from vunnel.utils import http, rpm
 
 namespace = "amzn"
 

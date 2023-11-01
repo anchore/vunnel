@@ -8,11 +8,10 @@ from dataclasses import dataclass
 from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
-import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
-from vunnel import utils
+from vunnel.utils import http
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     Impact,
@@ -26,7 +25,6 @@ from vunnel.utils.oval_v2 import (
     iter_parse_vulnerability_file,
 )
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
-from vunnel.utils import http
 
 if TYPE_CHECKING:
     from vunnel.workspace import Workspace
