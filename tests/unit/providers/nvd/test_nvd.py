@@ -9,14 +9,6 @@ from vunnel.providers import nvd
 from vunnel.providers.nvd import api as nvd_api
 
 
-@pytest.fixture()
-def disable_get_requests(monkeypatch):
-    def disabled(*args, **kwargs):
-        raise RuntimeError("requests disabled but HTTP GET attempted")
-
-    monkeypatch.setattr(nvd_api.requests, "get", disabled)
-
-
 @pytest.mark.parametrize(
     ("policy", "should_raise"),
     (
