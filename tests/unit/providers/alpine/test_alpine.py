@@ -190,14 +190,6 @@ class TestAlpineProvider:
         assert Parser._link_finder_regex_.findall(content) == expected
 
 
-@pytest.fixture()
-def disable_get_requests(monkeypatch):
-    def disabled(*args, **kwargs):
-        raise RuntimeError("requests disabled but HTTP GET attempted")
-
-    monkeypatch.setattr(parser.requests, "get", disabled)
-
-
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
