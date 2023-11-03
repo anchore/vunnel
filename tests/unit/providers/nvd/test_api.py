@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pytest
 from vunnel.providers.nvd import api
+from vunnel.utils import http
 
 
 @pytest.fixture()
@@ -25,7 +26,7 @@ def simple_mock(mocker):
         ),
     ]
 
-    return mocker.patch.object(api.requests, "get", side_effect=responses), [first_json_dict], subject
+    return mocker.patch.object(http, "get", side_effect=responses), [first_json_dict], subject
 
 
 class TestAPI:
@@ -36,9 +37,11 @@ class TestAPI:
         vulnerabilities = list(subject.cve("CVE-2020-0000"))
 
         assert vulnerabilities == responses
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
+                backoff_in_seconds=30,
                 params="cveId=CVE-2020-0000",
                 headers={"content-type": "application/json"},
                 timeout=1,
@@ -51,10 +54,12 @@ class TestAPI:
         vulnerabilities = list(subject.cve("CVE-2020-0000"))
 
         assert vulnerabilities == responses
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="cveId=CVE-2020-0000",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
@@ -103,27 +108,33 @@ class TestAPI:
                 ),
             )
 
-        mocker.patch.object(api.requests, "get", side_effect=responses)
+        mock = mocker.patch.object(http, "get", side_effect=responses)
 
         vulnerabilities = list(subject.cve())
 
         assert vulnerabilities == json_responses
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="resultsPerPage=3&startIndex=3",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="resultsPerPage=3&startIndex=6",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
@@ -140,10 +151,12 @@ class TestAPI:
         )
 
         assert vulnerabilities
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="pubStartDate=2019-12-04T00:00:00&pubEndDate=2019-12-05T00:00:00",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
@@ -160,10 +173,12 @@ class TestAPI:
         )
 
         assert vulnerabilities
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="lastModStartDate=2019-12-04T00:00:00&lastModEndDate=2019-12-05T00:00:00",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
@@ -177,10 +192,12 @@ class TestAPI:
 
         list(subject.cve(results_per_page=5))
 
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                subject.logger,
                 params="resultsPerPage=5",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
@@ -192,10 +209,12 @@ class TestAPI:
         changes = list(subject.cve_history("CVE-2020-0000"))
 
         assert changes
-        assert api.requests.get.call_args_list == [
+        assert mock.call_args_list == [
             mocker.call(
                 "https://services.nvd.nist.gov/rest/json/cvehistory/2.0",
+                subject.logger,
                 params="cveId=CVE-2020-0000",
+                backoff_in_seconds=30,
                 headers={"content-type": "application/json", "apiKey": "secret"},
                 timeout=1,
             ),
