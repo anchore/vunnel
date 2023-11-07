@@ -338,6 +338,10 @@ def yardstick_version_changed():
     # get list of files changed with git diff
     changes = subprocess.check_output(["git", "diff", base_ref]).decode("utf-8").splitlines()
     for line in changes:
+        if not line.strip().startswith(("-", "+")):
+            # this line is in the output of `git diff`, but is just context, not a change
+            continue
+
         if 'git = "https://github.com/anchore/yardstick"' in line:
             return True
 
