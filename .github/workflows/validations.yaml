@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
         with:
@@ -23,6 +26,8 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Run static analysis
         run: poetry run make static-analysis

@@ -123,6 +123,10 @@ check-types: virtual-env-check  ## Run type checks (mypy)
 unit: virtual-env-check  ## Run unit tests
 	pytest --cov-report html --cov vunnel -v tests/unit/
 
+.PHONY: unit-matrix
+unit-matrix: virtual-env-check  ## Run unit tests for all supported python versions
+	tox
+
 
 ## Build-related targets #################################
 
