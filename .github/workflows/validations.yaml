@@ -39,7 +39,7 @@ jobs:
     strategy:
       matrix:
         # note: this is not a single source of truth (this is also in the tox.ini)
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11']
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
         with:
