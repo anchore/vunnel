@@ -43,7 +43,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github action job name (in .github/workflows/validations.yaml)
-          checkName: "Test"
+          checkName: "Test Gate"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check nightly quality gate results
