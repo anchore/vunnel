@@ -6,7 +6,7 @@ from typing import Any
 
 import mergedeep
 import yaml
-from dataclass_wizard import asdict, fromdict
+from mashumaro.mixins.dict import DataClassDictMixin
 
 from vunnel import providers
 
@@ -49,7 +49,7 @@ class Log:
 
 
 @dataclass
-class Application:
+class Application(DataClassDictMixin):
     root: str = "./data"
     log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
@@ -60,18 +60,15 @@ def load(path: str = ".vunnel.yaml") -> Application:
         with open(path, encoding="utf-8") as f:
             app_object = yaml.safe_load(f.read()) or {}
             # we need a full default application config first then merge the loaded config on top.
-            # Why? dataclass_wizard.fromdict() will create instances from the dataclass default
+            # Why? cls.from_dict() will create instances from the dataclass default
             # and NOT the field definition from the container. So it is possible to specify a
             # single field in the config and all other fields would be set to the default value
             # based on the dataclass definition and not any field(default_factory=...) hints
             # from the containing class.
-            instance = asdict(Application())
+            instance = Application().to_dict()
 
             mergedeep.merge(instance, app_object)
-            cfg = fromdict(
-                Application,
-                instance,
-            )
+            cfg = Application.from_dict(instance)
             if cfg is None:
                 raise FileNotFoundError("parsed empty config")
     except FileNotFoundError:

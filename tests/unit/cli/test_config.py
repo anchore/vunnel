@@ -41,7 +41,14 @@ def test_full_config(helpers):
                 request_timeout=20,
             ),
             amazon=providers.amazon.Config(
-                security_advisories={42: "https://alas.aws.amazon.com/AL2/alas-42.rss"},  # cap sensitive!
+                security_advisories={
+                    # this is what we added in the config
+                    42: "https://alas.aws.amazon.com/AL2/alas-42.rss",
+                    # this is the defaults...
+                    2: "https://alas.aws.amazon.com/AL2/alas.rss",
+                    2022: "https://alas.aws.amazon.com/AL2022/alas.rss",
+                    2023: "https://alas.aws.amazon.com/AL2023/alas.rss",
+                },
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
@@ -51,6 +58,7 @@ def test_full_config(helpers):
             ),
             debian=providers.debian.Config(
                 releases={
+                    # this is the defaults...
                     "trixie": "13",
                     "bookworm": "12",
                     "bullseye": "11",
@@ -59,6 +67,7 @@ def test_full_config(helpers):
                     "jessie": "8",
                     "wheezy": "7",
                     "sid": "unstable",
+                    # this is what we added in the config
                     "jinx": 87,
                 },
                 runtime=runtime_cfg,

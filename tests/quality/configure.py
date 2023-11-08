@@ -18,21 +18,25 @@ import click
 import mergedeep
 import requests
 import yaml
-from dataclass_wizard import DumpMeta, asdict, fromdict
+from mashumaro.mixins.dict import DataClassDictMixin
 from yardstick.cli.config import (
-    Application,
     ResultSet,
     ScanMatrix,
     Tool,
 )
+from yardstick.cli.config import Application as YardstickApplication
 
 BIN_DIR = "./bin"
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
 GRYPE_DB = f"{BIN_DIR}/grype-db"
 
 
+class Application(YardstickApplication, DataClassDictMixin):
+    pass
+
+
 @dataclass
-class ConfigurationState:
+class ConfigurationState(DataClassDictMixin):
     uncached_providers: list[str] = field(default_factory=list)
     cached_providers: list[str] = field(default_factory=list)
 
@@ -65,7 +69,7 @@ class GrypeDB:
 
 
 @dataclass
-class Config:
+class Config(DataClassDictMixin):
     yardstick: Yardstick = field(default_factory=Yardstick)
     grype_db: GrypeDB = field(default_factory=GrypeDB)
     tests: list[Test] = field(default_factory=list)
@@ -79,18 +83,15 @@ class Config:
             with open(path, encoding="utf-8") as f:
                 app_object = yaml.safe_load(f.read()) or {}
                 # we need a full default application config first then merge the loaded config on top.
-                # Why? dataclass_wizard.fromdict() will create instances from the dataclass default
+                # Why? cls.from_dict() will create instances from the dataclass default
                 # and NOT the field definition from the container. So it is possible to specify a
                 # single field in the config and all other fields would be set to the default value
                 # based on the dataclass definition and not any field(default_factory=...) hints
                 # from the containing class.
-                instance = asdict(cls())
+                instance = cls().to_dict()
 
                 mergedeep.merge(instance, app_object)
-                cfg = fromdict(
-                    cls,
-                    instance,
-                )
+                cfg = cls.from_dict(instance)
                 if cfg is None:
                     raise FileNotFoundError("parsed empty config")
         except FileNotFoundError:
@@ -262,7 +263,7 @@ def write_config_state(cached_providers: list[str], uncached_providers: list[str
     logging.info(f"writing configuration state to {path!r}")
 
     with open(path, "w") as f:
-        f.write(yaml.dump(asdict(ConfigurationState(cached_providers=cached_providers, uncached_providers=uncached_providers))))
+        f.write(yaml.dump(ConfigurationState(cached_providers=cached_providers, uncached_providers=uncached_providers).to_dict()))
 
 
 def read_config_state(path: str = ".state.yaml"):
@@ -270,7 +271,7 @@ def read_config_state(path: str = ".state.yaml"):
 
     try:
         with open(path) as f:
-            return fromdict(ConfigurationState, yaml.safe_load(f.read()))
+            return ConfigurationState.from_dict(yaml.safe_load(f.read()))
     except FileNotFoundError:
         return ConfigurationState()
 
@@ -278,10 +279,8 @@ def read_config_state(path: str = ".state.yaml"):
 def write_yardstick_config(cfg: Application, path: str = ".yardstick.yaml"):
     logging.info(f"writing yardstick config to {path!r}")
 
-    DumpMeta(key_transform="SNAKE", skip_defaults=True).bind_to(Application)
-
     with open(path, "w") as f:
-        f.write(yaml.dump(asdict(cfg)))
+        f.write(yaml.dump(cfg.to_dict()))
 
 
 def write_grype_db_config(providers: set[str], path: str = ".grype-db.yaml"):
