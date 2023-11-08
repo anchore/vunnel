@@ -51,7 +51,7 @@ runs:
     - name: Install poetry
       shell: bash
       run: |
-        pipx install poetry==${{ inputs.poetry-version }}
+        python -m pip install poetry==${{ inputs.poetry-version }}
         poetry self add "poetry-dynamic-versioning[plugin]"
 
     - name: Cache Poetry virtualenv
