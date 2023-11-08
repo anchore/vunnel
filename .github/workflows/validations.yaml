@@ -39,7 +39,15 @@ jobs:
     strategy:
       matrix:
         # note: this is not a single source of truth (this is also in the tox.ini)
-        python-version: ['3.9', '3.10', '3.11']
+        python:
+          - version: '3.9'
+            toxEnv: py39
+
+          - version: '3.10'
+            toxEnv: py310
+
+          - version: '3.11'
+            toxEnv: py311
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
         with:
@@ -49,10 +57,10 @@ jobs:
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python.version }}
 
       - name: Run unit tests
-        run: poetry run tox -e ${{ matrix.python-version }}
+        run: poetry run tox -e ${{ matrix.python.toxEnv }}
 
       - name: Build assets
         run: poetry run make build
