@@ -28,13 +28,22 @@ jobs:
           git fetch origin main
           git merge-base --is-ancestor ${GITHUB_REF##*/} origin/main && echo "${GITHUB_REF##*/} is a commit on main!"
 
-      - name: Check validation results
+      - name: Check static analysis results
         uses: fountainhead/action-wait-for-check@297be350cf8393728ea4d4b39435c7d7ae167c93 #v1.1.1
-        id: validations
+        id: static-analysis
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github action job name (in .github/workflows/validations.yaml)
-          checkName: "Validations"
+          checkName: "Static Analysis"
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Check test results
+        uses: fountainhead/action-wait-for-check@297be350cf8393728ea4d4b39435c7d7ae167c93 #v1.1.1
+        id: test
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # This check name is defined as the github action job name (in .github/workflows/validations.yaml)
+          checkName: "Test"
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check nightly quality gate results
@@ -50,9 +59,10 @@ jobs:
           intervalSeconds: 3
 
       - name: Release quality gate
-        if: steps.validations.conclusion != 'success' || steps.nightly-quality-gate.conclusion != 'success'
+        if: steps.static-analysis.conclusion != 'success' || steps.test.conclusion != 'success' || steps.nightly-quality-gate.conclusion != 'success'
         run: |
-          echo "Validations Status: ${{ steps.validations.conclusion }}"
+          echo "Static Analysis Status: ${{ steps.static-analysis.conclusion }}"
+          echo "Test Status: ${{ steps.test.conclusion }}"
           echo "Nightly Quality Gate Status: ${{ steps.nightly-quality-gate.conclusion }}"
           false
 

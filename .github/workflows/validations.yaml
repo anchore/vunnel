@@ -11,12 +11,34 @@ on:
 jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
-  Validations:
+  Static-Analysis:
+    name: "Static Analysis"
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Run static analysis
+        run: poetry run make static-analysis
+
+      - name: Ensure quality gate tools are properly configured
+        run: |
+          cd tests/quality && make validate-test-tool-versions
+
+  Test:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
     strategy:
       matrix:
+        # note: this is not a single source of truth (this is also in the tox.ini)
         python-version: ['3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
@@ -29,22 +51,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Run static analysis
-        run: poetry run make static-analysis
-
       - name: Run unit tests
-        run: poetry run make unit
-
-      - name: Ensure quality gate tools are properly configured
-        run: |
-          cd tests/quality && make validate-test-tool-versions
+        run: poetry run make unit-matrix
 
       - name: Build assets
         run: poetry run make build
 
   Publish-PreProd:
     runs-on: ubuntu-22.04
-    needs: [Validations]
+    needs: [Static-Analysis, Test]
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read

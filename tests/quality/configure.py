@@ -31,7 +31,9 @@ CLONE_DIR = f"{BIN_DIR}/grype-db-src"
 GRYPE_DB = f"{BIN_DIR}/grype-db"
 
 
-class Application(YardstickApplication, DataClassDictMixin): pass
+class Application(YardstickApplication, DataClassDictMixin):
+    pass
+
 
 @dataclass
 class ConfigurationState(DataClassDictMixin):

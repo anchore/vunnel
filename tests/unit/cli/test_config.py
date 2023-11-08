@@ -45,9 +45,9 @@ def test_full_config(helpers):
                     # this is what we added in the config
                     42: "https://alas.aws.amazon.com/AL2/alas-42.rss",
                     # this is the defaults...
-                    2: 'https://alas.aws.amazon.com/AL2/alas.rss', 
-                    2022: 'https://alas.aws.amazon.com/AL2022/alas.rss', 
-                    2023: 'https://alas.aws.amazon.com/AL2023/alas.rss'
+                    2: "https://alas.aws.amazon.com/AL2/alas.rss",
+                    2022: "https://alas.aws.amazon.com/AL2022/alas.rss",
+                    2023: "https://alas.aws.amazon.com/AL2023/alas.rss",
                 },
                 runtime=runtime_cfg,
                 request_timeout=20,

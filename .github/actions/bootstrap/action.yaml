@@ -8,7 +8,9 @@ inputs:
   python-version:
     description: "Python version to install"
     required: true
-    default: "3.9" # note: the caller really drives this in a matrix strategy run
+    # note: the caller really drives this in a matrix strategy run for unit tests.
+    # this default value is used for the rest of the workflow.
+    default: "3.11"
   poetry-version:
     description: "Poetry version to install"
     required: true
