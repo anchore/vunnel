@@ -9,8 +9,8 @@ import re
 from collections import namedtuple
 from datetime import datetime as dt
 from decimal import Decimal as D
+from typing import TYPE_CHECKING
 
-import requests
 from cvss import CVSS3
 from dateutil import parser as dt_parser
 
@@ -20,6 +20,9 @@ from vunnel.utils.oval_parser import Config
 from vunnel.utils.vulnerability import vulnerability_element
 
 from .oval_parser import Parser as RHELOvalParser
+
+if TYPE_CHECKING:
+    import requests
 
 namespace = "rhel"
 
