@@ -5,10 +5,7 @@ import logging
 import os
 import re
 
-import requests
-
-from vunnel import utils
-from vunnel.utils import rpm
+from vunnel.utils import http, rpm
 from vunnel.utils.oval_parser import Config, parse
 
 # One time initialization of driver specific configuration
@@ -65,11 +62,10 @@ class Parser:
     def urls(self):
         return [self._url_]
 
-    @utils.retry_with_backoff()
     def _download(self):
         try:
             self.logger.info(f"downloading ELSA from {self._url_}")
-            r = requests.get(self._url_, stream=True, timeout=self.download_timeout)
+            r = http.get(self._url_, self.logger, stream=True, timeout=self.download_timeout)
             if r.status_code != 200:
                 raise Exception(f"GET {self._url_} failed with HTTP error {r.status_code}")
 

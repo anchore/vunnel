@@ -8,10 +8,7 @@ import re
 from collections import namedtuple
 from typing import Any
 
-import requests
-
-from vunnel import utils
-from vunnel.utils import vulnerability
+from vunnel.utils import http, vulnerability
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
@@ -59,19 +56,13 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    @utils.retry_with_backoff()
     def _download_json(self):
         """
         Downloads debian json file
         :return:
         """
         try:
-            self.logger.info(f"downloading debian security tracker data from {self._dsa_url_}")
-
-            r = requests.get(self._json_url_, timeout=self.download_timeout)
-            if r.status_code != 200:
-                raise Exception(f"GET {self._json_url_} failed with HTTP error {r.status_code}")
-
+            r = http.get(self._json_url_, self.logger, timeout=self.download_timeout)
             json.loads(r.text)  # quick check if json is valid
             with open(self.json_file_path, "w", encoding="utf-8") as OFH:
                 OFH.write(r.text)
@@ -80,18 +71,13 @@ class Parser:
             self.logger.exception("Error downloading debian json file")
             raise
 
-    @utils.retry_with_backoff()
     def _download_dsa(self):
         """
         Downloads debian dsa file
         :return:
         """
         try:
-            self.logger.info(f"downloading DSA from {self._dsa_url_}")
-            r = requests.get(self._dsa_url_, timeout=self.download_timeout)
-            if r.status_code != 200:
-                raise Exception(f"GET {self._dsa_url_} failed with HTTP error {r.status_code}")
-
+            r = http.get(self._dsa_url_, self.logger, timeout=self.download_timeout)
             with open(self.dsa_file_path, "w", encoding="utf-8") as OFH:
                 OFH.write(r.text)
 

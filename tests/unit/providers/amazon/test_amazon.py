@@ -4,6 +4,7 @@ import shutil
 
 import pytest
 from vunnel import result, workspace
+from vunnel.utils import http
 from vunnel.providers.amazon import Config, Provider, parser
 
 
@@ -74,14 +75,6 @@ class TestParser:
         a = parser.Parser.get_package_name_version("java-1.8.0-openjdk-1.8.0.161-0.b14.amzn2.src")
         b = parser.Parser.get_package_name_version("java-1.8.0-openjdk-1.8.0.161-0.b14.amzn2.x86_64")
         assert a == b
-
-
-@pytest.fixture()
-def disable_get_requests(monkeypatch):
-    def disabled(*args, **kwargs):
-        raise RuntimeError("requests disabled but HTTP GET attempted")
-
-    monkeypatch.setattr(parser.requests, "get", disabled)
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
