@@ -1,7 +1,7 @@
 import logging
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
 import requests
 
@@ -14,7 +14,7 @@ def get(  # noqa: PLR0913
     retries: int = 5,
     backoff_in_seconds: int = 3,
     timeout: int = DEFAULT_TIMEOUT,
-    status_handler: Callable[[requests.Response], None] | None = None,
+    status_handler: Optional[Callable[[requests.Response], None]] = None,
     **kwargs: Any,
 ) -> requests.Response:
     """
