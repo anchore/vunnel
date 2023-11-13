@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
@@ -20,10 +20,10 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    api_key: str = "env:NVD_API_KEY"
+    api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
 
     def __post_init__(self) -> None:
-        if self.api_key.startswith("env:"):
+        if self.api_key and self.api_key.startswith("env:"):
             self.api_key = os.environ.get(self.api_key[4:], "")
 
     def __str__(self) -> str:
