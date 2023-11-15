@@ -4,7 +4,6 @@ import copy
 import json
 import logging
 import os
-import re
 from urllib.parse import urlparse
 
 from vunnel.utils import http, vulnerability
@@ -98,10 +97,6 @@ class Parser:
                                 vids.append(newvid)
 
                 for vid in vids:
-                    if not re.match("^CVE-.*", vid):
-                        # skip non-CVE records
-                        continue
-
                     if vid not in vuln_dict:
                         # create a new record
                         vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
