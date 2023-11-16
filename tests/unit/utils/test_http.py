@@ -84,7 +84,6 @@ class TestGetRequests:
         result = http.get(
             "http://example.com/some-path", mock_logger, status_handler=status_handler, retries=1, backoff_in_seconds=33
         )
-        status_handler.assert_called()
         mock_sleep.assert_not_called()
         status_handler.assert_called_once()
         assert status_handler.call_args.args[0] == error_response
