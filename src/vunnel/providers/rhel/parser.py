@@ -9,17 +9,20 @@ import re
 from collections import namedtuple
 from datetime import datetime as dt
 from decimal import Decimal as D
+from typing import TYPE_CHECKING
 
-import requests
 from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
-from vunnel.utils import rpm
+from vunnel.utils import http, rpm
 from vunnel.utils.oval_parser import Config
 from vunnel.utils.vulnerability import vulnerability_element
 
 from .oval_parser import Parser as RHELOvalParser
+
+if TYPE_CHECKING:
+    import requests
 
 namespace = "rhel"
 
@@ -68,21 +71,18 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    @utils.retry_with_backoff()
     def _download_minimal_cves(self, page, limit=100):
         path_params = {"per_page": str(limit), "page": page}
 
         self.logger.info(
             f"downloading CVE list from url={self.__summary_url__} count={path_params['per_page']} page={path_params['page']}",
         )
-        r = requests.get(
+        r = http.get(
             self.__summary_url__,
+            self.logger,
             params=path_params,
             timeout=self.download_timeout,
         )
-
-        if r.status_code != 200:
-            raise Exception(f"CVE list download failed with {r.status_code}")
         return r.json()
 
     def _process_minimal_cve(self, min_cve_api, do_full_sync, min_cve_dir, full_cve_dir):
@@ -262,18 +262,20 @@ class Parser:
 
         return full_cve_dir
 
-    @utils.retry_with_backoff()
     def _download_entity(self, url, destination):
         self.logger.trace(f"downloading {url}")
-        r = requests.get(url, timeout=self.download_timeout)
+
+        def status_handler(r: requests.Response):
+            if r.status_code not in [200, 404]:
+                r.raise_for_status()
+
+        r = http.get(url, self.logger, status_handler=status_handler, timeout=self.download_timeout)
 
         if r.status_code == 200:
             with open(destination, "w", encoding="utf-8") as fp:
                 fp.write(r.text)
         elif r.status_code == 404:
             self.logger.warning(f"GET {url} returned 404 not found error")
-        else:
-            raise Exception(f"error downloading content from {url}, status code {r.status_code}")
 
     def _fetch_rhsa_fix_version(self, rhsa_id, platform, package):
         fixed_ver = None

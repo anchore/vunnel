@@ -75,3 +75,32 @@ class TestGetRequests:
         http.get("http://example.com/some-path", mock_logger, retries=1, backoff_in_seconds=33)
         assert "HTTP ERROR" in mock_logger.warning.call_args.args[0]
         assert "will retry in 33 seconds" in mock_logger.warning.call_args.args[0]
+
+    @patch("time.sleep")
+    @patch("requests.get")
+    def test_it_calls_status_handler(self, mock_requests, mock_sleep, mock_logger, error_response, success_response):
+        mock_requests.side_effect = [error_response]
+        status_handler = MagicMock()
+        result = http.get(
+            "http://example.com/some-path", mock_logger, status_handler=status_handler, retries=1, backoff_in_seconds=33
+        )
+        mock_sleep.assert_not_called()
+        status_handler.assert_called_once()
+        assert status_handler.call_args.args[0] == error_response
+        assert result == error_response
+
+    @patch("time.sleep")
+    @patch("requests.get")
+    def test_it_retries_when_status_handler_raises(
+        self, mock_requests, mock_sleep, mock_logger, error_response, success_response
+    ):
+        mock_requests.side_effect = [success_response, error_response]
+        status_handler = MagicMock()
+        status_handler.side_effect = [Exception("custom exception"), None]
+        result = http.get(
+            "http://example.com/some-path", mock_logger, status_handler=status_handler, retries=1, backoff_in_seconds=33
+        )
+        mock_sleep.assert_called_with(33)
+        # custom status handler raised the first time it was called,
+        # so we expect the second mock response to be returned overall
+        assert result == error_response

@@ -1,20 +1,45 @@
 import logging
 import time
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Optional
 
 import requests
 
 DEFAULT_TIMEOUT = 30
 
 
-def get(
+def get(  # noqa: PLR0913
     url: str,
     logger: logging.Logger,
     retries: int = 5,
     backoff_in_seconds: int = 3,
     timeout: int = DEFAULT_TIMEOUT,
+    status_handler: Optional[Callable[[requests.Response], None]] = None,
     **kwargs: Any,
 ) -> requests.Response:
+    """
+    Perform requests.get on the url with configurable retries. Retried failures are logged as warnings.
+
+    Args:
+        url (string): the url to get
+        logger: a logging.Logger that info about the request should be logged to
+        retries: how many times should the call be re-attempted if it fails. A maximum of retries+1 calls are made.
+        backoff_in_seconds: passed to time.sleep between retries
+        timeout: passed to requests.get. defaults to 30 seconds.
+        status_handler: a Callable to call to validate the response.
+            If the Callable raises and exception, the exception will be logged, and retried if any retries remain.
+            If the Callable does not raise, the response will be returned, and the caller is responsible for any
+            further validation.
+            If no Callable is provided, `raise_for_status` is called on the response instead.
+        **kwargs: additional args are passed to requests.get unchanged.
+    Raises:
+        If retries are exhausted, re-raises the exception from the last requests.get attempt.
+
+    Example:
+        http.get("http://example.com/some-url", self.logger, retries=3, backoff_in_seconds=30,
+                 status_handler= lambda response: None if response.status_code in [200, 201, 405] else response.raise_for_status())
+
+    """
     logger.debug(f"http GET {url}")
     last_exception: Exception | None = None
     for attempt in range(retries + 1):
@@ -22,7 +47,10 @@ def get(
             time.sleep(backoff_in_seconds)
         try:
             response = requests.get(url, timeout=timeout, **kwargs)
-            response.raise_for_status()
+            if status_handler:
+                status_handler(response)
+            else:
+                response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
             last_exception = e
