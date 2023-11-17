@@ -4,13 +4,9 @@ import copy
 import json
 import logging
 import os
-import re
 from urllib.parse import urlparse
 
-import requests
-
-from vunnel import utils
-from vunnel.utils import vulnerability
+from vunnel.utils import http, vulnerability
 
 
 class Parser:
@@ -40,7 +36,6 @@ class Parser:
     def _extract_filename_from_url(url):
         return os.path.basename(urlparse(url).path)
 
-    @utils.retry_with_backoff()
     def _download(self):
         """
         Downloads wolfi sec db files
@@ -51,14 +46,11 @@ class Parser:
 
         try:
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
-            r = requests.get(self.url, stream=True, timeout=self.download_timeout)
-            if r.status_code == 200:
-                file_path = os.path.join(self.secdb_dir_path, self._db_filename)
-                with open(file_path, "wb") as fp:
-                    for chunk in r.iter_content():
-                        fp.write(chunk)
-            else:
-                r.raise_for_status()
+            r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
+            file_path = os.path.join(self.secdb_dir_path, self._db_filename)
+            with open(file_path, "wb") as fp:
+                for chunk in r.iter_content():
+                    fp.write(chunk)
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
@@ -105,10 +97,6 @@ class Parser:
                                 vids.append(newvid)
 
                 for vid in vids:
-                    if not re.match("^CVE-.*", vid):
-                        # skip non-CVE records
-                        continue
-
                     if vid not in vuln_dict:
                         # create a new record
                         vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
