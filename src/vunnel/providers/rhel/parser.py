@@ -645,6 +645,28 @@ class Parser:
 
         return affected + out_of_support
 
+    def _parse_cvss3(self, cvss3: dict | None) -> RHELCVSS3 | None:
+        if not cvss3:
+            return None
+
+        vector = cvss3.get("cvss3_scoring_vector", None)
+        base_score = cvss3.get("cvss3_base_score", None)
+
+        if not vector or not base_score:
+            return None
+
+        try:
+            return RHELCVSS3(
+                vector,
+                base_score,
+                cvss3.get("status", None),
+            )
+
+        except Exception:
+            self.logger.info("unable to make cvss3, defaulting to None", exc_info=True)
+
+        return None
+
     def _parse_cve(self, cve_id, content):  # noqa: C901, PLR0912, PLR0915
         # logger.debug('Parsing {}'.format(cve_id))
 
@@ -679,16 +701,7 @@ class Parser:
             else:
                 description = ""  # leaving this empty to be compatible with some old client side logic that expects it
 
-            try:
-                cvssv3 = content.get("cvss3", {})
-                cvssv3_obj = RHELCVSS3(
-                    cvssv3.get("cvss3_scoring_vector", None),
-                    cvssv3.get("cvss3_base_score", None),
-                    cvssv3.get("status", None),
-                )
-            except Exception:
-                self.logger.info("unable to make cvss3, defaulting to None", exc_info=True)
-                cvssv3_obj = None
+            cvssv3_obj = self._parse_cvss3(content.get("cvss3", None))
 
             for item in nfins:  # process not fixed in packages first as that trumps fixes
                 if item.platform not in platform_artifacts:
