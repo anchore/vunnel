@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 
+import orjson
 import requests
 from vunnel import utils, workspace
 
@@ -48,7 +48,7 @@ class Parser:
 
         with open(self.json_file_path, encoding="utf-8") as f:
 
-            for input_record in json.loads(f.read()):
+            for input_record in orjson.loads(f.read()):
 
                 vuln_id = input_record["name"]
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import copy
-import json
 import logging
 import os
 import re
 from collections import namedtuple
 from typing import Any
+
+import orjson
 
 from vunnel.utils import http, vulnerability
 
@@ -63,7 +64,7 @@ class Parser:
         """
         try:
             r = http.get(self._json_url_, self.logger, timeout=self.download_timeout)
-            json.loads(r.text)  # quick check if json is valid
+            orjson.loads(r.text)  # quick check if json is valid
             with open(self.json_file_path, "w", encoding="utf-8") as OFH:
                 OFH.write(r.text)
 
@@ -259,7 +260,7 @@ class Parser:
 
         if os.path.exists(self.json_file_path):
             with open(self.json_file_path, encoding="utf-8") as FH:
-                data = json.loads(FH.read())
+                data = orjson.loads(FH.read())
         else:
             raise Exception(f"debian json source not found under {self.json_file_path}")
 
@@ -432,7 +433,7 @@ class Parser:
                     except Exception:
                         self.logger.exception(f"ignoring error parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
 
-        self.logger.debug(f"metrics for advisory information: {json.dumps(adv_mets)}")
+        self.logger.debug(f"metrics for advisory information: {orjson.dumps(adv_mets).decode('utf-8')}")
 
         adv_mets.clear()
         # all_dsas.clear()
@@ -465,7 +466,7 @@ class Parser:
             for file in files:
                 if file.endswith(".json") and file.startswith("vulnerabilities"):
                     with open(os.path.join(root, file)) as f:
-                        process_file(json.load(f))
+                        process_file(orjson.loads(f.read()))
 
         if legacy_records:
             self.logger.info(f"found existing legacy data for the following releases: {list(legacy_records.keys())}")

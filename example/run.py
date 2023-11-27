@@ -1,10 +1,10 @@
 # ruff: noqa: INP001
 
-import json
 import logging
 from unittest import mock
 
 import awesome
+import orjson
 from vunnel import provider, result
 
 fakedata = [
@@ -33,7 +33,7 @@ def main():
     with mock.patch("awesome.parser.requests.get") as get:
         get.return_value = mock.Mock(
             json=lambda: fakedata,
-            text=json.dumps(fakedata),
+            text=orjson.dumps(fakedata),
             raise_for_status=lambda: None,
             status_code=200,
         )

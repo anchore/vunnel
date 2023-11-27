@@ -3,7 +3,6 @@ from __future__ import annotations
 import concurrent.futures
 import copy
 import enum
-import json
 import logging
 import os
 import re
@@ -765,7 +764,7 @@ class Parser:
     def _load_merged_cve(self, cve_id: str) -> CVEFile | None:
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
-                cve_json = json.load(fp)
+                cve_json = orjson.loads(fp.read())
                 return CVEFile.from_dict(cve_json)
 
         return None
@@ -783,7 +782,7 @@ class Parser:
     def _merged_cve_iterator(self) -> Generator[CVEFile, None, None]:
         for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
-                cve = json.load(fp)
+                cve = orjson.loads(fp.read())
                 yield CVEFile.from_dict(cve)
 
     def _merged_cve_exists(self, cve_id):

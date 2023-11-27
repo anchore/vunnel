@@ -6,8 +6,9 @@ if it doesn't exist.
 """
 from __future__ import annotations
 
-import json
 import os
+
+import orjson
 
 
 def connection(path, serializer="raw"):
@@ -88,7 +89,7 @@ class JSONSerializer:
 
     def load(self):
         with open(self.path) as fp:
-            self.data = json.load(fp)
+            self.data = orjson.loads(fp.read())
         return self.data
 
     def commit(self, data=None):
@@ -99,8 +100,8 @@ class JSONSerializer:
         # allow to commit what exists already as self.data if data is not passed in
         data = data or self.data
         self.data.update(data)
-        with open(self.path, "w") as fp:
-            json.dump(data, fp)
+        with open(self.path, "wb") as fp:
+            fp.write(orjson.dumps(data))
 
 
 class RawSerializer:
