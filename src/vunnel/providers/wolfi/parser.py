@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import copy
-import json
 import logging
 import os
 from urllib.parse import urlparse
+
+import orjson
 
 from vunnel.utils import http, vulnerability
 
@@ -64,7 +65,7 @@ class Parser:
         # parse and transform the json
         try:
             with open(f"{self.secdb_dir_path}/{self._db_filename}") as fh:
-                dbtype_data_dict = json.load(fh)
+                dbtype_data_dict = orjson.loads(fh.read())
 
                 yield self._release_, dbtype_data_dict
         except Exception:

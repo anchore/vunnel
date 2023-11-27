@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import datetime
 import errno
-import json
 import logging
 import os
 import random
 import shutil
 import time
 from typing import TYPE_CHECKING, Any
-
-import rfc3339
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -57,13 +53,3 @@ def silent_remove(path: str, tree: bool = False) -> None:
         # note: errno.ENOENT = no such file or directory
         if e.errno != errno.ENOENT:
             raise
-
-
-class DTEncoder(json.JSONEncoder):
-    def default(self, o: Any) -> Any:
-        # if passed in object is datetime object
-        # convert it to a string
-        if isinstance(o, datetime.datetime):
-            return rfc3339.rfc3339(o)
-        # otherwise use the default behavior
-        return json.JSONEncoder.default(self, o)
