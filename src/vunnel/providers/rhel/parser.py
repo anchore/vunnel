@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import concurrent.futures
 import copy
-import json
 import logging
 import os
 import re
@@ -11,6 +10,7 @@ from datetime import datetime as dt
 from decimal import Decimal as D
 from typing import TYPE_CHECKING
 
+import orjson
 from cvss import CVSS3
 from dateutil import parser as dt_parser
 
@@ -110,7 +110,7 @@ class Parser:
         try:
             if not do_full_sync and os.path.exists(min_cve_file) and os.path.exists(full_cve_file):
                 with open(min_cve_file, encoding="utf-8") as fp:  # load minimal cve from disk
-                    min_cve_fs = json.load(fp)
+                    min_cve_fs = orjson.loads(fp.read())
                 if min_cve_fs == min_cve_api:  # only case where a download is not necessary
                     download = False
                 else:
@@ -122,8 +122,8 @@ class Parser:
                 self._download_entity(url, full_cve_file)
 
                 # save minimal to disk
-                with open(min_cve_file, "w", encoding="utf-8") as fp:
-                    json.dump(min_cve_api, fp)
+                with open(min_cve_file, "wb") as fp:
+                    fp.write(orjson.dumps(min_cve_api))
 
             return download
         except Exception as e:
@@ -775,7 +775,7 @@ class Parser:
 
     def _process_full_cve(self, cve_id, cve_file_path):
         with open(cve_file_path, encoding="utf-8") as fp:
-            content = json.load(fp)
+            content = orjson.loads(fp.read())
 
         return self._parse_cve(cve_id, content)
 

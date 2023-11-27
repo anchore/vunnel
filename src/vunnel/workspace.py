@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime  # noqa: TCH003
-import json
 import logging
 import os
 import shutil
@@ -66,8 +65,8 @@ class State(DataClassDictMixin):
                 path=os.path.basename(listing_path),  # may have been overridden, keep value
             )
 
-        with open(metadata_path, "w") as f:
-            json.dump(asdict(self), f, indent=2, cls=utils.DTEncoder)
+        with open(metadata_path, "wb") as f:
+            f.write(orjson.dumps(asdict(self), option=orjson.OPT_INDENT_2))
 
         return metadata_path
 
