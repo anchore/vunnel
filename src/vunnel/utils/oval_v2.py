@@ -146,7 +146,9 @@ class VulnerabilityParser(OVALElementParser, ABC):
         if not criteria_element:
             return results
 
-        if criteria_element.attrib["operator"].lower() == "or":
+        operator = criteria_element.attrib.get("operator")
+
+        if operator and operator.lower() == "or":
             # indicates multiple groups of impacted artifacts, parse each group and gather results
             for child in criteria_element:
                 results.extend(VulnerabilityParser._parse_group(child, config))
@@ -222,15 +224,16 @@ class VulnerabilityParser(OVALElementParser, ABC):
         test_ids = []
         crit_tag = OVALElementParser._find_with_regex(crit_element.tag, config.tag_regex)  # noqa: SLF001
 
-        if crit_tag == "criterion":
+        if crit_tag == "criterion" and "comment" in crit_element.attrib:
             regex_match = re.search(regex, crit_element.attrib["comment"])
-            if regex_match and crit_element.attrib["test_ref"]:
+            if regex_match and "test_ref" in crit_element.attrib:
                 test_ids.append(crit_element.attrib["test_ref"])
         elif crit_tag == "criteria":
             for criterion in crit_element:
-                regex_match = re.search(regex, criterion.attrib["comment"])
-                if regex_match and criterion.attrib["test_ref"]:
-                    test_ids.append(criterion.attrib["test_ref"])
+                if "comment" in criterion.attrib:
+                    regex_match = re.search(regex, criterion.attrib["comment"])
+                    if regex_match and criterion.attrib.get("test_ref"):
+                        test_ids.append(criterion.attrib["test_ref"])
 
         return test_ids
 
@@ -336,7 +339,7 @@ class VersionParser(OVALElementParser):
             identity = xml_element.attrib["id"]
             for child in xml_element:
                 child_tag = OVALElementParser._find_with_regex(child.tag, config.tag_regex)  # noqa: SLF001
-                if child_tag in ["version", "evr"]:
+                if child_tag in ["version", "evr"] and "operation" in child.attrib:
                     op = child.attrib["operation"]
                     value = child.text
                     break
