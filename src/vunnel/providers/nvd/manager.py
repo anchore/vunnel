@@ -5,6 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+import orjson
+
 from .api import NvdAPI
 
 if TYPE_CHECKING:
@@ -79,5 +81,22 @@ class Manager:
     def _unwrap_records(self, response: dict[str, Any]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         for vuln in response["vulnerabilities"]:
             cve_id = vuln["cve"]["id"]
+            overrides = self._get_ovverides_for_id(cve_id)
+            if "cve" in vuln:
+                vuln["cve"].update(overrides)
             year = cve_id.split("-")[1]
             yield os.path.join(year, cve_id), vuln
+
+    def _get_ovverides_for_id(self, vuln_id: str) -> dict:
+        override_path = os.path.join("transforms", "nvd", f"{vuln_id}.json".lower())
+        changes = {}
+        try:
+            with open(override_path) as f:
+                j = orjson.loads(f.read())
+                if "comment" in j:
+                    self.logger.info(f"Applying changes to {vuln_id} because of {j['comment']}")
+                if "changes" in j:
+                    changes = j["changes"]
+        except FileNotFoundError:
+            pass
+        return changes
