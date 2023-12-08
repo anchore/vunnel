@@ -38,6 +38,20 @@ class TestGetRequests:
 
     @patch("time.sleep")
     @patch("requests.get")
+    def test_correct_number_of_retria(self, mock_requests, mock_sleep, mock_logger, error_response):
+        mock_requests.side_effect = [
+            error_response,
+            error_response,
+            error_response,
+            error_response,
+            error_response,
+        ]  # more than enough
+        with pytest.raises(requests.HTTPError):
+            http.get("http://example.com/some-path", mock_logger, retries=2, backoff_in_seconds=3)
+        assert len(mock_requests.call_args_list) == 3  # once for initial plus two retries
+
+    @patch("time.sleep")
+    @patch("requests.get")
     def test_succeeds_if_retries_succeed(self, mock_requests, mock_sleep, mock_logger, error_response, success_response):
         mock_requests.side_effect = [error_response, success_response]
         http.get("http://example.com/some-path", mock_logger, retries=1, backoff_in_seconds=22)
@@ -53,10 +67,14 @@ class TestGetRequests:
 
     @patch("time.sleep")
     @patch("requests.get")
-    def test_sleeps_right_amount_between_retries(self, mock_requests, mock_sleep, mock_logger, error_response, success_response):
+    @patch("random.uniform")
+    def test_exponential_backoff_and_jitter(
+        self, mock_uniform_random, mock_requests, mock_sleep, mock_logger, error_response, success_response
+    ):
         mock_requests.side_effect = [error_response, error_response, error_response, success_response]
-        http.get("http://example.com/some-path", mock_logger, backoff_in_seconds=123, retries=3)
-        assert mock_sleep.call_args_list == [call(123), call(123), call(123)]
+        mock_uniform_random.side_effect = [0.5, 0.4, 0.1]
+        http.get("http://example.com/some-path", mock_logger, backoff_in_seconds=10, retries=3)
+        assert mock_sleep.call_args_list == [call(10), call(10 * 2 + 0.5), call(10 * 4 + 0.4)]
 
     @patch("time.sleep")
     @patch("requests.get")
