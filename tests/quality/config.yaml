@@ -68,6 +68,7 @@ tests:
       - alpine:distro:alpine:3.16
       - alpine:distro:alpine:3.17
       - alpine:distro:alpine:3.18
+      - alpine:distro:alpine:3.19
       - alpine:distro:alpine:edge
 
   - provider: amazon
