@@ -1,0 +1,8 @@
+# pretend the following PRs were merged
+include-prs:
+  - https://github.com/github/advisory-database/pull/2630
+
+# assuming the following GHSAs were reviewed, even if they
+# are not returned by the API
+assume-reviewed:
+  - GHSA-some-asdf

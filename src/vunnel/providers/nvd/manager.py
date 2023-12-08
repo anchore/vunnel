@@ -87,7 +87,7 @@ class Manager:
             year = cve_id.split("-")[1]
             yield os.path.join(year, cve_id), vuln
 
-    def _get_ovverides_for_id(self, vuln_id: str) -> dict:
+    def _get_ovverides_for_id(self, vuln_id: str) -> dict[str, Any]:
         override_path = os.path.join("transforms", "nvd", f"{vuln_id}.json".lower())
         changes = {}
         try:
