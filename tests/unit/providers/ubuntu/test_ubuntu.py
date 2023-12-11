@@ -21,8 +21,10 @@ from vunnel.providers.ubuntu.parser import (
     parse_cve_file,
     parse_list,
     parse_multiline_keyvalue,
+    parse_severity_from_priority,
     parse_simple_keyvalue,
     patch_states,
+    Severity,
     ubuntu_version_names,
 )
 
@@ -392,6 +394,63 @@ class TestUbuntuParser:
 
         result = udp._reprocess_merged_cve(cve_id, cvs_file)
         assert result.patches == data.patches + [Patch(**p) for p in new_distro_patches]
+
+    @pytest.mark.parametrize(
+        ("cve", "expected_severity"),
+        [
+            (
+                CVEFile(name="unset"),
+                Severity.Unknown,
+            ),
+            (
+                CVEFile(name="unknown", priority="unknown"),
+                Severity.Unknown,
+            ),
+            (
+                CVEFile(name="untriaged", priority="untriaged"),
+                Severity.Unknown,
+            ),
+            (
+                CVEFile(name="negligible", priority="negligible"),
+                Severity.Negligible,
+            ),
+            (
+                CVEFile(name="low", priority="low"),
+                Severity.Low,
+            ),
+            (
+                CVEFile(name="medium", priority="medium"),
+                Severity.Medium,
+            ),
+            (
+                CVEFile(name="high", priority="high"),
+                Severity.High,
+            ),
+            (
+                CVEFile(name="critical", priority="critical"),
+                Severity.Critical,
+            ),
+        ],
+    )
+    def test_parse_severity_from_priority(self, cve: CVEFile, expected_severity: Severity):
+        assert parse_severity_from_priority(cve) == expected_severity
+
+    @pytest.mark.parametrize(
+        ("cve", "error_type"),
+        [
+            (
+                CVEFile(name="unset", priority="something-else"),
+                AttributeError,
+            ),
+            (
+                None,
+                Exception,
+            ),
+        ],
+    )
+    def test_parse_severity_from_priority(self, cve: CVEFile, error_type: Exception):
+        with pytest.raises(error_type):
+            parse_severity_from_priority(cve)
 
 
 @pytest.fixture()
