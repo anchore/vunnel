@@ -460,6 +460,13 @@ def map_namespace(release_name: str) -> str | None:
     return None
 
 
+def parse_severity_from_priority(cve: CVEFile) -> Severity:
+    severity = cve.priority.capitalize()
+    if severity in {"Untriaged"}:
+        return Severity.Unknown
+    return getattr(Severity, severity)
+
+
 def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # noqa: C901, PLR0912
     """
     Maps a parsed CVE dict into a Vulnerability object.
@@ -493,10 +500,16 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
                 continue
 
             r = Vulnerability()
+
             try:
-                r.Severity = getattr(Severity, parsed_cve.priority.capitalize())
+                r.Severity = parse_severity_from_priority(parsed_cve)
+            except AttributeError:
+                logger.warning(
+                    f"setting unknown severity on {parsed_cve.name} due to unsupported priority value {parsed_cve.priority}",
+                )
+                r.Severity = Severity.Unknown
             except Exception:
-                logger.exception("setting unknown severity due to exception getting severity")
+                logger.exception(f"setting unknown severity on {parsed_cve.name} due to exception parsing severity from priority")
                 r.Severity = Severity.Unknown
 
             r.Name = parsed_cve.name
