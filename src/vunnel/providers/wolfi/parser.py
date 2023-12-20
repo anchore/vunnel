@@ -102,11 +102,16 @@ class Parser:
                         # create a new record
                         vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
                         vuln_record = vuln_dict[vid]
+                        reference_links = vulnerability.build_reference_links(vid)
 
                         # populate the static information about the new vuln record
                         vuln_record["Vulnerability"]["Name"] = str(vid)
                         vuln_record["Vulnerability"]["NamespaceName"] = self.namespace + ":" + str(release)
-                        vuln_record["Vulnerability"]["Link"] = "http://cve.mitre.org/cgi-bin/cvename.cgi?name=" + str(vid)
+
+                        if reference_links:
+                            # TODO: Support multiple links
+                            vuln_record["Vulnerability"]["Link"] = reference_links[0]
+
                         vuln_record["Vulnerability"]["Severity"] = "Unknown"
                     else:
                         vuln_record = vuln_dict[vid]
