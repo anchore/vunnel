@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 from vunnel.utils import http
-from vunnel.utils.vulnerability import vulnerability_element
+from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
 if TYPE_CHECKING:
     import requests
@@ -188,7 +188,7 @@ class Parser:
             self.logger.exception("Failed to load alpine sec db data")
             raise
 
-    def _normalize(self, release, dbtype_data_dict):  # noqa: C901
+    def _normalize(self, release, dbtype_data_dict):  # noqa: C901, PLR0912
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -224,29 +224,15 @@ class Parser:
                                 # create a new record
                                 vuln_dict[vid] = copy.deepcopy(vulnerability_element)
                                 vuln_record = vuln_dict[vid]
+                                reference_links = build_reference_links(vid)
 
                                 # populate the static information about the new vuln record
                                 vuln_record["Vulnerability"]["Name"] = str(vid)
                                 vuln_record["Vulnerability"]["NamespaceName"] = namespace + ":" + str(release)
-                                vuln_record["Vulnerability"]["Link"] = "http://cve.mitre.org/cgi-bin/cvename.cgi?name=" + str(vid)
+
+                                if reference_links:
+                                    vuln_record["Vulnerability"]["Link"] = reference_links[0]
                                 vuln_record["Vulnerability"]["Severity"] = "Unknown"
-
-                                # lookup nvd record only when creating the vulnerability, no point looking it up every time
-                                # nvd_severity = None
-                                # try:
-                                #    nvd_severity = nvd.get_severity(
-                                #        vid
-                                #    )
-                                # except Exception:
-                                #    self.logger.exception(
-                                #        "Ignoring error processing nvdv2 record"
-                                #    )
-
-                                # use nvd severity
-                                # if nvd_severity:
-                                #    vuln_record["Vulnerability"][
-                                #        "Severity"
-                                #    ] = nvd_severity
                             else:
                                 vuln_record = vuln_dict[vid]
 
