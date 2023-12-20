@@ -102,11 +102,14 @@ class Parser:
                         # create a new record
                         vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
                         vuln_record = vuln_dict[vid]
+                        link_prefix = "http://cve.mitre.org/cgi-bin/cvename.cgi?name="
+                        if vid.startswith("GHSA"):
+                            link_prefix = "https://github.com/advisories/"
 
                         # populate the static information about the new vuln record
                         vuln_record["Vulnerability"]["Name"] = str(vid)
                         vuln_record["Vulnerability"]["NamespaceName"] = self.namespace + ":" + str(release)
-                        vuln_record["Vulnerability"]["Link"] = "http://cve.mitre.org/cgi-bin/cvename.cgi?name=" + str(vid)
+                        vuln_record["Vulnerability"]["Link"] = link_prefix + str(vid)
                         vuln_record["Vulnerability"]["Severity"] = "Unknown"
                     else:
                         vuln_record = vuln_dict[vid]
