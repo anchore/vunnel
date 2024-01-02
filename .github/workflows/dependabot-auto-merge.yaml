@@ -30,12 +30,6 @@ jobs:
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-      - name: temp echo some variables
-        id: echo
-        run: |
-          echo "$HUMAN_PUSHED"
-        env:
-          HUMAN_PUSHED: ${{ steps.pr_author.outputs.human_pushed }}
       - name: Enable auto-merge for Dependabot PRs
         if: >
             ( steps.pr_author.ouputs.human_pushed == 'no' ) &&
