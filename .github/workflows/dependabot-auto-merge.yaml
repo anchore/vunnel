@@ -23,23 +23,23 @@ jobs:
           EXTRA_AUTHORS=$(gh pr view "$PR_URL" --json commits --jq '.commits[] | .authors[] | .login' | sort | uniq | grep -v dependabot || echo -n '')
           if [ -n "$EXTRA_AUTHORS" ]; then
             echo "PR has authors in addition to dependabot: $EXTRA_AUTHORS"
-            echo "human_pushed=true" >> "$GITHUB_OUTPUT"
+            echo "human_pushed=yes" >> "$GITHUB_OUTPUT"
           else
-            echo "human_pushed=false" >> "$GITHUB_OUTPUT"
+            echo "human_pushed=no" >> "$GITHUB_OUTPUT"
           fi
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Enable auto-merge for Dependabot PRs
         if: >
-            ( steps.pr_author.human_pushed != 'true' ) &&
+            ( steps.pr_author.human_pushed == 'no' ) &&
             ( steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor' )
         run: gh pr merge --auto --squash "$PR_URL" && gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Disable auto-merge if human modified PR
-        if: steps.pr_author.human_pushed == 'true'
+        if: steps.pr_author.human_pushed == 'yes'
         run: |
           echo "disabling auto-merge due to non-dependabot push"
           gh pr merge --disable-auto "$PR_URL"
