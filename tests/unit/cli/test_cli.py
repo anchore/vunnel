@@ -300,7 +300,3 @@ providers:
 root: ./data
 """
     assert expected_output.strip() in res.output
-
-
-def test_fail():
-    assert True == False
