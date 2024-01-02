@@ -23,9 +23,9 @@ jobs:
           EXTRA_AUTHORS=$(gh pr view "$PR_URL" --json commits --jq '.commits[] | .authors[] | .login' | sort | uniq | grep -v dependabot || echo -n '')
           if [ -n "$EXTRA_AUTHORS" ]; then
             echo "PR has authors in addition to dependabot: $EXTRA_AUTHORS"
-            echo "human_pushed=yes" >> "$GITHUB_OUTPUT"
+            echo "human_pushed=yes" >> $GITHUB_OUTPUT
           else
-            echo "human_pushed=no" >> "$GITHUB_OUTPUT"
+            echo "human_pushed=no" >> $GITHUB_OUTPUT
           fi
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
