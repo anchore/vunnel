@@ -66,9 +66,42 @@ jobs:
           echo "Nightly Quality Gate Status: ${{ steps.nightly-quality-gate.conclusion }}"
           false
 
-  tag:
+  publish-to-pre-prod:
+    runs-on: ubuntu-22.04
     needs:
       - quality-gate
+    permissions:
+      contents: read
+      # package write permission is needed for publishing commit images
+      packages: write
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Login to ghcr.io
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Build assets
+        run: poetry run make build
+
+      - name: Publish commit image
+        run: make ci-publish-commit
+
+      - name: Publish to test PyPI
+        run: make ci-publish-testpypi
+        env:
+          # note: "..._TESTPYPI" suffix should match the name of the testpypi repository (see the Makefile target)
+          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.TEST_PYPI_TOKEN }}
+
+  tag:
+    needs:
+      - publish-to-pre-prod
     runs-on: ubuntu-22.04
     permissions:
       contents: write
