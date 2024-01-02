@@ -35,17 +35,17 @@ jobs:
         run: |
           echo "$HUMAN_PUSHED"
         env:
-          HUMAN_PUSHED: ${{ steps.pr_author.human_pushed }}
+          HUMAN_PUSHED: ${{ steps.pr_author.outputs.human_pushed }}
       - name: Enable auto-merge for Dependabot PRs
         if: >
-            ( steps.pr_author.human_pushed == 'no' ) &&
+            ( steps.pr_author.ouputs.human_pushed == 'no' ) &&
             ( steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor' )
         run: gh pr merge --auto --squash "$PR_URL" && gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Disable auto-merge if human modified PR
-        if: steps.pr_author.human_pushed == 'yes'
+        if: steps.pr_author.outputs.human_pushed == 'yes'
         run: |
           echo "disabling auto-merge due to non-dependabot push"
           gh pr merge --disable-auto "$PR_URL"
