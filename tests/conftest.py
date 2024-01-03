@@ -56,7 +56,7 @@ class WorkspaceHelper:
                 schema_url = envelope["schema"]
 
                 schema_dict = load_json_schema(get_schema_repo_path(schema_url))
-                jsonschema.validate(instance=envelope["item"], schema=schema_dict)
+                _validate_json_schema(instance=envelope["item"], schema=schema_dict)
                 entries_validated += 1
 
         if require_entries and entries_validated == 0:
@@ -70,7 +70,7 @@ class WorkspaceHelper:
             schema_url = item["schema"]["url"]
 
             schema_dict = load_json_schema(get_schema_repo_path(schema_url))
-            jsonschema.validate(instance=item, schema=schema_dict)
+            _validate_json_schema(instance=item, schema=schema_dict)
 
         return True
 
@@ -217,3 +217,28 @@ def disable_get_requests(monkeypatch):
     from vunnel import utils
 
     return monkeypatch.setattr(utils.http, "get", disabled)
+
+
+def _validate_json_schema(instance: dict, schema: dict):
+    _schema_validator(schema=schema).validate(instance=instance)
+
+
+def _schema_validator(schema: dict) -> jsonschema.Draft7Validator:
+    from referencing import Registry, Resource
+
+    # load up known schema references into a common registry to prevent network calls
+    # see https://python-jsonschema.readthedocs.io/en/latest/referencing/ for more details
+
+    paths = {
+        "schema/vulnerability/nvd/cvss/schema-v2.0.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v2.0.json",
+        "schema/vulnerability/nvd/cvss/schema-v3.0.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.0.json",
+        "schema/vulnerability/nvd/cvss/schema-v3.1.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.1.json",
+    }
+
+    registry = Registry()
+    for path, url in paths.items():
+        in_repo_path = os.path.join(git_root(), path)
+        schema_resource = Resource.from_contents(load_json_schema(in_repo_path))
+        registry = registry.with_resource(url, schema_resource)
+
+    return jsonschema.Draft7Validator(schema, registry=registry)
