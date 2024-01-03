@@ -44,6 +44,7 @@ class Parser:
     __rhsa_dir_name__ = "rhsa"
     __cve_dir_name__ = "cve"
     __min_dir_name__ = "min"
+    __min_pages_dir_name__ = "min_pages"
     __full_dir_name__ = "full"
     __last_full_sync_filename__ = "last_full_sync"
 
@@ -71,7 +72,7 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def _download_minimal_cves(self, page, limit=100):
+    def _download_minimal_cves(self, page, limit=1000):
         path_params = {"per_page": str(limit), "page": page}
 
         self.logger.info(
@@ -83,6 +84,7 @@ class Parser:
             params=path_params,
             timeout=self.download_timeout,
         )
+
         return r.json()
 
     def _process_minimal_cve(self, min_cve_api, do_full_sync, min_cve_dir, full_cve_dir):
@@ -132,6 +134,39 @@ class Parser:
             utils.silent_remove(min_cve_file)
             utils.silent_remove(full_cve_file)
             raise  # raise the original exception
+
+    def _download_minimal_cve_pages(self) -> int:
+        dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__)
+
+        # clear all existing records
+        utils.silent_remove(dir_path, tree=True)
+        os.makedirs(dir_path)
+
+        page = 0
+        count = 0
+        while True:
+            page += 1
+            results = self._download_minimal_cves(page)
+
+            if not isinstance(results, list) or not results:
+                break
+
+            min_cve_file = os.path.join(dir_path, f"{page}.json")
+
+            count += len(results)
+
+            with open(min_cve_file, "wb") as fp:
+                fp.write(orjson.dumps(results))
+
+        return count
+
+    def enumerate_minimal_cve_pages(self):
+        dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__)
+
+        for file in os.listdir(dir_path):
+            if file.endswith(".json"):
+                with open(os.path.join(dir_path, file), encoding="utf-8") as fp:
+                    yield orjson.loads(fp.read())
 
     # TODO: ALEX, should skip_if_exists be hooked up here? (currently unused)
     def _sync_cves(self, skip_if_exists=False, do_full_sync=True):  # noqa: PLR0915, PLR0912, C901
@@ -185,20 +220,16 @@ class Parser:
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
 
+        count = self._download_minimal_cve_pages()
+
+        self.logger.info(f"downloading and processing {count} CVEs")
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             download_count = 0
-            page = 0
             api_cve_set = set()  # definitive set of cves
             error = False
 
-            while True:
-                # get a page of cve minimal/summary list
-                page += 1
-                results = self._download_minimal_cves(page)
-
-                if not isinstance(results, list) or not results:
-                    break
-
+            for results in self.enumerate_minimal_cve_pages():
                 future_cve_dict = {
                     executor.submit(
                         self._process_minimal_cve,
@@ -212,7 +243,16 @@ class Parser:
 
                 for future in concurrent.futures.as_completed(future_cve_dict):
                     cve_id = future_cve_dict[future]
+
+                    before = len(api_cve_set)
+
                     api_cve_set.add(cve_id)  # add to api set
+
+                    if len(api_cve_set) == before:  # duplicate cve id
+                        self.logger.warning(
+                            f"duplicate cve id {cve_id} found from api response (this is a known issue with the upstream API)",
+                        )
+
                     try:
                         download = future.result()
                     except Exception:
