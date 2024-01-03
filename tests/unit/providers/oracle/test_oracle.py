@@ -23,7 +23,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                             "NamespaceName": "ol:8",
                             "FixedIn": [],
                             "Link": "https://linux.oracle.com/errata/ELSA-2021-9151.html",
-                            "Description": "",
+                            "Description": "[1.1.1g-15] - version bump [1.1.1g-14] - CVE-2021-3450 openssl: CA certificate check bypass with X509_V_FLAG_X509_STRICT [1.1.1g-13] - Fix CVE-2021-3449 NULL pointer deref in signature_algorithms processing",
                             "Metadata": {
                                 "Issued": "2021-04-01",
                                 "RefId": "ELSA-2021-9151",
@@ -116,7 +116,12 @@ from vunnel.providers.oracle import Config, Provider, parser
                                 ],
                             ),
                             "Link": "http://linux.oracle.com/errata/ELSA-2007-0057.html",
-                            "Description": "",
+                            "Description": """[30:9.3.3-8]
+ - added fix for #224445 - CVE-2007-0493 BIND might crash after
+   attempting to read free()-ed memory
+ - added fix for #225229 - CVE-2007-0494 BIND dnssec denial of service
+ - Resolves: rhbz#224445
+ - Resolves: rhbz#225229""",
                             "Metadata": {
                                 "Issued": "2007-06-26",
                                 "RefId": "ELSA-2007-0057",
@@ -189,7 +194,16 @@ from vunnel.providers.oracle import Config, Provider, parser
                                 ],
                             ),
                             "Link": "http://linux.oracle.com/errata/ELSA-2018-4250.html",
-                            "Description": "",
+                            "Description": """[2.6.39-400.302.2]
+- Revert 'Fix up non-directory creation in SGID directories' (Brian Maly)  [Orabug: 28781234]
+
+[2.6.39-400.302.1]
+- Fix up non-directory creation in SGID directories (Linus Torvalds)  [Orabug: 28459479]  {CVE-2018-13405}
+- ALSA: seq: Make ioctls race-free (Takashi Iwai)  [Orabug: 28459730]  {CVE-2018-7566}
+- rds: CVE-2018-7492: Fix NULL pointer dereference in __rds_rdma_map (Hakon Bugge)  [Orabug: 28539910]  {CVE-2018-7492}
+- cdrom: Fix info leak/OOB read in cdrom_ioctl_drive_status (Scott Bauer)  [Orabug: 28664549]  {CVE-2018-16658}
+- ACPICA: acpi: acpica: fix acpi operand cache leak in nseval.c (Seunghun Han)  [Orabug: 28664580]  {CVE-2017-13695}
+- exec: Limit arg stack to at most 75% of _STK_LIM (Kees Cook)  [Orabug: 28710024]  {CVE-2018-14634}""",
                             "Metadata": {
                                 "Issued": "2018-10-12",
                                 "RefId": "ELSA-2018-4250",
