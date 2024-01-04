@@ -192,29 +192,32 @@ tests:
       - redhat:distro:redhat:8
       - redhat:distro:redhat:9
 
-# TODO: add sles test images and labels once there is a capability in grype to do so
-#  - providers:
-#      - name: sles
-#    images:
-#      -
-#    expected_namespaces:
-#      - sles:distro:sles:11
-#      - sles:distro:sles:11.1
-#      - sles:distro:sles:11.2
-#      - sles:distro:sles:11.3
-#      - sles:distro:sles:11.4
-#      - sles:distro:sles:12
-#      - sles:distro:sles:12.1
-#      - sles:distro:sles:12.2
-#      - sles:distro:sles:12.3
-#      - sles:distro:sles:12.4
-#      - sles:distro:sles:12.5
-#      - sles:distro:sles:15
-#      - sles:distro:sles:15.1
-#      - sles:distro:sles:15.2
-#      - sles:distro:sles:15.3
-#      - sles:distro:sles:15.4
-#      - sles:distro:sles:15.5
+  - provider: sles
+    additional_trigger_globs:
+      - src/vunnel/utils/oval_v2.py
+
+    images:
+      - registry.suse.com/suse/sles12sp4:26.380@sha256:94b537f5b312e7397b5d0bbb3d892f961acdd9454950fc233d77f771e25335fb
+      - registry.suse.com/suse/sle15:15.1.6.2.461@sha256:6e613c994c3b33224e439ef8ee9003fb69416f77f7a6b1da0b18981d5aa3bb75
+
+    expected_namespaces:
+      - sles:distro:sles:11
+      - sles:distro:sles:11.1
+      - sles:distro:sles:11.2
+      - sles:distro:sles:11.3
+      - sles:distro:sles:11.4
+      - sles:distro:sles:12
+      - sles:distro:sles:12.1
+      - sles:distro:sles:12.2
+      - sles:distro:sles:12.3
+      - sles:distro:sles:12.4
+      - sles:distro:sles:12.5
+      - sles:distro:sles:15
+      - sles:distro:sles:15.1
+      - sles:distro:sles:15.2
+      - sles:distro:sles:15.3
+      - sles:distro:sles:15.4
+      - sles:distro:sles:15.5
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
