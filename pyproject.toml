@@ -55,7 +55,7 @@ SQLAlchemy = ">= 1.4.46, < 2.0"  # note: 1.4.x currently required for enterprise
 mergedeep = "^1.3.4"
 future = "^0.18.3"
 importlib-metadata = "^6.1.0"
-xsdata = {extras = ["cli", "lxml", "soap"], version = ">=22.12,<24.0"}
+xsdata = {extras = ["cli", "lxml", "soap"], version = ">=22.12,<25.0"}
 pytest-snapshot = "^0.9.0"
 mashumaro = "^3.10"
 
