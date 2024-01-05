@@ -1989,13 +1989,13 @@ files = [
 
 [[package]]
 name = "xsdata"
-version = "23.8"
+version = "24.1"
 description = "Python XML Binding"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "xsdata-23.8-py3-none-any.whl", hash = "sha256:3cf34ffb1ae35ac873e7eb53504e326d7997939f976a51814a57f77c8df8f09e"},
-    {file = "xsdata-23.8.tar.gz", hash = "sha256:55f03d4c88236f047266affe550ba0dd19476adfce6a01f3e0aefac7c8078e56"},
+    {file = "xsdata-24.1-py3-none-any.whl", hash = "sha256:314eba1e50219e3393fa3814f51b426646ae0bb9a416ecc5b6d93bcb08e88416"},
+    {file = "xsdata-24.1.tar.gz", hash = "sha256:e36fc8b4624bbbaf2d34d0857c6d78ede99ec1d3240cc7dd50546177fbb52442"},
 ]
 
 [package.dependencies]
@@ -2005,11 +2005,12 @@ docformatter = {version = ">=1.7.2", optional = true, markers = "extra == \"cli\
 jinja2 = {version = ">=2.10", optional = true, markers = "extra == \"cli\""}
 lxml = {version = ">=4.4.1", optional = true, markers = "extra == \"lxml\""}
 requests = {version = "*", optional = true, markers = "extra == \"soap\""}
+ruff = {version = ">=0.1.9", optional = true, markers = "extra == \"cli\""}
 toposort = {version = ">=1.5", optional = true, markers = "extra == \"cli\""}
 typing-extensions = "*"
 
 [package.extras]
-cli = ["click (>=5.0)", "click-default-group (>=1.2)", "docformatter (>=1.7.2)", "jinja2 (>=2.10)", "toposort (>=1.5)"]
+cli = ["click (>=5.0)", "click-default-group (>=1.2)", "docformatter (>=1.7.2)", "jinja2 (>=2.10)", "ruff (>=0.1.9)", "toposort (>=1.5)"]
 docs = ["furo", "sphinx", "sphinx-autobuild", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-inline-tabs"]
 lxml = ["lxml (>=4.4.1)"]
 soap = ["requests"]
@@ -2181,4 +2182,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "03b1076a3813827edd61977f305c4a39558bcd54bc49f8c19f6325d1f468126c"
+content-hash = "d2a25d68cc6fb3e8d2856254c0b0c3733e0de5334b72fd52bb7900ccfaf37d7e"
