@@ -610,7 +610,18 @@ class Parser:
 
         return fixed_ins
 
-    def _parse_package_state(self, cve_id: str, fixed: list[FixedIn], content) -> list[FixedIn]:  # noqa: C901
+    def _parse_package_name_and_module(self, item: dict) -> tuple[str | None, str | None]:
+        package_name = item.get("package_name", None)
+        module = None
+
+        if package_name and "/" in package_name:
+            components = package_name.split("/")
+            package_name = components[1]
+            module = components[0]
+
+        return package_name, module
+
+    def _parse_package_state(self, cve_id: str, content) -> list[FixedIn]:  # noqa: C901
         affected: list[FixedIn] = []
         out_of_support: list[FixedIn] = []  # Track items out of support to be able to add them if others are affected
         pss = content.get("package_state", [])
@@ -628,16 +639,14 @@ class Parser:
                 if not platform or f"{namespace}:{platform}" in self.skip_namespaces:
                     continue
 
-                package_name = item.get("package_name", None)
-                module = None
-
-                if "/" in package_name:
-                    components = package_name.split("/")
-                    package_name = components[1]
-                    module = components[0]
+                package_name, module = self._parse_package_name_and_module(item)
 
                 if not package_name:
                     self.logger.debug(f"package state package_name missing for {cve_id} platform {platform}")
+                    continue
+
+                if module and module.endswith(":flatpak"):
+                    self.logger.debug(f"skipping flatpak entry {package_name} for {cve_id} platform {platform}")
                     continue
 
                 state = item.get("fix_state", None)
@@ -713,7 +722,7 @@ class Parser:
         results = []
         platform_artifacts = {}
         fins = self._parse_affected_release(cve_id, content)
-        nfins = self._parse_package_state(cve_id, fins, content)
+        nfins = self._parse_package_state(cve_id, content)
         platform_package_module_tuples = set()
 
         if fins or nfins:
