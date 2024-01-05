@@ -183,6 +183,150 @@ resolves these issues.</description>
   </criteria>
  </criteria>
 </definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235428" version="637">
+ <metadata>
+  <title>RHSA-2023:5428: thunderbird security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 8</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5428" ref_url="https://access.redhat.com/errata/RHSA-2023:5428" source="RHSA"/>
+  <reference ref_id="CVE-2023-3600" ref_url="https://access.redhat.com/security/cve/CVE-2023-3600" source="CVE"/>
+  <reference ref_id="CVE-2023-5169" ref_url="https://access.redhat.com/security/cve/CVE-2023-5169" source="CVE"/>
+  <reference ref_id="CVE-2023-5171" ref_url="https://access.redhat.com/security/cve/CVE-2023-5171" source="CVE"/>
+  <reference ref_id="CVE-2023-5176" ref_url="https://access.redhat.com/security/cve/CVE-2023-5176" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>Mozilla Thunderbird is a standalone mail and newsgroup client.
+
+This update upgrades Thunderbird to version 115.3.1.
+
+Security Fix(es):
+
+* firefox: use-after-free in workers (CVE-2023-3600)
+
+* Mozilla: Out-of-bounds write in PathOps (CVE-2023-5169)
+
+* Mozilla: Use-after-free in Ion Compiler (CVE-2023-5171)
+
+* Mozilla: Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3 (CVE-2023-5176)
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-04"/>
+   <updated date="2023-10-04"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-3600" impact="important" public="20230711">CVE-2023-3600</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-787" href="https://access.redhat.com/security/cve/CVE-2023-5169" impact="important" public="20230926">CVE-2023-5169</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-5171" impact="important" public="20230926">CVE-2023-5171</cve>
+   <cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-5176" impact="important" public="20230926">CVE-2023-5176</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2222652" id="2222652">use-after-free in workers</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240893" id="2240893">Out-of-bounds write in PathOps</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240894" id="2240894">Use-after-free in Ion Compiler</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240896" id="2240896">Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:8</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:8</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:8::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20191992005"/>
+  <criteria operator="AND">
+   <criterion comment="thunderbird is earlier than 0:115.3.1-1.el8_8" test_ref="oval:com.redhat.rhsa:tst:20235428001"/>
+   <criterion comment="thunderbird is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20191144002"/>
+   <criteria operator="OR">
+    <criterion comment="Red Hat Enterprise Linux 8 is installed" test_ref="oval:com.redhat.rhba:tst:20191992003"/>
+    <criterion comment="Red Hat CoreOS 4 is installed" test_ref="oval:com.redhat.rhba:tst:20191992004"/>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235433" version="637">
+ <metadata>
+  <title>RHSA-2023:5433: firefox security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 8</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5433" ref_url="https://access.redhat.com/errata/RHSA-2023:5433" source="RHSA"/>
+  <reference ref_id="CVE-2023-3600" ref_url="https://access.redhat.com/security/cve/CVE-2023-3600" source="CVE"/>
+  <reference ref_id="CVE-2023-5169" ref_url="https://access.redhat.com/security/cve/CVE-2023-5169" source="CVE"/>
+  <reference ref_id="CVE-2023-5171" ref_url="https://access.redhat.com/security/cve/CVE-2023-5171" source="CVE"/>
+  <reference ref_id="CVE-2023-5176" ref_url="https://access.redhat.com/security/cve/CVE-2023-5176" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.
+
+This update upgrades Firefox to version 115.3.1 ESR.
+
+Security Fix(es):
+
+* firefox: use-after-free in workers (CVE-2023-3600)
+
+* Mozilla: Out-of-bounds write in PathOps (CVE-2023-5169)
+
+* Mozilla: Use-after-free in Ion Compiler (CVE-2023-5171)
+
+* Mozilla: Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3 (CVE-2023-5176)
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-04"/>
+   <updated date="2023-10-04"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-3600" impact="important" public="20230711">CVE-2023-3600</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-787" href="https://access.redhat.com/security/cve/CVE-2023-5169" impact="important" public="20230926">CVE-2023-5169</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-5171" impact="important" public="20230926">CVE-2023-5171</cve>
+   <cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-5176" impact="important" public="20230926">CVE-2023-5176</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2222652" id="2222652">use-after-free in workers</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240893" id="2240893">Out-of-bounds write in PathOps</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240894" id="2240894">Use-after-free in Ion Compiler</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240896" id="2240896">Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:8</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:8::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:8</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:8::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20191992005"/>
+  <criteria operator="AND">
+   <criterion comment="firefox is earlier than 0:115.3.1-1.el8_8" test_ref="oval:com.redhat.rhsa:tst:20235433001"/>
+   <criterion comment="firefox is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20190966002"/>
+   <criteria operator="OR">
+    <criterion comment="Red Hat Enterprise Linux 8 is installed" test_ref="oval:com.redhat.rhba:tst:20191992003"/>
+    <criterion comment="Red Hat CoreOS 4 is installed" test_ref="oval:com.redhat.rhba:tst:20191992004"/>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
 </definitions>
 <tests>
 </tests>

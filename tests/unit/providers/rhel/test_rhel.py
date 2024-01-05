@@ -444,7 +444,7 @@ class TestParser:
 
     def test_parse_package_state(self, tmpdir, mock_cve):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        results = driver._parse_package_state([], mock_cve.get("name"), mock_cve)
+        results = driver._parse_package_state(mock_cve.get("name"), mock_cve)
 
         assert results and isinstance(results, list) and len(results) == 1
         fixed_in = results[0]
@@ -532,26 +532,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert 18 == workspace.num_result_entries()
-    # list of 18 entries:
-    #   "CVE-2017-3539" (rhel 5)
-    #   "CVE-2017-3539" (rhel 6)
-    #   "CVE-2017-3539" (rhel 7)
-    #   "CVE-2017-3509" (rhel 5)
-    #   "CVE-2017-3509" (rhel 6)
-    #   "CVE-2017-3509" (rhel 7)
-    #   "CVE-2017-3533" (rhel 5)
-    #   "CVE-2017-3533" (rhel 6)
-    #   "CVE-2017-3533" (rhel 7)
-    #   "CVE-2017-3526" (rhel 5)
-    #   "CVE-2017-3526" (rhel 6)
-    #   "CVE-2017-3526" (rhel 7)
-    #   "CVE-2017-3544" (rhel 5)
-    #   "CVE-2017-3544" (rhel 6)
-    #   "CVE-2017-3544" (rhel 7)
-    #   "CVE-2017-3511" (rhel 5)
-    #   "CVE-2017-3511" (rhel 6)
-    #   "CVE-2017-3511" (rhel 7)
+    assert workspace.num_result_entries() == 64
 
     assert workspace.result_schemas_valid(require_entries=True)
 
