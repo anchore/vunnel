@@ -34,7 +34,8 @@ NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
 
 
 class Parser:
-    __rhel_release_pattern__ = re.compile(r"Red Hat Enterprise Linux\s*(\d+)$")
+    __cve_rhel_product_name_base__ = "Red Hat Enterprise Linux"
+    __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
     __rhsa_url__ = "https://access.redhat.com/hydra/rest/securitydata/oval/{}.json"
     __last_synced_filename__ = "last_synced"
@@ -73,10 +74,10 @@ class Parser:
         self.logger = logger
 
     def _download_minimal_cves(self, page, limit=1000):
-        path_params = {"per_page": str(limit), "page": page}
+        path_params = {"per_page": str(limit), "page": page, "product": self.__cve_rhel_product_name_base__}
 
         self.logger.info(
-            f"downloading CVE list from url={self.__summary_url__} count={path_params['per_page']} page={path_params['page']}",
+            f"downloading CVE list from url={self.__summary_url__} count={path_params['per_page']} page={path_params['page']}, product={path_params['product']}",  # noqa: E501
         )
         r = http.get(
             self.__summary_url__,
