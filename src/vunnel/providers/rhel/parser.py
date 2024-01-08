@@ -304,8 +304,6 @@ class Parser:
         return full_cve_dir
 
     def _download_entity(self, url, destination):
-        self.logger.trace(f"downloading {url}")
-
         def status_handler(r: requests.Response):
             if r.status_code not in [200, 404]:
                 r.raise_for_status()
