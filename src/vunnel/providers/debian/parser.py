@@ -354,7 +354,7 @@ class Parser:
                             # HACK: when we can represent per-package severity or have a good mechanism
                             # for overriding upstream data, we should take this out.
                             if vid == "CVE-2023-44487":
-                                vuln_record["Vulnerability"]["Severity"] = "High"
+                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
 
                             # add fixedIn
                             skip_fixedin = False
