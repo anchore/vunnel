@@ -8,7 +8,7 @@ GITHUB_SECURITY_ADVISORY_SCHEMA_VERSION = "1.0.1"
 MSRC_SCHEMA_VERSION = "1.0.0"
 OS_SCHEMA_VERSION = "1.0.0"
 NVD_SCHEMA_VERSION = "1.0.0"
-
+OSV_SCHEMA_VERSION = "1.6.1"
 
 @dataclass(frozen=True)
 class Schema:
@@ -55,4 +55,10 @@ def NVDSchema(version: str = NVD_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/nvd/schema-{version}.json",
+    )
+
+def OSVSchema(version: str = OSV_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-{version}.json",
     )
