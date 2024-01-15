@@ -26,7 +26,7 @@ default_git_url = "git://git.launchpad.net/ubuntu-cve-tracker"
 default_git_branch = "master"
 
 ubuntu_pkg_version_format = "dpkg"
-ubuntu_cve_url = "http://people.ubuntu.com/~ubuntu-security/cve/{}"
+ubuntu_cve_url = "https://ubuntu.com/security/{}"
 _patches_header_regex = re.compile(r"Patches_(\S+)\s*")
 _patches_regex = re.compile(r"\s*(.+)_(.+)\s*:\s+(.+)\s*")
 _patch_state_regex = re.compile(r"\s*(\S+)(\s+.+)?\s*")
