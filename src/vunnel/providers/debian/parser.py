@@ -351,6 +351,14 @@ class Parser:
                             ):
                                 vuln_record["Vulnerability"]["Severity"] = sev
 
+                            # HACK: when we can represent per-package severity or have a good mechanism
+                            # for overriding upstream data, we should take this out.
+                            if vid == "CVE-2023-44487":
+                                self.logger.info(
+                                    "clearing severity on CVE-2023-44487, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
+                                )
+                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
+
                             # add fixedIn
                             skip_fixedin = False
                             fixed_el = {
