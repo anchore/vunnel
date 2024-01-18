@@ -1,0 +1,802 @@
+<?xml version="1.0" encoding="utf-8"?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:red-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+<generator>
+<oval:product_name>Red Hat OVAL Patch Definition Merger</oval:product_name>
+<oval:product_version>3</oval:product_version>
+<oval:schema_version>5.10</oval:schema_version>
+<oval:timestamp>2024-01-18T17:14:19</oval:timestamp>
+<oval:content_version>1705598059</oval:content_version>
+</generator>
+<definitions>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20232260" version="636">
+ <metadata>
+  <title>RHSA-2023:2260: gstreamer1-plugins-good security update (Moderate)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:2260" ref_url="https://access.redhat.com/errata/RHSA-2023:2260" source="RHSA"/>
+  <reference ref_id="CVE-2022-1920" ref_url="https://access.redhat.com/security/cve/CVE-2022-1920" source="CVE"/>
+  <reference ref_id="CVE-2022-1921" ref_url="https://access.redhat.com/security/cve/CVE-2022-1921" source="CVE"/>
+  <reference ref_id="CVE-2022-1922" ref_url="https://access.redhat.com/security/cve/CVE-2022-1922" source="CVE"/>
+  <reference ref_id="CVE-2022-1923" ref_url="https://access.redhat.com/security/cve/CVE-2022-1923" source="CVE"/>
+  <reference ref_id="CVE-2022-1924" ref_url="https://access.redhat.com/security/cve/CVE-2022-1924" source="CVE"/>
+  <reference ref_id="CVE-2022-1925" ref_url="https://access.redhat.com/security/cve/CVE-2022-1925" source="CVE"/>
+  <reference ref_id="CVE-2022-2122" ref_url="https://access.redhat.com/security/cve/CVE-2022-2122" source="CVE"/>
+  <description>GStreamer is a streaming media framework based on graphs of filters which operate on media data. The gstreamer1-plugins-good packages contain a collection of well-supported plug-ins of good quality and under the LGPL license.
+
+Security Fix(es):
+
+* gstreamer-plugins-good: Potential heap overwrite in gst_matroska_demux_add_wvpk_header() (CVE-2022-1920)
+
+* gstreamer-plugins-good: Heap-based buffer overflow in the avi demuxer when handling certain AVI files (CVE-2022-1921)
+
+* gstreamer-plugins-good: Potential heap overwrite in mkv demuxing using zlib decompression (CVE-2022-1922)
+
+* gstreamer-plugins-good: Potential heap overwrite in mkv demuxing using bz2 decompression (CVE-2022-1923)
+
+* gstreamer-plugins-good: Potential heap overwrite in mkv demuxing using lzo decompression (CVE-2022-1924)
+
+* gstreamer-plugins-good: Potential heap overwrite in mkv demuxing using HEADERSTRIP decompression (CVE-2022-1925)
+
+* gstreamer-plugins-good: Potential heap overwrite in mp4 demuxing using zlib decompression (CVE-2022-2122)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.
+
+Additional Changes:
+
+For detailed information on changes in this release, see the Red Hat Enterprise Linux 9.2 Release Notes linked from the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Moderate</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-05-09"/>
+   <updated date="2023-05-09"/>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190-&gt;CWE-122" href="https://access.redhat.com/security/cve/CVE-2022-1920" impact="moderate" public="20220518">CVE-2022-1920</cve>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2022-1921" impact="moderate" public="20220517">CVE-2022-1921</cve>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2022-1922" impact="moderate" public="20220518">CVE-2022-1922</cve>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2022-1923" impact="moderate" public="20220518">CVE-2022-1923</cve>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2022-1924" impact="moderate" public="20220518">CVE-2022-1924</cve>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190-&gt;CWE-122" href="https://access.redhat.com/security/cve/CVE-2022-1925" impact="moderate" public="20220518">CVE-2022-1925</cve>
+   <cve cvss3="7.8/CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-190-&gt;CWE-122" href="https://access.redhat.com/security/cve/CVE-2022-2122" impact="moderate" public="20220518">CVE-2022-2122</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2130935" id="2130935">Potential heap overwrite in gst_matroska_demux_add_wvpk_header()</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2130949" id="2130949">Heap-based buffer overflow in the avi demuxer when handling certain AVI files</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2130955" id="2130955">Potential heap overwrite in mkv demuxing using zlib decompression</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2130959" id="2130959">Potential heap overwrite in mkv demuxing using bz2 decompression</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2131003" id="2131003">Potential heap overwrite in mkv demuxing using lzo decompression</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2131007" id="2131007">Potential heap overwrite in mkv demuxing using HEADERSTRIP decompression</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2131018" id="2131018">Potential heap overwrite in mp4 demuxing using zlib decompression</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="gstreamer1-plugins-good is earlier than 0:1.18.4-6.el9" test_ref="oval:com.redhat.rhsa:tst:20232260001"/>
+     <criterion comment="gstreamer1-plugins-good is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20232260002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="gstreamer1-plugins-good-gtk is earlier than 0:1.18.4-6.el9" test_ref="oval:com.redhat.rhsa:tst:20232260003"/>
+     <criterion comment="gstreamer1-plugins-good-gtk is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20232260004"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20228226" version="636">
+ <metadata>
+  <title>RHSA-2022:8226: python-lxml security update (Moderate)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2022:8226" ref_url="https://access.redhat.com/errata/RHSA-2022:8226" source="RHSA"/>
+  <reference ref_id="CVE-2022-2309" ref_url="https://access.redhat.com/security/cve/CVE-2022-2309" source="CVE"/>
+  <description>lxml is an XML processing library providing access to libxml2 and libxslt libraries using the Python ElementTree API.
+
+Security Fix(es):
+
+* lxml: NULL Pointer Dereference in lxml (CVE-2022-2309)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.
+
+Additional Changes:
+
+For detailed information on changes in this release, see the Red Hat Enterprise Linux 9.1 Release Notes linked from the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Moderate</severity>
+   <rights>Copyright 2022 Red Hat, Inc.</rights>
+   <issued date="2022-11-15"/>
+   <updated date="2022-11-15"/>
+   <cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" cwe="CWE-476" href="https://access.redhat.com/security/cve/CVE-2022-2309" impact="moderate" public="20220705">CVE-2022-2309</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2107571" id="2107571">CVE-2022-2309 lxml: NULL Pointer Dereference in lxml</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criterion comment="python3-lxml is earlier than 0:4.6.5-3.el9" test_ref="oval:com.redhat.rhsa:tst:20228226001"/>
+   <criterion comment="python3-lxml is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20228226002"/>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235200" version="638">
+ <metadata>
+  <title>RHSA-2023:5200: firefox security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5200" ref_url="https://access.redhat.com/errata/RHSA-2023:5200" source="RHSA"/>
+  <reference ref_id="CVE-2023-4863" ref_url="https://access.redhat.com/security/cve/CVE-2023-4863" source="CVE"/>
+  <reference ref_id="CVE-2023-5129" ref_url="https://access.redhat.com/security/cve/CVE-2023-5129" source="CVE"/>
+  <description>Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.
+
+This update upgrades Firefox to version 102.15.1 ESR.
+
+Security Fix(es):
+
+* libwebp: Heap buffer overflow in WebP Codec (CVE-2023-4863)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-09-18"/>
+   <updated date="2023-09-18"/>
+   <cve cvss3="9.6/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-4863" impact="important" public="20230911">CVE-2023-4863</cve>
+   <cve cvss3="0.0/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:N" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-5129" public="20230925">CVE-2023-5129</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2238431" id="2238431">libwebp: Heap buffer overflow in WebP Codec</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240759" id="2240759">libwebp: out-of-bounds write with a specially crafted WebP lossless file</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="firefox is earlier than 0:102.15.1-1.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235200001"/>
+     <criterion comment="firefox is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224590002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="firefox-x11 is earlier than 0:102.15.1-1.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235200003"/>
+     <criterion comment="firefox-x11 is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20230810004"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235214" version="636">
+ <metadata>
+  <title>RHSA-2023:5214: libwebp security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5214" ref_url="https://access.redhat.com/errata/RHSA-2023:5214" source="RHSA"/>
+  <reference ref_id="CVE-2023-4863" ref_url="https://access.redhat.com/security/cve/CVE-2023-4863" source="CVE"/>
+  <reference ref_id="CVE-2023-5129" ref_url="https://access.redhat.com/security/cve/CVE-2023-5129" source="CVE"/>
+  <description>The libwebp packages provide a library and tools for the WebP graphics format. WebP is an image format with a lossy compression of digital photographic images. WebP consists of a codec based on the VP8 format, and a container based on the Resource Interchange File Format (RIFF). Webmasters, web developers and browser developers can use WebP to compress, archive, and distribute digital images more efficiently.
+
+Security Fix(es):
+
+* libwebp: Heap buffer overflow in WebP Codec (CVE-2023-4863)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-09-19"/>
+   <updated date="2023-09-19"/>
+   <cve cvss3="9.6/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-4863" impact="important" public="20230911">CVE-2023-4863</cve>
+   <cve cvss3="0.0/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:N" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-5129" public="20230925">CVE-2023-5129</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2238431" id="2238431">libwebp: Heap buffer overflow in WebP Codec</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240759" id="2240759">libwebp: out-of-bounds write with a specially crafted WebP lossless file</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="libwebp is earlier than 0:1.2.0-7.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235214001"/>
+     <criterion comment="libwebp is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20232078002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="libwebp-devel is earlier than 0:1.2.0-7.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235214003"/>
+     <criterion comment="libwebp-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20232078004"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="libwebp-tools is earlier than 0:1.2.0-7.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235214005"/>
+     <criterion comment="libwebp-tools is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20235214006"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235434" version="637">
+ <metadata>
+  <title>RHSA-2023:5434: firefox security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5434" ref_url="https://access.redhat.com/errata/RHSA-2023:5434" source="RHSA"/>
+  <reference ref_id="CVE-2023-3600" ref_url="https://access.redhat.com/security/cve/CVE-2023-3600" source="CVE"/>
+  <reference ref_id="CVE-2023-5169" ref_url="https://access.redhat.com/security/cve/CVE-2023-5169" source="CVE"/>
+  <reference ref_id="CVE-2023-5171" ref_url="https://access.redhat.com/security/cve/CVE-2023-5171" source="CVE"/>
+  <reference ref_id="CVE-2023-5176" ref_url="https://access.redhat.com/security/cve/CVE-2023-5176" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.
+
+This update upgrades Firefox to version 115.3.1 ESR.
+
+Security Fix(es):
+
+* firefox: use-after-free in workers (CVE-2023-3600)
+
+* Mozilla: Out-of-bounds write in PathOps (CVE-2023-5169)
+
+* Mozilla: Use-after-free in Ion Compiler (CVE-2023-5171)
+
+* Mozilla: Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3 (CVE-2023-5176)
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-04"/>
+   <updated date="2023-10-04"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-3600" impact="important" public="20230711">CVE-2023-3600</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-787" href="https://access.redhat.com/security/cve/CVE-2023-5169" impact="important" public="20230926">CVE-2023-5169</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-5171" impact="important" public="20230926">CVE-2023-5171</cve>
+   <cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-5176" impact="important" public="20230926">CVE-2023-5176</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2222652" id="2222652">use-after-free in workers</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240893" id="2240893">Out-of-bounds write in PathOps</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240894" id="2240894">Use-after-free in Ion Compiler</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240896" id="2240896">Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="firefox is earlier than 0:115.3.1-1.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235434001"/>
+     <criterion comment="firefox is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224590002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="firefox-x11 is earlier than 0:115.3.1-1.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235434003"/>
+     <criterion comment="firefox-x11 is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20230810004"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20237784" version="635">
+ <metadata>
+  <title>RHSA-2023:7784: postgresql security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:7784" ref_url="https://access.redhat.com/errata/RHSA-2023:7784" source="RHSA"/>
+  <reference ref_id="CVE-2023-39417" ref_url="https://access.redhat.com/security/cve/CVE-2023-39417" source="CVE"/>
+  <reference ref_id="CVE-2023-5868" ref_url="https://access.redhat.com/security/cve/CVE-2023-5868" source="CVE"/>
+  <reference ref_id="CVE-2023-5869" ref_url="https://access.redhat.com/security/cve/CVE-2023-5869" source="CVE"/>
+  <reference ref_id="CVE-2023-5870" ref_url="https://access.redhat.com/security/cve/CVE-2023-5870" source="CVE"/>
+  <description>PostgreSQL is an advanced object-relational database management system (DBMS).
+
+Security Fix(es):
+
+* postgresql: Buffer overrun from integer overflow in array modification (CVE-2023-5869)
+
+* postgresql: Memory disclosure in aggregate function calls (CVE-2023-5868)
+
+* postgresql: extension script @substitutions@ within quoting allow SQL injection (CVE-2023-39417)
+
+* postgresql: Role pg_signal_backend can signal certain superuser processes. (CVE-2023-5870)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-12-13"/>
+   <updated date="2023-12-13"/>
+   <cve cvss3="7.5/CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-89" href="https://access.redhat.com/security/cve/CVE-2023-39417" impact="moderate" public="20230810">CVE-2023-39417</cve>
+   <cve cvss3="4.3/CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N" cwe="CWE-686" href="https://access.redhat.com/security/cve/CVE-2023-5868" impact="moderate" public="20231109">CVE-2023-5868</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2023-5869" impact="important" public="20231109">CVE-2023-5869</cve>
+   <cve cvss3="2.2/CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:L" cwe="CWE-400" href="https://access.redhat.com/security/cve/CVE-2023-5870" impact="low" public="20231109">CVE-2023-5870</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2228111" id="2228111">postgresql: extension script @substitutions@ within quoting allow SQL injection</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2247168" id="2247168">postgresql: Memory disclosure in aggregate function calls</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2247169" id="2247169">postgresql: Buffer overrun from integer overflow in array modification</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2247170" id="2247170">postgresql: Role pg_signal_backend can signal certain superuser processes.</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="postgresql is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784001"/>
+     <criterion comment="postgresql is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-contrib is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784003"/>
+     <criterion comment="postgresql-contrib is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771004"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-docs is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784005"/>
+     <criterion comment="postgresql-docs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20231693006"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-plperl is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784007"/>
+     <criterion comment="postgresql-plperl is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771006"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-plpython3 is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784009"/>
+     <criterion comment="postgresql-plpython3 is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771008"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-pltcl is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784011"/>
+     <criterion comment="postgresql-pltcl is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771010"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-private-devel is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784013"/>
+     <criterion comment="postgresql-private-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771012"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-private-libs is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784015"/>
+     <criterion comment="postgresql-private-libs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771014"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-server is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784017"/>
+     <criterion comment="postgresql-server is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771016"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-server-devel is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784019"/>
+     <criterion comment="postgresql-server-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771018"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-static is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784021"/>
+     <criterion comment="postgresql-static is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20231693022"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-test is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784023"/>
+     <criterion comment="postgresql-test is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771020"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-upgrade is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784025"/>
+     <criterion comment="postgresql-upgrade is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771022"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-upgrade-devel is earlier than 0:13.13-1.el9_3" test_ref="oval:com.redhat.rhsa:tst:20237784027"/>
+     <criterion comment="postgresql-upgrade-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20231693028"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235224" version="637">
+ <metadata>
+  <title>RHSA-2023:5224: thunderbird security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5224" ref_url="https://access.redhat.com/errata/RHSA-2023:5224" source="RHSA"/>
+  <reference ref_id="CVE-2023-4863" ref_url="https://access.redhat.com/security/cve/CVE-2023-4863" source="CVE"/>
+  <reference ref_id="CVE-2023-5129" ref_url="https://access.redhat.com/security/cve/CVE-2023-5129" source="CVE"/>
+  <description>Mozilla Thunderbird is a standalone mail and newsgroup client.
+
+This update upgrades Thunderbird to version 102.15.1.
+
+Security Fix(es):
+
+* libwebp: Heap buffer overflow in WebP Codec (CVE-2023-4863)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-09-19"/>
+   <updated date="2023-09-19"/>
+   <cve cvss3="9.6/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-4863" impact="important" public="20230911">CVE-2023-4863</cve>
+   <cve cvss3="0.0/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:N" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-5129" public="20230925">CVE-2023-5129</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2238431" id="2238431">libwebp: Heap buffer overflow in WebP Codec</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240759" id="2240759">libwebp: out-of-bounds write with a specially crafted WebP lossless file</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criterion comment="thunderbird is earlier than 0:102.15.1-1.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235224001"/>
+   <criterion comment="thunderbird is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224589002"/>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235435" version="637">
+ <metadata>
+  <title>RHSA-2023:5435: thunderbird security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5435" ref_url="https://access.redhat.com/errata/RHSA-2023:5435" source="RHSA"/>
+  <reference ref_id="CVE-2023-3600" ref_url="https://access.redhat.com/security/cve/CVE-2023-3600" source="CVE"/>
+  <reference ref_id="CVE-2023-5169" ref_url="https://access.redhat.com/security/cve/CVE-2023-5169" source="CVE"/>
+  <reference ref_id="CVE-2023-5171" ref_url="https://access.redhat.com/security/cve/CVE-2023-5171" source="CVE"/>
+  <reference ref_id="CVE-2023-5176" ref_url="https://access.redhat.com/security/cve/CVE-2023-5176" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>Mozilla Thunderbird is a standalone mail and newsgroup client.
+
+This update upgrades Thunderbird to version 115.3.1.
+
+Security Fix(es):
+
+* firefox: use-after-free in workers (CVE-2023-3600)
+
+* Mozilla: Out-of-bounds write in PathOps (CVE-2023-5169)
+
+* Mozilla: Use-after-free in Ion Compiler (CVE-2023-5171)
+
+* Mozilla: Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3 (CVE-2023-5176)
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-04"/>
+   <updated date="2023-10-04"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-3600" impact="important" public="20230711">CVE-2023-3600</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-787" href="https://access.redhat.com/security/cve/CVE-2023-5169" impact="important" public="20230926">CVE-2023-5169</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-5171" impact="important" public="20230926">CVE-2023-5171</cve>
+   <cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-5176" impact="important" public="20230926">CVE-2023-5176</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2222652" id="2222652">use-after-free in workers</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240893" id="2240893">Out-of-bounds write in PathOps</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240894" id="2240894">Use-after-free in Ion Compiler</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240896" id="2240896">Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criterion comment="thunderbird is earlier than 0:115.3.1-1.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235435001"/>
+   <criterion comment="thunderbird is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224589002"/>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20237785" version="635">
+ <metadata>
+  <title>RHSA-2023:7785: postgresql:15 security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:7785" ref_url="https://access.redhat.com/errata/RHSA-2023:7785" source="RHSA"/>
+  <reference ref_id="CVE-2023-39417" ref_url="https://access.redhat.com/security/cve/CVE-2023-39417" source="CVE"/>
+  <reference ref_id="CVE-2023-39418" ref_url="https://access.redhat.com/security/cve/CVE-2023-39418" source="CVE"/>
+  <reference ref_id="CVE-2023-5868" ref_url="https://access.redhat.com/security/cve/CVE-2023-5868" source="CVE"/>
+  <reference ref_id="CVE-2023-5869" ref_url="https://access.redhat.com/security/cve/CVE-2023-5869" source="CVE"/>
+  <reference ref_id="CVE-2023-5870" ref_url="https://access.redhat.com/security/cve/CVE-2023-5870" source="CVE"/>
+  <description>PostgreSQL is an advanced object-relational database management system (DBMS).
+
+Security Fix(es):
+
+* postgresql: Buffer overrun from integer overflow in array modification (CVE-2023-5869)
+
+* postgresql: Memory disclosure in aggregate function calls (CVE-2023-5868)
+
+* postgresql: extension script @substitutions@ within quoting allow SQL injection (CVE-2023-39417)
+
+* postgresql: Role pg_signal_backend can signal certain superuser processes. (CVE-2023-5870)
+
+* postgresql: MERGE fails to enforce UPDATE or SELECT row security policies (CVE-2023-39418)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-12-13"/>
+   <updated date="2023-12-13"/>
+   <cve cvss3="7.5/CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-89" href="https://access.redhat.com/security/cve/CVE-2023-39417" impact="moderate" public="20230810">CVE-2023-39417</cve>
+   <cve cvss3="3.1/CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N" href="https://access.redhat.com/security/cve/CVE-2023-39418" impact="low" public="20230810">CVE-2023-39418</cve>
+   <cve cvss3="4.3/CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N" cwe="CWE-686" href="https://access.redhat.com/security/cve/CVE-2023-5868" impact="moderate" public="20231109">CVE-2023-5868</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2023-5869" impact="important" public="20231109">CVE-2023-5869</cve>
+   <cve cvss3="2.2/CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:L" cwe="CWE-400" href="https://access.redhat.com/security/cve/CVE-2023-5870" impact="low" public="20231109">CVE-2023-5870</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2228111" id="2228111">postgresql: extension script @substitutions@ within quoting allow SQL injection</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2228112" id="2228112">postgresql: MERGE fails to enforce UPDATE or SELECT row security policies</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2247168" id="2247168">postgresql: Memory disclosure in aggregate function calls</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2247169" id="2247169">postgresql: Buffer overrun from integer overflow in array modification</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2247170" id="2247170">postgresql: Role pg_signal_backend can signal certain superuser processes.</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="Module postgresql:15 is enabled" test_ref="oval:com.redhat.rhsa:tst:20234327037"/>
+     <criteria operator="OR">
+      <criteria operator="AND">
+       <criterion comment="pg_repack is earlier than 0:1.4.8-1.module+el9.2.0+17405+aeb9ec60" test_ref="oval:com.redhat.rhsa:tst:20234327001"/>
+       <criterion comment="pg_repack is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20234327002"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="pgaudit is earlier than 0:1.7.0-1.module+el9.2.0+17405+aeb9ec60" test_ref="oval:com.redhat.rhsa:tst:20234327003"/>
+       <criterion comment="pgaudit is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20234327004"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgres-decoderbufs is earlier than 0:1.9.7-1.Final.module+el9.2.0+17405+aeb9ec60" test_ref="oval:com.redhat.rhsa:tst:20234327005"/>
+       <criterion comment="postgres-decoderbufs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20234327006"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785007"/>
+       <criterion comment="postgresql is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771002"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-contrib is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785009"/>
+       <criterion comment="postgresql-contrib is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771004"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-docs is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785011"/>
+       <criterion comment="postgresql-docs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20231693006"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-plperl is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785013"/>
+       <criterion comment="postgresql-plperl is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771006"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-plpython3 is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785015"/>
+       <criterion comment="postgresql-plpython3 is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771008"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-pltcl is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785017"/>
+       <criterion comment="postgresql-pltcl is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771010"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-private-devel is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785019"/>
+       <criterion comment="postgresql-private-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771012"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-private-libs is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785021"/>
+       <criterion comment="postgresql-private-libs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771014"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-server is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785023"/>
+       <criterion comment="postgresql-server is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771016"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-server-devel is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785025"/>
+       <criterion comment="postgresql-server-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771018"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-static is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785027"/>
+       <criterion comment="postgresql-static is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20231693022"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-test is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785029"/>
+       <criterion comment="postgresql-test is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771020"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-test-rpm-macros is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785031"/>
+       <criterion comment="postgresql-test-rpm-macros is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20234327032"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-upgrade is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785033"/>
+       <criterion comment="postgresql-upgrade is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20224771022"/>
+      </criteria>
+      <criteria operator="AND">
+       <criterion comment="postgresql-upgrade-devel is earlier than 0:15.5-1.module+el9.2.0.z+20667+a2d2a8a9" test_ref="oval:com.redhat.rhsa:tst:20237785035"/>
+       <criterion comment="postgresql-upgrade-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20231693028"/>
+      </criteria>
+     </criteria>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235539" version="635">
+ <metadata>
+  <title>RHSA-2023:5539: libvpx security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 9</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5539" ref_url="https://access.redhat.com/errata/RHSA-2023:5539" source="RHSA"/>
+  <reference ref_id="CVE-2023-44488" ref_url="https://access.redhat.com/security/cve/CVE-2023-44488" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>The libvpx packages provide the VP8 SDK, which allows the encoding and decoding of the VP8 video codec, commonly used with the WebM multimedia container file format.
+
+Security Fix(es):
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+* libvpx: crash related to VP9 encoding in libvpx (CVE-2023-44488)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-09"/>
+   <updated date="2023-10-09"/>
+   <cve cvss3="7.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" cwe="CWE-755" href="https://access.redhat.com/security/cve/CVE-2023-44488" impact="important" public="20230930">CVE-2023-44488</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241806" id="2241806">libvpx: crash related to VP9 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::appstream</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::crb</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::highavailability</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::nfv</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::realtime</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::resilientstorage</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::sap_hana</cpe>
+    <cpe>cpe:/a:redhat:enterprise_linux:9::supplementary</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:9::baseos</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20225749024"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 9 is installed" test_ref="oval:com.redhat.rhba:tst:20225749023"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="libvpx is earlier than 0:1.9.0-7.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235539001"/>
+     <criterion comment="libvpx is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20235539002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="libvpx-devel is earlier than 0:1.9.0-7.el9_2" test_ref="oval:com.redhat.rhsa:tst:20235539003"/>
+     <criterion comment="libvpx-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20235539004"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+</definitions>
+<tests>
+</tests>
+<objects>
+</objects>
+<states>
+</states>
+<variables>
+</variables>
+</oval_definitions>

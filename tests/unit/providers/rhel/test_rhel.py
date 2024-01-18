@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import os
-import shutil
 
 import pytest
-
 from vunnel import result, workspace
-from vunnel.providers.rhel import Config, Provider, parser
-from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
+from vunnel.providers.rhel import Config, Provider
+from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser, RHELOvalParser
 
 
 class TestParser:
     # flake8: noqa: E501
-    @pytest.fixture
+    @pytest.fixture()
     def mock_cve(self):
         return {
             "threat_severity": "Low",
@@ -29,7 +27,7 @@ class TestParser:
             },
             "cwe": "CWE-122",
             "details": [
-                "An integer underflow issue exists in ntfs-3g 2017.3.23. A local attacker could potentially exploit this by running /bin/ntfs-3g with specially crafted arguments from a specially crafted directory to cause a heap buffer overflow, resulting in a crash or the ability to execute arbitrary code. In installations where /bin/ntfs-3g is a setuid-root binary, this could lead to a local escalation of privileges."
+                "An integer underflow issue exists in ntfs-3g 2017.3.23. A local attacker could potentially exploit this by running /bin/ntfs-3g with specially crafted arguments from a specially crafted directory to cause a heap buffer overflow, resulting in a crash or the ability to execute arbitrary code. In installations where /bin/ntfs-3g is a setuid-root binary, this could lead to a local escalation of privileges.",
             ],
             "statement": "This flaw has a lower impact on Red Hat Enterprise Linux because the ntfs-3g tool is run in a supermin appliance, which is similar to a virtual machine instantiated on the fly, and it does not have the SUID bit set. Thus an attacker is very limited on what he can do to the vulnerable system.",
             "affected_release": [
@@ -73,7 +71,7 @@ class TestParser:
         }
 
     # noqa: E501
-    @pytest.fixture
+    @pytest.fixture()
     def mock_rhsa_dict(self):
         return {
             ("RHSA-2019:2308", "7"): (
@@ -88,7 +86,7 @@ class TestParser:
                                 "Version": "0:7.2-3.el7",
                                 "VersionFormat": "rpm",
                                 "NamespaceName": "7",
-                            }
+                            },
                         ],
                         "Link": "https://access.redhat.com/errata/RHSA-2019:2308",
                         "Description": "",
@@ -100,18 +98,18 @@ class TestParser:
                                 {
                                     "Name": "CVE-2019-9755",
                                     "Link": "https://access.redhat.com/security/cve/CVE-2019-9755",
-                                }
+                                },
                             ],
                         },
                         "Name": "RHSA-2019:2308",
                         "CVSS": [],
-                    }
+                    },
                 },
-            )
+            ),
         }
 
     # flake8: noqa: E501
-    @pytest.fixture
+    @pytest.fixture()
     def mock_rhsa_dict_2(self):
         return {
             ("RHSA-2019:2308", "7"): (
@@ -126,11 +124,11 @@ class TestParser:
                                 "Version": "0:7.2-3.el7",
                                 "VersionFormat": "rpm",
                                 "NamespaceName": "7",
-                            }
+                            },
                         ],
                         "Link": "https://access.redhat.com/errata/RHSA-2019:2308",
                         "Name": "RHSA-2019:2308",
-                    }
+                    },
                 },
             ),
             ("RHSA-2019:3345", "8"): (
@@ -145,17 +143,17 @@ class TestParser:
                                 "Version": "0:7.2-3.el8",
                                 "VersionFormat": "rpm",
                                 "NamespaceName": "8",
-                            }
+                            },
                         ],
                         "Link": "https://access.redhat.com/errata/RHSA-2019:3345",
                         "Name": "RHSA-2019:3345",
-                    }
+                    },
                 },
             ),
         }
 
     # flake8: noqa: E501
-    @pytest.fixture
+    @pytest.fixture()
     def mock_cve_partial_fix(self):
         return {
             "threat_severity": "Important",
@@ -203,7 +201,7 @@ class TestParser:
                     "fix_state": "Affected",
                     "package_name": "kernel",
                     "cpe": "cpe:/o:redhat:enterprise_linux:7",
-                }
+                },
             ],
             "name": "CVE-2017-16939",
         }
@@ -278,7 +276,7 @@ class TestParser:
                         {
                             "product_name": "Red Hat Enterprise Linux 8",
                             "advisory": "RHSA-2019:3345",
-                            "package": "virt:rhel-8010020190916153839.cdc1202b"
+                            "package": "virt:rhel-8010020190916153839.cdc1202b",
                             # package name lookup using RHSA and other packages shouldn't yield any results
                         },
                     ],
@@ -296,7 +294,7 @@ class TestParser:
                             severity=None,
                             link="https://access.redhat.com/errata/RHSA-2019:2308",
                         ),
-                    )
+                    ),
                 ],
             ),
             (
@@ -310,7 +308,7 @@ class TestParser:
                         {
                             "product_name": "Red Hat Enterprise Linux 8",
                             "advisory": "RHSA-2019:5678",
-                            "package": "virt:rhel-8010020190916153839.cdc1202b"
+                            "package": "virt:rhel-8010020190916153839.cdc1202b",
                             # RHSA lookup shouldn't yield results
                         },
                     ],
@@ -328,7 +326,7 @@ class TestParser:
                             severity=None,
                             link="https://access.redhat.com/errata/RHSA-2019:1234",
                         ),
-                    )
+                    ),
                 ],
             ),
             (
@@ -337,7 +335,7 @@ class TestParser:
                         {
                             "product_name": "Red Hat Enterprise Linux 7",
                             "package": "libguestfs-winsupport-7.2-3.el7",
-                        }
+                        },
                     ],
                     "name": "CVE-2019-9755",
                 },
@@ -348,7 +346,7 @@ class TestParser:
                         platform="7",
                         version="7.2-3.el7",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
-                    )
+                    ),
                 ],
             ),
             (
@@ -373,7 +371,7 @@ class TestParser:
                         platform="7",
                         version="7.2-3.el7.1",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
-                    )
+                    ),
                 ],
             ),
             (
@@ -402,7 +400,7 @@ class TestParser:
                         platform="8",
                         version="1:12.16.1-2.module+el8.1.0+6117+b25a342c",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
-                    )
+                    ),
                 ],
             ),
             (
@@ -427,7 +425,7 @@ class TestParser:
                         platform="6",
                         version="2:0.12.1.2-2.209.el6_2.1",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
-                    )
+                    ),
                 ],
             ),
         ],
@@ -524,15 +522,15 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     def mock_sync_cves(*args, **kwargs):
         return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
-    def mock_init_rhsa_data(*args, **kwargs):
-        return {}
+    def mock_rhel_oval_parser_download(*args, **kwargs):
+        pass
 
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
-    monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
+    monkeypatch.setattr(RHELOvalParser, "_download", mock_rhel_oval_parser_download)
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 64
+    assert workspace.num_result_entries() == 68
 
     assert workspace.result_schemas_valid(require_entries=True)
 
@@ -550,11 +548,11 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     def mock_sync_cves(*args, **kwargs):
         return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
-    def mock_init_rhsa_data(*args, **kwargs):
-        return {}
+    def mock_rhel_oval_parser_download(*args, **kwargs):
+        pass
 
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
-    monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
+    monkeypatch.setattr(RHELOvalParser, "_download", mock_rhel_oval_parser_download)
 
     p.update(None)
 

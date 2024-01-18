@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:unix-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#unix" xmlns:red-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:ind-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix unix-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux linux-definitions-schema.xsd">
+<generator>
+<oval:product_name>Red Hat OVAL Patch Definition Merger</oval:product_name>
+<oval:product_version>3</oval:product_version>
+<oval:schema_version>5.10</oval:schema_version>
+<oval:timestamp>2024-01-17T21:54:33</oval:timestamp>
+<oval:content_version>1705528473</oval:content_version>
+</generator>
+<definitions>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20171108" version="636">
+ <metadata>
+  <title>RHSA-2017:1108: java-1.8.0-openjdk security and bug fix update (Moderate)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2017:1108" ref_url="https://access.redhat.com/errata/RHSA-2017:1108" source="RHSA"/>
+  <reference ref_id="CVE-2017-3509" ref_url="https://access.redhat.com/security/cve/CVE-2017-3509" source="CVE"/>
+  <reference ref_id="CVE-2017-3511" ref_url="https://access.redhat.com/security/cve/CVE-2017-3511" source="CVE"/>
+  <reference ref_id="CVE-2017-3526" ref_url="https://access.redhat.com/security/cve/CVE-2017-3526" source="CVE"/>
+  <reference ref_id="CVE-2017-3533" ref_url="https://access.redhat.com/security/cve/CVE-2017-3533" source="CVE"/>
+  <reference ref_id="CVE-2017-3539" ref_url="https://access.redhat.com/security/cve/CVE-2017-3539" source="CVE"/>
+  <reference ref_id="CVE-2017-3544" ref_url="https://access.redhat.com/security/cve/CVE-2017-3544" source="CVE"/>
+  <description>The java-1.8.0-openjdk packages provide the OpenJDK 8 Java Runtime Environment and the OpenJDK 8 Java Software Development Kit.
+
+Security Fix(es):
+
+* An untrusted library search path flaw was found in the JCE component of OpenJDK. A local attacker could possibly use this flaw to cause a Java application using JCE to load an attacker-controlled library and hence escalate their privileges. (CVE-2017-3511)
+
+* It was found that the JAXP component of OpenJDK failed to correctly enforce parse tree size limits when parsing XML document. An attacker able to make a Java application parse a specially crafted XML document could use this flaw to make it consume an excessive amount of CPU and memory. (CVE-2017-3526)
+
+* It was discovered that the HTTP client implementation in the Networking component of OpenJDK could cache and re-use an NTLM authenticated connection in a different security context. A remote attacker could possibly use this flaw to make a Java application perform HTTP requests authenticated with credentials of a different user. (CVE-2017-3509)
+
+Note: This update adds support for the &quot;jdk.ntlm.cache&quot; system property which, when set to false, prevents caching of NTLM connections and authentications and hence prevents this issue. However, caching remains enabled by default.
+
+* It was discovered that the Security component of OpenJDK did not allow users to restrict the set of algorithms allowed for Jar integrity verification. This flaw could allow an attacker to modify content of the Jar file that used weak signing key or hash algorithm. (CVE-2017-3539)
+
+Note: This updates extends the fix for CVE-2016-5542 released as part of the RHSA-2016:2079 erratum to no longer allow the MD5 hash algorithm during the Jar integrity verification by adding it to the jdk.jar.disabledAlgorithms security property.
+
+* Newline injection flaws were discovered in FTP and SMTP client implementations in the Networking component in OpenJDK. A remote attacker could possibly use these flaws to manipulate FTP or SMTP connections established by a Java application. (CVE-2017-3533, CVE-2017-3544)
+
+Note: If the web browser plug-in provided by the icedtea-web package was installed, the issues exposed via Java applets could have been exploited without user interaction if a user visited a malicious website.
+
+Bug Fix(es):
+
+* When a method is called using the Java Debug Wire Protocol (JDWP) &quot;invokeMethod&quot; command in a target Java virtual machine, JDWP creates global references for every Object that is implied in the method invocation, as well as for the returned argument of the reference type. Previously, the global references created for such arguments were not collected (deallocated) by the garbage collector after &quot;invokeMethod&quot; finished. This consequently caused memory leaks, and because references to such objects were never released, the debugged application could be terminated with an Out of Memory error. This bug has been fixed, and the described problem no longer occurs. (BZ#1442162)</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Moderate</severity>
+   <rights>Copyright 2017 Red Hat, Inc.</rights>
+   <issued date="2017-04-21"/>
+   <updated date="2017-04-21"/>
+   <cve cvss3="4.2/CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N" cwe="CWE-287" href="https://access.redhat.com/security/cve/CVE-2017-3509" impact="moderate" public="20170418">CVE-2017-3509</cve>
+   <cve cvss3="7.0/CVSS:3.0/AV:L/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-426" href="https://access.redhat.com/security/cve/CVE-2017-3511" impact="moderate" public="20170418">CVE-2017-3511</cve>
+   <cve cvss3="5.9/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" cwe="CWE-770" href="https://access.redhat.com/security/cve/CVE-2017-3526" impact="moderate" public="20170418">CVE-2017-3526</cve>
+   <cve cvss3="3.7/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" cwe="CWE-20" href="https://access.redhat.com/security/cve/CVE-2017-3533" impact="low" public="20170218">CVE-2017-3533</cve>
+   <cve cvss3="3.1/CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N" cwe="CWE-327" href="https://access.redhat.com/security/cve/CVE-2017-3539" impact="moderate" public="20170418">CVE-2017-3539</cve>
+   <cve cvss3="3.7/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" cwe="CWE-20" href="https://access.redhat.com/security/cve/CVE-2017-3544" impact="low" public="20170418">CVE-2017-3544</cve>
+   <bugzilla href="https://bugzilla.redhat.com/1443007" id="1443007">CVE-2017-3511 OpenJDK: untrusted extension directories search path in Launcher (JCE, 8163528)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443052" id="1443052">CVE-2017-3509 OpenJDK: improper re-use of NTLM authenticated connections (Networking, 8163520)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443068" id="1443068">CVE-2017-3544 OpenJDK: newline injection in the SMTP client (Networking, 8171533)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443083" id="1443083">CVE-2017-3533 OpenJDK: newline injection in the FTP client (Networking, 8170222)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443097" id="1443097">CVE-2017-3539 OpenJDK: MD5 allowed for jar verification (Security, 8171121)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443252" id="1443252">CVE-2017-3526 OpenJDK: incomplete XML parse tree size enforcement (JAXP, 8169011)</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108001"/>
+     <criterion comment="java-1.8.0-openjdk is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-accessibility is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108003"/>
+     <criterion comment="java-1.8.0-openjdk-accessibility is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809004"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-accessibility-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108005"/>
+     <criterion comment="java-1.8.0-openjdk-accessibility-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049006"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108007"/>
+     <criterion comment="java-1.8.0-openjdk-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049008"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-demo is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108009"/>
+     <criterion comment="java-1.8.0-openjdk-demo is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809006"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-demo-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108011"/>
+     <criterion comment="java-1.8.0-openjdk-demo-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049012"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-devel is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108013"/>
+     <criterion comment="java-1.8.0-openjdk-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809008"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-devel-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108015"/>
+     <criterion comment="java-1.8.0-openjdk-devel-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049016"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-headless is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108017"/>
+     <criterion comment="java-1.8.0-openjdk-headless is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809010"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-headless-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108019"/>
+     <criterion comment="java-1.8.0-openjdk-headless-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049020"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-javadoc is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108021"/>
+     <criterion comment="java-1.8.0-openjdk-javadoc is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809012"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-javadoc-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108023"/>
+     <criterion comment="java-1.8.0-openjdk-javadoc-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049024"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-javadoc-zip is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108025"/>
+     <criterion comment="java-1.8.0-openjdk-javadoc-zip is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20170180026"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-javadoc-zip-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108027"/>
+     <criterion comment="java-1.8.0-openjdk-javadoc-zip-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20170180028"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-src is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108029"/>
+     <criterion comment="java-1.8.0-openjdk-src is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150809014"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.8.0-openjdk-src-debug is earlier than 1:1.8.0.131-2.b11.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171108031"/>
+     <criterion comment="java-1.8.0-openjdk-src-debug is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20160049028"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20171204" version="637">
+ <metadata>
+  <title>RHSA-2017:1204: java-1.7.0-openjdk security update (Moderate)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2017:1204" ref_url="https://access.redhat.com/errata/RHSA-2017:1204" source="RHSA"/>
+  <reference ref_id="CVE-2017-3509" ref_url="https://access.redhat.com/security/cve/CVE-2017-3509" source="CVE"/>
+  <reference ref_id="CVE-2017-3511" ref_url="https://access.redhat.com/security/cve/CVE-2017-3511" source="CVE"/>
+  <reference ref_id="CVE-2017-3526" ref_url="https://access.redhat.com/security/cve/CVE-2017-3526" source="CVE"/>
+  <reference ref_id="CVE-2017-3533" ref_url="https://access.redhat.com/security/cve/CVE-2017-3533" source="CVE"/>
+  <reference ref_id="CVE-2017-3539" ref_url="https://access.redhat.com/security/cve/CVE-2017-3539" source="CVE"/>
+  <reference ref_id="CVE-2017-3544" ref_url="https://access.redhat.com/security/cve/CVE-2017-3544" source="CVE"/>
+  <description>The java-1.7.0-openjdk packages provide the OpenJDK 7 Java Runtime Environment and the OpenJDK 7 Java Software Development Kit.
+
+Security Fix(es):
+
+* An untrusted library search path flaw was found in the JCE component of OpenJDK. A local attacker could possibly use this flaw to cause a Java application using JCE to load an attacker-controlled library and hence escalate their privileges. (CVE-2017-3511)
+
+* It was found that the JAXP component of OpenJDK failed to correctly enforce parse tree size limits when parsing XML document. An attacker able to make a Java application parse a specially crafted XML document could use this flaw to make it consume an excessive amount of CPU and memory. (CVE-2017-3526)
+
+* It was discovered that the HTTP client implementation in the Networking component of OpenJDK could cache and re-use an NTLM authenticated connection in a different security context. A remote attacker could possibly use this flaw to make a Java application perform HTTP requests authenticated with credentials of a different user. (CVE-2017-3509)
+
+Note: This update adds support for the &quot;jdk.ntlm.cache&quot; system property which, when set to false, prevents caching of NTLM connections and authentications and hence prevents this issue. However, caching remains enabled by default.
+
+* It was discovered that the Security component of OpenJDK did not allow users to restrict the set of algorithms allowed for Jar integrity verification. This flaw could allow an attacker to modify content of the Jar file that used weak signing key or hash algorithm. (CVE-2017-3539)
+
+Note: This updates extends the fix for CVE-2016-5542 released as part of the RHSA-2016:2658 erratum to no longer allow the MD5 hash algorithm during the Jar integrity verification by adding it to the jdk.jar.disabledAlgorithms security property.
+
+* Newline injection flaws were discovered in FTP and SMTP client implementations in the Networking component in OpenJDK. A remote attacker could possibly use these flaws to manipulate FTP or SMTP connections established by a Java application. (CVE-2017-3533, CVE-2017-3544)</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Moderate</severity>
+   <rights>Copyright 2017 Red Hat, Inc.</rights>
+   <issued date="2017-05-09"/>
+   <updated date="2017-05-09"/>
+   <cve cvss3="4.2/CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N" cwe="CWE-287" href="https://access.redhat.com/security/cve/CVE-2017-3509" impact="moderate" public="20170418">CVE-2017-3509</cve>
+   <cve cvss3="7.0/CVSS:3.0/AV:L/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-426" href="https://access.redhat.com/security/cve/CVE-2017-3511" impact="moderate" public="20170418">CVE-2017-3511</cve>
+   <cve cvss3="5.9/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H" cwe="CWE-770" href="https://access.redhat.com/security/cve/CVE-2017-3526" impact="moderate" public="20170418">CVE-2017-3526</cve>
+   <cve cvss3="3.7/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" cwe="CWE-20" href="https://access.redhat.com/security/cve/CVE-2017-3533" impact="low" public="20170218">CVE-2017-3533</cve>
+   <cve cvss3="3.1/CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N" cwe="CWE-327" href="https://access.redhat.com/security/cve/CVE-2017-3539" impact="moderate" public="20170418">CVE-2017-3539</cve>
+   <cve cvss3="3.7/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" cwe="CWE-20" href="https://access.redhat.com/security/cve/CVE-2017-3544" impact="low" public="20170418">CVE-2017-3544</cve>
+   <bugzilla href="https://bugzilla.redhat.com/1443007" id="1443007">CVE-2017-3511 OpenJDK: untrusted extension directories search path in Launcher (JCE, 8163528)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443052" id="1443052">CVE-2017-3509 OpenJDK: improper re-use of NTLM authenticated connections (Networking, 8163520)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443068" id="1443068">CVE-2017-3544 OpenJDK: newline injection in the SMTP client (Networking, 8171533)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443083" id="1443083">CVE-2017-3533 OpenJDK: newline injection in the FTP client (Networking, 8170222)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443097" id="1443097">CVE-2017-3539 OpenJDK: MD5 allowed for jar verification (Security, 8171121)</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/1443252" id="1443252">CVE-2017-3526 OpenJDK: incomplete XML parse tree size enforcement (JAXP, 8169011)</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204001"/>
+     <criterion comment="java-1.7.0-openjdk is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk-accessibility is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204003"/>
+     <criterion comment="java-1.7.0-openjdk-accessibility is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675004"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk-demo is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204005"/>
+     <criterion comment="java-1.7.0-openjdk-demo is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675006"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk-devel is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204007"/>
+     <criterion comment="java-1.7.0-openjdk-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675008"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk-headless is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204009"/>
+     <criterion comment="java-1.7.0-openjdk-headless is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675010"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk-javadoc is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204011"/>
+     <criterion comment="java-1.7.0-openjdk-javadoc is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675012"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="java-1.7.0-openjdk-src is earlier than 1:1.7.0.141-2.6.10.1.el7_3" test_ref="oval:com.redhat.rhsa:tst:20171204013"/>
+     <criterion comment="java-1.7.0-openjdk-src is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140675014"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235191" version="637">
+ <metadata>
+  <title>RHSA-2023:5191: thunderbird security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5191" ref_url="https://access.redhat.com/errata/RHSA-2023:5191" source="RHSA"/>
+  <reference ref_id="CVE-2023-4863" ref_url="https://access.redhat.com/security/cve/CVE-2023-4863" source="CVE"/>
+  <reference ref_id="CVE-2023-5129" ref_url="https://access.redhat.com/security/cve/CVE-2023-5129" source="CVE"/>
+  <description>Mozilla Thunderbird is a standalone mail and newsgroup client.
+
+This update upgrades Thunderbird to version 102.15.1.
+
+Security Fix(es):
+
+* libwebp: Heap buffer overflow in WebP Codec (CVE-2023-4863)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-09-18"/>
+   <updated date="2023-09-18"/>
+   <cve cvss3="9.6/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-4863" impact="important" public="20230911">CVE-2023-4863</cve>
+   <cve cvss3="0.0/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:N" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-5129" public="20230925">CVE-2023-5129</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2238431" id="2238431">libwebp: Heap buffer overflow in WebP Codec</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240759" id="2240759">libwebp: out-of-bounds write with a specially crafted WebP lossless file</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criterion comment="thunderbird is earlier than 0:102.15.1-1.el7_9" test_ref="oval:com.redhat.rhsa:tst:20235191001"/>
+   <criterion comment="thunderbird is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150642002"/>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235197" version="638">
+ <metadata>
+  <title>RHSA-2023:5197: firefox security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5197" ref_url="https://access.redhat.com/errata/RHSA-2023:5197" source="RHSA"/>
+  <reference ref_id="CVE-2023-4863" ref_url="https://access.redhat.com/security/cve/CVE-2023-4863" source="CVE"/>
+  <reference ref_id="CVE-2023-5129" ref_url="https://access.redhat.com/security/cve/CVE-2023-5129" source="CVE"/>
+  <description>Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.
+
+This update upgrades Firefox to version 102.15.1 ESR.
+
+Security Fix(es):
+
+* libwebp: Heap buffer overflow in WebP Codec (CVE-2023-4863)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-09-18"/>
+   <updated date="2023-09-18"/>
+   <cve cvss3="9.6/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-4863" impact="important" public="20230911">CVE-2023-4863</cve>
+   <cve cvss3="0.0/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:N/I:N/A:N" cwe="CWE-122" href="https://access.redhat.com/security/cve/CVE-2023-5129" public="20230925">CVE-2023-5129</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2238431" id="2238431">libwebp: Heap buffer overflow in WebP Codec</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240759" id="2240759">libwebp: out-of-bounds write with a specially crafted WebP lossless file</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criterion comment="firefox is earlier than 0:102.15.1-1.el7_9" test_ref="oval:com.redhat.rhsa:tst:20235197001"/>
+   <criterion comment="firefox is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140741002"/>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235475" version="637">
+ <metadata>
+  <title>RHSA-2023:5475: thunderbird security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5475" ref_url="https://access.redhat.com/errata/RHSA-2023:5475" source="RHSA"/>
+  <reference ref_id="CVE-2023-3600" ref_url="https://access.redhat.com/security/cve/CVE-2023-3600" source="CVE"/>
+  <reference ref_id="CVE-2023-5169" ref_url="https://access.redhat.com/security/cve/CVE-2023-5169" source="CVE"/>
+  <reference ref_id="CVE-2023-5171" ref_url="https://access.redhat.com/security/cve/CVE-2023-5171" source="CVE"/>
+  <reference ref_id="CVE-2023-5176" ref_url="https://access.redhat.com/security/cve/CVE-2023-5176" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>Mozilla Thunderbird is a standalone mail and newsgroup client.
+
+This update upgrades Thunderbird to version 115.3.1.
+
+Security Fix(es):
+
+* firefox: use-after-free in workers (CVE-2023-3600)
+
+* Mozilla: Out-of-bounds write in PathOps (CVE-2023-5169)
+
+* Mozilla: Use-after-free in Ion Compiler (CVE-2023-5171)
+
+* Mozilla: Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3 (CVE-2023-5176)
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-05"/>
+   <updated date="2023-10-05"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-3600" impact="important" public="20230711">CVE-2023-3600</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-787" href="https://access.redhat.com/security/cve/CVE-2023-5169" impact="important" public="20230926">CVE-2023-5169</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-5171" impact="important" public="20230926">CVE-2023-5171</cve>
+   <cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-5176" impact="important" public="20230926">CVE-2023-5176</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2222652" id="2222652">use-after-free in workers</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240893" id="2240893">Out-of-bounds write in PathOps</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240894" id="2240894">Use-after-free in Ion Compiler</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240896" id="2240896">Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criterion comment="thunderbird is earlier than 0:115.3.1-1.el7_9" test_ref="oval:com.redhat.rhsa:tst:20235475001"/>
+   <criterion comment="thunderbird is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150642002"/>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20237783" version="635">
+ <metadata>
+  <title>RHSA-2023:7783: postgresql security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:7783" ref_url="https://access.redhat.com/errata/RHSA-2023:7783" source="RHSA"/>
+  <reference ref_id="CVE-2023-5869" ref_url="https://access.redhat.com/security/cve/CVE-2023-5869" source="CVE"/>
+  <description>PostgreSQL is an advanced object-relational database management system (DBMS).
+
+Security Fix(es):
+
+* postgresql: Buffer overrun from integer overflow in array modification (CVE-2023-5869)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-12-13"/>
+   <updated date="2023-12-13"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-190" href="https://access.redhat.com/security/cve/CVE-2023-5869" impact="important" public="20231109">CVE-2023-5869</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2247169" id="2247169">postgresql: Buffer overrun from integer overflow in array modification</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criteria operator="OR">
+    <criteria operator="AND">
+     <criterion comment="postgresql is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783001"/>
+     <criterion comment="postgresql is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750002"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-contrib is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783003"/>
+     <criterion comment="postgresql-contrib is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750004"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-devel is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783005"/>
+     <criterion comment="postgresql-devel is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750006"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-docs is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783007"/>
+     <criterion comment="postgresql-docs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750008"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-libs is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783009"/>
+     <criterion comment="postgresql-libs is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750010"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-plperl is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783011"/>
+     <criterion comment="postgresql-plperl is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750012"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-plpython is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783013"/>
+     <criterion comment="postgresql-plpython is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750014"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-pltcl is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783015"/>
+     <criterion comment="postgresql-pltcl is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750016"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-server is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783017"/>
+     <criterion comment="postgresql-server is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750018"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-static is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783019"/>
+     <criterion comment="postgresql-static is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20171983020"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-test is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783021"/>
+     <criterion comment="postgresql-test is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750020"/>
+    </criteria>
+    <criteria operator="AND">
+     <criterion comment="postgresql-upgrade is earlier than 0:9.2.24-9.el7_9" test_ref="oval:com.redhat.rhsa:tst:20237783023"/>
+     <criterion comment="postgresql-upgrade is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20150750022"/>
+    </criteria>
+   </criteria>
+  </criteria>
+ </criteria>
+</definition>
+<definition class="patch" id="oval:com.redhat.rhsa:def:20235477" version="637">
+ <metadata>
+  <title>RHSA-2023:5477: firefox security update (Important)</title>
+  <affected family="unix">
+   <platform>Red Hat Enterprise Linux 7</platform>
+  </affected>
+  <reference ref_id="RHSA-2023:5477" ref_url="https://access.redhat.com/errata/RHSA-2023:5477" source="RHSA"/>
+  <reference ref_id="CVE-2023-3600" ref_url="https://access.redhat.com/security/cve/CVE-2023-3600" source="CVE"/>
+  <reference ref_id="CVE-2023-5169" ref_url="https://access.redhat.com/security/cve/CVE-2023-5169" source="CVE"/>
+  <reference ref_id="CVE-2023-5171" ref_url="https://access.redhat.com/security/cve/CVE-2023-5171" source="CVE"/>
+  <reference ref_id="CVE-2023-5176" ref_url="https://access.redhat.com/security/cve/CVE-2023-5176" source="CVE"/>
+  <reference ref_id="CVE-2023-5217" ref_url="https://access.redhat.com/security/cve/CVE-2023-5217" source="CVE"/>
+  <description>Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.
+
+This update upgrades Firefox to version 115.3.1 ESR.
+
+Security Fix(es):
+
+* firefox: use-after-free in workers (CVE-2023-3600)
+
+* Mozilla: Out-of-bounds write in PathOps (CVE-2023-5169)
+
+* Mozilla: Use-after-free in Ion Compiler (CVE-2023-5171)
+
+* Mozilla: Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3 (CVE-2023-5176)
+
+* libvpx: Heap buffer overflow in vp8 encoding in libvpx (CVE-2023-5217)
+
+For more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.</description>
+  <advisory from="secalert@redhat.com">
+   <severity>Important</severity>
+   <rights>Copyright 2023 Red Hat, Inc.</rights>
+   <issued date="2023-10-05"/>
+   <updated date="2023-10-05"/>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-3600" impact="important" public="20230711">CVE-2023-3600</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-787" href="https://access.redhat.com/security/cve/CVE-2023-5169" impact="important" public="20230926">CVE-2023-5169</cve>
+   <cve cvss3="6.5/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H" cwe="CWE-416" href="https://access.redhat.com/security/cve/CVE-2023-5171" impact="important" public="20230926">CVE-2023-5171</cve>
+   <cve cvss3="9.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" cwe="CWE-120" href="https://access.redhat.com/security/cve/CVE-2023-5176" impact="important" public="20230926">CVE-2023-5176</cve>
+   <cve cvss3="8.8/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H" cwe="CWE-119" href="https://access.redhat.com/security/cve/CVE-2023-5217" impact="important" public="20230927">CVE-2023-5217</cve>
+   <bugzilla href="https://bugzilla.redhat.com/2222652" id="2222652">use-after-free in workers</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240893" id="2240893">Out-of-bounds write in PathOps</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240894" id="2240894">Use-after-free in Ion Compiler</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2240896" id="2240896">Memory safety bugs fixed in Firefox 118, Firefox ESR 115.3, and Thunderbird 115.3</bugzilla>
+   <bugzilla href="https://bugzilla.redhat.com/2241191" id="2241191">libvpx: Heap buffer overflow in vp8 encoding in libvpx</bugzilla>
+   <affected_cpe_list>
+    <cpe>cpe:/a:redhat:rhel_extras:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_oracle_java:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_rt:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap:7</cpe>
+    <cpe>cpe:/a:redhat:rhel_extras_sap_hana:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::client</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::computenode</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::server</cpe>
+    <cpe>cpe:/o:redhat:enterprise_linux:7::workstation</cpe>
+   </affected_cpe_list>
+  </advisory>
+ </metadata>
+ <criteria operator="OR">
+  <criterion comment="Red Hat Enterprise Linux must be installed" test_ref="oval:com.redhat.rhba:tst:20150364028"/>
+  <criteria operator="AND">
+   <criterion comment="Red Hat Enterprise Linux 7 is installed" test_ref="oval:com.redhat.rhba:tst:20150364027"/>
+   <criterion comment="firefox is earlier than 0:115.3.1-1.el7_9" test_ref="oval:com.redhat.rhsa:tst:20235477001"/>
+   <criterion comment="firefox is signed with Red Hat redhatrelease2 key" test_ref="oval:com.redhat.rhsa:tst:20140741002"/>
+  </criteria>
+ </criteria>
+</definition>
+</definitions>
+<tests>
+</tests>
+<objects>
+</objects>
+<states>
+</states>
+<variables>
+</variables>
+</oval_definitions>
