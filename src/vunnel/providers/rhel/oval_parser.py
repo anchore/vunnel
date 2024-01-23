@@ -107,7 +107,7 @@ class Parser:
 
         if previous_sha256 and latest_sha256:
             self.logger.debug(f"{oval_url_path}: previous sha256: {previous_sha256}, latest sha256: {latest_sha256}")
-            download = latest_sha256.lower() != latest_sha256.lower()
+            download = previous_sha256.lower() != latest_sha256.lower()
 
         if download:
             try:
