@@ -30,7 +30,7 @@ inputs:
   cache-key-prefix:
     description: "Prefix all cache keys with this value"
     required: true
-    default: "8381c12a05"
+    default: "9c833ef7"
   bootstrap-apt-packages:
     description: "Space delimited list of tools to install via apt"
     default: ""
