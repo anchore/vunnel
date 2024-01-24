@@ -330,13 +330,12 @@ toml = ["tomli"]
 
 [[package]]
 name = "cvss"
-version = "2.6"
-description = "CVSS2/3 library with interactive calculator for Python 2 and Python 3"
+version = "3.0"
+description = "CVSS2/3/4 library with interactive calculator for Python 2 and Python 3"
 optional = false
 python-versions = "*"
 files = [
-    {file = "cvss-2.6-py2.py3-none-any.whl", hash = "sha256:7006a025e1587f94fc7ce6bd2f3fa10b27a85d2f843d72d4346122779919c63b"},
-    {file = "cvss-2.6.tar.gz", hash = "sha256:1e8f0c7ac1c1d7f4fb6d901950aa216358809de25ee7c41bc138615a23936c80"},
+    {file = "cvss-3.0-py2.py3-none-any.whl", hash = "sha256:705995aa6f99efdd600f83997c78b625bc81be0603ec00a91465ad2eb613cd7b"},
 ]
 
 [[package]]
@@ -2204,4 +2203,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "73352aa3c5a785c07ae52041c5a97fad976d68b4f497e46e22fd1bf47128d006"
+content-hash = "68320cbfb9a3a675389e270ce67dbc936dbd13b86adf557531e1387b1c20e7ba"
