@@ -47,7 +47,7 @@ colorlog = "^6.7.0"
 PyYAML = ">= 6.0, < 7.0"  # note: required for enterprise
 ijson = ">= 2.5.1, < 3.0"   # note: required for enterprise
 xxhash = "^3.1.0"
-cvss = "^2.6"
+cvss = ">=2.6,<4.0"
 python-dateutil = "^2.8.2"
 defusedxml = "^0.7.1"
 orjson = "^3.8.6"
