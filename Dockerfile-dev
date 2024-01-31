@@ -1,0 +1,100 @@
+FROM ubuntu:latest AS t1
+LABEL name=test1
+
+ARG UID
+ARG GID
+ARG UNAME
+ARG GO_VERSION
+ARG WORKDIR
+ARG PROVIDER
+ARG DEBUG
+ARG XDG_CACHE_HOME
+ARG PIP_NO_CACHE_DIR
+ARG PIP_DISABLE_PIP_VERSION_CHECK
+ARG PIP_DEFAULT_TIMEOUT
+ARG POETRY_NO_INTERACTION
+ARG POETRY_VIRTUALENVS_IN_PROJECT
+ARG POETRY_VIRTUALENVS_CREATE
+ARG PATH
+
+ENV DEBUG $DEBUG
+ENV XDG_CACHE_HOME $XDG_CACHE_HOME
+ENV PIP_NO_CACHE_DIR $PIP_NO_CACHE_DIR
+ENV PIP_DISABLE_PIP_VERSION_CHECK $PIP_DISABLE_PIP_VERSION_CHECK
+ENV PIP_DEFAULT_TIMEOUT $PIP_DEFAULT_TIMEOUT
+ENV POETRY_NO_INTERACTION $POETRY_NO_INTERACTION
+ENV POETRY_VIRTUALENVS_IN_PROJECT $POETRY_VIRTUALENVS_IN_PROJECT
+ENV POETRY_VIRTUALENVS_CREATE $POETRY_VIRTUALENVS_CREATE
+ENV PATH $PATH
+
+RUN --mount=type=cache,target=/var/cache/apt \
+  --mount=type=cache,target=/var/lib/apt/lists \
+  rm -f /etc/apt/apt.conf.d/docker-clean \
+  && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache \
+  && apt update \
+  && apt install -y \
+    bash \
+    build-essential \
+    curl \
+    libcurl4 \
+    python3 \
+    python3-pip \
+    git \
+    util-linux
+
+SHELL [ "/bin/bash", "-c" ]
+
+RUN --mount=type=cache,target=/tmp \
+  [ -f /tmp/go.tgz ] || curl -L "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tgz \
+  && tar -zxvf /tmp/go.tgz -C /usr/local/
+
+RUN --mount=type=cache,target=/tmp \
+  groupadd -g ${GID} -o ${UNAME} \
+  && useradd -m -u ${UID} -g ${GID} -o -s /bin/bash ${UNAME} \
+  && chown -R ${UID}:${GID} /tmp \
+  && install -d -o ${UID} -g ${GID} -m 770 /work
+
+USER ${UNAME}
+
+# Ensure git repos are populated/updated from cache
+RUN --mount=type=cache,target=/tmp,uid=${UID},gid=${GID} \
+  if [ -d /tmp/grype ]; then \
+    git --git-dir=/tmp/grype fetch origin; \
+  else \
+    git clone --bare https://github.com/anchore/grype /tmp/grype; \
+    git --git-dir=/tmp/grype config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"; \
+  fi && \
+  if [ -d /tmp/grype-db ]; then \
+    git --git-dir=/tmp/grype-db fetch origin; \
+  else \
+    git clone --bare https://github.com/anchore/grype-db /tmp/grype-db; \
+    git --git-dir=/tmp/grype-db config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"; \
+  fi
+
+# Pull git repos from cache
+RUN --mount=type=cache,target=/tmp,uid=${UID},gid=${GID} \
+  git clone /tmp/grype /work/grype \
+  && git clone /tmp/grype-db /work/grype-db
+
+ADD --chown=${UID}:$${GID} \
+  . ${WORKDIR}
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/go-build,uid=${UID},gid=${GID} \
+ --mount=type=cache,target=/home/${UNAME}/.cache/pip,uid=${UID},gid=${GID} \
+  cd ${WORKDIR} \
+  && pip install poetry \
+  && make bootstrap
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/pypoetry/artifacts,uid=${UID},gid=${GID} \
+  --mount=type=cache,target=/home/${UNAME}/.cache/pypoetry/cache,uid=${UID},gid=${GID} \
+  cd ${WORKDIR} \
+  && poetry install
+RUN --mount=type=cache,target=/home/${UNAME}/.cache/go-build,uid=${UID},gid=${GID} \
+ --mount=type=cache,target=/home/${UNAME}/.cache/pip,uid=${UID},gid=${GID} \
+  cd ${WORKDIR} \
+  && make dev provider="${PROVIDER}"
+
+WORKDIR ${WORKDIR}
+
+LABEL org.opencontainers.image.title vunnel-dev
+LABEL org.opencontainers.image.source https://github.com/anchore/vunnel
+LABEL org.opencontainers.image.description "Development image for a tool for pulling and processing vulnerability data from mutiple sources"
+

@@ -1,0 +1,31 @@
+---
+version: "3"
+services:
+  vunnel-dev:
+    image: vunnel-dev
+    environment:
+      UID: 1000
+      GID: 1000
+      UNAME: user
+    build:
+      context: .
+      args:
+        UID: 1000
+        GID: 1000
+        UNAME: user
+        GO_VERSION: 1.21.6
+        WORKDIR: /work/vunnel
+        PROVIDER:
+        DEBUG: 1
+        XDG_CACHE_HOME: /home/user/.cache
+        PIP_NO_CACHE_DIR: off
+        PIP_DISABLE_PIP_VERSION_CHECK: on
+        PIP_DEFAULT_TIMEOUT: 100
+        POETRY_NO_INTERACTION: 1
+        POETRY_VIRTUALENVS_IN_PROJECT: 1
+        POETRY_VIRTUALENVS_CREATE: 1
+        PATH: /home/user/.local/bin:/home/user/.cache/pypoetry/bin:/home/user/.cache/venv/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      dockerfile: ./Dockerfile-dev
+    user: "${UID:-1000}:${GID:-1000}"
+    tty: true
+    stdin_open: true
