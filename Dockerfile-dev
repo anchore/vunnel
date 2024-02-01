@@ -1,5 +1,4 @@
-FROM ubuntu:latest AS t1
-LABEL name=test1
+FROM ubuntu:latest AS vunnel-dev
 
 ARG UID
 ARG GID
