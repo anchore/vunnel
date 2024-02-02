@@ -5,6 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+from vunnel.overrides import Overrides
+
 from .api import NvdAPI
 
 if TYPE_CHECKING:

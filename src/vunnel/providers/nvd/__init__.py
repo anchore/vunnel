@@ -4,7 +4,8 @@ import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
-from vunnel import provider, result, schema
+from vunnel import provider, result, schema, workspace
+from vunnel.overrides import Overrides
 from vunnel.providers.nvd.manager import Manager
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ class Config:
     )
     request_timeout: int = 125
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
+    overrides_repo_uri: Optional[str] = None  # noqa: UP007
 
     def __post_init__(self) -> None:
         if self.api_key and self.api_key.startswith("env:"):
@@ -43,6 +45,15 @@ class Provider(provider.Provider):
         self.config = config
 
         self.logger.debug(f"config: {config}")
+        # # TODO: remove
+        # raise Exception(f"WILL CONFIG IS {config}")
+        if config.overrides_repo_uri:
+            self.overrides = Overrides(
+                overrides_uri=config.overrides_repo_uri,
+                logger=self.logger,
+                provider_name = self.name(),
+                workspace=self.workspace,
+            )
 
         if self.config.runtime.skip_if_exists and config.runtime.existing_results != result.ResultStatePolicy.KEEP:
             raise ValueError(
@@ -73,5 +84,6 @@ class Provider(provider.Provider):
                     schema=self.schema,
                     payload=record,
                 )
-
+        if self.overrides:
+            self.overrides.apply_overrides()
         return self.manager.urls, len(writer)
