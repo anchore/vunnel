@@ -10,6 +10,7 @@ OS_SCHEMA_VERSION = "1.0.0"
 NVD_SCHEMA_VERSION = "1.0.0"
 OSV_SCHEMA_VERSION = "1.6.1"
 
+
 @dataclass(frozen=True)
 class Schema:
     version: str
@@ -56,6 +57,7 @@ def NVDSchema(version: str = NVD_SCHEMA_VERSION) -> Schema:
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/nvd/schema-{version}.json",
     )
+
 
 def OSVSchema(version: str = OSV_SCHEMA_VERSION) -> Schema:
     return Schema(
