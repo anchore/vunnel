@@ -84,6 +84,6 @@ class Provider(provider.Provider):
                     schema=self.schema,
                     payload=record,
                 )
-        if self.overrides:
-            self.overrides.apply_overrides()
+            if self.overrides:
+                self.overrides.apply_all_overrides(writer)
         return self.manager.urls, len(writer)

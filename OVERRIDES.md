@@ -45,3 +45,26 @@ Commands to override data live under the `vunnel override` namespace. The follow
         git push origin nvd-2020-9493-chainsaw
         # then open a PR
         ```
+
+## Example Override File
+
+```json
+{
+  "vuln_id": "CVE-2020-9493",
+  "provider": "nvd",
+  "upstream_record_sha256": "8ee4e53e39ae3b8c3c8d7d57e3df45db361aab898acdd9a01824a2db74bfae05",
+  "additional_entries": [
+    {
+      "package": {
+        "identifier": "pkg:maven/log4j/apache-chainsaw"
+      },
+      "affected": [
+        {
+          "version_constraint": "< 2.1.0",
+          "patched": "2.1.0"
+        }
+      ]
+    }
+  ]
+}
+```

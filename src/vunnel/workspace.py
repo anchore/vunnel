@@ -116,6 +116,10 @@ class Workspace:
     def input_path(self) -> str:
         return os.path.join(self.path, "input")
 
+    @property
+    def overrides_path(self) -> str:
+        return os.path.join(self.path, "overrides")
+
     def create(self) -> None:
         if not os.path.exists(self.input_path):
             self.logger.debug(f"creating input workspace {self.input_path!r}")

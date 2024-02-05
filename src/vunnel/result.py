@@ -57,6 +57,10 @@ class Store:
         raise NotImplementedError
 
     @abc.abstractmethod
+    def read(self, identifier: str) -> Envelope:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def prepare(self) -> None:
         raise NotImplementedError
 
@@ -171,6 +175,16 @@ class SQLiteStore(Store):
 
             conn.execute(statement)
 
+    def read(self, identifier: str) -> Envelope:
+        conn, table = self.connection()
+
+        with conn.begin():
+            result = conn.execute(table.select().where(table.c.id == identifier)).first()
+            if not result:
+                raise KeyError(f"no result found for identifier: {identifier!r}")
+
+            return Envelope(**orjson.loads(result.record))
+
     def prepare(self) -> None:
         if os.path.exists(self.temp_db_file_path):
             self.logger.warning("removing unexpected partial result state")
@@ -232,6 +246,9 @@ class Writer:
 
     def __len__(self) -> int:
         return self.wrote
+
+    def get_store(self) -> Store:
+        return self.store
 
     def write(self, identifier: str, schema: Schema, payload: Any) -> None:
         if self.wrote == 0:
