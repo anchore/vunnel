@@ -12,7 +12,7 @@ import yaml
 
 from vunnel import __name__ as package_name
 from vunnel import providers
-from vunnel.cli import config
+from vunnel.cli import config, override
 
 
 @click.option("--verbose", "-v", default=False, help="show logs", count=True)
@@ -240,3 +240,5 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
 def list_providers(cfg: config.Application) -> None:
     for p in providers.names():
         print(p)
+
+cli.add_command(override.group)
