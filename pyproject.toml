@@ -76,7 +76,7 @@ types-requests = "^2.28.11.7"
 mypy = "^1.1"
 radon = ">=5.1,<7.0"
 dunamai = "^1.15.0"
-ruff = ">=0.0.254,<0.1.16"
+ruff = ">=0.0.254,<0.2.1"
 yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.9.1"}
 tabulate = "0.9.0"
 tox = "^4.11.3"
@@ -172,6 +172,24 @@ dirty = true
 cache-dir = ".cache/ruff"
 # allow for a wide-birth relative to what black will correct to
 line-length = 150
+
+extend-exclude = [
+  "**/tests/**",
+  "src/vunnel/providers/mariner/model/**" # these are generated
+]
+
+[tool.ruff.lint]
+ignore = [
+  "ARG001", # unused args are ok, as they communicate intent in interfaces, even if not used in impls.
+  "ARG002", # unused args are ok, as they communicate intent in interfaces, even if not used in impls.
+  "G004", # it's ok to use formatted strings for logging
+  "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
+  "PLR2004", # a little too agressive, not allowing any magic numbers
+  "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
+  "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
+  "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)` -- not compatible with python 3.9 (even with __future__ import)
+]
+
 select = [
   "A",   # flake8-builtins
   # "ANN", # flake8-annotations   # this is great, but let mypy handle this so it can honor type:ignore comments without noqa comments too
@@ -210,22 +228,6 @@ select = [
   "UP",  # pyupgrade
   "W",   # pycodestyle, warnings
   "YTT", # flake8-2020
-]
-
-ignore = [
-  "ARG001", # unused args are ok, as they communicate intent in interfaces, even if not used in impls.
-  "ARG002", # unused args are ok, as they communicate intent in interfaces, even if not used in impls.
-  "G004", # it's ok to use formatted strings for logging
-  "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
-  "PLR2004", # a little too agressive, not allowing any magic numbers
-  "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
-  "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
-  "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)` -- not compatible with python 3.9 (even with __future__ import)
-]
-
-extend-exclude = [
-  "**/tests/**",
-  "src/vunnel/providers/mariner/model/**" # these are generated
 ]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]

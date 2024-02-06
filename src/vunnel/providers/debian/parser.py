@@ -157,7 +157,7 @@ class Parser:
                     version = version.strip() if version else None
                     if not version:
                         self.logger.debug(
-                            f"release version not included dsa: {dsa.get('id', None)}, distro: {distro}, pkg: {pkg}",
+                            f"release version not included dsa: {dsa.get('id')}, distro: {distro}, pkg: {pkg}",
                         )
                     dsa["fixed_in"].append({"distro": distro, "pkg": pkg, "ver": version})
                     continue
@@ -168,7 +168,7 @@ class Parser:
                     version = version.strip() if version else None
                     if not version:
                         self.logger.debug(
-                            f"release version not included dsa: {dsa.get('id', None)}, distro: {distro}, pkg: {pkg}",
+                            f"release version not included dsa: {dsa.get('id')}, distro: {distro}, pkg: {pkg}",
                         )
                     dsa["fixed_in"].append({"distro": distro, "pkg": pkg, "ver": version})
                     continue

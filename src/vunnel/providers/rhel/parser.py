@@ -610,7 +610,7 @@ class Parser:
         return fixed_ins
 
     def _parse_package_name_and_module(self, item: dict) -> tuple[str | None, str | None]:
-        package_name = item.get("package_name", None)
+        package_name = item.get("package_name")
         module = None
 
         if package_name and "/" in package_name:
