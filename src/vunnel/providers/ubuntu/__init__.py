@@ -21,7 +21,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    additional_versions: dict[str, str] = field(default_factory=lambda: {})
+    additional_versions: dict[str, str] = field(default_factory=dict)
     enable_rev_history: bool = True
     parallelism: int = default_max_workers
     git_url: str = default_git_url
