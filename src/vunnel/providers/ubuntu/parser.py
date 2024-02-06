@@ -37,7 +37,7 @@ _cve_filename_regex = re.compile("CVE-[0-9]+-[0-9]+")
 # Per the Ubuntu README in the security tracker BZR repo:
 # Maps the state name to whether it indicates a package is vulnerable
 patch_states = {
-    "DNE": False,  # Does Not Exist, no fix
+    "DNE": False,  # Does Not Exist, the package is does not exist in a particular ubuntu release
     "needs-triage": False,  # Not yet determined if CVE affects package, ignore in anchore until determination made
     "ignored": False,  # CVE does not affect the package or no updates (e.g. end-of-life) (NOTE: should still report?)
     "not-affected": False,  # The package is related to the issue, but not affected by it.
@@ -148,6 +148,7 @@ class FixedIn(JsonifierMixin):
         self.NamespaceName = None
         self.VersionFormat = None
         self.Version = None
+        self.VendorAdvisory = None
 
 
 class Severity(enum.IntEnum):
@@ -283,7 +284,7 @@ def parse_patch(header: str, lines: list[str]) -> list[Patch]:  # noqa: C901
                 status_match = _patch_state_regex.match(match.group(3))
                 if status_match and status_match.group(1):
                     state = status_match.group(1)
-                    if state in patch_states:  # and patch_states[state]:
+                    if state in patch_states:
                         version = status_match.group(2)
                         if version:
                             version = version.strip()
@@ -520,7 +521,9 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
             vulns[namespace_name] = r
 
         # If the patch status is one we care about, make the FixedIn record, else skip it but create CVE records
-        if check_state(p.status):
+        # We currently want to mark end-of-support records with no previously known fix as vulnerable, hence the
+        # or check_merge step here.
+        if check_state(p.status) or check_merge(p):
             pkg = FixedIn()
             pkg.Name = p.package
 
@@ -542,6 +545,13 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
 
             else:
                 pkg.Version = "None"
+                # Set NoAdvisory to true so that `wont-fix` status gets set on
+                # out of support entries
+                if p.status == "ignored":
+                    pkg.VendorAdvisory = {"NoAdvisory": True}
+
+            if not pkg.VendorAdvisory:
+                pkg.VendorAdvisory = {"NoAdvisory": False}
 
             pkg.VersionFormat = "dpkg"
             pkg.NamespaceName = namespace_name
