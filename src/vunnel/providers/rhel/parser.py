@@ -584,14 +584,16 @@ class Parser:
                     package=ar_obj.name,
                     version=ar_obj.version,
                     module=ar_obj.module,
-                    advisory=Advisory(
-                        wont_fix=False,
-                        rhsa_id=ar_obj.rhsa_id,
-                        link=f"https://access.redhat.com/errata/{ar_obj.rhsa_id}",
-                        severity=None,
-                    )
-                    if ar_obj.rhsa_id
-                    else Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                    advisory=(
+                        Advisory(
+                            wont_fix=False,
+                            rhsa_id=ar_obj.rhsa_id,
+                            link=f"https://access.redhat.com/errata/{ar_obj.rhsa_id}",
+                            severity=None,
+                        )
+                        if ar_obj.rhsa_id
+                        else Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None)
+                    ),
                 )
                 for ar_obj in final_ar_objs.values()
             ]

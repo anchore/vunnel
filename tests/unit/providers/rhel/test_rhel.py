@@ -278,7 +278,7 @@ class TestParser:
                         {
                             "product_name": "Red Hat Enterprise Linux 8",
                             "advisory": "RHSA-2019:3345",
-                            "package": "virt:rhel-8010020190916153839.cdc1202b"
+                            "package": "virt:rhel-8010020190916153839.cdc1202b",
                             # package name lookup using RHSA and other packages shouldn't yield any results
                         },
                     ],
@@ -310,7 +310,7 @@ class TestParser:
                         {
                             "product_name": "Red Hat Enterprise Linux 8",
                             "advisory": "RHSA-2019:5678",
-                            "package": "virt:rhel-8010020190916153839.cdc1202b"
+                            "package": "virt:rhel-8010020190916153839.cdc1202b",
                             # RHSA lookup shouldn't yield results
                         },
                     ],

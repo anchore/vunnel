@@ -3,6 +3,7 @@ A generic framework for parsing an OVAL xml file. Design is based on separate co
 Each section is associated with a parser that can be overridden by the driver. Parsed output represents a view of the
 OVAL content, it's up to the driver to transform it into normalized feed data
 """
+
 from __future__ import annotations
 
 import enum
@@ -93,8 +94,7 @@ class OVALElementParser(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Parsed | None:
-        ...
+    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Parsed | None: ...
 
     @staticmethod
     def _find_with_regex(data: str, regex: re.Pattern):
