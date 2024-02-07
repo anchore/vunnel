@@ -1,6 +1,7 @@
 """
 RPM utilities with no binary dependencies on rpm or rpmUtil.
 """
+
 from __future__ import annotations
 
 
