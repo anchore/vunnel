@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
-import json
-from typing_extensions import Any, Generator, Iterator
+from collections.abc import Iterator
 
+from vunnel.result import Writer
 from vunnel.workspace import Workspace
-from vunnel.result import Store, Writer
 
 
 class Overrides:
@@ -37,7 +37,7 @@ class Overrides:
             name = os.path.basename(file).replace(".json", "")
             year = name.split("-")[1]
             identifier = f"{year}/{name}"
-            with open(os.path.join(self.workspace.overrides_path, file), "r") as f:
+            with open(os.path.join(self.workspace.overrides_path, file)) as f:
                 override = json.load(f)
                 envelope = store.read(identifier)
                 self.logger.info(f"applying overrides for {identifier}: {override} to {envelope}")
