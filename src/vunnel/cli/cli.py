@@ -149,7 +149,7 @@ def show_config(cfg: config.Application) -> None:
 def run_provider(cfg: config.Application, provider_name: str) -> None:
     logging.info(f"running {provider_name} provider")
 
-    provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
+    provider = providers.create(provider_name, cfg.root, cfg.overrides_root, config=cfg.providers.get(provider_name))
     provider.run()
 
 

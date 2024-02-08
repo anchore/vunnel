@@ -94,12 +94,13 @@ class State(DataClassDictMixin):
 
 
 class Workspace:
-    def __init__(self, root: str, name: str, create: bool = False, logger: logging.Logger | None = None):
+    def __init__(self, root: str, name: str, create: bool = False, logger: logging.Logger | None = None, overrides_root: str | None = None):
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self._root = root
         self.name = name
+        self.overrides_root = overrides_root
 
         if create:
             self.create()
@@ -118,6 +119,9 @@ class Workspace:
 
     @property
     def overrides_path(self) -> str:
+        # TODO: simplify this
+        if self.overrides_root:
+            return os.path.join(self.overrides_root, self.name)
         return os.path.join(self.path, "overrides")
 
     def create(self) -> None:

@@ -43,8 +43,8 @@ _providers: dict[str, type[provider.Provider]] = {
 }
 
 
-def create(name: str, workspace_path: str, *args: Any, **kwargs: Any) -> provider.Provider:
-    return _providers[name](workspace_path, *args, **kwargs)
+def create(name: str, workspace_path: str, overrides_root: str, *args: Any, **kwargs: Any) -> provider.Provider:
+    return _providers[name](workspace_path, overrides_root=overrides_root, *args, **kwargs)
 
 
 def names() -> list[str]:
