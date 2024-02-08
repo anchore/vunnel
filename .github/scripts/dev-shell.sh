@@ -71,8 +71,10 @@ step "Writing grype-db config: $GRYPE_DB_CONFIG"
 cat << EOF > "$GRYPE_DB_CONFIG"
 pull:
   parallelism: 1
+build:
+  schema-version: 5
 provider:
-  root: ./data
+  root: /Users/willmurphy/work/vunnel/data # TODO: revert
   vunnel:
     executor: local
     env:
