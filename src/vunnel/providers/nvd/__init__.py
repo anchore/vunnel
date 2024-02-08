@@ -23,6 +23,7 @@ class Config:
     request_timeout: int = 125
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
     overrides_repo_uri: Optional[str] = None  # noqa: UP007
+    overrides_repo_subdir: Optional[str] = None  # noqa: UP007
 
     def __post_init__(self) -> None:
         if self.api_key and self.api_key.startswith("env:"):

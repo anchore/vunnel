@@ -51,6 +51,7 @@ class Log:
 @dataclass
 class Application(DataClassDictMixin):
     root: str = "./data"
+    overrides_root: str = "./overrides"
     log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
 

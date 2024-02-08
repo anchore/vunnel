@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 
 import click
 import requests
+import subprocess
 
 from vunnel.cli import config
 
@@ -82,3 +83,27 @@ def create_override(cfg: config.Application, provider_name: str, vuln_id: str) -
     with open(override_path, "w") as f:
         f.write(json.dumps(asdict(record), indent=2))
     print(override_path)
+
+@group.command(name="pull", help="pull existing overrides")
+@click.pass_obj
+def pull_override(cfg: config.Application) -> None:
+    print(f"pulling overrides", file=sys.stderr)
+    print(f"config root is {cfg.root}")
+    if not cfg.providers.nvd.overrides_repo_uri:
+        print("no overrides repo configured", file=sys.stderr)
+        return
+
+    if not cfg.overrides_root:
+        print("no overrides root configured", file=sys.stderr)
+        return
+
+
+    if not os.path.exists(cfg.overrides_root):
+        command = ['git', 'clone', cfg.providers.nvd.overrides_repo_uri, cfg.overrides_root]
+        print(f"running command: {' '.join(command)}")
+        subprocess.run(command, check=True)
+    else:
+        command = ['git', 'pull']
+        workdir = cfg.overrides_root
+        print(f"running command: {' '.join(command)}")
+        subprocess.run(command, check=True, cwd=workdir)

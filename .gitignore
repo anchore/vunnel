@@ -8,6 +8,7 @@
 
 /bin
 /data/
+/overrides/
 /backup/
 .pytype/
 .wily/
