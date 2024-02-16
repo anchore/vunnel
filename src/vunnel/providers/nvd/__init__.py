@@ -61,7 +61,6 @@ class Provider(provider.Provider):
                 "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' "
                 "(otherwise incremental updates will fail)",
             )
-
         self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,

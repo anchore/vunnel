@@ -75,9 +75,10 @@ def create_override(cfg: config.Application, provider_name: str, vuln_id: str) -
     response = requests.get(url)
     response.raise_for_status()
     data = response.json()["vulnerabilities"][0]
-    dir_path = os.path.join(cfg.root, provider_name, "overrides")
+    dir_path = os.path.join(cfg.overrides_root, provider_name)
+    # TODO: check that pull has / hasn't been run
     os.makedirs(dir_path, exist_ok=True)
-    override_path = os.path.join(dir_path, f"{vuln_id}.json")
+    override_path = os.path.join(dir_path, f"{vuln_id.lower()}.json")
     # TODO: report if path exists
     record = create_blank_override_record(vuln_id, provider_name, compute_sha256_of_json(data))
     with open(override_path, "w") as f:
