@@ -88,9 +88,9 @@ class Provider(abc.ABC):
     # (regardless of the existing_input and existing_result policy is).
     __version__: int = 1
 
-    def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig(), overrides_root : str | None = None):  # noqa: B008
+    def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig(), overrides_root: str | None = None):  # noqa: B008
         self.logger = logging.getLogger(self.name())
-        self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
+        self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False, overrides_root=overrides_root)
         self.urls: list[str] = []
         self.runtime_cfg = runtime_cfg
 

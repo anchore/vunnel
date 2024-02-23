@@ -42,7 +42,7 @@ class Provider(provider.Provider):
     def __init__(self, root: str, overrides_root: str, config: Config | None = None):
         if not config:
             config = Config()
-        super().__init__(root, runtime_cfg=config.runtime)
+        super().__init__(root, runtime_cfg=config.runtime, overrides_root=overrides_root)
         self.config = config
 
         self.logger.debug(f"config: {config}")
@@ -78,6 +78,7 @@ class Provider(provider.Provider):
             for identifier, record in self.manager.get(
                 skip_if_exists=self.config.runtime.skip_if_exists,
                 last_updated=last_updated,
+                all_overridden_ids=self.all_overridden_ids(),
             ):
                 writer.write(
                     identifier=identifier.lower(),
@@ -87,3 +88,8 @@ class Provider(provider.Provider):
             if self.overrides:
                 self.overrides.apply_all_overrides(writer)
         return self.manager.urls, len(writer)
+
+    def all_overridden_ids(self) -> set[str]:
+        if self.overrides:
+            return {os.path.splitext(os.path.basename(path))[0].upper() for path in self.overrides.all_overrides_paths()}
+        return set()

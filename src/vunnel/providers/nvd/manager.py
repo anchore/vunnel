@@ -36,11 +36,17 @@ class Manager:
         self,
         last_updated: datetime.datetime | None,
         skip_if_exists: bool = False,
+        all_overridden_ids: set[str] | None = None
     ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+        if all_overridden_ids is None:
+            all_overridden_ids = set()
         if skip_if_exists and self._can_update_incrementally(last_updated):
             yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
+            # TODO: WILL: it might be worth ensuring that these don't get downloaded redundantly.
+            yield from self._download_specific(all_overridden_ids)
         else:
             yield from self._download_all()
+            # No need to ensure overridden records are re-downloaded, because we downloaded everything
 
     def _can_update_incrementally(self, last_updated: datetime.datetime | None) -> bool:
         if not last_updated:
@@ -83,3 +89,10 @@ class Manager:
             cve_id = vuln["cve"]["id"]
             year = cve_id.split("-")[1]
             yield os.path.join(year, cve_id), vuln
+
+    def _download_specific(self, all_overridden_ids: set[str]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+        for id in all_overridden_ids:
+            for idx, response in enumerate(self.api.cve(cve_id=id)):
+                # TODO: WILL: I think this is assuming it fetches more than 1 id; it seems to return
+                # an empty list of vulns after it fetches each id.
+                yield from self._unwrap_records(response)

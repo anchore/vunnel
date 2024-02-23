@@ -76,6 +76,7 @@ build:
 provider:
   root: /Users/willmurphy/work/vunnel/data # TODO: revert
   vunnel:
+    config: .vunnel.yaml
     executor: local
     env:
       GITHUB_TOKEN: \$GITHUB_TOKEN
