@@ -109,13 +109,13 @@ class FlatFileStore(Store):
 
 class SQLiteStore(Store):
     filename = "results.db"
-    temp_filename = "results.db.tmp"
+    temp_filename = f"results.db.{int(time.time())}.tmp"
     table_name = "results"
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.conn = None
         self.engine = None
+        self.conn = None
         self.table = None
 
         @db.event.listens_for(db.engine.Engine, "connect")
@@ -126,8 +126,11 @@ class SQLiteStore(Store):
             # cursor.execute("PRAGMA cache_size=100000")
             cursor.close()
 
+        self.conn, self.table = self.connection()
+
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
+            self.prepare()
             self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
             self.conn = self.engine.connect()  # type: ignore[attr-defined]
             self.table = self._create_table()
@@ -173,8 +176,8 @@ class SQLiteStore(Store):
 
     def prepare(self) -> None:
         if os.path.exists(self.temp_db_file_path):
-            self.logger.warning("removing unexpected partial result state")
-            os.remove(self.temp_db_file_path)
+            # already prepared
+            return
 
         if self.result_state_policy == ResultStatePolicy.KEEP and os.path.exists(self.db_file_path):
             shutil.copy2(self.db_file_path, self.temp_db_file_path)

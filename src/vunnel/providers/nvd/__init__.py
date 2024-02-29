@@ -50,6 +50,11 @@ class Provider(provider.Provider):
                 "(otherwise incremental updates will fail)",
             )
 
+        if self.config.runtime.result_store != result.StoreStrategy.SQLITE:
+            raise ValueError(
+                f"only 'SQLITE' is supported for 'runtime.result_store' but got '{self.config.runtime.result_store}'",
+            )
+
         self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,
@@ -64,7 +69,12 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
+            reader: result.SQLiteStore = writer.store
+            conn, table = reader.connection()
+
             for identifier, record in self.manager.get(
+                db_conn=conn,
+                result_table=table,
                 skip_if_exists=self.config.runtime.skip_if_exists,
                 last_updated=last_updated,
             ):

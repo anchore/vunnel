@@ -6,7 +6,6 @@ import json
 import pytest
 from vunnel import provider, result
 from vunnel.providers import nvd
-from vunnel.providers.nvd import api as nvd_api
 
 
 @pytest.mark.parametrize(

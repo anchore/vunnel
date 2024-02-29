@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import datetime
 import logging
+import os
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.providers.nvd.git import Git
 from vunnel.utils import http
 
 if TYPE_CHECKING:
@@ -16,6 +18,8 @@ if TYPE_CHECKING:
 
 
 class NvdAPI:
+    # TODO: make configuration for downloading NVD data from alternative source
+
     _cve_api_url_: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
     _cve_history_api_url_: str = "https://services.nvd.nist.gov/rest/json/cvehistory/2.0"
     _max_results_per_page_: int = 2000
@@ -28,6 +32,10 @@ class NvdAPI:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+    @classmethod
+    def urls(cls) -> list[str]:
+        return [cls._cve_api_url_]
 
     def cve_history(
         self,
@@ -136,7 +144,7 @@ class NvdAPI:
         index = results_per_page
 
         for page in range(pages):
-            self.logger.debug(f"{message} (page {page+2} of {pages})")
+            self.logger.debug(f"{message} (page {page+2} of {pages+1})")
 
             parameters["resultsPerPage"] = str(results_per_page)
             parameters["startIndex"] = str(index)
@@ -164,3 +172,42 @@ def clean_date(dt: datetime.datetime | str) -> str:
     if isinstance(dt, datetime.datetime):
         return dt.isoformat()
     return datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M").isoformat()  # noqa: DTZ007
+
+
+class CVEList:
+    _git_url_ = "https://github.com/CVEProject/cvelistV5.git"
+    _repo_name_ = "cvelistV5"
+
+    def __init__(self, destination: str, logger: logging.Logger | None = None, timeout: int = 30):
+        self.timeout = timeout
+
+        if not logger:
+            logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logger
+        self.git = Git(
+            source=self._git_url_,
+            destination=os.path.join(destination, self._repo_name_),
+            logger=self.logger,
+        )
+
+    @classmethod
+    def urls(cls) -> list[str]:
+        return [cls._git_url_]
+
+    def download(self) -> None:
+        self.git.clone_or_update_repo()
+
+    def cves(self) -> set[str]:
+        return {f.lower().removesuffix(".json") for f in self.git.cve_files}
+
+    def get(self, cve: str) -> dict[str, Any] | None:
+        path = self.git.cve_file(cve=cve)
+
+        if not path:
+            self.logger.warning(f"no cvelist record for cve_id={cve!r}")
+            return None
+
+        self.logger.trace(f"found cvelist record for {cve!r} at {path!r}")
+
+        with open(path) as fp:
+            return orjson.loads(fp.read())
