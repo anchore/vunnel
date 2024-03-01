@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import logging
 import os
 import shlex
@@ -24,7 +23,6 @@ class Git:
     _set_remote_cmd_ = "git remote set-url origin {src}"
     _clone_cmd_ = "git clone -b {branch} {src} {dest}"
     _check_out_cmd_ = "git checkout {branch}"
-    _ls_files_ = "git ls-files"
     _clean_cmd_ = "git clean --force -d"
     _reset_cmd_ = "git reset --hard HEAD"
     _pull_ff_only_cmd_ = "git pull --ff-only"
@@ -35,7 +33,7 @@ class Git:
         self,
         source: str,
         destination: str,
-        branch: str = "main",
+        branch: str,
         logger: logging.Logger | None = None,
     ):
         self.src = source
@@ -65,28 +63,6 @@ class Git:
             return
 
         self._clone_repo()
-
-    def cve_file(self, cve: str) -> str | None:
-        result_set = self.cve_files.get(cve.upper() + ".json", None)
-        if result_set:
-            return next(iter(result_set))
-        return None
-
-    @property
-    def cve_files(self) -> dict[str, set[str]]:
-        if not self._ls_cache:
-            out = self._exec_cmd(self._ls_files_, cwd=self.destination)
-            all_files = [os.path.join(self.destination, line) for line in out.decode().splitlines()]
-
-            cache = collections.defaultdict(set)
-            for f in all_files:
-                basename = os.path.basename(f)
-                if basename.startswith("CVE") and basename.endswith(".json"):
-                    cache[basename].add(f)
-
-            self._ls_cache = cache
-
-        return self._ls_cache
 
     def _check(self, destination):
         try:
@@ -154,7 +130,7 @@ class Git:
             raise
 
     def _reset_cache(self):
-        self._ls_cache = None
+        pass
 
     def _exec_cmd(self, cmd, *args, **kwargs) -> bytes:
         """

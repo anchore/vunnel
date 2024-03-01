@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING, Any
 import orjson
 import sqlalchemy as db
 
-from .api import CVEList, NvdAPI
+from .analysis import Analysis
+from .api import NvdAPI
+from .cvelist import CVEList
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -32,7 +34,8 @@ class Manager:
 
         self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout)
         self.cvelist = CVEList(logger=logger, destination=workspace.input_path, timeout=download_timeout)
-        self.urls = [*self.api.urls(), *self.cvelist.urls()]  # noqa: SLF001
+        self.analysis = Analysis(destination=workspace.input_path, logger=logger, timeout=download_timeout)
+        self.urls = [*self.api.urls(), *self.cvelist.urls(), *self.analysis.urls()]
 
     def get(
         self,
@@ -43,6 +46,9 @@ class Manager:
     ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         # download and persist all CVElist records
         self.cvelist.download()
+
+        # download the latest NVD analysis data
+        self.analysis.download()
 
         # download and process NVD records in realtime (not persisted to the DB)
         if skip_if_exists and self._can_update_incrementally(last_updated):

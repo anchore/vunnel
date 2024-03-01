@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import datetime
 import logging
-import os
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
 import orjson
 
-from vunnel.providers.nvd.git import Git
 from vunnel.utils import http
 
 if TYPE_CHECKING:
@@ -172,42 +170,3 @@ def clean_date(dt: datetime.datetime | str) -> str:
     if isinstance(dt, datetime.datetime):
         return dt.isoformat()
     return datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M").isoformat()  # noqa: DTZ007
-
-
-class CVEList:
-    _git_url_ = "https://github.com/CVEProject/cvelistV5.git"
-    _repo_name_ = "cvelistV5"
-
-    def __init__(self, destination: str, logger: logging.Logger | None = None, timeout: int = 30):
-        self.timeout = timeout
-
-        if not logger:
-            logger = logging.getLogger(self.__class__.__name__)
-        self.logger = logger
-        self.git = Git(
-            source=self._git_url_,
-            destination=os.path.join(destination, self._repo_name_),
-            logger=self.logger,
-        )
-
-    @classmethod
-    def urls(cls) -> list[str]:
-        return [cls._git_url_]
-
-    def download(self) -> None:
-        self.git.clone_or_update_repo()
-
-    def cves(self) -> set[str]:
-        return {f.lower().removesuffix(".json") for f in self.git.cve_files}
-
-    def get(self, cve: str) -> dict[str, Any] | None:
-        path = self.git.cve_file(cve=cve)
-
-        if not path:
-            self.logger.warning(f"no cvelist record for cve_id={cve!r}")
-            return None
-
-        self.logger.trace(f"found cvelist record for {cve!r} at {path!r}")
-
-        with open(path) as fp:
-            return orjson.loads(fp.read())
