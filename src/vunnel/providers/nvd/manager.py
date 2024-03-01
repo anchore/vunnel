@@ -60,7 +60,7 @@ class Manager:
         cves_reprocessed = set()
         for cve_id, nvd_record in self._nvd_records_to_reprocess(conn=db_conn, result_table=result_table):
             cves_reprocessed.add(cve_id)
-            yield self._reconsile_cve_record(cve_id=cve_id, cve_list_record=self.cvelist.get(cve_id), nvd_record=nvd_record)
+            yield self._reconcile_cve_record(cve_id=cve_id, cve_list_record=self.cvelist.get(cve_id), nvd_record=nvd_record)
 
         # any CVEs that are in CVElist and not NVD should be processed
         for cve_id, cve_list_record in self._unique_cvelist_records_to_process(
@@ -68,7 +68,7 @@ class Manager:
             result_table=result_table,
             skip_cves=cves_reprocessed,
         ):
-            yield self._reconsile_cve_record(cve_id=cve_id, cve_list_record=cve_list_record, nvd_record=None)
+            yield self._reconcile_cve_record(cve_id=cve_id, cve_list_record=cve_list_record, nvd_record=None)
 
     def _nvd_records_to_reprocess(
         self,
@@ -159,13 +159,13 @@ class Manager:
         for vuln in response["vulnerabilities"]:
             cve_id = vuln["cve"]["id"]
 
-            yield cve_to_id(cve_id), self._reconsile_cve_record(
+            yield cve_to_id(cve_id), self._reconcile_cve_record(
                 cve_id,
                 self.cvelist.get(cve=cve_id),
                 vuln,
             )
 
-    def _reconsile_cve_record(
+    def _reconcile_cve_record(
         self,
         cve_id: str,
         cve_list_record: dict[str, Any],
