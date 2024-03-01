@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import orjson
 import sqlalchemy as db
@@ -11,6 +12,7 @@ import sqlalchemy as db
 from .analysis import Analysis
 from .api import NvdAPI
 from .cvelist import CVEList
+from .normalization import normalize
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -60,7 +62,9 @@ class Manager:
         cves_reprocessed = set()
         for cve_id, nvd_record in self._nvd_records_to_reprocess(conn=db_conn, result_table=result_table):
             cves_reprocessed.add(cve_id)
-            yield self._reconcile_cve_record(cve_id=cve_id, cve_list_record=self.cvelist.get(cve_id), nvd_record=nvd_record)
+            r_id, r = self._reconcile_cve_record(cve_id=cve_id, cve_list_record=self.cvelist.get(cve_id), nvd_record=nvd_record)
+            if r:
+                yield r_id, r
 
         # any CVEs that are in CVElist and not NVD should be processed
         for cve_id, cve_list_record in self._unique_cvelist_records_to_process(
@@ -68,7 +72,9 @@ class Manager:
             result_table=result_table,
             skip_cves=cves_reprocessed,
         ):
-            yield self._reconcile_cve_record(cve_id=cve_id, cve_list_record=cve_list_record, nvd_record=None)
+            r_id, r = self._reconcile_cve_record(cve_id=cve_id, cve_list_record=cve_list_record, nvd_record=None)
+            if r:
+                yield r_id, r
 
     def _nvd_records_to_reprocess(
         self,
@@ -171,7 +177,114 @@ class Manager:
         cve_list_record: dict[str, Any],
         nvd_record: dict[str, Any] | None,
     ) -> tuple[str, dict[str, Any]]:
+        nvd_override = self.analysis.get_nvd_override(cve_id=cve_id)
+        if nvd_override:
+            configs = nvd_override.get("cve", {}).get("configurations")
+
+            if configs:
+                self.logger.debug(f"Overriding NVD record {cve_id!r} with curated CPE configurations")
+                nvd_record["cve"]["configurations"] = configs
+                return cve_to_id(cve_id), nvd_record
+
+        if not nvd_record or "cve" not in nvd_record:
+            # TODO: Create a new NVD record if no record exists whatsoever
+            return cve_to_id(cve_id), nvd_record
+
+        if nvd_record["cve"].get("configurations"):
+            return cve_to_id(cve_id), nvd_record
+
         # TODO: insert magic here...
+        # Iterate through affected entries in CVE list record
+        # Extract collectionURL, packageName, vendor, and product (defaulting to None if not found)
+        # and pass to self.analysis.cpe_lookup.lookup to (hopefully) get a list of CPE patterns.
+        # If none are found then attempt to generate some (need to create a function for this)
+        # from the attributes that exist.
+        # If we fail to generate any CPEs, warn and bail
+        # If we do have CPEs, iterate through the CVE5 version and attempt to create a CPE version config
+        # Still need a function for that
+        cna_node = cve_list_record.get("containers", {}).get("cna", {})
+        configs = []
+        for affected in cna_node.get("affected", []):
+            collection_url = affected.get("collectionURL")
+            package_name = affected.get("packageName")
+            vendor = affected.get("vendor")
+            product = affected.get("product")
+            cpes = set()
+
+            for cpe in affected.get("cpes", []):
+                if cpe.startswith("cpe:2.3") and len(cpe.split(":")) == 12:
+                    cpes.add(cpe)
+
+            lookup_cpes = self.analysis.cpe_lookup.lookup(collection_url=collection_url, package_name=package_name, vendor=vendor, product=product)
+            if lookup_cpes:
+                cpes.update(lookup_cpes)
+
+            if not cpes:
+                # TODO: create some sort of generator if the values aren't all equivalent to empty
+                # for now just bail
+                self.logger.warning(f"No CPEs discovered for affected entry: {affected!r} on {cve_id!r}")
+                continue
+
+            # Possible status values are `affected`, `unaffected`, and `unknown`, should be considered `unknown`
+            # if not specified
+            default_status = affected.get("defaultStatus", "unknown").lower()
+            versions = affected.get("versions", [])
+            node = {
+                "operator": "OR",
+                "negate": False,
+                "cpeMatch": [],
+            }
+
+            for v in versions:
+                status = v.get("status", default_status).lower()
+                version = normalize(v.get("version"))
+                less_than = normalize(v.get("lessThan"))
+                less_than_or_equal = normalize(v.get("lessThanOrEqual"))
+                version_type = normalize(v.get("versionType", ""))
+
+                if version_type == "git":
+                    self.logger.debug(f"Skipping git version type for {cve_id!r}")
+                    continue
+
+                for cpe in cpes:
+                    m = {}
+                    m["criteria"] = cpe
+                    m["matchCriteriaId"] = str(uuid4()).upper()
+                    if less_than and less_than != "*":
+                        m["versionEndExcluding"] = less_than
+                        if version and version != "*":
+                            m["versionStartIncluding"] = version
+                    elif less_than_or_equal and less_than_or_equal != "*":
+                        m["versionEndIncluding"] = less_than_or_equal
+                        if version and version != "*":
+                            m["versionStartIncluding"] = version
+                    elif version:
+                        components = cpe.split(":")
+                        components[5] = version
+                        m["criteria"] = ":".join(components)
+                    else:
+                        self.logger.warning(f"no useable version information extracted for affected entry: {affected!r}, version: {v!r} on {cve_id!r}")
+                        break
+
+                    if status in {"affected", "unknown"}:
+                        m["vulnerable"] = True
+                    elif status in {"unaffected"}:
+                        m["vulnerable"] = False
+
+                    node["cpeMatch"].append(m)
+
+            if not node["cpeMatch"]:
+                continue
+
+            configs.append(
+                {
+                    "nodes": [node],
+                },
+            )
+
+        if configs:
+            self.logger.debug(f"patching NVD record for {cve_id!r} with CPE configurations: {configs!r}")
+            nvd_record["cve"]["configurations"] = configs
 
         return cve_to_id(cve_id), nvd_record
 
