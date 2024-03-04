@@ -165,7 +165,7 @@ class Manager:
         for vuln in response["vulnerabilities"]:
             cve_id = vuln["cve"]["id"]
 
-            yield cve_to_id(cve_id), self._reconcile_cve_record(
+            yield self._reconcile_cve_record(
                 cve_id,
                 self.cvelist.get(cve=cve_id),
                 vuln,
