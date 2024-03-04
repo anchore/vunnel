@@ -85,7 +85,7 @@ class Manager:
         reprocess_rows = result_table.select().where(
             db.and_(
                 result_table.c.id.like(b"202%"),
-                result_table.c.record.like(b"%Awaiting Analysis%"),
+                db.or_(result_table.c.record.like(b"%Awaiting Analysis%"),result_table.c.record.like(b'%"vulnStatus": "Received"%')),
             ),
         )
 
