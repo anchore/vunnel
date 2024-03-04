@@ -177,6 +177,7 @@ class Manager:
         cve_list_record: dict[str, Any],
         nvd_record: dict[str, Any] | None,
     ) -> tuple[str, dict[str, Any]]:
+        self.logger.trace(f"Reconciling CVE and NVD records for {cve_id!r}")
         nvd_override = self.analysis.get_nvd_override(cve_id=cve_id)
         if nvd_override:
             configs = nvd_override.get("cve", {}).get("configurations")
@@ -207,6 +208,7 @@ class Manager:
             if descriptions:
                 nvd_record["cve"]["descriptions"] = descriptions
 
+        # TODO: add published and modified dates if missing
         # TODO: Add references if missing and provided by CVE record
         # TODO: Add CNA CVSS scores (Secondary) if missing and provided by CVE record
 

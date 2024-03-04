@@ -38,6 +38,7 @@ class CPEPatternLookup:
 
         for file in generated_files + curated_files:
             if os.path.exists(file):
+                self.logger.trace(f"loading CPE mapping file {file}")
                 cpe_type = None
                 if file.endswith("/application.json"):
                     cpe_type = "application"
@@ -166,6 +167,8 @@ class Repo(Git):
             logger=logger,
         )
         self._nvd_overrides_cache = None
+        self._curated_lookups_cache = None
+        self._generated_lookups_cache = None
 
     def _reset_cache(self):
         super()._reset_cache()
@@ -185,10 +188,15 @@ class Repo(Git):
 
     @property
     def curated_lookup_files(self) -> list[str] | None:
+        if self._curated_lookups_cache is None:
+            self._populate_ls_cache()
+
         return self._curated_lookups_cache
 
     @property
     def generated_lookup_files(self) -> list[str] | None:
+        if self._generated_lookups_cache is None:
+            self._populate_ls_cache()
         return self._generated_lookups_cache
 
     def _populate_ls_cache(self):
