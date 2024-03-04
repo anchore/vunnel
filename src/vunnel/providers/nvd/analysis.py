@@ -172,9 +172,9 @@ class Repo(Git):
 
     def _reset_cache(self):
         super()._reset_cache()
-        self._nvd_overrides_cache = {}
-        self._curated_lookups_cache = []
-        self._generated_lookups_cache = []
+        self._nvd_overrides_cache = None
+        self._curated_lookups_cache = None
+        self._generated_lookups_cache = None
 
     @classmethod
     def urls(cls) -> list[str]:
@@ -203,7 +203,9 @@ class Repo(Git):
         out = self._exec_cmd(self._ls_files_, cwd=self.destination)
         all_files = [os.path.join(self.destination, line) for line in out.decode().splitlines()]
 
-        self._reset_cache()
+        self._nvd_overrides_cache = {}
+        self._curated_lookups_cache = []
+        self._generated_lookups_cache = []
 
         for f in all_files:
             if "data/nvd/overrides" in f:
