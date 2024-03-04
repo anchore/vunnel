@@ -1,4 +1,4 @@
-UNKNOWN_VALUES =  {"", "n/a", "unknown", "[unknown]"}
+UNKNOWN_VALUES =  {"", "-", "n/a", "unknown", "[unknown]", "(as-yet-unknown)"}
 
 def is_unknown(value: str | None) -> bool:
     if not value:
