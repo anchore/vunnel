@@ -186,13 +186,6 @@ class Manager:
                 nvd_record["cve"]["configurations"] = configs
                 return cve_to_id(cve_id), nvd_record
 
-        if not nvd_record or "cve" not in nvd_record:
-            # TODO: Create a new NVD record if no record exists whatsoever
-            return cve_to_id(cve_id), nvd_record
-
-        if nvd_record["cve"].get("configurations"):
-            return cve_to_id(cve_id), nvd_record
-
         # TODO: insert magic here...
         # Iterate through affected entries in CVE list record
         # Extract collectionURL, packageName, vendor, and product (defaulting to None if not found)
@@ -203,6 +196,23 @@ class Manager:
         # If we do have CPEs, iterate through the CVE5 version and attempt to create a CPE version config
         # Still need a function for that
         cna_node = cve_list_record.get("containers", {}).get("cna", {})
+
+        if not nvd_record or "cve" not in nvd_record:
+            nvd_record = {
+                "cve": {},
+            }
+
+        if "descriptions" not in nvd_record["cve"]:
+            descriptions = cna_node.get("descriptions")
+            if descriptions:
+                nvd_record["cve"]["descriptions"] = descriptions
+
+        # TODO: Add references if missing and provided by CVE record
+        # TODO: Add CNA CVSS scores (Secondary) if missing and provided by CVE record
+
+        if nvd_record["cve"].get("configurations"):
+            return cve_to_id(cve_id), nvd_record
+
         configs = []
         for affected in cna_node.get("affected", []):
             collection_url = affected.get("collectionURL")
