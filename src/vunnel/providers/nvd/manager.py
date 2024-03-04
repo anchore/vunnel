@@ -222,7 +222,7 @@ class Manager:
             if not cpes:
                 # TODO: create some sort of generator if the values aren't all equivalent to empty
                 # for now just bail
-                self.logger.warning(f"No CPEs discovered for affected entry: {affected!r} on {cve_id!r}")
+                self.logger.trace(f"No CPEs discovered for affected entry: {affected!r} on {cve_id!r}")
                 continue
 
             # Possible status values are `affected`, `unaffected`, and `unknown`, should be considered `unknown`
@@ -263,7 +263,7 @@ class Manager:
                         components[5] = version
                         m["criteria"] = ":".join(components)
                     else:
-                        self.logger.warning(f"no useable version information extracted for affected entry: {affected!r}, version: {v!r} on {cve_id!r}")
+                        self.logger.trace(f"no useable version information extracted for affected entry: {affected!r}, version: {v!r} on {cve_id!r}")
                         break
 
                     if status in {"affected", "unknown"}:

@@ -165,9 +165,7 @@ class Repo(Git):
             branch=self._branch_,
             logger=logger,
         )
-        self._nvd_overrides_cache: dict[str, str] = None
-        self._curated_lookups_cache: list[str]= None
-        self._generated_lookups_cache: list[str] = None
+        self._nvd_overrides_cache = None
 
     def _reset_cache(self):
         super()._reset_cache()
@@ -211,7 +209,7 @@ class Repo(Git):
 
     @property
     def nvd_override_files(self) -> dict[str, str]:
-        if not self._nvd_overrides_cache:
+        if self._nvd_overrides_cache is None:
             self._populate_ls_cache()
 
         return self._nvd_overrides_cache
