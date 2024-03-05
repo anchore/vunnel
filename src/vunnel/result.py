@@ -42,6 +42,7 @@ class Store:
         result_state_policy: ResultStatePolicy,
         skip_duplicates: bool = False,
         logger: logging.Logger | None = None,
+        **kwargs,
     ):
         self.workspace = workspace
         self.result_state_policy = result_state_policy
@@ -117,6 +118,7 @@ class SQLiteStore(Store):
         self.conn = None
         self.engine = None
         self.table = None
+        self.write_location = kwargs.get('write_location', None)
 
         @db.event.listens_for(db.engine.Engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
@@ -135,6 +137,8 @@ class SQLiteStore(Store):
 
     @property
     def db_file_path(self) -> str:
+        if self.write_location:
+            return self.write_location
         return os.path.join(self.workspace.results_path, self.filename)
 
     @property
@@ -202,6 +206,7 @@ class Writer:
         logger: logging.Logger | None = None,
         skip_duplicates: bool = False,
         store_strategy: StoreStrategy = StoreStrategy.FLAT_FILE,
+        write_location : str | None = None,
     ):
         self.workspace = workspace
         self.skip_duplicates = skip_duplicates
@@ -216,6 +221,7 @@ class Writer:
             result_state_policy=result_state_policy,
             skip_duplicates=skip_duplicates,
             logger=logger,
+            write_location=write_location,
         )
 
     def __enter__(self) -> Writer:
