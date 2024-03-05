@@ -12,7 +12,7 @@ import sqlalchemy as db
 from .analysis import Analysis
 from .api import NvdAPI
 from .cvelist import CVEList
-from .normalization import normalize
+from .normalization import normalize, cpes_from_vendor_and_product
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -226,16 +226,21 @@ class Manager:
             for cpe in affected.get("cpes", []):
                 if cpe.startswith("cpe:2.3") and len(cpe.split(":")) == 12:
                     cpes.add(cpe)
+                    self.logger.trace(f"Using CPES {cpes!r} provided by the CNA on the CVE record for {cve_id!r}")
 
             lookup_cpes = self.analysis.cpe_lookup.lookup(collection_url=collection_url, package_name=package_name, vendor=vendor, product=product)
             if lookup_cpes:
+                self.logger.trace(f"Discovered CPES {lookup_cpes!r} via lookups for {cve_id!r}")
                 cpes.update(lookup_cpes)
 
             if not cpes:
-                # TODO: create some sort of generator if the values aren't all equivalent to empty
-                # for now just bail
-                self.logger.trace(f"No CPEs discovered for affected entry: {affected!r} on {cve_id!r}")
-                continue
+                cpes = cpes_from_vendor_and_product(vendor=vendor, product=product)
+                self.logger.trace(f"Generated CPES {cpes!r} from vendor={vendor!r}, product={product!r} for {cve_id!r}")
+                if not cpes:
+                    # TODO: create some sort of generator if the values aren't all equivalent to empty
+                    # for now just bail
+                    self.logger.trace(f"No CPEs discovered or generated for affected entry: {affected!r} on {cve_id!r}")
+                    continue
 
             # Possible status values are `affected`, `unaffected`, and `unknown`, should be considered `unknown`
             # if not specified

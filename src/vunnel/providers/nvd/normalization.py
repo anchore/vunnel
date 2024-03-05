@@ -66,3 +66,16 @@ def generate_candidates(value: str) -> list[str]:
                 candidates.append(v)
 
     return list(candidates)
+
+
+def cpes_from_vendor_and_product(vendor, product) -> list[str]:
+    vendors = generate_candidates(vendor)
+    products = generate_candidates(product)
+    cpes = []
+
+    if vendors and products:
+        for v in vendors:
+            for p in products:
+                cpes.append(f"cpe:2.3:a:{v}:{p}:*:*:*:*:*:*:*:*")
+
+    return cpes
