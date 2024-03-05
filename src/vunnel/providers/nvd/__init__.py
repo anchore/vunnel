@@ -68,7 +68,20 @@ class Provider(provider.Provider):
         return "nvd"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with self.input_writer() as writer:
+            for id, record in self.manager.download_nvd_input(
+                last_updated=last_updated,
+                skip_if_exists=self.config.runtime.skip_if_exists,
+            ):
+                writer.write(
+                    identifier=id.lower(),
+                    schema=self.schema,
+                    payload=record,
+                )
+
         with self.results_writer() as writer:
+            # TODO: get the reader and connection from the input writer and pass that in
+            # instead of the reader and connection from the results writer
             reader: result.SQLiteStore = writer.store
             conn, table = reader.connection()
 
@@ -85,3 +98,12 @@ class Provider(provider.Provider):
                 )
 
         return self.manager.urls, len(writer)
+
+    def input_writer(self) -> result.Writer:
+        return result.Writer(
+            workspace=self.workspace,
+            result_state_policy=self.runtime_cfg.existing_results,
+            logger=self.logger,
+            store_strategy=self.runtime_cfg.result_store,
+            write_location=os.path.join(self.workspace.input_path, 'nvd-input.db')
+        )

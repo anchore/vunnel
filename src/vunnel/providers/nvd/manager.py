@@ -53,10 +53,11 @@ class Manager:
         self.analysis.download()
 
         # download and process NVD records in realtime (not persisted to the DB)
-        if skip_if_exists and self._can_update_incrementally(last_updated):
-            yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
-        else:
-            yield from self._download_all()
+        # TODO: instead yield from input db
+        # if skip_if_exists and self._can_update_incrementally(last_updated):
+        #     yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
+        # else:
+        #     yield from self._download_all()
 
         # these are the records that are suspect to reprocess.
         cves_reprocessed = set()
@@ -75,6 +76,14 @@ class Manager:
             r_id, r = self._reconcile_cve_record(cve_id=cve_id, cve_list_record=cve_list_record, nvd_record=None)
             if r:
                 yield r_id, r
+
+    def download_nvd_input(self, last_updated: datetime.datetime | None,
+                           skip_if_exists: bool = False
+                           )-> Generator[tuple[str, dict[str, Any]], Any, None]:
+        if skip_if_exists and self._can_update_incrementally(last_updated):
+            yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
+        else:
+            yield from self._download_all()
 
     def _nvd_records_to_reprocess(
         self,
