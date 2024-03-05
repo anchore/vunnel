@@ -7,7 +7,7 @@ import os
 import shutil
 import time
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generator
 
 import orjson
 import sqlalchemy as db
@@ -119,6 +119,9 @@ class SQLiteStore(Store):
         self.engine = None
         self.table = None
         self.write_location = kwargs.get('write_location', None)
+        if self.write_location:
+            self.filename = os.path.basename(self.write_location)
+            self.temp_filename = f"{self.filename}.tmp"
 
         @db.event.listens_for(db.engine.Engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
@@ -136,14 +139,20 @@ class SQLiteStore(Store):
         return self.conn, self.table
 
     @property
+    def write_dir(self) -> str:
+        if self.write_location:
+            return os.path.dirname(self.write_location)
+        return self.workspace.results_path
+
+    @property
     def db_file_path(self) -> str:
         if self.write_location:
             return self.write_location
-        return os.path.join(self.workspace.results_path, self.filename)
+        return os.path.join(self.write_dir, self.filename)
 
     @property
     def temp_db_file_path(self) -> str:
-        return os.path.join(self.workspace.results_path, self.temp_filename)
+        return os.path.join(self.write_dir, self.temp_filename)
 
     def _create_table(self) -> db.Table:
         metadata = db.MetaData()
@@ -174,6 +183,20 @@ class SQLiteStore(Store):
                 statement = db.insert(table).values(id=identifier, record=record_str)
 
             conn.execute(statement)
+
+    def read(self, identifier: str) -> Envelope:
+        conn, table = self.connection()
+        with conn.begin():
+            result = conn.execute(table.select().where(table.c.id == identifier)).first()
+            if not result:
+                raise KeyError(f"no result found for identifier: {identifier!r}")
+
+            return Envelope(**orjson.loads(result.record))
+
+    def read_all(self) -> Generator[Envelope]:
+        conn, table = self.connection()
+        with conn.begin():
+            result = conn.execute(table.select())
 
     def prepare(self) -> None:
         if os.path.exists(self.temp_db_file_path):
@@ -206,7 +229,7 @@ class Writer:
         logger: logging.Logger | None = None,
         skip_duplicates: bool = False,
         store_strategy: StoreStrategy = StoreStrategy.FLAT_FILE,
-        write_location : str | None = None,
+        write_location: str | None = None,
     ):
         self.workspace = workspace
         self.skip_duplicates = skip_duplicates
@@ -248,3 +271,56 @@ class Writer:
         self.store.store(identifier, envelope)
 
         self.wrote += 1
+
+class SQLiteReader:
+    def __init__(self, sqlite_db_path: str, table_name: str = "results"):
+        self.db_path = sqlite_db_path
+        self.table_name = table_name
+        self.conn = None
+        self.engine = None
+        self.table = None
+
+    def read_all(self) -> Generator[tuple[str, Any]]:
+        conn, table = self.connection()
+        with conn.begin():
+            all_result = conn.execute(self.table.select())
+            for row in all_result:
+                yield row["id"], orjson.loads(row["record"])
+
+
+    def connection(self) -> tuple[db.engine.Connection, db.Table]:
+        if not self.conn:
+            self.engine = db.create_engine(f"sqlite:///{self.db_path}")
+            self.conn = self.engine.connect()  # type: ignore[attr-defined]
+            metadata = db.MetaData(bind=self.engine)
+            self.table = db.Table(self.table_name, metadata, autoload=True, autoload_with=self.engine)
+        return self.conn, self.table
+
+    def __enter__(self) -> SQLiteReader:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ):
+        if self.conn:
+            self.conn.close()
+            self.engine.dispose()
+
+            self.conn = None
+            self.engine = None
+            self.table = None
+
+
+    # def _create_table(self) -> db.Table:
+    #     metadata = db.MetaData()
+    #     table = db.Table(
+    #         self.table_name,
+    #         metadata,
+    #         db.Column("id", db.String(), primary_key=True, index=True),
+    #         db.Column("record", db.LargeBinary()),
+    #     )
+    #     metadata.create_all(self.engine)
+    #     return table
