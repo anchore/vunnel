@@ -225,11 +225,18 @@ class Manager:
             vendor = affected.get("vendor")
             product = affected.get("product")
             cpes = set()
+            versioned_cna_cpes = set()
 
             for cpe in affected.get("cpes", []):
-                if cpe.startswith("cpe:2.3") and len(cpe.split(":")) == 12:
-                    cpes.add(cpe)
-                    self.logger.trace(f"Using CPES {cpes!r} provided by the CNA on the CVE record for {cve_id!r}")
+                if cpe.startswith("cpe:2.3"):
+                    components = cpe.split(":")
+                    if len(components) == 13:
+                        if components[5] not in {"*", "-"}:
+                            versioned_cna_cpes.add(cpe)
+                        components[5] = "*"
+                        components[6] = "*"
+                        self.logger.trace(f"Adding CPE {cpe!r} provided by the CNA on the CVE record for {cve_id!r}")
+                        cpes.add(":".join(components))
 
             lookup_cpes = self.analysis.cpe_lookup.lookup(collection_url=collection_url, package_name=package_name, vendor=vendor, product=product)
             if lookup_cpes:
