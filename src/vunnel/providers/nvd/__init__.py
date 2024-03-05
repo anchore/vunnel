@@ -61,6 +61,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             api_key=self.config.api_key,
             logger=self.logger,
+            schema=self.schema,
         )
 
     @classmethod
@@ -68,22 +69,22 @@ class Provider(provider.Provider):
         return "nvd"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.input_writer() as writer:
-            for id, record in self.manager.download_nvd_input(
-                last_updated=last_updated,
-                skip_if_exists=self.config.runtime.skip_if_exists,
-            ):
-                writer.write(
-                    identifier=id.lower(),
-                    schema=self.schema,
-                    payload=record,
-                )
+        # with self.input_writer() as writer:
+        #     for id, record in self.manager.download_nvd_input(
+        #         last_updated=last_updated,
+        #         skip_if_exists=self.config.runtime.skip_if_exists,
+        #     ):
+        #         writer.write(
+        #             identifier=id.lower(),
+        #             schema=self.schema,
+        #             payload=record,
+        #         )
 
-        with self.results_writer() as writer, self.input_writer() as nvd_writer:
+        with self.results_writer() as writer, self.input_reader() as reader:
             # TODO: get the reader and connection from the input writer and pass that in
             # instead of the reader and connection from the results writer
-            reader: result.SQLiteStore = nvd_writer.store
-            conn, table = reader.connection()
+            # reader: result.SQLiteStore = nvd_writer.store
+            # conn, table = reader.connection()
 
             for identifier, record in self.manager.get(
                 skip_if_exists=self.config.runtime.skip_if_exists,
@@ -104,4 +105,9 @@ class Provider(provider.Provider):
             logger=self.logger,
             store_strategy=self.runtime_cfg.result_store,
             write_location=os.path.join(self.workspace.input_path, 'nvd-input.db')
+        )
+
+    def input_reader(self) -> result.SQLiteReader:
+        return result.SQLiteReader(
+            sqlite_db_path=os.path.join(self.workspace.input_path, 'nvd-input.db')
         )
