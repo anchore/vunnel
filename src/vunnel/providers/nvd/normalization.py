@@ -1,3 +1,5 @@
+from typing import Any
+
 UNKNOWN_VALUES =  {"", "-", "n/a", "unknown", "[unknown]", "(as-yet-unknown)"}
 
 def is_unknown(value: str | None) -> bool:
@@ -79,3 +81,29 @@ def cpes_from_vendor_and_product(vendor, product) -> list[str]:
                 cpes.append(f"cpe:2.3:a:{v}:{p}:*:*:*:*:*:*:*:*")
 
     return cpes
+
+def parse_cpe_5_version_info(v: dict[str, Any]) -> tuple[str, str, str, str]:
+    version = normalize(v.get("version"))
+    less_than = normalize(v.get("lessThan"))
+    less_than_or_equal = normalize(v.get("lessThanOrEqual"))
+    version_type = normalize(v.get("versionType", ""))
+
+    if version and (not less_than and not less_than_or_equal):
+        components = version.split(",")
+        if len(components) <= 2:
+            for c in components:
+                c = normalize(c)
+                if not c:
+                    break
+
+                if c.startswith(">="):
+                    version = normalize(c.removeprefix(">="))
+                elif c.startswith("<="):
+                    less_than_or_equal = normalize(c.removeprefix("<="))
+                elif c.startswith("<"):
+                    less_than = normalize(c.removeprefix("<"))
+
+            if less_than_or_equal and version.startswith("<=") or less_than and version.startswith("<"):
+                version = None
+
+    return version, less_than, less_than_or_equal, version_type

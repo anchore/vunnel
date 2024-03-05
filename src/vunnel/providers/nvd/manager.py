@@ -12,7 +12,7 @@ import sqlalchemy as db
 from .analysis import Analysis
 from .api import NvdAPI
 from .cvelist import CVEList
-from .normalization import normalize, cpes_from_vendor_and_product
+from .normalization import cpes_from_vendor_and_product, parse_cpe_5_version_info
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -85,7 +85,10 @@ class Manager:
         reprocess_rows = result_table.select().where(
             db.and_(
                 result_table.c.id.like(b"202%"),
-                db.or_(result_table.c.record.like(b"%Awaiting Analysis%"),result_table.c.record.like(b'%"vulnStatus": "Received"%')),
+                db.or_(
+                    result_table.c.record.like(b"%Awaiting Analysis%"),
+                    result_table.c.record.like(b'%"vulnStatus": "Received"%'),
+                ),
             ),
         )
 
@@ -212,8 +215,8 @@ class Manager:
         # TODO: Add references if missing and provided by CVE record
         # TODO: Add CNA CVSS scores (Secondary) if missing and provided by CVE record
 
-        if nvd_record["cve"].get("configurations"):
-            return cve_to_id(cve_id), nvd_record
+        #if nvd_record["cve"].get("configurations"):
+        #    return cve_to_id(cve_id), nvd_record
 
         configs = []
         for affected in cna_node.get("affected", []):
@@ -254,10 +257,7 @@ class Manager:
 
             for v in versions:
                 status = v.get("status", default_status).lower()
-                version = normalize(v.get("version"))
-                less_than = normalize(v.get("lessThan"))
-                less_than_or_equal = normalize(v.get("lessThanOrEqual"))
-                version_type = normalize(v.get("versionType", ""))
+                version, less_than, less_than_or_equal, version_type = parse_cpe_5_version_info(v)
 
                 if version_type == "git":
                     self.logger.debug(f"Skipping git version type for {cve_id!r}")
