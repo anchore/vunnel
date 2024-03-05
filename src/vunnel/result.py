@@ -6,8 +6,9 @@ import logging
 import os
 import shutil
 import time
+from collections.abc import Generator
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 import orjson
 import sqlalchemy as db
@@ -118,7 +119,7 @@ class SQLiteStore(Store):
         self.conn = None
         self.engine = None
         self.table = None
-        self.write_location = kwargs.get('write_location', None)
+        self.write_location = kwargs.get("write_location", None)
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
             self.temp_filename = f"{self.filename}.tmp"
@@ -272,6 +273,7 @@ class Writer:
 
         self.wrote += 1
 
+
 class SQLiteReader:
     def __init__(self, sqlite_db_path: str, table_name: str = "results"):
         self.db_path = sqlite_db_path
@@ -286,7 +288,6 @@ class SQLiteReader:
             all_result = conn.execute(self.table.select())
             for row in all_result:
                 yield row["id"], orjson.loads(row["record"])
-
 
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
@@ -312,7 +313,6 @@ class SQLiteReader:
             self.conn = None
             self.engine = None
             self.table = None
-
 
     # def _create_table(self) -> db.Table:
     #     metadata = db.MetaData()

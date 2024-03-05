@@ -5,8 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-from .api import NvdAPI
 from ... import result, schema
+from .api import NvdAPI
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -40,7 +40,6 @@ class Manager:
     ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         yield from self.download_nvd_input(last_updated, skip_if_exists)
 
-
     def _can_update_incrementally(self, last_updated: datetime.datetime | None) -> bool:
         if not last_updated:
             return False
@@ -56,9 +55,11 @@ class Manager:
 
         return True
 
-    def download_nvd_input(self, last_updated: datetime.datetime | None,
-                           skip_if_exists: bool = False
-                           )-> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def download_nvd_input(
+        self,
+        last_updated: datetime.datetime | None,
+        skip_if_exists: bool = False,
+    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         with self.input_writer() as writer:
             if skip_if_exists and self._can_update_incrementally(last_updated):
                 yield from self._download_updates(last_updated, writer)  # type: ignore  # noqa: PGH003
@@ -73,7 +74,11 @@ class Manager:
         for response in self.api.cve():
             yield from self._unwrap_records(response, writer)
 
-    def _download_updates(self, last_updated: datetime.datetime, writer: result.Writer) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def _download_updates(
+        self,
+        last_updated: datetime.datetime,
+        writer: result.Writer,
+    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         self.logger.debug(f"downloading CVEs changed since {last_updated.isoformat()}")
 
         # get the list of CVEs that have been updated since the last sync
@@ -86,7 +91,11 @@ class Manager:
 
             yield from self._unwrap_records(response, writer)
 
-    def _unwrap_records(self, response: dict[str, Any], writer: result.Writer) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def _unwrap_records(
+        self,
+        response: dict[str, Any],
+        writer: result.Writer,
+    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         for vuln in response["vulnerabilities"]:
             cve_id = vuln["cve"]["id"]
             year = cve_id.split("-")[1]
@@ -101,5 +110,5 @@ class Manager:
             result_state_policy=result.ResultStatePolicy.KEEP,
             logger=self.logger,
             store_strategy=result.StoreStrategy.SQLITE,
-            write_location=os.path.join(self.workspace.input_path, 'nvd-input.db'),
+            write_location=os.path.join(self.workspace.input_path, "nvd-input.db"),
         )
