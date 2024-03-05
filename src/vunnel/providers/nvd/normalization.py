@@ -1,6 +1,6 @@
 from typing import Any
 
-UNKNOWN_VALUES =  {"", "-", "n/a", "unknown", "[unknown]", "(as-yet-unknown)"}
+UNKNOWN_VALUES =  {"", "-", "n/a", "unknown", "[unknown]", "(as-yet-unknown)", "unspecified"}
 
 def is_unknown(value: str | None) -> bool:
     if not value:
