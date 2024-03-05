@@ -79,10 +79,10 @@ class Provider(provider.Provider):
                     payload=record,
                 )
 
-        with self.results_writer() as writer:
+        with self.results_writer() as writer, self.input_writer() as nvd_writer:
             # TODO: get the reader and connection from the input writer and pass that in
             # instead of the reader and connection from the results writer
-            reader: result.SQLiteStore = writer.store
+            reader: result.SQLiteStore = nvd_writer.store
             conn, table = reader.connection()
 
             for identifier, record in self.manager.get(
