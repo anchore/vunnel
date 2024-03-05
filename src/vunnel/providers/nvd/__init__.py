@@ -104,10 +104,8 @@ class Provider(provider.Provider):
             result_state_policy=self.runtime_cfg.existing_results,
             logger=self.logger,
             store_strategy=self.runtime_cfg.result_store,
-            write_location=os.path.join(self.workspace.input_path, 'nvd-input.db')
+            write_location=os.path.join(self.workspace.input_path, "nvd-input.db"),
         )
 
     def input_reader(self) -> result.SQLiteReader:
-        return result.SQLiteReader(
-            sqlite_db_path=os.path.join(self.workspace.input_path, 'nvd-input.db')
-        )
+        return result.SQLiteReader(sqlite_db_path=os.path.join(self.workspace.input_path, "nvd-input.db"))
