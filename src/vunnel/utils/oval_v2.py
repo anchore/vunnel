@@ -94,7 +94,8 @@ class OVALElementParser(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Parsed | None: ...
+    def parse(xml_element: ET.Element, config: OVALParserConfig) -> Parsed | None:
+        ...
 
     @staticmethod
     def _find_with_regex(data: str, regex: re.Pattern):

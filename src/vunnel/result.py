@@ -216,7 +216,7 @@ class SQLiteStore(Store):
             self.engine = None
             self.table = None
 
-        if successful:
+        if successful and os.path.exists(self.temp_db_file_path):
             os.rename(self.temp_db_file_path, self.db_file_path)
         elif os.path.exists(self.temp_db_file_path):
             os.remove(self.temp_db_file_path)
@@ -282,12 +282,14 @@ class SQLiteReader:
         self.engine = None
         self.table = None
 
-    def read_all(self) -> Generator[tuple[str, Any]]:
+    def read(self, identifier: str) -> dict[str, Any] | None:
         conn, table = self.connection()
         with conn.begin():
-            all_result = conn.execute(self.table.select())
-            for row in all_result:
-                yield row["id"], orjson.loads(row["record"])
+            result = conn.execute(table.select().where(table.c.id == identifier)).first()
+            if not result:
+                return None
+
+            return orjson.loads(result.record)
 
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:

@@ -58,10 +58,10 @@ class Provider(provider.Provider):
         self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,
+            schema=self.schema,
             download_timeout=self.config.request_timeout,
             api_key=self.config.api_key,
             logger=self.logger,
-            schema=self.schema,
         )
 
     @classmethod
@@ -69,23 +69,7 @@ class Provider(provider.Provider):
         return "nvd"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        # with self.input_writer() as writer:
-        #     for id, record in self.manager.download_nvd_input(
-        #         last_updated=last_updated,
-        #         skip_if_exists=self.config.runtime.skip_if_exists,
-        #     ):
-        #         writer.write(
-        #             identifier=id.lower(),
-        #             schema=self.schema,
-        #             payload=record,
-        #         )
-
-        with self.results_writer() as writer, self.input_reader() as reader:
-            # TODO: get the reader and connection from the input writer and pass that in
-            # instead of the reader and connection from the results writer
-            # reader: result.SQLiteStore = nvd_writer.store
-            # conn, table = reader.connection()
-
+        with self.results_writer() as writer:
             for identifier, record in self.manager.get(
                 skip_if_exists=self.config.runtime.skip_if_exists,
                 last_updated=last_updated,
