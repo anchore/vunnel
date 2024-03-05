@@ -35,10 +35,13 @@ class Manager:
         last_updated: datetime.datetime | None,
         skip_if_exists: bool = False,
     ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
-        if skip_if_exists and self._can_update_incrementally(last_updated):
-            yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
-        else:
-            yield from self._download_all()
+        # download and process NVD records in realtime (not persisted to the DB)
+        # TODO: instead yield from input db
+        # if skip_if_exists and self._can_update_incrementally(last_updated):
+        #     yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
+        # else:
+        #     yield from self._download_all()
+        yield from set()
 
     def _can_update_incrementally(self, last_updated: datetime.datetime | None) -> bool:
         if not last_updated:
@@ -54,6 +57,14 @@ class Manager:
             return False
 
         return True
+
+    def download_nvd_input(self, last_updated: datetime.datetime | None,
+                           skip_if_exists: bool = False
+                           )-> Generator[tuple[str, dict[str, Any]], Any, None]:
+        if skip_if_exists and self._can_update_incrementally(last_updated):
+            yield from self._download_updates(last_updated)  # type: ignore  # noqa: PGH003
+        else:
+            yield from self._download_all()
 
     def _download_all(self) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         self.logger.info("downloading all CVEs")
