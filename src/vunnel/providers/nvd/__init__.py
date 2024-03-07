@@ -37,6 +37,8 @@ class Config:
 
 
 class Provider(provider.Provider):
+    __version__ = 2
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
