@@ -21,7 +21,8 @@ class Config:
     )
     request_timeout: int = 125
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
-    overrides_url: Optional[str] = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
+    overrides_url: str = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
+    overrides_enabled: bool = False
 
     def __post_init__(self) -> None:
         if self.api_key and self.api_key.startswith("env:"):
@@ -58,6 +59,11 @@ class Provider(provider.Provider):
                 f"only 'SQLITE' is supported for 'runtime.result_store' but got '{self.config.runtime.result_store}'",
             )
 
+        if self.config.overrides_enabled and not self.config.overrides_url:
+            raise ValueError(
+                "if 'overrides_enabled' is set then 'overrides_url' must be set",
+            )
+
         self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,
@@ -65,6 +71,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             api_key=self.config.api_key,
             logger=self.logger,
+            overrides_enabled=self.config.overrides_enabled,
             overrides_url=self.config.overrides_url,
         )
 
@@ -85,15 +92,3 @@ class Provider(provider.Provider):
                 )
 
         return self.manager.urls, len(writer)
-
-    def input_writer(self) -> result.Writer:
-        return result.Writer(
-            workspace=self.workspace,
-            result_state_policy=self.runtime_cfg.existing_results,
-            logger=self.logger,
-            store_strategy=self.runtime_cfg.result_store,
-            write_location=os.path.join(self.workspace.input_path, "nvd-input.db"),
-        )
-
-    def input_reader(self) -> result.SQLiteReader:
-        return result.SQLiteReader(sqlite_db_path=os.path.join(self.workspace.input_path, "nvd-input.db"))

@@ -5,9 +5,9 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-from ... import result, schema
-from .api import NvdAPI
-from .overrides import NVDOverrides
+from vunnel import result, schema
+from vunnel.providers.nvd.api import NvdAPI
+from vunnel.providers.nvd.overrides import NVDOverrides
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -18,14 +18,15 @@ if TYPE_CHECKING:
 class Manager:
     __nvd_input_db__ = "nvd-input.db"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
         schema: schema.Schema,
+        overrides_url: str,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
         api_key: str | None = None,
-        overrides_url: str | None = None,
+        overrides_enabled: bool = False,
     ) -> None:
         self.workspace = workspace
 
@@ -34,9 +35,15 @@ class Manager:
         self.logger = logger
 
         self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout)
-        self.overrides = None
-        if overrides_url:
-            self.overrides = NVDOverrides(url=overrides_url, workspace=workspace, logger=logger, download_timeout=download_timeout)
+
+        self.overrides = NVDOverrides(
+            enabled=overrides_enabled,
+            url=overrides_url,
+            workspace=workspace,
+            logger=logger,
+            download_timeout=download_timeout,
+        )
+
         self.urls = [self.api._cve_api_url_, self.overrides.url]  # noqa: SLF001
         self.schema = schema
 
@@ -52,18 +59,29 @@ class Manager:
             cves_processed.add(id_to_cve(record_id))
             yield record_id, record
 
-        override_cves = {cve.lower() for cve in self.overrides.cves()}
-        override_remaining_cves = override_cves - cves_processed
-        with self._sqlite_reader() as reader:
-            for cve in override_remaining_cves:
-                original_record = reader.read(cve_to_id(cve))
-                if not original_record:
-                    self.logger.warning(f"override for {cve} not found in original data")
-                    continue
-                original_record = original_record["item"]
-                yield cve_to_id(cve), self._apply_override(cve, original_record)
+        if self.overrides.enabled:
+            self.logger.debug("applying NVD data overrides...")
 
-        self.logger.debug(f"applied overrides for {len(override_remaining_cves)} CVEs")
+            override_cves = {cve.lower() for cve in self.overrides.cves()}
+            override_remaining_cves = override_cves - cves_processed
+            with self._sqlite_reader() as reader:
+                for cve in override_remaining_cves:
+
+                    original_record = reader.read(cve_to_id(cve))
+                    if not original_record:
+                        self.logger.warning(f"override for {cve} not found in original data")
+                        continue
+
+                    original_record = original_record["item"]
+                    if not original_record:
+                        self.logger.warning(f"missing original data for {cve}")
+                        continue
+
+                    yield cve_to_id(cve), self._apply_override(cve, original_record)
+
+            self.logger.debug(f"applied overrides for {len(override_remaining_cves)} CVEs")
+
+        self.logger.debug("overrides are not enabled, skipping...")
 
     def _download_nvd_input(
         self,

@@ -6,7 +6,6 @@ import logging
 import os
 import shutil
 import time
-from collections.abc import Generator
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -43,7 +42,7 @@ class Store:
         result_state_policy: ResultStatePolicy,
         skip_duplicates: bool = False,
         logger: logging.Logger | None = None,
-        **kwargs,
+        **kwargs: dict[str, Any],
     ):
         self.workspace = workspace
         self.result_state_policy = result_state_policy
@@ -194,11 +193,6 @@ class SQLiteStore(Store):
 
             return Envelope(**orjson.loads(result.record))
 
-    def read_all(self) -> Generator[Envelope]:
-        conn, table = self.connection()
-        with conn.begin():
-            result = conn.execute(table.select())
-
     def prepare(self) -> None:
         if os.path.exists(self.temp_db_file_path):
             self.logger.warning("removing unexpected partial result state")
@@ -307,7 +301,7 @@ class SQLiteReader:
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
-    ):
+    ) -> None:
         if self.conn:
             self.conn.close()
             self.engine.dispose()
@@ -315,14 +309,3 @@ class SQLiteReader:
             self.conn = None
             self.engine = None
             self.table = None
-
-    # def _create_table(self) -> db.Table:
-    #     metadata = db.MetaData()
-    #     table = db.Table(
-    #         self.table_name,
-    #         metadata,
-    #         db.Column("id", db.String(), primary_key=True, index=True),
-    #         db.Column("record", db.LargeBinary()),
-    #     )
-    #     metadata.create_all(self.engine)
-    #     return table
