@@ -25,6 +25,7 @@ class Manager:
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
         api_key: str | None = None,
+        overrides_url: str | None = None,
     ) -> None:
         self.workspace = workspace
 
@@ -33,8 +34,10 @@ class Manager:
         self.logger = logger
 
         self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout)
-        self.overrides = NVDOverrides(workspace=workspace, logger=logger, download_timeout=download_timeout)
-        self.urls = [self.api._cve_api_url_, self.overrides.__url__]  # noqa: SLF001
+        self.overrides = None
+        if overrides_url:
+            self.overrides = NVDOverrides(url=overrides_url, workspace=workspace, logger=logger, download_timeout=download_timeout)
+        self.urls = [self.api._cve_api_url_, self.overrides.url]  # noqa: SLF001
         self.schema = schema
 
     def get(
@@ -151,10 +154,18 @@ class Manager:
     def _apply_override(self, cve_id: str, record: dict[str, Any]) -> dict[str, Any]:
         override = self.overrides.cve(cve_id)
         if override:
-            # TODO: change to trace
-            self.logger.warning(f"applying override for {cve_id}")
-            # TODO: should we merge or replace?
-            record.update(override)
+            self.logger.debug(f"applying override for {cve_id}")
+            # ignore empty overrides
+            if override is None or "cve" not in override:
+                return record
+            # explicitly only support CPE configurations for now and always override the
+            # original record configurations. Can figure out more complicated scenarios
+            # later if needed
+            if "configurations" not in override["cve"]:
+                return record
+
+            record["cve"]["configurations"] = override["cve"]["configurations"]
+
         return record
 
 

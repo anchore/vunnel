@@ -1,33 +1,37 @@
 import glob
-import json
 import logging
 import os
 import tarfile
 from typing import Any
+
+from orjson import loads
 
 from vunnel.utils import http
 from vunnel.workspace import Workspace
 
 
 class NVDOverrides:
-    __url__ = "http://localhost:8080/overrides.tar.gz"
     __file_name__ = "nvd-overrides.tar.gz"
     __extract_name__ = "nvd-overrides"
 
     def __init__(
         self,
+        url: str,
         workspace: Workspace,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
     ):
+        self.__url__ = url
         self.workspace = workspace
         self.download_timeout = download_timeout
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+        self.__filepaths_by_cve__ = None
 
-    def url(self):
-        return [self.__url__]
+    @property
+    def url(self) -> str:
+        return self.__url__
 
     def download(self):
         req = http.get(self.__url__, self.logger, stream=True, timeout=self.download_timeout)
@@ -43,19 +47,26 @@ class NVDOverrides:
     def extract_path(self):
         return os.path.join(self.workspace.input_path, self.__extract_name__)
 
+    def _build_files_by_cve(self):
+        self.__filepaths_by_cve__ = {}
+        for path in glob.glob(os.path.join(self.extract_path, "**/data/**/", "CVE-*.json"), recursive=True):
+            cve_id = os.path.basename(path).removesuffix(".json").upper()
+            self.__filepaths_by_cve__[cve_id] = path
+
     def cve(self, cve_id: str) -> dict[str, Any] | None:
+        if self.__filepaths_by_cve__ is None:
+            self._build_files_by_cve()
         # TODO: implement in-memory index
-        path = os.path.join(self.extract_path, "data", "nvd", "overrides", f"{cve_id.upper()}.json")
-        if os.path.exists(path):
+        path = self.__filepaths_by_cve__.get(cve_id.upper())
+        if path and os.path.exists(path):
             with open(path) as f:
-                return json.loads(f.read())
+                return loads(f.read())
         return None
 
     def cves(self) -> list[str]:
-        names = []
-        for path in glob.glob(os.path.join(self.extract_path, "data", "nvd", "overrides", "CVE-*.json")):
-            names.append(os.path.basename(path).replace(".json", ""))
-        return names
+        if self.__filepaths_by_cve__ is None:
+            self._build_files_by_cve()
+        return list(self.__filepaths_by_cve__.keys())
 
 
 def untar_file(file_path, extract_path):

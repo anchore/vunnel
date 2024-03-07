@@ -21,6 +21,7 @@ class Config:
     )
     request_timeout: int = 125
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
+    overrides_url: Optional[str] = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
 
     def __post_init__(self) -> None:
         if self.api_key and self.api_key.startswith("env:"):
@@ -62,6 +63,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             api_key=self.config.api_key,
             logger=self.logger,
+            overrides_url=self.config.overrides_url,
         )
 
     @classmethod
