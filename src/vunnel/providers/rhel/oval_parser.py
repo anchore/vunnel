@@ -84,7 +84,8 @@ class Parser:
 
             for p in oval_paths:
                 self._urls.add(f"{base_url}/{p}")
-                self._download_oval_file(base_url, p)
+                if not skip_download:
+                    self._download_oval_file(base_url, p)
 
     def xml_paths(self):
         paths = []
