@@ -6,7 +6,6 @@ import json
 import pytest
 from vunnel import provider, result
 from vunnel.providers import nvd
-from vunnel.providers.nvd import api as nvd_api
 
 
 @pytest.mark.parametrize(
@@ -19,7 +18,55 @@ from vunnel.providers.nvd import api as nvd_api
 )
 def test_incremental_update_with_existing_results(policy, should_raise):
     def make():
-        nvd.Provider("/tmp/doesntmatter", nvd.Config(runtime=provider.RuntimeConfig(existing_results=policy)))
+        nvd.Provider(
+            "/tmp/doesntmatter",
+            nvd.Config(runtime=provider.RuntimeConfig(existing_results=policy, result_store=result.StoreStrategy.SQLITE)),
+        )
+
+    if should_raise:
+        with pytest.raises(Exception):
+            make()
+    else:
+        make()
+
+
+@pytest.mark.parametrize(
+    ("store", "should_raise"),
+    (
+        (result.StoreStrategy.FLAT_FILE, True),
+        (result.StoreStrategy.SQLITE, False),
+    ),
+)
+def test_require_sqlite_store(store, should_raise):
+    def make():
+        nvd.Provider("/tmp/doesntmatter", nvd.Config(runtime=provider.RuntimeConfig(result_store=store)))
+
+    if should_raise:
+        with pytest.raises(Exception):
+            make()
+    else:
+        make()
+
+
+@pytest.mark.parametrize(
+    ("overrides_enabled", "overrides_url", "should_raise"),
+    (
+        (True, "something", False),
+        (False, "something", False),
+        (True, "", True),
+        (False, "", False),
+    ),
+)
+def test_require_override_configuration(overrides_enabled, overrides_url, should_raise):
+    def make():
+        nvd.Provider(
+            "/tmp/doesntmatter",
+            nvd.Config(
+                overrides_enabled=overrides_enabled,
+                overrides_url=overrides_url,
+                runtime=provider.RuntimeConfig(result_store=result.StoreStrategy.SQLITE),
+            ),
+        )
 
     if should_raise:
         with pytest.raises(Exception):
@@ -42,8 +89,8 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries, disa
         json_dict = json.load(f)
 
     c = nvd.Config()
-    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = nvd.Provider(root=workspace.root, config=c)
+    p.config.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p.manager.api.cve = mocker.Mock(return_value=[json_dict])
 
     p.update(None)
@@ -68,12 +115,12 @@ def test_provider_via_snapshot(helpers, mock_data_path, disable_get_requests, mo
     )
 
     c = nvd.Config()
-    # keep all of the default values for the result store, but override the strategy
-    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = nvd.Provider(
         root=workspace.root,
         config=c,
     )
+    # keep all of the default values for the result store, but override the strategy
+    p.config.runtime.result_store = result.StoreStrategy.FLAT_FILE
 
     mock_data_path = helpers.local_dir(mock_data_path)
 

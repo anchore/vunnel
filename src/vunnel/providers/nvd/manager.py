@@ -44,7 +44,7 @@ class Manager:
             download_timeout=download_timeout,
         )
 
-        self.urls = [self.api._cve_api_url_, self.overrides.url]  # noqa: SLF001
+        self.urls = [self.api._cve_api_url_]  # noqa: SLF001
         self.schema = schema
 
     def get(
@@ -60,6 +60,7 @@ class Manager:
             yield record_id, record
 
         if self.overrides.enabled:
+            self.urls.append(self.overrides.url)
             self.logger.debug("applying NVD data overrides...")
 
             override_cves = {cve.lower() for cve in self.overrides.cves()}
@@ -189,7 +190,7 @@ class Manager:
 
 def cve_to_id(cve: str) -> str:
     year = cve.split("-")[1]
-    return os.path.join(year, cve).lower()
+    return os.path.join(year, cve)
 
 
 def id_to_cve(cve_id: str) -> str:

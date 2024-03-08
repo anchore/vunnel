@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import glob
 import logging
 import os
 import tarfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from orjson import loads
 
 from vunnel.utils import http
-from vunnel.workspace import Workspace
+
+if TYPE_CHECKING:
+    from vunnel.workspace import Workspace
 
 
 class NVDOverrides:
@@ -29,7 +33,7 @@ class NVDOverrides:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        self.__filepaths_by_cve__: dict[str, str] = {}
+        self.__filepaths_by_cve__: dict[str, str] | None = None
 
     @property
     def url(self) -> str:
@@ -53,20 +57,20 @@ class NVDOverrides:
     def _extract_path(self) -> str:
         return os.path.join(self.workspace.input_path, self.__extract_name__)
 
-    def _build_files_by_cve(self) -> None:
+    def _build_files_by_cve(self) -> dict[str, Any]:
         filepaths_by_cve__: dict[str, str] = {}
         for path in glob.glob(os.path.join(self._extract_path, "**/data/**/", "CVE-*.json"), recursive=True):
             cve_id = os.path.basename(path).removesuffix(".json").upper()
             filepaths_by_cve__[cve_id] = path
 
-        self.__filepaths_by_cve__ = filepaths_by_cve__
+        return filepaths_by_cve__
 
     def cve(self, cve_id: str) -> dict[str, Any] | None:
         if not self.enabled:
             return None
 
         if self.__filepaths_by_cve__ is None:
-            self._build_files_by_cve()
+            self.__filepaths_by_cve__ = self._build_files_by_cve()
 
         # TODO: implement in-memory index
         path = self.__filepaths_by_cve__.get(cve_id.upper())
@@ -80,7 +84,8 @@ class NVDOverrides:
             return []
 
         if self.__filepaths_by_cve__ is None:
-            self._build_files_by_cve()
+            self.__filepaths_by_cve__ = self._build_files_by_cve()
+
         return list(self.__filepaths_by_cve__.keys())
 
 
@@ -95,7 +100,7 @@ def untar_file(file_path: str, extract_path: str) -> None:
             #  unexpected: results/../../../../etc/passwd
             # we filter (drop) any such entries
 
-            if path != os.path.normpath(path):
+            if tarinfo.name != os.path.normpath(tarinfo.name):
                 return None
             return tarinfo
 

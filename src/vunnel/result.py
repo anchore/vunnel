@@ -279,7 +279,7 @@ class SQLiteReader:
     def read(self, identifier: str) -> dict[str, Any] | None:
         conn, table = self.connection()
         with conn.begin():
-            result = conn.execute(table.select().where(table.c.id == identifier)).first()
+            result = conn.execute(table.select().where(table.c.id == identifier.lower())).first()
             if not result:
                 return None
 
