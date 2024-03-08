@@ -78,9 +78,8 @@ class Parser:
                         break
 
                 if len(unmatched_oval_paths) > 0:
-                    error = f"no matching sha256 found for {unmatched_oval_paths}"
-                    self.logger.error(error)
-                    raise Exception(error)
+                    warning = f"no matching sha256 found for {unmatched_oval_paths}"
+                    self.logger.warning(warning)
 
                 self.logger.info(f"finish processing manifest from {manifest_url}")
                 return path_to_sha
