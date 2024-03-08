@@ -79,6 +79,7 @@ class Parser:
             base_url = m["base_url"]
             manifest_path = m["manifest_path"]
             oval_paths = m["oval_paths"]
+            skip_download = m.get("skip_download", False)
             self._urls.add(f"{base_url}/{manifest_path}")
 
             for p in oval_paths:
