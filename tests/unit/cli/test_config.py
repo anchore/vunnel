@@ -82,6 +82,8 @@ def test_full_config(helpers):
             nvd=providers.nvd.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
+                overrides_enabled=True,
+                overrides_url="https://github.com/anchore/nvd-data-overrides/SOMEWHEREELSE/main.tar.gz",
             ),
             oracle=providers.oracle.Config(
                 runtime=runtime_cfg,

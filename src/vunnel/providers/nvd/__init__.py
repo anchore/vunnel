@@ -21,6 +21,8 @@ class Config:
     )
     request_timeout: int = 125
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
+    overrides_url: str = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
+    overrides_enabled: bool = False
 
     def __post_init__(self) -> None:
         if self.api_key and self.api_key.startswith("env:"):
@@ -36,6 +38,8 @@ class Config:
 
 
 class Provider(provider.Provider):
+    __version__ = 2
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
@@ -50,12 +54,25 @@ class Provider(provider.Provider):
                 "(otherwise incremental updates will fail)",
             )
 
+        if self.config.runtime.result_store != result.StoreStrategy.SQLITE:
+            raise ValueError(
+                f"only 'SQLITE' is supported for 'runtime.result_store' but got '{self.config.runtime.result_store}'",
+            )
+
+        if self.config.overrides_enabled and not self.config.overrides_url:
+            raise ValueError(
+                "if 'overrides_enabled' is set then 'overrides_url' must be set",
+            )
+
         self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,
+            schema=self.schema,
             download_timeout=self.config.request_timeout,
             api_key=self.config.api_key,
             logger=self.logger,
+            overrides_enabled=self.config.overrides_enabled,
+            overrides_url=self.config.overrides_url,
         )
 
     @classmethod
