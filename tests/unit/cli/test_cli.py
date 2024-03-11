@@ -212,6 +212,8 @@ providers:
       result_store: sqlite
   nvd:
     api_key: secret
+    overrides_enabled: false
+    overrides_url: https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz
     request_timeout: 125
     runtime:
       existing_input: keep
