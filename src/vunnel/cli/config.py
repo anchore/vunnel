@@ -15,6 +15,7 @@ from vunnel import providers
 class Providers:
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
+    bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
