@@ -1372,17 +1372,17 @@ dev = ["black", "flake8", "pre-commit"]
 
 [[package]]
 name = "pytest-unordered"
-version = "0.5.2"
+version = "0.6.0"
 description = "Test equality of unordered collections in pytest"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-unordered-0.5.2.tar.gz", hash = "sha256:8187e6d68a7d54e5447e88c229cbeafa38205e55baf7da7ae57cc965c1ecdbb3"},
-    {file = "pytest_unordered-0.5.2-py3-none-any.whl", hash = "sha256:b01bb0e8ba80db6dd8c840fe24ad1804c8672919303dc9302688221390a7dc29"},
+    {file = "pytest-unordered-0.6.0.tar.gz", hash = "sha256:f61b4f6e06a60a92db50968954efac93e2f584290a49f53ad135e3f32f57e02a"},
+    {file = "pytest_unordered-0.6.0-py3-none-any.whl", hash = "sha256:86675cade320d1c54864fedd10c2277f685bf2d958ef744c578b3d622000f2ac"},
 ]
 
 [package.dependencies]
-pytest = ">=6.0.0"
+pytest = ">=7.0.0"
 
 [[package]]
 name = "pytest-xdist"
@@ -2193,4 +2193,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "db9303828af91f2582a8d847bdc7097d18c2e0c5bd5e315c2a75c3b953e4c224"
+content-hash = "243f36bc61eadc19c8f7e44bc4db0739a8d757538e9ad9e952958baee43ad62a"
