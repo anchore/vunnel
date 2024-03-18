@@ -38,6 +38,7 @@ class State(DataClassDictMixin):
     version: int = 1
     listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
     schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderStateSchema)
+    stale: bool = False
 
     @staticmethod
     def read(root: str) -> State:

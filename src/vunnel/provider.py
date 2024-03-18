@@ -122,7 +122,7 @@ class Provider(abc.ABC):
 
         last_updated = None
         current_state = self.read_state()
-        if current_state:
+        if current_state and not current_state.stale:
             last_updated = current_state.timestamp
 
         urls, count = self.update(last_updated=last_updated)
