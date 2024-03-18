@@ -29,7 +29,7 @@ jobs:
           git merge-base --is-ancestor ${GITHUB_REF##*/} origin/main && echo "${GITHUB_REF##*/} is a commit on main!"
 
       - name: Check static analysis results
-        uses: fountainhead/action-wait-for-check@297be350cf8393728ea4d4b39435c7d7ae167c93 #v1.1.1
+        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be #v1.1.1
         id: static-analysis
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -38,7 +38,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check test results
-        uses: fountainhead/action-wait-for-check@297be350cf8393728ea4d4b39435c7d7ae167c93 #v1.1.1
+        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be #v1.1.1
         id: test
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -47,7 +47,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check nightly quality gate results
-        uses: fountainhead/action-wait-for-check@297be350cf8393728ea4d4b39435c7d7ae167c93 #v1.1.0
+        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be #v1.2.0
         id: nightly-quality-gate
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
