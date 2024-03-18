@@ -748,7 +748,7 @@ class Parser:
         to_rev: str,
         updated_paths: list[str],
     ) -> CVEFile | None:
-        self.logger.debug(f"begin processing {cve_id} to rev {to_rev}")
+        self.logger.info(f"begin processing {cve_id} to rev {to_rev}")
 
         if cve_rel_path in updated_paths:
             # merge cves updated since last revision or all if the last processed revision is not available
@@ -763,7 +763,7 @@ class Parser:
             # self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
             result = self._reprocess_merged_cve(cve_id, cve_rel_path)
 
-        self.logger.debug(f"finish processing {cve_id} to rev {to_rev}")
+        self.logger.info(f"finish processing {cve_id} to rev {to_rev}")
         return result
 
     def _load_last_processed_rev(self):
