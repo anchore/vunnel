@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import sqlite3
+import hashlib
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -231,14 +232,24 @@ def digest_path_with_hasher(path: str, hasher: Any, label: str | None, size: int
         return label + ":" + hasher.hexdigest()
     return hasher.hexdigest()
 
-
-# def sha256_digest(path: str, label: bool = True) -> str:
-#     return digest_path_with_hasher(path, hashlib.sha256(), "sha256" if label else None)
+def sha256_digest(path: str, label: bool = True) -> str:
+    return digest_path_with_hasher(path, hashlib.sha256(), "sha256" if label else None)
 
 
 def xxhash64_digest(path: str, label: bool = True) -> str:
     return digest_path_with_hasher(path, xxhash.xxh64(), "xxh64" if label else None)
 
+def parse_labeled_digest(digest: str) -> tuple[str, str]:
+    algorithm, value = digest.split(":")
+    return algorithm, value
+
+def hasher_for_label(label: str) -> Any:
+    label = label.lower()
+    if label == "sha256":
+        return hashlib.sha256()
+    if label == "xxh64":
+        return xxhash.xxh64()
+    raise ValueError(f"unknown digest label: {label}")
 
 def write_file_listing(output_file: str, path: str) -> str:
     listing_hasher = xxhash.xxh64()

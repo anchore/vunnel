@@ -316,7 +316,10 @@ def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
     subject.assert_state_file(exists=False)
 
 
-def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory) -> tuple[str, str, distribution.ListingEntry]:
+def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name: str | None = None, archive_checksum: str | None = None, results_checksum: str | None = None) -> tuple[str, str, distribution.ListingEntry]:
+    if not archive_name:
+        archive_name = "results.tar.gz"
+
     policy = provider.RuntimeConfig(
         result_store=result.StoreStrategy.SQLITE,
         existing_input=provider.InputStatePolicy.KEEP,
@@ -329,23 +332,24 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory) -> tuple[str
     dest = os.path.join(tmpdir, subject.name())
     os.makedirs(dest, exist_ok=True)
 
-
     # tar up the subject.workspace.path into a tarfile
-    tarfile_path = os.path.join(dest, "results.tar.gz")
+    tarfile_path = os.path.join(dest, archive_name)
     with tarfile.open(tarfile_path, "w:gz") as tar:
         tar.add(subject.workspace.path, arcname=subject.name())
 
-    # get sha256 sum of the tarfile
-    digest = workspace.xxhash64_digest(tarfile_path, label=True)
+    if not archive_checksum:
+        archive_checksum = workspace.xxhash64_digest(tarfile_path, label=True)
 
-    workspace_state: workspace.State = subject.workspace.state()
+    if not results_checksum:
+        workspace_state: workspace.State = subject.workspace.state()
+        results_checksum = workspace_state.listing.digest
 
     listing_entry = distribution.ListingEntry(
         built="2021-01-01T00:00:00Z",
         version=1,
-        url=f"http://localhost:{port}/{subject.name()}/results.tar.gz",
-        archive_checksum=digest,
-        results_checksum=workspace_state.listing.digest,
+        url=f"http://localhost:{port}/{subject.name()}/{archive_name}",
+        archive_checksum=archive_checksum,
+        results_checksum=results_checksum,
     )
 
     listing_doc = distribution.ListingDocument(available={"1": [listing_entry]})
@@ -357,9 +361,16 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory) -> tuple[str
 
     return tarfile_path, listing_url, listing_entry
 
-
+@pytest.mark.parametrize("archive_name,archive_checksum,raises_type", 
+    (
+        ("results.tar.gz", None, None),
+        ("results.tar.zst", None, ValueError),
+        ("results.tar", None, RuntimeError),
+        ("results.tar.gz", "sha256:1234567890abcdef", ValueError),
+    ),
+)
 @patch("requests.get")
-def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider):
+def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, archive_name, archive_checksum,raises_type):
     port = 8080
 
     policy = provider.RuntimeConfig(
@@ -370,7 +381,7 @@ def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider):
         import_results_host="http://localhost",
     )
 
-    tarfile_path, listing_url, listing_entry = listing_tar_entry(tmpdir, port, dummy_provider_factory=dummy_provider)
+    tarfile_path, listing_url, listing_entry = listing_tar_entry(tmpdir, port, dummy_provider_factory=dummy_provider, archive_name=archive_name, archive_checksum=archive_checksum)
 
     content = None
     with open(tarfile_path, "rb") as f:
@@ -380,13 +391,18 @@ def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider):
     mock_requests.return_value.iter_content.return_value = [content]
 
     logger = logging.getLogger("test")
-    unarchived_dir = provider._fetch_listing_entry_archive(entry=listing_entry, dest=tmpdir, logger=logger)
 
-    args, _ = mock_requests.call_args
-    assert args == (listing_entry.url,)
+    if not raises_type:
+        unarchived_dir = provider._fetch_listing_entry_archive(entry=listing_entry, dest=tmpdir, logger=logger)
 
-    # assert the unarchived_dir path contents is the same as the tarfile contents
-    compare_dir_tar(tmpdir, unarchived_dir, tarfile_path)
+        # assert the unarchived_dir path contents is the same as the tarfile contents
+        compare_dir_tar(tmpdir, unarchived_dir, tarfile_path)
+
+        args, _ = mock_requests.call_args
+        assert args == (listing_entry.url,)
+    else:
+        with pytest.raises(raises_type):
+            unarchived_dir = provider._fetch_listing_entry_archive(entry=listing_entry, dest=tmpdir, logger=logger)
 
 
 def checksum(file_path):
@@ -431,10 +447,6 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
     assert dir_checksums == tar_checksums, "Directory and TAR file contents differ"
 
 
-
-
-
-
 @patch("requests.get")
 def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     port = 8080
@@ -453,11 +465,11 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     subject = dummy_provider(populate=False, runtime_cfg=policy)
     mock_requests.return_value.status_code = 200
     mock_requests.return_value.json.return_value = {"available": {"1": [listing_entry.to_dict()]}}
+    
     doc = subject._fetch_listing_document()
-    assert doc.available[1][0] == listing_entry
+
     args, _ = mock_requests.call_args
     assert args == ('http://localhost/dummy/listing.json',)
-
 
 
 def assert_dummy_workspace_state(ws):

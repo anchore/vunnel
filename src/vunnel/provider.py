@@ -289,6 +289,11 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
             fp.write(chunk)
 
     # TODO: ensure the checksum matches whats in the listing entry
+    alg, digest = workspace.parse_labeled_digest(entry.archive_checksum)
+    hasher = workspace.hasher_for_label(alg)
+    actual_labeled_digest = workspace.digest_path_with_hasher(archive_path, hasher, label=alg)
+    if actual_labeled_digest != entry.archive_checksum:
+        raise ValueError(f"archive checksum mismatch: {actual_labeled_digest} != {entry.archive_checksum}")
 
     unarchive_path = os.path.join(dest, "unarchived")
     if entry.url.endswith(".tar.gz"):

@@ -18,7 +18,9 @@ class ListingEntry(DataClassDictMixin):
     built: str
     version: int
     url: str
+    # e.g. sha256:1234567890abcdef1234567890abcdef
     archive_checksum: str
+    # e.g. xxhash64:1234567890abcdef
     results_checksum: str
 
     def basename(self) -> str:
