@@ -8,7 +8,14 @@ import mergedeep
 import yaml
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel import providers
+from vunnel import providers, provider
+
+
+@dataclass
+class ImportResults:
+    host: str = ""
+    path: str = "/{provider_name}/{results_schema_major_version}/latest.tar.zst"
+    enabled: bool | None = None
 
 
 @dataclass
@@ -25,6 +32,21 @@ class Providers:
     sles: providers.sles.Config = field(default_factory=providers.sles.Config)
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
+    import_results: ImportResults = field(default_factory=ImportResults)
+
+    def __post_init__(self):
+        for f in fields(Providers):
+            if f.name == "import_results":
+                continue
+            runtime_cfg = getattr(self, f.name).runtime
+            if runtime_cfg and isinstance(runtime_cfg, provider.RuntimeConfig):
+                if runtime_cfg.import_results_enabled is None:
+                    runtime_cfg.import_results_enabled = self.import_results.enabled
+                if runtime_cfg.import_results_host is None:
+                    runtime_cfg.import_results_host = self.import_results.host
+                if runtime_cfg.import_results_path is None:
+                    runtime_cfg.import_results_path = self.import_results.path
+
 
     def get(self, name: str) -> Any | None:
         for f in fields(Providers):
