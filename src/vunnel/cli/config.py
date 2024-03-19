@@ -8,7 +8,7 @@ import mergedeep
 import yaml
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel import providers, provider
+from vunnel import provider, providers
 
 
 @dataclass
@@ -34,7 +34,7 @@ class Providers:
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
     import_results: ImportResults = field(default_factory=ImportResults)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         for f in fields(Providers):
             if f.name == "import_results":
                 continue
@@ -46,7 +46,6 @@ class Providers:
                     runtime_cfg.import_results_host = self.import_results.host
                 if runtime_cfg.import_results_path is None:
                     runtime_cfg.import_results_path = self.import_results.path
-
 
     def get(self, name: str) -> Any | None:
         for f in fields(Providers):

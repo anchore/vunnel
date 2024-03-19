@@ -66,7 +66,6 @@ class RuntimeConfig:
     import_results_path: str | None = None
     import_results_enabled: bool | None = None
 
-
     def __post_init__(self) -> None:
         if not isinstance(self.existing_input, InputStatePolicy):
             self.existing_input = InputStatePolicy(self.existing_input)
