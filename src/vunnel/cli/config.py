@@ -14,7 +14,7 @@ from vunnel import provider, providers
 @dataclass
 class ImportResults:
     host: str = ""
-    path: str = "/{provider_name}/{results_schema_major_version}/latest.tar.zst"
+    path: str = "/{provider_name}/listing.json"
     enabled: bool | None = None
 
 
@@ -32,6 +32,8 @@ class Providers:
     sles: providers.sles.Config = field(default_factory=providers.sles.Config)
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
+
+    # TODO: try to move this to the toplevel config and make this an init-only var
     import_results: ImportResults = field(default_factory=ImportResults)
 
     def __post_init__(self) -> None:
@@ -42,9 +44,9 @@ class Providers:
             if runtime_cfg and isinstance(runtime_cfg, provider.RuntimeConfig):
                 if runtime_cfg.import_results_enabled is None:
                     runtime_cfg.import_results_enabled = self.import_results.enabled
-                if runtime_cfg.import_results_host is None:
+                if not runtime_cfg.import_results_host:
                     runtime_cfg.import_results_host = self.import_results.host
-                if runtime_cfg.import_results_path is None:
+                if not runtime_cfg.import_results_path:
                     runtime_cfg.import_results_path = self.import_results.path
 
     def get(self, name: str) -> Any | None:
@@ -75,6 +77,10 @@ class Application(DataClassDictMixin):
     log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
 
+
+    # def from_dict(self, data: dict) -> Application:
+    #     # TODO: do the logic to pull out and merge the import_results config here
+    #     return super().from_dict(data)
 
 def load(path: str = ".vunnel.yaml") -> Application:
     try:

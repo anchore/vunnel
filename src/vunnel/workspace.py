@@ -163,7 +163,7 @@ class Workspace:
             shutil.rmtree(self.input_path)
             os.makedirs(self.input_path, exist_ok=True)
 
-    def record_state(self, version: int, timestamp: datetime.datetime, urls: list[str], store: str) -> None:
+    def record_state(self, version: int, timestamp: datetime.datetime, urls: list[str], store: str, stale: bool = False) -> None:
         try:
             current_state = State.read(root=self.path)
         except FileNotFoundError:
@@ -177,13 +177,49 @@ class Workspace:
 
         self.logger.info("recording workspace state")
 
-        state = State(provider=self.name, version=version, urls=urls, store=store, timestamp=timestamp)
+        state = State(provider=self.name, version=version, urls=urls, store=store, timestamp=timestamp, stale=stale)
         metadata_path = state.write(self.path, self.results_path)
 
         self.logger.debug(f"wrote workspace state to {metadata_path}")
 
     def state(self) -> State | None:
         return State.read(self.path)
+
+    def validate_checksums(self) -> None:
+        state = State.read(self.path)
+        if not state.listing:
+            raise RuntimeError("no file listing found in workspace state")
+
+        full_path = os.path.join(self.path, state.listing.path)
+
+        # ensure the checksums file itself is not modified
+        if state.listing.digest != xxhash64_digest(full_path, label=False):
+            raise RuntimeError(f"file {full_path!r} has been modified")
+
+        # validate the checksums in the listing file
+        with open(full_path, "r") as f:
+            for line in f.readlines():
+                digest, path = line.split()
+                full_path = os.path.join(self.results_path, path)
+                if not os.path.exists(full_path):
+                    raise RuntimeError(f"file {full_path!r} does not exist")
+
+                if digest != xxhash64_digest(full_path, label=False):
+                    raise RuntimeError(f"file {full_path!r} has been modified")
+
+    def overlay_existing(self, source: str, move: bool = False) -> None:
+        self.logger.info(f"overlaying existing workspace {source!r} to {self.path!r}")
+    
+        for root, _, files in os.walk(source):
+            for file in files:
+                src = os.path.join(root, file)
+                dst = os.path.join(self.workspace.path, os.path.relpath(src, source))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                
+                if move:
+                    os.rename(src, dst)
+                else:
+                    shutil.copy2(src, dst)
 
 
 def digest_path_with_hasher(path: str, hasher: Any, label: str | None, size: int = 65536) -> str:

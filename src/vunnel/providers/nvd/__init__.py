@@ -38,6 +38,7 @@ class Config:
 
 
 class Provider(provider.Provider):
+    # TODO: why not int(schema.NVDSchema().major_version) (@weston)
     __version__ = 2
 
     def __init__(self, root: str, config: Config | None = None):

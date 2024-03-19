@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import tarfile
 from unittest.mock import MagicMock, patch
 
 import pytest
-from vunnel import provider, result, schema, workspace
+from vunnel import provider, result, schema, workspace, distribution
 
 
 def assert_path(path: str, exists: bool = True):
@@ -302,6 +303,64 @@ def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
     assert subject.count == 2
 
     subject.assert_state_file(exists=False)
+
+
+class MockResultsDB:
+    def __init__(self, path):
+        self.path = path
+
+    def __enter__(self):
+        self.store = result.SQLiteStore(write_location=self.path)
+        self.store.prepare()
+        return self
+
+    def add(self, identifier, item, schema = None):
+        if not schema:
+            schema = schema.OSSchema()
+        envelope = result.Envelope(identifier=identifier, schema=schema.url, item=item)
+        self.store.store(identifier, item, schema=schema)
+
+    def __exit__(self, *args):
+        self.store.close()
+
+
+# @pytest.fixture()
+# def listing_tar_entry(tmpdir) -> tuple[str, str, distribution.ListingEntry]:
+#     # make a results.tar.gz file with
+#     # results/
+#     #  - results.db
+#     # checksums
+#     # metadata.json
+
+
+#     tarfile_path = os.path.join(tmpdir, "results.tar.gz")
+#     with tarfile.open(tarfile_path, "w:gz") as tar:
+#         # add results.db
+#         tar.add("tests/fixtures/results.db", arcname="results/results.db")
+
+
+#     listing_entry = distribution.ListingEntry(
+#         built="2021-01-01T00:00:00Z",
+#         version=1,
+#         url="http://localhost:8000/dummy-input-1.tar.gz",
+#         archive_checksum="1e119ae45b38b28f",
+#         results_checksum="1e119ae45b38b28f",
+#     )
+
+
+
+#     return tarfile_path, listing_url, listing_entry
+
+
+@patch("requests.get")
+def test_fetch_listing_entry_archive(mock_requests, tmpdir):
+    path = os.path.join(tmpdir, "results.db")
+    with MockResultsDB(path) as db:
+        db.add("1", "item")
+    
+    print(path)
+    print(db)
+
 
 
 def assert_dummy_workspace_state(ws):

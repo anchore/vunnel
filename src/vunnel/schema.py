@@ -16,6 +16,9 @@ class Schema:
     version: str
     url: str
 
+    @property
+    def major_version(self) -> str:
+        return self.version.split(".")[0]
 
 def ProviderStateSchema(version: str = PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION) -> Schema:
     return Schema(

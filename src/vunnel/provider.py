@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import abc
+import os
 import datetime
 import enum
 import logging
+import tarfile
 import time
+import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import result, workspace
+from . import result, workspace, distribution
 from .result import ResultStatePolicy
+from vunnel.utils import http, archive
+
 
 
 class OnErrorAction(str, enum.Enum):
@@ -78,6 +83,9 @@ class RuntimeConfig:
     def skip_if_exists(self) -> bool:
         return self.existing_input == InputStatePolicy.KEEP
 
+    def import_url(self, provider_name: str) -> str:
+        return f"{self.import_results_host.strip('/')}/{provider_name}/{self.import_results_path.strip('/')}"
+
 
 def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
     if cfg.existing_input != InputStatePolicy.KEEP:
@@ -97,6 +105,9 @@ class Provider(abc.ABC):
         self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
         self.urls: list[str] = []
         self.runtime_cfg = runtime_cfg
+
+        # TODO: check runtime config is valid for import_results_enabled
+
 
     @classmethod
     def version(cls) -> int:
@@ -129,9 +140,17 @@ class Provider(abc.ABC):
         if current_state and not current_state.stale:
             last_updated = current_state.timestamp
 
-        urls, count = self.update(last_updated=last_updated)
+        stale = False
+        if self.runtime_cfg.import_results_enabled:
+            # TODO: need url and count logic
+            urls, count = self._fetch_or_use_results_archive()
+            stale = True
+        else:
+            urls, count = self.update(last_updated=last_updated)
+        
         if count > 0:
             self.workspace.record_state(
+                stale=stale,
                 version=self.version(),
                 timestamp=start,
                 urls=urls,
@@ -139,6 +158,66 @@ class Provider(abc.ABC):
             )
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
+
+
+
+    def _fetch_or_use_results_archive(self) -> None:
+
+        listing_doc = self._fetch_listing_document()
+        latest_entry = listing_doc.latest_entry(schema_version=self.version())
+
+        if self._has_newer_archive(latest_entry=latest_entry):
+            # TODO: download and extract archive
+            self._prep_workspace_from_listing_entry(entry=latest_entry)
+
+    def _fetch_listing_document(self) -> distribution.ListingDocument:
+        url = self.runtime_cfg.import_url(provider_name=self.name())
+        resp = http.get(url)
+        resp.raise_for_status()
+
+        return distribution.ListingDocument.from_json(resp.text)
+        
+    def _has_newer_archive(self, latest_entry: distribution.ListingEntry) -> bool:
+        # TODO: can do checksum comparison here
+        return True
+
+    def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> str:
+        with tempfile.TemporaryDirectory() as temp_dir:
+    
+            unarchived_path = self._fetch_listing_entry_archive(dest_filename=temp_dir, entry=entry)
+            
+            # prep the workspace with the unarchived dir
+            temp_ws = workspace.Workspace(unarchived_path, self.name(), logger=self.logger, create=False)
+            
+            # validate that the workspace is in a good state
+            temp_ws.validate_checksums()
+            
+            # then switch the existing workspace to the new one...
+            # move the contents of the tmp dir to the workspace destination
+            self.workspace.overlay_existing(unarchived_path, move=True)
+
+            # TODO: mark stale = true
+
+
+    def _fetch_listing_entry_archive(self, dest: str, entry: distribution.ListingEntry) -> str:
+        archive_path = os.path.join(dest, entry.basename())
+
+        # download the URL for the archive
+        resp = http.get(entry.url, stream=True)
+        resp.raise_for_status()
+        with open(archive_path, "wb") as fp:
+            for chunk in resp.iter_content():
+                fp.write(chunk)
+
+        unarchive_path = os.path.join(dest, "unarchived")
+        if entry.url.endswith(".tar.gz"):
+            with open(archive_path, "r:gz") as tar:
+                archive.safe_extract_tar(tar, unarchive_path)
+
+        # TODO: other archive types
+        return unarchive_path
+        
+
 
     def run(self) -> None:
         self.logger.debug(f"using {self.workspace.path!r} as workspace")
