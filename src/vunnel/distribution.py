@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import datetime
+import json
 from dataclasses import dataclass
 from urllib.parse import urlparse
 from mashumaro.mixins.dict import DataClassDictMixin
@@ -37,6 +38,10 @@ class ListingEntry(DataClassDictMixin):
 @dataclass
 class ListingDocument(DataClassDictMixin):
     available: dict[int, list[ListingEntry]]
+
+    # @classmethod
+    # def from_json(cls, contents: str) -> ListingDocument:
+    #     return cls.from_dict(json.loads(contents))
 
     def latest_entry(self, schema_version: int) -> ListingEntry | None:
         if schema_version not in self.available:

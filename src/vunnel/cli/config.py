@@ -14,7 +14,7 @@ from vunnel import provider, providers
 @dataclass
 class ImportResults:
     host: str = ""
-    path: str = "/{provider_name}/listing.json"
+    path: str = ""
     enabled: bool | None = None
 
 

@@ -68,7 +68,7 @@ class RuntimeConfig:
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     import_results_host: str | None = None
-    import_results_path: str | None = None
+    import_results_path: str = "{provider_name}/listing.json" 
     import_results_enabled: bool | None = None
 
     def __post_init__(self) -> None:
@@ -84,7 +84,8 @@ class RuntimeConfig:
         return self.existing_input == InputStatePolicy.KEEP
 
     def import_url(self, provider_name: str) -> str:
-        return f"{self.import_results_host.strip('/')}/{provider_name}/{self.import_results_path.strip('/')}"
+        path = self.import_results_path.format(provider_name=provider_name)
+        return f"{self.import_results_host.strip('/')}/{path.strip('/')}"
 
 
 def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
@@ -163,7 +164,7 @@ class Provider(abc.ABC):
 
     def _fetch_or_use_results_archive(self) -> None:
 
-        listing_doc = self._fetch_listing_document()
+        listing_doc = self._fetch_listing_document(self.runtime_cfg, self.name())
         latest_entry = listing_doc.latest_entry(schema_version=self.version())
 
         if self._has_newer_archive(latest_entry=latest_entry):
@@ -172,10 +173,10 @@ class Provider(abc.ABC):
 
     def _fetch_listing_document(self) -> distribution.ListingDocument:
         url = self.runtime_cfg.import_url(provider_name=self.name())
-        resp = http.get(url)
+        resp = http.get(url, logger=self.logger)
         resp.raise_for_status()
 
-        return distribution.ListingDocument.from_json(resp.text)
+        return distribution.ListingDocument.from_dict(resp.json())
         
     def _has_newer_archive(self, latest_entry: distribution.ListingEntry) -> bool:
         # TODO: can do checksum comparison here
@@ -184,7 +185,7 @@ class Provider(abc.ABC):
     def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> str:
         with tempfile.TemporaryDirectory() as temp_dir:
     
-            unarchived_path = self._fetch_listing_entry_archive(dest_filename=temp_dir, entry=entry)
+            unarchived_path = _fetch_listing_entry_archive(dest_filename=temp_dir, entry=entry, logger=self.logger)
             
             # prep the workspace with the unarchived dir
             temp_ws = workspace.Workspace(unarchived_path, self.name(), logger=self.logger, create=False)
@@ -197,26 +198,6 @@ class Provider(abc.ABC):
             self.workspace.overlay_existing(unarchived_path, move=True)
 
             # TODO: mark stale = true
-
-
-    def _fetch_listing_entry_archive(self, dest: str, entry: distribution.ListingEntry) -> str:
-        archive_path = os.path.join(dest, entry.basename())
-
-        # download the URL for the archive
-        resp = http.get(entry.url, stream=True)
-        resp.raise_for_status()
-        with open(archive_path, "wb") as fp:
-            for chunk in resp.iter_content():
-                fp.write(chunk)
-
-        unarchive_path = os.path.join(dest, "unarchived")
-        if entry.url.endswith(".tar.gz"):
-            with open(archive_path, "r:gz") as tar:
-                archive.safe_extract_tar(tar, unarchive_path)
-
-        # TODO: other archive types
-        return unarchive_path
-        
 
 
     def run(self) -> None:
@@ -295,3 +276,27 @@ class Provider(abc.ABC):
             store_strategy=self.runtime_cfg.result_store,
             **kwargs,
         )
+
+
+def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, logger) -> str:
+    archive_path = os.path.join(dest, entry.basename())
+
+    # download the URL for the archive
+    resp = http.get(entry.url, logger=logger, stream=True)
+    resp.raise_for_status()
+    with open(archive_path, "wb") as fp:
+        for chunk in resp.iter_content():
+            fp.write(chunk)
+
+    # TODO: ensure the checksum matches whats in the listing entry
+
+    unarchive_path = os.path.join(dest, "unarchived")
+    if entry.url.endswith(".tar.gz"):
+        with tarfile.open(archive_path, "r:gz") as tar:
+            archive.safe_extract_tar(tar, unarchive_path)
+    else:
+        raise ValueError(f"unsupported archive type: {entry.url}")
+
+    # TODO: other archive types
+    return unarchive_path
+        
