@@ -195,7 +195,7 @@ class Provider(abc.ABC):
             
             # then switch the existing workspace to the new one...
             # move the contents of the tmp dir to the workspace destination
-            self.workspace.overlay_existing(unarchived_path, move=True)
+            self.workspace.replace_results(temp_workspace=temp_ws)
 
             # TODO: mark stale = true
 
