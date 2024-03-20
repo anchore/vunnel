@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from vunnel import provider, result, schema, workspace, distribution
-from vunnel.utils import http
+from vunnel.utils import hasher
 
 def assert_path(path: str, exists: bool = True):
     assert os.path.exists(path) == exists
@@ -338,7 +338,7 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name
         tar.add(subject.workspace.path, arcname=subject.name())
 
     if not archive_checksum:
-        archive_checksum = workspace.xxhash64_digest(tarfile_path, label=True)
+        archive_checksum = hasher.Method.XXH64.digest(tarfile_path, label=True)
 
     if not results_checksum:
         workspace_state: workspace.State = subject.workspace.state()

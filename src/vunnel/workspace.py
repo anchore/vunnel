@@ -5,9 +5,8 @@ import logging
 import os
 import shutil
 import sqlite3
-import hashlib
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 import orjson
 import xxhash
@@ -15,6 +14,7 @@ from mashumaro.mixins.dict import DataClassDictMixin
 
 from vunnel import schema as schemaDef
 from vunnel import utils
+from vunnel.utils import hasher
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -202,7 +202,7 @@ class Workspace:
         full_path = os.path.join(self.path, state.listing.path)
 
         # ensure the checksums file itself is not modified
-        if state.listing.digest != xxhash64_digest(full_path, label=False):
+        if state.listing.digest != hasher.Method.XXH64.digest(full_path, label=False):
             raise RuntimeError(f"file {full_path!r} has been modified")
 
         # validate the checksums in the listing file
@@ -213,7 +213,7 @@ class Workspace:
                 if not os.path.exists(full_path):
                     raise RuntimeError(f"file {full_path!r} does not exist")
 
-                if digest != xxhash64_digest(full_path, label=False):
+                if digest != hasher.Method.XXH64.digest(full_path, label=False):
                     raise RuntimeError(f"file {full_path!r} has been modified")
 
     def overlay_existing(self, source: str, move: bool = False) -> None:
@@ -239,34 +239,6 @@ class Workspace:
         os.rename(temp_workspace.checksums_path, self.checksums_path)
 
 
-def digest_path_with_hasher(path: str, hasher: Any, label: str | None, size: int = 65536) -> str:
-    with open(path, "rb") as f:
-        while b := f.read(size):
-            hasher.update(b)
-
-    if label:
-        return label + ":" + hasher.hexdigest()
-    return hasher.hexdigest()
-
-def sha256_digest(path: str, label: bool = True) -> str:
-    return digest_path_with_hasher(path, hashlib.sha256(), "sha256" if label else None)
-
-
-def xxhash64_digest(path: str, label: bool = True) -> str:
-    return digest_path_with_hasher(path, xxhash.xxh64(), "xxh64" if label else None)
-
-def parse_labeled_digest(digest: str) -> tuple[str, str]:
-    algorithm, value = digest.split(":")
-    return algorithm, value
-
-def hasher_for_label(label: str) -> Any:
-    label = label.lower()
-    if label == "sha256":
-        return hashlib.sha256()
-    if label == "xxh64":
-        return xxhash.xxh64()
-    raise ValueError(f"unknown digest label: {label}")
-
 def write_file_listing(output_file: str, path: str) -> str:
     listing_hasher = xxhash.xxh64()
 
@@ -278,7 +250,7 @@ def write_file_listing(output_file: str, path: str) -> str:
                 path_relative_to_results = os.path.relpath(full_path, path)
                 path_relative_to_workspace = os.path.join(os.path.basename(path), path_relative_to_results)
 
-                contents = f"{xxhash64_digest(full_path, label=False)}  {path_relative_to_workspace}\n"
+                contents = f"{hasher.Method.XXH64.digest(full_path, label=False)}  {path_relative_to_workspace}\n"
                 listing_hasher.update(contents.encode("utf-8"))
 
                 f.write(contents)
