@@ -237,6 +237,9 @@ class Workspace:
         self._clear_metadata()
         os.rename(temp_workspace.metadata_path, self.metadata_path)
         os.rename(temp_workspace.checksums_path, self.checksums_path)
+        state = self.state()
+        state.stale = True
+        self.record_state(state.version, state.timestamp, state.urls, state.store, True)
 
 
 def write_file_listing(output_file: str, path: str) -> str:

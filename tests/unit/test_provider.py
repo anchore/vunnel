@@ -361,7 +361,7 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name
 
     return tarfile_path, listing_url, listing_entry
 
-@pytest.mark.parametrize("archive_name,archive_checksum,raises_type", 
+@pytest.mark.parametrize("archive_name,archive_checksum,raises_type",
     (
         ("results.tar.gz", None, None),
         ("results.tar.zst", None, ValueError),
@@ -465,12 +465,35 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     subject = dummy_provider(populate=False, runtime_cfg=policy)
     mock_requests.return_value.status_code = 200
     mock_requests.return_value.json.return_value = {"available": {"1": [listing_entry.to_dict()]}}
-    
+
     doc = subject._fetch_listing_document()
 
     args, _ = mock_requests.call_args
     assert args == ('http://localhost/dummy/listing.json',)
 
+@patch("requests.get")
+def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider):
+    provider = dummy_provider(populate=False)
+    tarfile_path, listing_url, entry = listing_tar_entry(tmpdir=tmpdir, port=8080, dummy_provider_factory=dummy_provider)
+    with open(tarfile_path, "rb") as f:
+        content = f.read()
+        mock_requests.return_value.status_code = 200
+        mock_requests.return_value.iter_content.return_value = [content]
+    with tarfile.open(tarfile_path, "r:gz") as tar:
+        list_of_files = tar.getnames()
+    provider._prep_workspace_from_listing_entry(entry=entry)
+    state = provider.workspace.state()
+    assert state.stale
+    provider.workspace.validate_checksums()
+
+    # TODO: assert that the tar.gz gets extracted to the workspace
+    # for file in list_of_files:
+    #     assert os.path.exists(os.path.join(provider.workspace.path, "..", file))
+    # what this does is:
+    # 1. it receives a listing entry and makes a call to fetch and unarchive it
+    # 2. it creates a temp workspace around the unarchive path
+    # 3. it validates the checksums on the temp workspace
+    # 4. it overlays it's current workspace with the temp workspace
 
 def assert_dummy_workspace_state(ws):
     current_state = workspace.State.read(root=ws.path)

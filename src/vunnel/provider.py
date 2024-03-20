@@ -185,7 +185,7 @@ class Provider(abc.ABC):
     def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> str:
         with tempfile.TemporaryDirectory() as temp_dir:
     
-            unarchived_path = _fetch_listing_entry_archive(dest_filename=temp_dir, entry=entry, logger=self.logger)
+            unarchived_path = _fetch_listing_entry_archive(dest=temp_dir, entry=entry, logger=self.logger)
             
             # prep the workspace with the unarchived dir
             temp_ws = workspace.Workspace(unarchived_path, self.name(), logger=self.logger, create=False)
@@ -303,4 +303,4 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
 
     # TODO: other archive types
     return unarchive_path
-        
+
