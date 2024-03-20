@@ -162,14 +162,15 @@ class Provider(abc.ABC):
 
 
 
-    def _fetch_or_use_results_archive(self) -> None:
+    def _fetch_or_use_results_archive(self) -> tuple[list[str], int]:
 
-        listing_doc = self._fetch_listing_document(self.runtime_cfg, self.name())
+        listing_doc = self._fetch_listing_document()
         latest_entry = listing_doc.latest_entry(schema_version=self.version())
 
         if self._has_newer_archive(latest_entry=latest_entry):
-            # TODO: download and extract archive
             self._prep_workspace_from_listing_entry(entry=latest_entry)
+        state = self.workspace.state()
+        return state.urls, state.result_count(self.workspace.path)
 
     def _fetch_listing_document(self) -> distribution.ListingDocument:
         url = self.runtime_cfg.import_url(provider_name=self.name())
@@ -284,17 +285,20 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
     # download the URL for the archive
     resp = http.get(entry.url, logger=logger, stream=True)
     resp.raise_for_status()
+    logger.debug(f"downloading {entry.url} to {archive_path}")
     with open(archive_path, "wb") as fp:
-        for chunk in resp.iter_content():
+        for chunk in resp.iter_content(chunk_size=None):
             fp.write(chunk)
 
     # TODO: ensure the checksum matches whats in the listing entry
+    logger.debug(f"validating checksum for {archive_path}")
     hashMethod = hasher.Method.parse(entry.archive_checksum)
     actual_labeled_digest = hashMethod.digest(archive_path)
     if actual_labeled_digest != entry.archive_checksum:
         raise ValueError(f"archive checksum mismatch: {actual_labeled_digest} != {entry.archive_checksum}")
 
     unarchive_path = os.path.join(dest, "unarchived")
+    logger.debug(f"unarchiving {archive_path} to {unarchive_path}")
     if entry.url.endswith(".tar.gz"):
         with tarfile.open(archive_path, "r:gz") as tar:
             archive.safe_extract_tar(tar, unarchive_path)
