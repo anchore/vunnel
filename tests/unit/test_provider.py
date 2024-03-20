@@ -416,7 +416,7 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
     temp_dir = os.path.join(tmpdir, "extracted")
     with tarfile.open(tar_path, "r:gz") as tar:
         tar.extractall(temp_dir)
-    
+
     dir_checksums = {}
     tar_checksums = {}
 

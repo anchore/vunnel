@@ -115,6 +115,14 @@ class Workspace:
         return os.path.join(self.path, "results")
 
     @property
+    def metadata_path(self) -> str:
+        return os.path.join(self.path, METADATA_FILENAME)
+
+    @property
+    def checksums_path(self) -> str:
+        return os.path.join(self.path, CHECKSUM_LISTING_FILENAME)
+
+    @property
     def input_path(self) -> str:
         return os.path.join(self.path, "input")
 
@@ -201,7 +209,7 @@ class Workspace:
         with open(full_path, "r") as f:
             for line in f.readlines():
                 digest, path = line.split()
-                full_path = os.path.join(self.results_path, path)
+                full_path = os.path.join(self.path, path)
                 if not os.path.exists(full_path):
                     raise RuntimeError(f"file {full_path!r} does not exist")
 
@@ -221,6 +229,14 @@ class Workspace:
                     os.rename(src, dst)
                 else:
                     shutil.copy2(src, dst)
+
+    def replace_results(self, temp_workspace: Workspace) -> None:
+        self.logger.info(f"replacing results in {self.path!r} with results from {temp_workspace.path!r}")
+        self.clear_results()
+        os.rename(temp_workspace.results_path, self.results_path)
+        self._clear_metadata()
+        os.rename(temp_workspace.metadata_path, self.metadata_path)
+        os.rename(temp_workspace.checksums_path, self.checksums_path)
 
 
 def digest_path_with_hasher(path: str, hasher: Any, label: str | None, size: int = 65536) -> str:
