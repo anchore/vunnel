@@ -8,6 +8,7 @@ import logging
 import random
 import string
 import hashlib
+import shutil
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -333,6 +334,7 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name
     os.makedirs(dest, exist_ok=True)
 
     # tar up the subject.workspace.path into a tarfile
+    shutil.rmtree(subject.workspace.input_path, ignore_errors=True)
     tarfile_path = os.path.join(dest, archive_name)
     with tarfile.open(tarfile_path, "w:gz") as tar:
         tar.add(subject.workspace.path, arcname=subject.name())
@@ -486,9 +488,8 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
     assert state.stale
     provider.workspace.validate_checksums()
 
-    # TODO: assert that the tar.gz gets extracted to the workspace
-    # for file in list_of_files:
-    #     assert os.path.exists(os.path.join(provider.workspace.path, "..", file))
+    for file in list_of_files:
+        assert os.path.exists(os.path.join(provider.workspace.path, "..", file))
     # what this does is:
     # 1. it receives a listing entry and makes a call to fetch and unarchive it
     # 2. it creates a temp workspace around the unarchive path
