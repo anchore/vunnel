@@ -1,5 +1,10 @@
+from __future__ import annotations
+
 import os
-import tarfile
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import tarfile
 from pathlib import Path
 
 
