@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from vunnel import provider, providers, result
 from vunnel.cli import config
 
@@ -116,3 +117,50 @@ def test_full_config(helpers):
             ),
         ),
     )
+
+@pytest.mark.parametrize(
+    "top_level_import_results,provider_host,provider_path,provider_enabled,want_import_results",
+    [
+        (
+            # top-level values propagate down
+            config.ImportResults("http://example.com","", True),
+            "",None,None,
+            config.ImportResults("http://example.com", "{provider_name}/listing.json", True),
+        ),
+        (
+            # runtime defaults come through
+            config.ImportResults("", "", None),
+            "",None,None,
+            config.ImportResults("", "{provider_name}/listing.json", None),
+        ),
+        (
+            # specific values override top-level values
+            config.ImportResults("http://example.com", "some-specific-path/listing.json",False),
+            "http://somewhere-else.example.com","specific-path",True,
+            config.ImportResults("http://somewhere-else.example.com","specific-path",True),
+        ),
+    ],
+)
+def test_import_results_config(top_level_import_results,provider_host,provider_path,provider_enabled,want_import_results):
+    runtime_config_args = {}
+    if provider_path is not None:
+        runtime_config_args["import_results_path"] = provider_path
+    if provider_host is not None:
+        runtime_config_args["import_results_host"] = provider_host
+    if provider_enabled is not None:
+        runtime_config_args["import_results_enabled"] = provider_enabled
+
+    cfg = config.Application(
+        providers=config.Providers(
+            import_results=top_level_import_results,
+            nvd=providers.nvd.Config(
+                runtime=provider.RuntimeConfig(
+                    **runtime_config_args,
+                ),
+            ),
+        ),
+    )
+
+    assert cfg.providers.nvd.runtime.import_results_host == want_import_results.host
+    assert cfg.providers.nvd.runtime.import_results_path == want_import_results.path
+    assert cfg.providers.nvd.runtime.import_results_enabled == want_import_results.enabled
