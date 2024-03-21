@@ -496,6 +496,53 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
     # 3. it validates the checksums on the temp workspace
     # 4. it overlays it's current workspace with the temp workspace
 
+@patch("requests.get")
+def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
+    port = 8080
+
+    tarfile_path, listing_url, entry = listing_tar_entry(tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider)
+    # fetch the tar file
+    tarfile_bytes = None
+    with open(tarfile_path, "rb") as f:
+        tarfile_bytes = f.read()
+
+    policy = provider.RuntimeConfig(
+        result_store=result.StoreStrategy.SQLITE,
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+        import_results_enabled=True,
+        import_results_host=f"http://localhost:{port}",
+    )
+
+    subject = dummy_provider(populate=False, runtime_cfg=policy)
+    def handle_get_requests(url, *args, **kwargs):
+        listing_response = MagicMock()
+        listing_response.status_code = 200
+        listing_response.raise_for_status.side_effect = None
+        listing_response.json.return_value = {"available": {"1": [entry.to_dict()]} }
+
+        entry_response = MagicMock()
+        entry_response.status_code = 200
+        entry_response.raise_for_status.side_effect = None
+        entry_response.iter_content.return_value = [tarfile_bytes]
+
+        not_found_response = MagicMock()
+        not_found_response.status_code = 404
+        not_found_response.raise_for_status.side_effect = Exception("404")
+
+        if url == f"http://localhost:{port}/{subject.name()}/listing.json":
+            return listing_response
+        elif url == entry.url:
+            return entry_response
+        else:
+            return not_found_response
+
+    mock_requests.side_effect = handle_get_requests
+
+    urls, count = subject._fetch_or_use_results_archive()
+    assert urls == ["http://localhost:8000/dummy-input-1.json"]
+    assert count == 1
+
 def assert_dummy_workspace_state(ws):
     current_state = workspace.State.read(root=ws.path)
 

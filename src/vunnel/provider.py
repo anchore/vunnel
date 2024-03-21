@@ -188,7 +188,6 @@ class Provider(abc.ABC):
     
             unarchived_path = _fetch_listing_entry_archive(dest=temp_dir, entry=entry, logger=self.logger)
             
-            # prep the workspace with the unarchived dir
             temp_ws = workspace.Workspace(unarchived_path, self.name(), logger=self.logger, create=False)
             
             # validate that the workspace is in a good state
