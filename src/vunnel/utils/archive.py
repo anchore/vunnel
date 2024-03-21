@@ -19,4 +19,4 @@ def filter_path_traversal(tarinfo: tarfile.TarInfo, path: str) -> tarfile.TarInf
 def safe_extract_tar(tar: tarfile.TarFile, destination_dir: str) -> None:
     # explanation of noqa: S202
     # This function is a safe wrapper around tar.extractall.
-    tar.extractall(destination_dir, filter=filter_path_traversal) # noqa: S202
+    tar.extractall(destination_dir, filter=filter_path_traversal)  # noqa: S202

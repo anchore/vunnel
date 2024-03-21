@@ -141,6 +141,7 @@ def test_state_schema(tmpdir, dummy_file, helpers):
 
     assert ws_helper.metadata_schema_valid()
 
+
 def test_replace_results(tmpdir, dummy_file):
     # make 2 workspaces
     ws1_dir = tmpdir.mkdir("ws1")
@@ -182,6 +183,7 @@ def test_validate_checksums_valid(tmpdir, dummy_file):
     ws.record_state(urls=urls, store=result.StoreStrategy.FLAT_FILE.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
     ws.validate_checksums()
 
+
 def test_validate_checksums_invalid(tmpdir, dummy_file):
     ws = workspace.Workspace(root=tmpdir, name="dummy", create=True)
     urls = []
@@ -192,6 +194,7 @@ def test_validate_checksums_invalid(tmpdir, dummy_file):
     with pytest.raises(RuntimeError) as e:
         ws.validate_checksums()
         assert "has been modified" in str(e)
+
 
 def test_validate_checksums_missing(tmpdir, dummy_file):
     ws = workspace.Workspace(root=tmpdir, name="dummy", create=True)

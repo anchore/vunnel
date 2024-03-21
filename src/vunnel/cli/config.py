@@ -77,10 +77,10 @@ class Application(DataClassDictMixin):
     log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
 
-
     # def from_dict(self, data: dict) -> Application:
     #     # TODO: do the logic to pull out and merge the import_results config here
     #     return super().from_dict(data)
+
 
 def load(path: str = ".vunnel.yaml") -> Application:
     try:

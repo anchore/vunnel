@@ -172,7 +172,14 @@ class Workspace:
             shutil.rmtree(self.input_path)
             os.makedirs(self.input_path, exist_ok=True)
 
-    def record_state(self, version: int, timestamp: datetime.datetime, urls: list[str], store: str, stale: bool = False) -> None:
+    def record_state(  # noqa: PLR0913
+        self,
+        version: int,
+        timestamp: datetime.datetime,
+        urls: list[str],
+        store: str,
+        stale: bool = False,
+    ) -> None:
         try:
             current_state = State.read(root=self.path)
         except FileNotFoundError:
@@ -191,7 +198,7 @@ class Workspace:
 
         self.logger.debug(f"wrote workspace state to {metadata_path}")
 
-    def state(self) -> State | None:
+    def state(self) -> State:
         return State.read(self.path)
 
     def validate_checksums(self) -> None:
@@ -206,7 +213,7 @@ class Workspace:
             raise RuntimeError(f"file {full_path!r} has been modified")
 
         # validate the checksums in the listing file
-        with open(full_path, "r") as f:
+        with open(full_path) as f:
             for line in f.readlines():
                 digest, path = line.split()
                 full_path = os.path.join(self.path, path)
@@ -218,13 +225,13 @@ class Workspace:
 
     def overlay_existing(self, source: str, move: bool = False) -> None:
         self.logger.info(f"overlaying existing workspace {source!r} to {self.path!r}")
-    
+
         for root, _, files in os.walk(source):
             for file in files:
                 src = os.path.join(root, file)
-                dst = os.path.join(self.workspace.path, os.path.relpath(src, source))
+                dst = os.path.join(self.path, os.path.relpath(src, source))
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
-                
+
                 if move:
                     os.rename(src, dst)
                 else:

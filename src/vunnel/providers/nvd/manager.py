@@ -67,7 +67,6 @@ class Manager:
             override_remaining_cves = override_cves - cves_processed
             with self._sqlite_reader() as reader:
                 for cve in override_remaining_cves:
-
                     original_record = reader.read(cve_to_id(cve))
                     if not original_record:
                         self.logger.warning(f"override for {cve} not found in original data")

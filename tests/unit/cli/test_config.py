@@ -118,30 +118,37 @@ def test_full_config(helpers):
         ),
     )
 
+
 @pytest.mark.parametrize(
     "top_level_import_results,provider_host,provider_path,provider_enabled,want_import_results",
     [
         (
             # top-level values propagate down
-            config.ImportResults("http://example.com","", True),
-            "",None,None,
+            config.ImportResults("http://example.com", "", True),
+            "",
+            None,
+            None,
             config.ImportResults("http://example.com", "{provider_name}/listing.json", True),
         ),
         (
             # runtime defaults come through
             config.ImportResults("", "", None),
-            "",None,None,
+            "",
+            None,
+            None,
             config.ImportResults("", "{provider_name}/listing.json", None),
         ),
         (
             # specific values override top-level values
-            config.ImportResults("http://example.com", "some-specific-path/listing.json",False),
-            "http://somewhere-else.example.com","specific-path",True,
-            config.ImportResults("http://somewhere-else.example.com","specific-path",True),
+            config.ImportResults("http://example.com", "some-specific-path/listing.json", False),
+            "http://somewhere-else.example.com",
+            "specific-path",
+            True,
+            config.ImportResults("http://somewhere-else.example.com", "specific-path", True),
         ),
     ],
 )
-def test_import_results_config(top_level_import_results,provider_host,provider_path,provider_enabled,want_import_results):
+def test_import_results_config(top_level_import_results, provider_host, provider_path, provider_enabled, want_import_results):
     runtime_config_args = {}
     if provider_path is not None:
         runtime_config_args["import_results_path"] = provider_path

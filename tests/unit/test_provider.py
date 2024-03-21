@@ -15,6 +15,7 @@ import pytest
 from vunnel import provider, result, schema, workspace, distribution
 from vunnel.utils import hasher
 
+
 def assert_path(path: str, exists: bool = True):
     assert os.path.exists(path) == exists
 
@@ -59,11 +60,10 @@ class DummyProvider(provider.Provider):
         return ["http://localhost:8000/dummy-input-1.json"], 1
 
 
-
-
 def get_random_string(length=10):
     characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
+    return "".join(random.choice(characters) for _ in range(length))
+
 
 @pytest.fixture()
 def dummy_provider(tmpdir):
@@ -317,7 +317,14 @@ def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
     subject.assert_state_file(exists=False)
 
 
-def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name: str | None = None, archive_checksum: str | None = None, results_checksum: str | None = None) -> tuple[str, str, distribution.ListingEntry]:
+def listing_tar_entry(
+    tmpdir: str,
+    port: str,
+    dummy_provider_factory,
+    archive_name: str | None = None,
+    archive_checksum: str | None = None,
+    results_checksum: str | None = None,
+) -> tuple[str, str, distribution.ListingEntry]:
     if not archive_name:
         archive_name = "results.tar.gz"
 
@@ -363,7 +370,9 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name
 
     return tarfile_path, listing_url, listing_entry
 
-@pytest.mark.parametrize("archive_name,archive_checksum,raises_type",
+
+@pytest.mark.parametrize(
+    "archive_name,archive_checksum,raises_type",
     (
         ("results.tar.gz", None, None),
         ("results.tar.zst", None, ValueError),
@@ -372,7 +381,7 @@ def listing_tar_entry(tmpdir:str, port:str, dummy_provider_factory, archive_name
     ),
 )
 @patch("requests.get")
-def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, archive_name, archive_checksum,raises_type):
+def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, archive_name, archive_checksum, raises_type):
     port = 8080
 
     policy = provider.RuntimeConfig(
@@ -383,7 +392,9 @@ def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, arch
         import_results_host="http://localhost",
     )
 
-    tarfile_path, listing_url, listing_entry = listing_tar_entry(tmpdir, port, dummy_provider_factory=dummy_provider, archive_name=archive_name, archive_checksum=archive_checksum)
+    tarfile_path, listing_url, listing_entry = listing_tar_entry(
+        tmpdir, port, dummy_provider_factory=dummy_provider, archive_name=archive_name, archive_checksum=archive_checksum
+    )
 
     content = None
     with open(tarfile_path, "rb") as f:
@@ -413,6 +424,7 @@ def checksum(file_path):
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
 
 def compare_dir_tar(tmpdir, dir_path, tar_path):
     temp_dir = os.path.join(tmpdir, "extracted")
@@ -461,7 +473,6 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
         import_results_host="http://localhost",
     )
 
-
     tarfile_path, listing_url, listing_entry = listing_tar_entry(tmpdir, port, dummy_provider_factory=dummy_provider)
 
     subject = dummy_provider(populate=False, runtime_cfg=policy)
@@ -471,7 +482,8 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     doc = subject._fetch_listing_document()
 
     args, _ = mock_requests.call_args
-    assert args == ('http://localhost/dummy/listing.json',)
+    assert args == ("http://localhost/dummy/listing.json",)
+
 
 @patch("requests.get")
 def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider):
@@ -496,6 +508,7 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
     # 3. it validates the checksums on the temp workspace
     # 4. it overlays it's current workspace with the temp workspace
 
+
 @patch("requests.get")
 def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     port = 8080
@@ -515,11 +528,12 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     )
 
     subject = dummy_provider(populate=False, runtime_cfg=policy)
+
     def handle_get_requests(url, *args, **kwargs):
         listing_response = MagicMock()
         listing_response.status_code = 200
         listing_response.raise_for_status.side_effect = None
-        listing_response.json.return_value = {"available": {"1": [entry.to_dict()]} }
+        listing_response.json.return_value = {"available": {"1": [entry.to_dict()]}}
 
         entry_response = MagicMock()
         entry_response.status_code = 200
@@ -542,6 +556,7 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     urls, count = subject._fetch_or_use_results_archive()
     assert urls == ["http://localhost:8000/dummy-input-1.json"]
     assert count == 1
+
 
 def assert_dummy_workspace_state(ws):
     current_state = workspace.State.read(root=ws.path)

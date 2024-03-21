@@ -6,7 +6,6 @@ from enum import Enum
 import xxhash
 
 
-
 class Method(Enum):
     SHA256 = "sha256"
     XXH64 = "xxh64"
@@ -20,17 +19,16 @@ class Method(Enum):
             return self.value + ":" + hasher.hexdigest()
         return hasher.hexdigest()
 
-    def hasher(self):
+    def hasher(self):  # type: ignore[no-untyped-def]
         if self == self.SHA256:
             return hashlib.sha256()
-        elif self == self.XXH64:
+        if self == self.XXH64:
             return xxhash.xxh64()
-        else:
-            raise ValueError(f"unknown digest label: {self.value}")
+        raise ValueError(f"unknown digest label: {self.value}")
 
     @staticmethod
-    def parse(value: str):
+    def parse(value: str) -> Method:
         try:
             return Method(value.lower().replace("-", "").strip().split(":")[0])
         except ValueError:
-            raise ValueError(f"unknown digest label: {value}")
+            raise ValueError(f"unknown digest label: {value}") from None

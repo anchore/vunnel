@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
 import datetime
-import json
+import os
 from dataclasses import dataclass
 from urllib.parse import urlparse
-from mashumaro.mixins.dict import DataClassDictMixin
 
 import iso8601
-
+from mashumaro.mixins.dict import DataClassDictMixin
 
 DB_SUFFIXES = {".tar.gz", ".tar.zst"}
 
@@ -48,13 +46,12 @@ class ListingDocument(DataClassDictMixin):
     def latest_entry(self, schema_version: int) -> ListingEntry | None:
         if schema_version not in self.available:
             return None
-        
+
         if not self.available[schema_version]:
             return None
 
         return self.available[schema_version][0]
 
-    
 
 def _has_suffix(el: str, suffixes: set[str] | None) -> bool:
     if not suffixes:

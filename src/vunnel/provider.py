@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import abc
-import os
 import datetime
 import enum
 import logging
+import os
 import tarfile
-import time
 import tempfile
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import result, workspace, distribution
-from .result import ResultStatePolicy
-from vunnel.utils import http, archive, hasher
+from vunnel.utils import archive, hasher, http
 
+from . import distribution, result, workspace
+from .result import ResultStatePolicy
 
 
 class OnErrorAction(str, enum.Enum):
@@ -68,7 +68,7 @@ class RuntimeConfig:
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     import_results_host: str | None = None
-    import_results_path: str = "{provider_name}/listing.json" 
+    import_results_path: str = "{provider_name}/listing.json"
     import_results_enabled: bool | None = None
 
     def __post_init__(self) -> None:
@@ -85,7 +85,11 @@ class RuntimeConfig:
 
     def import_url(self, provider_name: str) -> str:
         path = self.import_results_path.format(provider_name=provider_name)
-        return f"{self.import_results_host.strip('/')}/{path.strip('/')}"
+        host = self.import_results_host
+        if host is None:
+            host = ""
+
+        return f"{host.strip('/')}/{path.strip('/')}"
 
 
 def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
@@ -108,7 +112,6 @@ class Provider(abc.ABC):
         self.runtime_cfg = runtime_cfg
 
         # TODO: check runtime config is valid for import_results_enabled
-
 
     @classmethod
     def version(cls) -> int:
@@ -148,7 +151,7 @@ class Provider(abc.ABC):
             stale = True
         else:
             urls, count = self.update(last_updated=last_updated)
-        
+
         if count > 0:
             self.workspace.record_state(
                 stale=stale,
@@ -160,12 +163,11 @@ class Provider(abc.ABC):
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 
-
-
     def _fetch_or_use_results_archive(self) -> tuple[list[str], int]:
-
         listing_doc = self._fetch_listing_document()
         latest_entry = listing_doc.latest_entry(schema_version=self.version())
+        if not latest_entry:
+            raise RuntimeError("no listing entry found")
 
         if self._has_newer_archive(latest_entry=latest_entry):
             self._prep_workspace_from_listing_entry(entry=latest_entry)
@@ -178,27 +180,23 @@ class Provider(abc.ABC):
         resp.raise_for_status()
 
         return distribution.ListingDocument.from_dict(resp.json())
-        
+
     def _has_newer_archive(self, latest_entry: distribution.ListingEntry) -> bool:
         # TODO: can do checksum comparison here
         return True
 
-    def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> str:
+    def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-    
             unarchived_path = _fetch_listing_entry_archive(dest=temp_dir, entry=entry, logger=self.logger)
-            
+
             temp_ws = workspace.Workspace(unarchived_path, self.name(), logger=self.logger, create=False)
-            
+
             # validate that the workspace is in a good state
             temp_ws.validate_checksums()
-            
+
             # then switch the existing workspace to the new one...
             # move the contents of the tmp dir to the workspace destination
             self.workspace.replace_results(temp_workspace=temp_ws)
-
-            # TODO: mark stale = true
-
 
     def run(self) -> None:
         self.logger.debug(f"using {self.workspace.path!r} as workspace")
@@ -278,7 +276,7 @@ class Provider(abc.ABC):
         )
 
 
-def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, logger) -> str:
+def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, logger: logging.Logger) -> str:
     archive_path = os.path.join(dest, entry.basename())
 
     # download the URL for the archive
@@ -306,4 +304,3 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
 
     # TODO: other archive types
     return unarchive_path
-

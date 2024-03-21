@@ -76,7 +76,7 @@ def test_run(mocker, monkeypatch) -> None:
                     result_store=result.StoreStrategy.SQLITE,
                     import_results_host="",
                     import_results_path="{provider_name}/listing.json",
-                    import_results_enabled=None
+                    import_results_enabled=None,
                 ),
                 request_timeout=125,
                 api_key="secret",
