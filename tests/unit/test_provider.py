@@ -558,6 +558,27 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     assert count == 1
 
 
+@pytest.mark.parametrize(
+    "enabled,host,path,error_message",
+    [
+        (True, "", "", "enablign import results requires host"),
+        (True, "http://example.com", "", "enablign import results requires path"),
+        (False, "", "", None),
+    ],
+)
+def test_validate_import_results_config(enabled: bool, host: str, path: str, error_message: str | None, dummy_provider):
+    runtime_config = provider.RuntimeConfig()
+    runtime_config.import_results_enabled = enabled
+    runtime_config.import_results_host = host
+    runtime_config.import_results_path = path
+    if error_message:
+        with pytest.raises(RuntimeError) as e:
+            dummy_provider(runtime_cfg=runtime_config)
+            assert error_message == str(e)
+    else:
+        dummy_provider(runtime_cfg=runtime_config)
+
+
 def assert_dummy_workspace_state(ws):
     current_state = workspace.State.read(root=ws.path)
 

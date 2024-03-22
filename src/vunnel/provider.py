@@ -109,9 +109,13 @@ class Provider(abc.ABC):
         self.logger = logging.getLogger(self.name())
         self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
         self.urls: list[str] = []
-        self.runtime_cfg = runtime_cfg
+        if runtime_cfg.import_results_enabled:
+            if not runtime_cfg.import_results_host:
+                raise RuntimeError("enabling import results requires host")
+            if not runtime_cfg.import_results_path:
+                raise RuntimeError("enabling import results requires path")
 
-        # TODO: check runtime config is valid for import_results_enabled
+        self.runtime_cfg = runtime_cfg
 
     @classmethod
     def version(cls) -> int:
@@ -146,7 +150,6 @@ class Provider(abc.ABC):
 
         stale = False
         if self.runtime_cfg.import_results_enabled:
-            # TODO: need url and count logic
             urls, count = self._fetch_or_use_results_archive()
             stale = True
         else:
