@@ -9,7 +9,7 @@ import tarfile
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from vunnel.utils import archive, hasher, http
 
@@ -67,9 +67,9 @@ class RuntimeConfig:
     # the format the results should be written in
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
-    import_results_host: str | None = None
+    import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
     import_results_path: str = "{provider_name}/listing.json"
-    import_results_enabled: bool | None = None
+    import_results_enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
 
     def __post_init__(self) -> None:
         if not isinstance(self.existing_input, InputStatePolicy):

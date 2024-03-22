@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field, fields
-from typing import Any
+from typing import Any, Optional
 
 import mergedeep
 import yaml
@@ -15,7 +15,7 @@ from vunnel import provider, providers
 class ImportResults:
     host: str = ""
     path: str = ""
-    enabled: bool | None = None
+    enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
 
 
 @dataclass
