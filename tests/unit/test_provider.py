@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import tarfile
 import json
@@ -319,12 +318,12 @@ def test_retry_on_failure_max_attempts(dummy_provider, dummy_file):
 
 def listing_tar_entry(
     tmpdir: str,
-    port: str,
+    port: int,
     dummy_provider_factory,
     archive_name: str | None = None,
     archive_checksum: str | None = None,
     results_checksum: str | None = None,
-) -> tuple[str, str, distribution.ListingEntry]:
+) -> tuple[str, str, distribution.ListingEntry, str]:
     if not archive_name:
         archive_name = "results.tar.gz"
 
@@ -357,18 +356,19 @@ def listing_tar_entry(
         built="2021-01-01T00:00:00Z",
         version=1,
         url=f"http://localhost:{port}/{subject.name()}/{archive_name}",
-        archive_checksum=archive_checksum,
-        results_checksum=results_checksum,
+        distribution_checksum=archive_checksum,
+        checksum=results_checksum,
     )
 
-    listing_doc = distribution.ListingDocument(available={"1": [listing_entry]})
+    listing_doc = distribution.ListingDocument(available={"1": [listing_entry]}, provider=subject.name())
     listing_url = f"http://localhost:{port}/{subject.name()}/listing.json"
 
     # write out the listing document
-    with open(os.path.join(dest, "listing.json"), "w") as f:
+    listing_path = os.path.join(dest, "listing.json")
+    with open(listing_path, "w") as f:
         json.dump(listing_doc.to_dict(), f)
 
-    return tarfile_path, listing_url, listing_entry
+    return tarfile_path, listing_url, listing_entry, listing_path
 
 
 @pytest.mark.parametrize(
@@ -376,7 +376,7 @@ def listing_tar_entry(
     (
         ("results.tar.gz", None, None),
         ("results.tar.zst", None, ValueError),
-        ("results.tar", None, RuntimeError),
+        ("results.tar", None, ValueError),
         ("results.tar.gz", "sha256:1234567890abcdef", ValueError),
     ),
 )
@@ -384,19 +384,10 @@ def listing_tar_entry(
 def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, archive_name, archive_checksum, raises_type):
     port = 8080
 
-    policy = provider.RuntimeConfig(
-        result_store=result.StoreStrategy.SQLITE,
-        existing_input=provider.InputStatePolicy.KEEP,
-        existing_results=provider.ResultStatePolicy.KEEP,
-        import_results_enabled=True,
-        import_results_host="http://localhost",
-    )
-
-    tarfile_path, listing_url, listing_entry = listing_tar_entry(
+    tarfile_path, listing_url, listing_entry, listing_path = listing_tar_entry(
         tmpdir, port, dummy_provider_factory=dummy_provider, archive_name=archive_name, archive_checksum=archive_checksum
     )
 
-    content = None
     with open(tarfile_path, "rb") as f:
         content = f.read()
 
@@ -415,7 +406,7 @@ def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, arch
         assert args == (listing_entry.url,)
     else:
         with pytest.raises(raises_type):
-            unarchived_dir = provider._fetch_listing_entry_archive(entry=listing_entry, dest=tmpdir, logger=logger)
+            provider._fetch_listing_entry_archive(entry=listing_entry, dest=tmpdir, logger=logger)
 
 
 def checksum(file_path):
@@ -434,7 +425,7 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
     dir_checksums = {}
     tar_checksums = {}
 
-    # Walk through directory and calculate checksums
+    # walk through directory and calculate checksums
     for root, dirs, files in os.walk(dir_path):
         for name in files:
             rel_dir = os.path.relpath(root, dir_path)
@@ -442,7 +433,7 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
             file_path = os.path.join(root, name)
             dir_checksums[rel_file] = checksum(file_path)
 
-    # Walk through extracted tar contents and calculate checksums
+    # walk through extracted tar contents and calculate checksums
     for root, dirs, files in os.walk(temp_dir):
         for name in files:
             rel_dir = os.path.relpath(root, temp_dir)
@@ -450,7 +441,7 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
             file_path = os.path.join(root, name)
             tar_checksums[rel_file] = checksum(file_path)
 
-    # Cleanup temporary directory
+    # cleanup temporary directory
     for root, dirs, files in os.walk(temp_dir, topdown=False):
         for name in files:
             os.remove(os.path.join(root, name))
@@ -473,11 +464,11 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
         import_results_host="http://localhost",
     )
 
-    tarfile_path, listing_url, listing_entry = listing_tar_entry(tmpdir, port, dummy_provider_factory=dummy_provider)
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(tmpdir, port, dummy_provider_factory=dummy_provider)
 
     subject = dummy_provider(populate=False, runtime_cfg=policy)
     mock_requests.return_value.status_code = 200
-    mock_requests.return_value.json.return_value = {"available": {"1": [listing_entry.to_dict()]}}
+    mock_requests.return_value.json.return_value = json.loads(open(listing_path, "r").read())
 
     doc = subject._fetch_listing_document()
 
@@ -488,20 +479,29 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
 @patch("requests.get")
 def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider):
     provider = dummy_provider(populate=False)
-    tarfile_path, listing_url, entry = listing_tar_entry(tmpdir=tmpdir, port=8080, dummy_provider_factory=dummy_provider)
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
+        tmpdir=tmpdir, port=8080, dummy_provider_factory=dummy_provider
+    )
+
     with open(tarfile_path, "rb") as f:
         content = f.read()
         mock_requests.return_value.status_code = 200
         mock_requests.return_value.iter_content.return_value = [content]
+
     with tarfile.open(tarfile_path, "r:gz") as tar:
         list_of_files = tar.getnames()
+
     provider._prep_workspace_from_listing_entry(entry=entry)
+
     state = provider.workspace.state()
+
     assert state.stale
+
     provider.workspace.validate_checksums()
 
     for file in list_of_files:
         assert os.path.exists(os.path.join(provider.workspace.path, "..", file))
+
     # what this does is:
     # 1. it receives a listing entry and makes a call to fetch and unarchive it
     # 2. it creates a temp workspace around the unarchive path
@@ -513,7 +513,9 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
 def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
-    tarfile_path, listing_url, entry = listing_tar_entry(tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider)
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
+        tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider
+    )
     # fetch the tar file
     tarfile_bytes = None
     with open(tarfile_path, "rb") as f:
@@ -533,7 +535,7 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
         listing_response = MagicMock()
         listing_response.status_code = 200
         listing_response.raise_for_status.side_effect = None
-        listing_response.json.return_value = {"available": {"1": [entry.to_dict()]}}
+        listing_response.json.return_value = json.loads(open(listing_path, "r").read())
 
         entry_response = MagicMock()
         entry_response.status_code = 200

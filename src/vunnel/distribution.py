@@ -2,24 +2,35 @@ from __future__ import annotations
 
 import datetime
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 import iso8601
 from mashumaro.mixins.dict import DataClassDictMixin
+
+from vunnel import schema as schemaDef
 
 DB_SUFFIXES = {".tar.gz", ".tar.zst"}
 
 
 @dataclass
 class ListingEntry(DataClassDictMixin):
+    # the date this archive was built relative to the data enclosed in the archive
     built: str
+
+    # the provider version this archive was built with
     version: int
+
+    # the URL where the vunnel provider archive is located
     url: str
-    # e.g. sha256:1234567890abcdef1234567890abcdef
-    archive_checksum: str
-    # e.g. xxhash64:1234567890abcdef
-    results_checksum: str
+
+    # the digest of the archive referenced at the URL.
+    # Note: all checksums are labeled with "algorithm:value" ( e.g. sha256:1234567890abcdef1234567890abcdef)
+    distribution_checksum: str
+
+    # the digest of the checksums file within the archive referenced at the URL
+    # Note: all checksums are labeled with "algorithm:value" ( e.g. xxhash64:1234567890abcdef)
+    checksum: str
 
     def basename(self) -> str:
         basename = os.path.basename(urlparse(self.url, allow_fragments=False).path)
@@ -37,11 +48,18 @@ class ListingEntry(DataClassDictMixin):
 
 @dataclass
 class ListingDocument(DataClassDictMixin):
+    # mapping of provider versions to a list of ListingEntry objects denoting archives available for download
     available: dict[int, list[ListingEntry]]
 
-    # @classmethod
-    # def from_json(cls, contents: str) -> ListingDocument:
-    #     return cls.from_dict(json.loads(contents))
+    # the provider name this document is associated with
+    provider: str
+
+    # the schema information for this document
+    schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderListingSchema)
+
+    @classmethod
+    def new(cls, provider: str) -> ListingDocument:
+        return cls(available={}, provider=provider)
 
     def latest_entry(self, schema_version: int) -> ListingEntry | None:
         if schema_version not in self.available:
@@ -51,6 +69,18 @@ class ListingDocument(DataClassDictMixin):
             return None
 
         return self.available[schema_version][0]
+
+    def add(self, entry: ListingEntry) -> None:
+        if not self.available.get(entry.version):
+            self.available[entry.version] = []
+
+        self.available[entry.version].append(entry)
+
+        # keep listing entries sorted by date (rfc3339 formatted entries, which iso8601 is a superset of)
+        self.available[entry.version].sort(
+            key=lambda x: iso8601.parse_date(x.built),
+            reverse=True,
+        )
 
 
 def _has_suffix(el: str, suffixes: set[str] | None) -> bool:

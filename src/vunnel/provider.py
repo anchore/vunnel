@@ -10,6 +10,7 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 from vunnel.utils import archive, hasher, http
 
@@ -280,7 +281,8 @@ class Provider(abc.ABC):
 
 
 def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, logger: logging.Logger) -> str:
-    archive_path = os.path.join(dest, entry.basename())
+
+    archive_path = os.path.join(dest, os.path.basename(urlparse(entry.url, allow_fragments=False).path))
 
     # download the URL for the archive
     resp = http.get(entry.url, logger=logger, stream=True)
@@ -292,10 +294,10 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
 
     # TODO: ensure the checksum matches whats in the listing entry
     logger.debug(f"validating checksum for {archive_path}")
-    hashMethod = hasher.Method.parse(entry.archive_checksum)
+    hashMethod = hasher.Method.parse(entry.distribution_checksum)
     actual_labeled_digest = hashMethod.digest(archive_path)
-    if actual_labeled_digest != entry.archive_checksum:
-        raise ValueError(f"archive checksum mismatch: {actual_labeled_digest} != {entry.archive_checksum}")
+    if actual_labeled_digest != entry.distribution_checksum:
+        raise ValueError(f"archive checksum mismatch: {actual_labeled_digest} != {entry.distribution_checksum}")
 
     unarchive_path = os.path.join(dest, "unarchived")
     logger.debug(f"unarchiving {archive_path} to {unarchive_path}")
