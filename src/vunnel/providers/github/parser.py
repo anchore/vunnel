@@ -61,10 +61,6 @@ class Parser:
         self.download_timeout = download_timeout
         self.api_url = api_url
         self.token = token
-
-        if not self.token:
-            raise ValueError("Github token must be defined")
-
         self.timestamp = None
         self.cursor = None
         if not logger:
@@ -72,6 +68,9 @@ class Parser:
         self.logger = logger
 
     def _download(self, vuln_cursor=None):
+        if not self.token:
+            raise ValueError("Github token must be defined")
+
         """
         Download the advisories from Github via the GraphQL API, using a cursor
         if it was defined in the class. Advisories stay in memory until
