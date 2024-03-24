@@ -9,8 +9,11 @@ import tarfile
 import tempfile
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
+
+import zstandard
 
 from vunnel.utils import archive, hasher, http
 
@@ -186,8 +189,18 @@ class Provider(abc.ABC):
         return distribution.ListingDocument.from_dict(resp.json())
 
     def _has_newer_archive(self, latest_entry: distribution.ListingEntry) -> bool:
-        # TODO: can do checksum comparison here
-        return True
+        state = self.workspace.state()
+        if not state:
+            return True
+
+        if state.version != self.version():
+            return True
+
+        if not state.listing:
+            return True
+
+        # note: the checksum is the digest of the checksums file within the archive, which is in the form "algo:value"
+        return f"{state.listing.algorithm}:{state.listing.digest}" != latest_entry.checksum
 
     def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -302,10 +315,32 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
     unarchive_path = os.path.join(dest, "unarchived")
     logger.debug(f"unarchiving {archive_path} to {unarchive_path}")
     if entry.url.endswith(".tar.gz"):
-        with tarfile.open(archive_path, "r:gz") as tar:
-            archive.safe_extract_tar(tar, unarchive_path)
+        _extract_tar_gz(archive_path, unarchive_path)
+    elif entry.url.endswith(".tar.zst"):
+        _extract_tar_zst(archive_path, unarchive_path)
     else:
         raise ValueError(f"unsupported archive type: {entry.url}")
 
     # TODO: other archive types
     return unarchive_path
+
+
+def _extract_tar(tar_obj: tarfile.TarFile, unarchive_path: str):
+    archive.safe_extract_tar(tar_obj, unarchive_path)
+
+
+def _extract_tar_gz(path: str, unarchive_path: str):
+    with tarfile.open(path, "r") as a:
+        return _extract_tar(a, unarchive_path)
+
+
+def _extract_tar_zst(path: str, unarchive_path: str):
+    archive_path = Path(path).expanduser()
+    dctx = zstandard.ZstdDecompressor(max_window_size=2147483648)
+
+    with tempfile.TemporaryFile(suffix=".tar") as ofh:
+        with archive_path.open("rb") as ifh:
+            dctx.copy_stream(ifh, ofh)
+        ofh.seek(0)
+        with tarfile.open(fileobj=ofh) as z:
+            return _extract_tar(z, unarchive_path)
