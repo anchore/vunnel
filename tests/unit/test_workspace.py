@@ -48,7 +48,7 @@ def test_clear_results(tmpdir, dummy_file):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1, distribution_version=1)
 
     assert_directory(ws.input_path, exists=True, empty=False)
     assert_directory(ws.results_path, exists=True, empty=False)
@@ -73,7 +73,7 @@ def test_record_state(tmpdir, dummy_file):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1, distribution_version=1)
 
     current_state = workspace.State.read(root=ws.path)
 
@@ -102,10 +102,10 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1, distribution_version=1)
 
     # this call should not clear the URLs
-    ws.record_state(urls=None, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(urls=None, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1, distribution_version=1)
 
     current_state = workspace.State.read(root=ws.path)
 
@@ -135,7 +135,7 @@ def test_state_schema(tmpdir, dummy_file, helpers):
 
     urls = ["http://localhost:8000/dummy-input-1.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1, distribution_version=1)
 
     ws_helper = helpers.provider_workspace_helper(name=name, create=False)
 
@@ -150,7 +150,7 @@ def test_replace_results(tmpdir, dummy_file):
     dummy_file(ws1.results_path, "old-00000.json")
     urls = ["http://localhost:8000/old_workspace.json"]
     store = result.StoreStrategy.FLAT_FILE
-    ws1.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws1.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2021, 1, 1), version=1, distribution_version=1)
 
     ws2_dir = tmpdir.mkdir("ws2")
     ws2 = workspace.Workspace(root=ws2_dir, name="new", create=True)
@@ -158,7 +158,7 @@ def test_replace_results(tmpdir, dummy_file):
     urls = ["http://localhost:8000/new_workspace.json"]
     store = result.StoreStrategy.FLAT_FILE
     dummy_file(ws2.results_path, "new-00000.json")
-    ws2.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2024, 1, 1), version=1)
+    ws2.record_state(urls=urls, store=store.value, timestamp=datetime.datetime(2024, 1, 1), version=1, distribution_version=1)
     # be able to tell the contents apart
     # replace the results in one with the other
     # assert on the contents
@@ -180,7 +180,13 @@ def test_validate_checksums_valid(tmpdir, dummy_file):
     ws = workspace.Workspace(root=tmpdir, name="dummy", create=True)
     urls = []
     dummy_file(ws.results_path, "dummy-result-1.json")
-    ws.record_state(urls=urls, store=result.StoreStrategy.FLAT_FILE.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(
+        urls=urls,
+        store=result.StoreStrategy.FLAT_FILE.value,
+        timestamp=datetime.datetime(2021, 1, 1),
+        version=1,
+        distribution_version=1,
+    )
     ws.validate_checksums()
 
 
@@ -188,7 +194,13 @@ def test_validate_checksums_invalid(tmpdir, dummy_file):
     ws = workspace.Workspace(root=tmpdir, name="dummy", create=True)
     urls = []
     result_file_path = dummy_file(ws.results_path, "dummy-result-1.json")
-    ws.record_state(urls=urls, store=result.StoreStrategy.FLAT_FILE.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(
+        urls=urls,
+        store=result.StoreStrategy.FLAT_FILE.value,
+        timestamp=datetime.datetime(2021, 1, 1),
+        version=1,
+        distribution_version=1,
+    )
     with open(result_file_path, "a") as f:
         f.write("invalid")
     with pytest.raises(RuntimeError) as e:
@@ -200,7 +212,13 @@ def test_validate_checksums_missing(tmpdir, dummy_file):
     ws = workspace.Workspace(root=tmpdir, name="dummy", create=True)
     urls = []
     result_file_path = dummy_file(ws.results_path, "dummy-result-1.json")
-    ws.record_state(urls=urls, store=result.StoreStrategy.FLAT_FILE.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(
+        urls=urls,
+        store=result.StoreStrategy.FLAT_FILE.value,
+        timestamp=datetime.datetime(2021, 1, 1),
+        version=1,
+        distribution_version=1,
+    )
     os.remove(result_file_path)
     with pytest.raises(RuntimeError) as e:
         ws.validate_checksums()
@@ -212,7 +230,13 @@ def test_validate_checksums_input_changed_ok(tmpdir, dummy_file):
     urls = []
     result_file_path = dummy_file(ws.results_path, "dummy-result-1.json")
     input_file_path = dummy_file(ws.input_path, "dummy-input-1.json")
-    ws.record_state(urls=urls, store=result.StoreStrategy.FLAT_FILE.value, timestamp=datetime.datetime(2021, 1, 1), version=1)
+    ws.record_state(
+        urls=urls,
+        store=result.StoreStrategy.FLAT_FILE.value,
+        timestamp=datetime.datetime(2021, 1, 1),
+        version=1,
+        distribution_version=1,
+    )
     with open(input_file_path, "a") as f:
         f.write("this won't change the checksums")
 

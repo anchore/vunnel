@@ -37,6 +37,7 @@ class State(DataClassDictMixin):
     store: str
     timestamp: datetime.datetime
     version: int = 1
+    distribution_version: int = 1
     listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
     schema: schema_def.Schema = field(default_factory=schema_def.ProviderStateSchema)
     stale: bool = False
@@ -175,6 +176,7 @@ class Workspace:
     def record_state(  # noqa: PLR0913
         self,
         version: int,
+        distribution_version: int,
         timestamp: datetime.datetime,
         urls: list[str],
         store: str,
@@ -193,7 +195,15 @@ class Workspace:
 
         self.logger.info("recording workspace state")
 
-        state = State(provider=self.name, version=version, urls=urls, store=store, timestamp=timestamp, stale=stale)
+        state = State(
+            provider=self.name,
+            version=version,
+            distribution_version=distribution_version,
+            urls=urls,
+            store=store,
+            timestamp=timestamp,
+            stale=stale,
+        )
         metadata_path = state.write(self.path, self.results_path)
 
         self.logger.debug(f"wrote workspace state to {metadata_path}")
@@ -246,7 +256,7 @@ class Workspace:
         os.rename(temp_workspace.checksums_path, self.checksums_path)
         state = self.state()
         state.stale = True
-        self.record_state(state.version, state.timestamp, state.urls, state.store, True)
+        self.record_state(state.version, state.distribution_version, state.timestamp, state.urls, state.store, True)
 
 
 def write_file_listing(output_file: str, path: str) -> str:

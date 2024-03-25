@@ -11,20 +11,20 @@ class TestListingEntry:
     def entry1(self):
         return ListingEntry(
             built="2022-01-01T00:00:00Z",
-            version=1,
+            distribution_version=1,
             url="http://example.com/archive.tar.gz",
             distribution_checksum="sha256:1234567890abcdef1234567890abcdef",
-            checksum="xxhash64:1234567890abcdef",
+            enclosed_checksum="xxhash64:1234567890abcdef",
         )
 
     @pytest.fixture
     def entry2(self):
         return ListingEntry(
             built="2022-01-01T00:00:00Z",
-            version=1,
+            distribution_version=1,
             url="http://example.com/archive.tar.zst",
             distribution_checksum="sha256:abcdef1234567890abcdef1234567890",
-            checksum="xxhash64:abcdef1234567890",
+            enclosed_checksum="xxhash64:abcdef1234567890",
         )
 
     def test_basename(self, entry1, entry2):
@@ -50,17 +50,17 @@ class TestListingDocument:
         entries = [
             ListingEntry(
                 built="2022-01-01T00:00:00Z",
-                version=1,
+                distribution_version=1,
                 url="http://example.com/archive1.tar.gz",
                 distribution_checksum="sha256:1234567890abcdef1234567890abcdef",
-                checksum="xxhash64:1234567890abcdef",
+                enclosed_checksum="xxhash64:1234567890abcdef",
             ),
             ListingEntry(
                 built="2022-01-02T00:00:00Z",
-                version=1,
+                distribution_version=1,
                 url="http://example.com/archive2.tar.gz",
                 distribution_checksum="sha256:abcdef1234567890abcdef1234567890",
-                checksum="xxhash64:abcdef1234567890",
+                enclosed_checksum="xxhash64:abcdef1234567890",
             ),
         ]
         return ListingDocument(available={1: entries}, provider="test_provider")
@@ -72,60 +72,60 @@ class TestListingDocument:
         subject.add(
             ListingEntry(
                 built=datetime(2017, 11, 28, 23, 55, 59, 342380).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-                version=3,
+                distribution_version=3,
                 url="https://b-place.com/something-1.tar.gz",
                 distribution_checksum="sha256:123456789",
-                checksum="xxh64:123456789",
+                enclosed_checksum="xxh64:123456789",
             )
         )
 
         subject.add(
             ListingEntry(
                 built=datetime(2016, 11, 28, 23, 55, 59, 342380).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-                version=3,
+                distribution_version=3,
                 url="https://a-place.com/something.tar.gz",
                 distribution_checksum="sha256:123456789",
-                checksum="xxh64:123456789",
+                enclosed_checksum="xxh64:123456789",
             )
         )
 
         subject.add(
             ListingEntry(
                 built=datetime(2019, 11, 28, 23, 55, 59, 342380).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-                version=3,
+                distribution_version=3,
                 url="https://c-place.com/something.tar.gz",
                 distribution_checksum="sha256:123456789",
-                checksum="xxh64:123456789",
+                enclosed_checksum="xxh64:123456789",
             )
         )
 
         subject.add(
             ListingEntry(
                 built=datetime(2017, 11, 28, 23, 55, 59, 342380).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-                version=4,
+                distribution_version=4,
                 url="https://b-place.com/something-1.tar.zst",
                 distribution_checksum="sha256:123456789",
-                checksum="xxh64:123456789",
+                enclosed_checksum="xxh64:123456789",
             )
         )
 
         subject.add(
             ListingEntry(
                 built=datetime(2016, 11, 28, 23, 55, 59, 342380).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-                version=4,
+                distribution_version=4,
                 url="https://a-place.com/something.tar.zst",
                 distribution_checksum="sha256:123456789",
-                checksum="xxh64:123456789",
+                enclosed_checksum="xxh64:123456789",
             )
         )
 
         subject.add(
             ListingEntry(
                 built=datetime(2019, 11, 28, 23, 55, 59, 342380).strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-                version=4,
+                distribution_version=4,
                 url="https://c-place.com/something.tar.zst",
                 distribution_checksum="sha256:123456789",
-                checksum="xxh64:123456789",
+                enclosed_checksum="xxh64:123456789",
             )
         )
 
@@ -134,7 +134,7 @@ class TestListingDocument:
     def test_latest_entry(self, document, built_document):
         latest_entry = document.latest_entry(1)
         assert latest_entry is not None
-        assert latest_entry.version == 1
+        assert latest_entry.distribution_version == 1
         assert latest_entry.url == "http://example.com/archive1.tar.gz"
 
         assert "https://c-place.com/something.tar.gz" == built_document.latest_entry(3).url

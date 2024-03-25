@@ -29,7 +29,7 @@ def flat_file_existing_workspace(ws: workspace.Workspace) -> workspace.Workspace
             payload={"Vulnerability": {"dummy": "result-2"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1, distribution_version=1)
     return ws
 
 
@@ -51,7 +51,7 @@ def sqlite_existing_workspace(ws: workspace.Workspace) -> workspace.Workspace:
             payload={"Vulnerability": {"dummy": "result-2"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1, distribution_version=1)
     return ws
 
 
@@ -62,7 +62,7 @@ def sqlite_existing_workspace_with_partial_results(sqlite_existing_workspace: wo
         os.path.join(sqlite_existing_workspace.results_path, "results.db.tmp"),
     )
     sqlite_existing_workspace.record_state(
-        timestamp=datetime.datetime.now(), urls=[], store=result.StoreStrategy.SQLITE, version=1
+        timestamp=datetime.datetime.now(), urls=[], store=result.StoreStrategy.SQLITE, version=1, distribution_version=1
     )
     assert len(list(sqlite_existing_workspace.state().result_files(sqlite_existing_workspace.path))) == 2
     return sqlite_existing_workspace
@@ -118,7 +118,7 @@ def test_result_writer_flat_file(
             payload={"Vulnerability": {"dummy": "result-4"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1, distribution_version=1)
 
     state = ws.state()
 
@@ -168,7 +168,7 @@ def test_result_writer_sqlite(
             payload={"Vulnerability": {"dummy": "result-4"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1, distribution_version=1)
     state = ws.state()
 
     # note: since the hash changes on each test run, just confirm the result file count, not the extra metadata
@@ -218,7 +218,7 @@ def test_result_writer_sqlite_with_partial_result(
             payload={"Vulnerability": {"dummy": "result-4"}},
         )
 
-    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1)
+    ws.record_state(timestamp=datetime.datetime.now(), urls=[], store=store_strategy, version=1, distribution_version=1)
     state = ws.state()
 
     # note: since the hash changes on each test run, just confirm the result file count, not the extra metadata

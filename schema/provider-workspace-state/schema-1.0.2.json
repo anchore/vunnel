@@ -41,7 +41,12 @@
       ]
     },
     "version": {
-      "type": "integer"
+      "type": "integer",
+      "description": "version describing the result data shape + the provider processing behavior semantics"
+    },
+    "distribution_version": {
+      "type": "integer",
+      "description": "version describing purely the result data shape"
     },
     "schema": {
       "type": "object",

@@ -357,10 +357,10 @@ def listing_tar_entry(
 
     listing_entry = distribution.ListingEntry(
         built="2021-01-01T00:00:00Z",
-        version=1,
+        distribution_version=1,
         url=f"http://localhost:{port}/{subject.name()}/{archive_name}",
         distribution_checksum=archive_checksum,
-        checksum=results_checksum,
+        enclosed_checksum=results_checksum,
     )
 
     listing_doc = distribution.ListingDocument(available={"1": [listing_entry]}, provider=subject.name())
@@ -617,14 +617,15 @@ def test_has_newer_archive_version_mismatch_true(dummy_provider):
     existing_state = subject.workspace.state()
     subject.workspace.record_state(
         version=mismatched_version,
+        distribution_version=subject.distribution_version(),
         timestamp=existing_state.timestamp,
         store=result.StoreStrategy.FLAT_FILE.value,
         urls=existing_state.urls,
     )
     entry = distribution.ListingEntry(
-        checksum=f"{existing_state.listing.algorithm}:{existing_state.listing.digest}",
+        enclosed_checksum=f"{existing_state.listing.algorithm}:{existing_state.listing.digest}",
         distribution_checksum="xxh64:12341234aedf",
-        version=subject.version(),
+        distribution_version=subject.distribution_version(),
         built="2024-03-25T13:36:36Z",
         url="http://example.com/some-example",
     )
@@ -635,9 +636,9 @@ def test_has_newer_archive_false(dummy_provider):
     subject = dummy_provider(populate=True)
     state = subject.workspace.state()
     entry = distribution.ListingEntry(
-        checksum=f"{state.listing.algorithm}:{state.listing.digest}",
+        enclosed_checksum=f"{state.listing.algorithm}:{state.listing.digest}",
         distribution_checksum="xxh64:12341234aedf",
-        version=subject.version(),
+        distribution_version=subject.distribution_version(),
         built="2024-03-25T13:36:36Z",
         url="http://example.com/some-example",
     )

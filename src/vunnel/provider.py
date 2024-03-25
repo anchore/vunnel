@@ -175,6 +175,7 @@ class Provider(abc.ABC):
             self.workspace.record_state(
                 stale=stale,
                 version=self.version(),
+                distribution_version=self.distribution_version(),
                 timestamp=start,
                 urls=urls,
                 store=self.runtime_cfg.result_store.value,
@@ -215,7 +216,7 @@ class Provider(abc.ABC):
             return True
 
         # note: the checksum is the digest of the checksums file within the archive, which is in the form "algo:value"
-        return f"{state.listing.algorithm}:{state.listing.digest}" != latest_entry.checksum
+        return f"{state.listing.algorithm}:{state.listing.digest}" != latest_entry.enclosed_checksum
 
     def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

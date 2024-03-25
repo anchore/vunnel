@@ -18,8 +18,8 @@ class ListingEntry(DataClassDictMixin):
     # the date this archive was built relative to the data enclosed in the archive
     built: str
 
-    # the provider version this archive was built with
-    version: int
+    # the provider distribution version this archive was built with (different than the provider version)
+    distribution_version: int
 
     # the URL where the vunnel provider archive is located
     url: str
@@ -30,7 +30,7 @@ class ListingEntry(DataClassDictMixin):
 
     # the digest of the checksums file within the archive referenced at the URL
     # Note: all checksums are labeled with "algorithm:value" ( e.g. xxhash64:1234567890abcdef)
-    checksum: str
+    enclosed_checksum: str
 
     def basename(self) -> str:
         basename = os.path.basename(urlparse(self.url, allow_fragments=False).path)
@@ -71,13 +71,13 @@ class ListingDocument(DataClassDictMixin):
         return self.available[schema_version][0]
 
     def add(self, entry: ListingEntry) -> None:
-        if not self.available.get(entry.version):
-            self.available[entry.version] = []
+        if not self.available.get(entry.distribution_version):
+            self.available[entry.distribution_version] = []
 
-        self.available[entry.version].append(entry)
+        self.available[entry.distribution_version].append(entry)
 
         # keep listing entries sorted by date (rfc3339 formatted entries, which iso8601 is a superset of)
-        self.available[entry.version].sort(
+        self.available[entry.distribution_version].sort(
             key=lambda x: iso8601.parse_date(x.built),
             reverse=True,
         )
