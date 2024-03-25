@@ -172,6 +172,11 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+  common:
+    import_results:
+      enabled: null
+      host: ''
+      path: ''
   debian:
     releases:
       bookworm: '12'
@@ -213,10 +218,6 @@ providers:
         retry_delay: 5
       result_store: sqlite
     token: secret
-  import_results:
-    enabled: null
-    host: ''
-    path: ''
   mariner:
     allow_versions:
       - '1.0'

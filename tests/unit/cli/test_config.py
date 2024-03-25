@@ -159,7 +159,9 @@ def test_import_results_config(top_level_import_results, provider_host, provider
 
     cfg = config.Application(
         providers=config.Providers(
-            import_results=top_level_import_results,
+            common=config.CommonProviderConfig(
+                import_results=top_level_import_results,
+            ),
             nvd=providers.nvd.Config(
                 runtime=provider.RuntimeConfig(
                     **runtime_config_args,

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field, fields
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 import mergedeep
 import yaml
@@ -16,6 +19,11 @@ class ImportResults:
     host: str = ""
     path: str = ""
     enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
+
+
+@dataclass
+class CommonProviderConfig:
+    import_results: ImportResults = field(default_factory=ImportResults)
 
 
 @dataclass
@@ -33,27 +41,31 @@ class Providers:
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
 
-    # TODO: try to move this to the toplevel config and make this an init-only var
-    import_results: ImportResults = field(default_factory=ImportResults)
+    common: CommonProviderConfig = field(default_factory=CommonProviderConfig)
 
     def __post_init__(self) -> None:
-        for f in fields(Providers):
-            if f.name == "import_results":
-                continue
-            runtime_cfg = getattr(self, f.name).runtime
+        for name in self.provider_names():
+            runtime_cfg = getattr(self, name).runtime
             if runtime_cfg and isinstance(runtime_cfg, provider.RuntimeConfig):
                 if runtime_cfg.import_results_enabled is None:
-                    runtime_cfg.import_results_enabled = self.import_results.enabled
+                    runtime_cfg.import_results_enabled = self.common.import_results.enabled
                 if not runtime_cfg.import_results_host:
-                    runtime_cfg.import_results_host = self.import_results.host
+                    runtime_cfg.import_results_host = self.common.import_results.host
                 if not runtime_cfg.import_results_path:
-                    runtime_cfg.import_results_path = self.import_results.path
+                    runtime_cfg.import_results_path = self.common.import_results.path
 
     def get(self, name: str) -> Any | None:
-        for f in fields(Providers):
-            if self._normalize_name(f.name) == self._normalize_name(name):
-                return getattr(self, f.name)
+        for candidate in self.provider_names():
+            if self._normalize_name(candidate) == self._normalize_name(name):
+                return getattr(self, candidate)
         return None
+
+    @staticmethod
+    def provider_names() -> Generator[str, None, None]:
+        for f in fields(Providers):
+            if f.name == "common":
+                continue
+            yield f.name
 
     @staticmethod
     def _normalize_name(name: str) -> str:
