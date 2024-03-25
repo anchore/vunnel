@@ -209,7 +209,7 @@ class Provider(abc.ABC):
         if not state:
             return True
 
-        if state.version != self.version():
+        if state.distribution_version != self.distribution_version():
             return True
 
         if not state.listing:
@@ -235,7 +235,14 @@ class Provider(abc.ABC):
         self.logger.debug(f"using {self.workspace.path!r} as workspace")
 
         current_state = self.read_state()
-        if current_state and current_state.version != self.version():
+        if self.runtime_cfg.import_results_enabled:
+            if current_state and current_state.distribution_version != self.distribution_version():
+                self.logger.warning(
+                    f"provider distribution version has changed from {current_state.distribution_version} to {self.distribution_version()}",
+                )
+                self.logger.warning("clearing workspace to ensure consistency of existing results")
+                self.workspace.clear()
+        elif current_state and current_state.version != self.version():
             self.logger.warning(f"provider version has changed from {current_state.version} to {self.version()}")
             self.logger.warning("clearing workspace to ensure consistency of existing input and results")
             self.workspace.clear()
@@ -247,6 +254,7 @@ class Provider(abc.ABC):
                 self.workspace.clear_input()
 
         self.workspace.create()
+
         try:
             self._update()
         except Exception as e:

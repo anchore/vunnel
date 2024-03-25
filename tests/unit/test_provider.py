@@ -41,6 +41,9 @@ class DummyProvider(provider.Provider):
     def assert_state_file(self, exists: bool = True):
         assert_path(os.path.join(self.workspace.path, "state.json"), exists)
 
+    def _fetch_or_use_results_archive(self):
+        return self.update()
+
     def update(self, *args, **kwargs):
         self.count += 1
         if self.count <= self.errors:
@@ -127,6 +130,74 @@ def test_clear_existing_state_from_mismatched_versions(dummy_provider):
     assert subject.workspace.clear_input.call_count == 1
     assert subject.workspace.clear_results.call_count == 1
     assert subject.workspace._clear_metadata.call_count == 1
+
+
+def test_clear_existing_state_from_mismatched_distribution_versions(dummy_provider):
+    policy = provider.RuntimeConfig(
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+        import_results_enabled=True,
+        import_results_host="http://localhost",
+    )
+
+    subject = dummy_provider(populate=True, runtime_cfg=policy)
+
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace._clear_metadata = MagicMock(side_effect=subject.workspace._clear_metadata)
+    subject.distribution_version = MagicMock(return_value=2)
+
+    subject.run()
+
+    assert subject.workspace.clear_input.call_count == 1
+    assert subject.workspace.clear_results.call_count == 1
+    assert subject.workspace._clear_metadata.call_count == 1
+
+
+def test_mismatched_distribution_versions_has_no_effect_when_import_disabled(dummy_provider):
+    policy = provider.RuntimeConfig(
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+        import_results_enabled=False,
+    )
+
+    subject = dummy_provider(populate=True, runtime_cfg=policy)
+
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace._clear_metadata = MagicMock(side_effect=subject.workspace._clear_metadata)
+    subject.distribution_version = MagicMock(return_value=2)
+
+    subject.run()
+
+    assert subject.workspace.clear_input.call_count == 0
+    assert subject.workspace.clear_results.call_count == 0
+    assert subject.workspace._clear_metadata.call_count == 0
+
+
+def test_mismatched_versions_has_no_effect_when_import_enabled(dummy_provider):
+    policy = provider.RuntimeConfig(
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+        import_results_enabled=True,
+        import_results_host="http://localhost",
+    )
+
+    subject = dummy_provider(populate=True, runtime_cfg=policy)
+
+    # track calls without affecting behavior (get mock tracking abilities without mocking)
+    subject.workspace.clear_input = MagicMock(side_effect=subject.workspace.clear_input)
+    subject.workspace.clear_results = MagicMock(side_effect=subject.workspace.clear_results)
+    subject.workspace._clear_metadata = MagicMock(side_effect=subject.workspace._clear_metadata)
+    subject.version = MagicMock(return_value=2)
+
+    subject.run()
+
+    assert subject.workspace.clear_input.call_count == 0
+    assert subject.workspace.clear_results.call_count == 0
+    assert subject.workspace._clear_metadata.call_count == 0
 
 
 def test_keep_existing_state_from_matching_versions(dummy_provider):
@@ -610,7 +681,29 @@ def test_validate_import_results_config(enabled: bool, host: str, path: str, err
         dummy_provider(runtime_cfg=runtime_config)
 
 
-def test_has_newer_archive_version_mismatch_true(dummy_provider):
+def test_has_newer_archive_distribution_version_mismatch_true(dummy_provider):
+    subject = dummy_provider()
+    distribution_version = subject.distribution_version()
+    mismatched_distribution_version = distribution_version + 1
+    existing_state = subject.workspace.state()
+    subject.workspace.record_state(
+        version=subject.version(),
+        distribution_version=mismatched_distribution_version,
+        timestamp=existing_state.timestamp,
+        store=result.StoreStrategy.FLAT_FILE.value,
+        urls=existing_state.urls,
+    )
+    entry = distribution.ListingEntry(
+        enclosed_checksum=f"{existing_state.listing.algorithm}:{existing_state.listing.digest}",
+        distribution_checksum="xxh64:12341234aedf",
+        distribution_version=subject.distribution_version(),
+        built="2024-03-25T13:36:36Z",
+        url="http://example.com/some-example",
+    )
+    assert subject._has_newer_archive(latest_entry=entry)
+
+
+def test_has_newer_archive_version_mismatch_has_no_effect(dummy_provider):
     subject = dummy_provider()
     version = subject.version()
     mismatched_version = version + 1
@@ -629,7 +722,7 @@ def test_has_newer_archive_version_mismatch_true(dummy_provider):
         built="2024-03-25T13:36:36Z",
         url="http://example.com/some-example",
     )
-    assert subject._has_newer_archive(latest_entry=entry)
+    assert not subject._has_newer_archive(latest_entry=entry)
 
 
 def test_has_newer_archive_false(dummy_provider):

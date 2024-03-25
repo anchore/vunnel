@@ -19,7 +19,6 @@ OSV_SCHEMA_VERSION = "1.6.1"
 class Schema:
     version: str
     url: str
-    _name: str = ""
 
     @property
     def major_version(self) -> str:
@@ -27,9 +26,6 @@ class Schema:
 
     @property
     def name(self) -> str:
-        if self._name:
-            return self._name
-
         name = self.url.removeprefix("https://raw.githubusercontent.com/anchore/vunnel/main/schema/")
         return os.path.dirname(name)
 
