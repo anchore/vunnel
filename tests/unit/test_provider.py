@@ -581,6 +581,40 @@ def test_validate_import_results_config(enabled: bool, host: str, path: str, err
         dummy_provider(runtime_cfg=runtime_config)
 
 
+def test_has_newer_archive_version_mismatch_true(dummy_provider):
+    subject = dummy_provider()
+    version = subject.version()
+    mismatched_version = version + 1
+    existing_state = subject.workspace.state()
+    subject.workspace.record_state(
+        version=mismatched_version,
+        timestamp=existing_state.timestamp,
+        store=result.StoreStrategy.FLAT_FILE.value,
+        urls=existing_state.urls,
+    )
+    entry = distribution.ListingEntry(
+        checksum=f"{existing_state.listing.algorithm}:{existing_state.listing.digest}",
+        distribution_checksum="xxh64:12341234aedf",
+        version=subject.version(),
+        built="2024-03-25T13:36:36Z",
+        url="http://example.com/some-example",
+    )
+    assert subject._has_newer_archive(latest_entry=entry)
+
+
+def test_has_newer_archive_false(dummy_provider):
+    subject = dummy_provider(populate=True)
+    state = subject.workspace.state()
+    entry = distribution.ListingEntry(
+        checksum=f"{state.listing.algorithm}:{state.listing.digest}",
+        distribution_checksum="xxh64:12341234aedf",
+        version=subject.version(),
+        built="2024-03-25T13:36:36Z",
+        url="http://example.com/some-example",
+    )
+    assert not subject._has_newer_archive(entry)
+
+
 def assert_dummy_workspace_state(ws):
     current_state = workspace.State.read(root=ws.path)
 
