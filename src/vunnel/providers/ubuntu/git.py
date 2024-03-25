@@ -393,12 +393,22 @@ class GitWrapper:
         try:
             self.logger.trace(f"running: {cmd}")
             cmd_list = shlex.split(cmd)
-            # S603 disable exaplanation: running git commands by design
+
+            # S603 disable explanation: running git commands by design
             return subprocess.check_output(cmd_list, *args, **kwargs, stderr=subprocess.PIPE)  # noqa: S603
+
+        except subprocess.CalledProcessError as e:
+            stderr = ""
+            if e.stderr:
+                stderr = e.stderr.decode()
+            self.logger.exception(f"error executing command: {cmd}\nstderr:{stderr}")
+
+            if self._ubuntu_server_503_message in stderr:
+                raise UbuntuGitServer503Error from e
+
+            raise e
+
         except Exception as e:
             self.logger.exception(f"error executing command: {cmd}")
-
-            if isinstance(e, subprocess.CalledProcessError) and e.stderr and self._ubuntu_server_503_message in e.stderr.decode():
-                raise UbuntuGitServer503Error from e
 
             raise e
