@@ -59,13 +59,3 @@ def test_overrides_enabled(mock_requests, overrides_tar, tmpdir):
 
     assert subject.cve("CVE-2011-0022") is not None
     assert subject.cves() == ["CVE-2011-0022"]
-
-
-def test_untar_file(overrides_tar, tmpdir):
-    overrides.untar_file(overrides_tar, tmpdir)
-    assert tmpdir.join("data/CVE-2011-0022.json").check(file=True)
-
-
-def test_untar_file_path_traversal(path_traversal_tar, tmpdir):
-    overrides.untar_file(path_traversal_tar, tmpdir.join("somewhere", "else"))
-    assert tmpdir.join("somewhere/else/CVE-2011-0022.json").check(file=False)

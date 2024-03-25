@@ -8,11 +8,14 @@ import random
 import string
 import hashlib
 import shutil
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
+import zstandard
+
 from vunnel import provider, result, schema, workspace, distribution
-from vunnel.utils import hasher
+from vunnel.utils import hasher, archive
 
 
 def assert_path(path: str, exists: bool = True):
@@ -342,7 +345,7 @@ def listing_tar_entry(
     # tar up the subject.workspace.path into a tarfile
     shutil.rmtree(subject.workspace.input_path, ignore_errors=True)
     tarfile_path = os.path.join(dest, archive_name)
-    with tarfile.open(tarfile_path, "w:gz") as tar:
+    with _get_tar_writer_obj(tarfile_path) as tar:
         tar.add(subject.workspace.path, arcname=subject.name())
 
     if not archive_checksum:
@@ -371,12 +374,38 @@ def listing_tar_entry(
     return tarfile_path, listing_url, listing_entry, listing_path
 
 
+def _get_tar_writer_obj(tarfile_path):
+    if tarfile_path.endswith(".tar.zst"):
+        return _get_tar_zst_writer_obj(tarfile_path)
+
+    elif tarfile_path.endswith(".tar"):
+        return tarfile.open(tarfile_path, "w:")
+
+    if tarfile_path.endswith(".tar.gz"):
+        return tarfile.open(tarfile_path, "w:gz")
+
+    raise ValueError("unsupported tarfile extension")
+
+
+@contextmanager
+def _get_tar_zst_writer_obj(tarfile_path):
+    fileobj = zstandard.ZstdCompressor().stream_writer(open(tarfile_path, "wb"))
+    tf = None
+    try:
+        tf = tarfile.open(tarfile_path, "w|", fileobj=fileobj)
+        yield tf
+    finally:
+        if tf:
+            tf.close()
+        fileobj.close()
+
+
 @pytest.mark.parametrize(
     "archive_name,archive_checksum,raises_type",
     (
         ("results.tar.gz", None, None),
-        ("results.tar.zst", None, ValueError),
-        ("results.tar", None, ValueError),
+        ("results.tar.zst", None, None),
+        ("results.tar", None, None),
         ("results.tar.gz", "sha256:1234567890abcdef", ValueError),
     ),
 )
@@ -419,8 +448,8 @@ def checksum(file_path):
 
 def compare_dir_tar(tmpdir, dir_path, tar_path):
     temp_dir = os.path.join(tmpdir, "extracted")
-    with tarfile.open(tar_path, "r:gz") as tar:
-        tar.extractall(temp_dir)
+
+    archive.extract(tar_path, temp_dir)
 
     dir_checksums = {}
     tar_checksums = {}

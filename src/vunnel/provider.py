@@ -185,6 +185,9 @@ class Provider(abc.ABC):
         return distribution.ListingDocument.from_dict(resp.json())
 
     def _has_newer_archive(self, latest_entry: distribution.ListingEntry) -> bool:
+        if not os.path.exists(self.workspace.metadata_path):
+            return True
+
         state = self.workspace.state()
         if not state:
             return True

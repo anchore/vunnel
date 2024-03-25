@@ -13,7 +13,7 @@ def extract(path: str, destination_dir: str) -> None:
         return _extract_tar_zst(path, destination_dir)
 
     # open for reading with transparent compression (supports gz, bz2, and xz)
-    with tarfile.open(path, "r:*") as tar:
+    with tarfile.open(path, mode="r:*") as tar:
         _safe_extract_tar(tar, destination_dir)
 
     return None
@@ -27,7 +27,7 @@ def _extract_tar_zst(path: str, unarchive_path: str) -> None:
         with archive_path.open("rb") as ifh:
             dctx.copy_stream(ifh, ofh)
         ofh.seek(0)
-        with tarfile.open(fileobj=ofh) as z:
+        with tarfile.open(fileobj=ofh, mode="r") as z:
             return _safe_extract_tar(z, unarchive_path)
 
 
