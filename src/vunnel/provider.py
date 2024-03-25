@@ -5,15 +5,11 @@ import datetime
 import enum
 import logging
 import os
-import tarfile
 import tempfile
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
-
-import zstandard
 
 from vunnel.utils import archive, hasher, http
 
@@ -314,33 +310,6 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
 
     unarchive_path = os.path.join(dest, "unarchived")
     logger.debug(f"unarchiving {archive_path} to {unarchive_path}")
-    if entry.url.endswith(".tar.gz"):
-        _extract_tar_gz(archive_path, unarchive_path)
-    elif entry.url.endswith(".tar.zst"):
-        _extract_tar_zst(archive_path, unarchive_path)
-    else:
-        raise ValueError(f"unsupported archive type: {entry.url}")
+    archive.extract(archive_path, unarchive_path)
 
-    # TODO: other archive types
     return unarchive_path
-
-
-def _extract_tar(tar_obj: tarfile.TarFile, unarchive_path: str):
-    archive.safe_extract_tar(tar_obj, unarchive_path)
-
-
-def _extract_tar_gz(path: str, unarchive_path: str):
-    with tarfile.open(path, "r") as a:
-        return _extract_tar(a, unarchive_path)
-
-
-def _extract_tar_zst(path: str, unarchive_path: str):
-    archive_path = Path(path).expanduser()
-    dctx = zstandard.ZstdDecompressor(max_window_size=2147483648)
-
-    with tempfile.TemporaryFile(suffix=".tar") as ofh:
-        with archive_path.open("rb") as ifh:
-            dctx.copy_stream(ifh, ofh)
-        ofh.seek(0)
-        with tarfile.open(fileobj=ofh) as z:
-            return _extract_tar(z, unarchive_path)

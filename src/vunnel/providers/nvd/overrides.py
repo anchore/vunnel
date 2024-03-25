@@ -3,7 +3,6 @@ from __future__ import annotations
 import glob
 import logging
 import os
-import tarfile
 from typing import TYPE_CHECKING, Any
 
 from orjson import loads
@@ -51,7 +50,7 @@ class NVDOverrides:
             for chunk in req.iter_content():
                 fp.write(chunk)
 
-        untar_file(file_path, self._extract_path)
+        archive.extract(file_path, self._extract_path)
 
     @property
     def _extract_path(self) -> str:
@@ -87,8 +86,3 @@ class NVDOverrides:
             self.__filepaths_by_cve__ = self._build_files_by_cve()
 
         return list(self.__filepaths_by_cve__.keys())
-
-
-def untar_file(file_path: str, extract_path: str) -> None:
-    with tarfile.open(file_path, "r:gz") as tar:
-        archive.safe_extract_tar(tar, extract_path)
