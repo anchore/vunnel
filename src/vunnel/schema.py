@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import os.path
 from dataclasses import dataclass
 
+# Note: this metadata.json file currently is not allowed to have a breaking change
 PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION = "1.0.2"
+
 PROVIDER_ARCHIVE_LISTING_SCHEMA_VERSION = "1.0.0"
 MATCH_EXCLUSION_SCHEMA_VERSION = "1.0.0"
 GITHUB_SECURITY_ADVISORY_SCHEMA_VERSION = "1.0.1"
@@ -16,10 +19,19 @@ OSV_SCHEMA_VERSION = "1.6.1"
 class Schema:
     version: str
     url: str
+    _name: str = ""
 
     @property
     def major_version(self) -> str:
         return self.version.split(".")[0]
+
+    @property
+    def name(self) -> str:
+        if self._name:
+            return self._name
+
+        name = self.url.removeprefix("https://raw.githubusercontent.com/anchore/vunnel/main/schema/")
+        return os.path.dirname(name)
 
 
 def ProviderListingSchema(version: str = PROVIDER_ARCHIVE_LISTING_SCHEMA_VERSION) -> Schema:

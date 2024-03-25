@@ -23,6 +23,9 @@ class Config:
 
 
 class Provider(provider.Provider):
+
+    __distribution_version__ = int(schema.OSSchema().major_version)
+
     _url = "https://packages.cgr.dev/chainguard/security.json"
     _namespace = "chainguard"
 

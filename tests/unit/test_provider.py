@@ -661,3 +661,110 @@ def assert_dummy_workspace_state(ws):
     )
 
     assert current_state == expected_state
+
+
+@patch("vunnel.provider.schemaDef.ProviderStateSchema")
+def test_version(mock_schema):
+    mock_schema.return_value = MagicMock(major_version=3)
+
+    class Impl(provider.Provider):
+        __distribution_version__ = 4
+        __version__ = 2
+
+        def __init__(self):
+            # intentionally do not call super().__init__()
+            pass
+
+        def name(self):
+            return "dummy"
+
+        def update(self):
+            return None
+
+    # distribution version = 4 + (3-1) = 6
+    # provider version = __version__ + (distribution version - 1) = 2 + (6-1) = 7
+    assert Impl().version() == 7
+
+
+@patch("vunnel.provider.schemaDef.ProviderStateSchema")
+def test_distribution_version(mock_schema):
+    mock_schema.return_value = MagicMock(major_version=1)
+
+    class Impl(provider.Provider):
+        __distribution_version__ = 4
+
+        def __init__(self):
+            # intentionally do not call super().__init__()
+            pass
+
+        def name(self):
+            return "dummy"
+
+        def update(self):
+            return None
+
+    assert Impl().distribution_version() == 4
+
+    # a breaking change to the workspace schema should reflect a change in distribution version
+    mock_schema.return_value = MagicMock(major_version=2)
+    assert Impl().distribution_version() == 5
+
+    # a change in the provider's distribution version should reflect a change in distribution version
+    Impl.__distribution_version__ = 6
+    assert Impl().distribution_version() == 7
+
+
+def test_provider_versions(tmpdir):
+    from vunnel import providers
+
+    # WARNING: changing the values of these versions has operational impact! Do not change them without
+    # understanding the implications!
+    expected = {
+        "alpine": 1,
+        "amazon": 1,
+        "chainguard": 1,
+        "debian": 1,
+        "github": 1,
+        "mariner": 1,
+        "nvd": 2,
+        "oracle": 1,
+        "rhel": 1,
+        "sles": 1,
+        "ubuntu": 2,
+        "wolfi": 1,
+    }
+
+    got = {}
+    for name in providers.names():
+        p = providers.create(name, tmpdir)
+        got[p.name()] = p.version()
+
+    assert expected == got, "WARNING! CHANGES TO VERSIONS HAVE OPERATIONAL IMPACT!"
+
+
+def test_provider_distribution_versions(tmpdir):
+    from vunnel import providers
+
+    # WARNING: changing the values of these distributions has operational impact! Do not change them without
+    # understanding the implications!
+    expected = {
+        "alpine": 1,
+        "amazon": 1,
+        "chainguard": 1,
+        "debian": 1,
+        "github": 1,
+        "mariner": 1,
+        "nvd": 1,
+        "oracle": 1,
+        "rhel": 1,
+        "sles": 1,
+        "ubuntu": 1,
+        "wolfi": 1,
+    }
+
+    got = {}
+    for name in providers.names():
+        p = providers.create(name, tmpdir)
+        got[p.name()] = p.distribution_version()
+
+    assert expected == got, "WARNING! CHANGES TO DISTRIBUTION VERSIONS HAVE OPERATIONAL IMPACT!"

@@ -24,6 +24,9 @@ class Config:
 
 
 class Provider(provider.Provider):
+
+    __distribution_version__ = int(schema.OSSchema().major_version)
+
     _url = "https://packages.wolfi.dev/os/security.json"
     _namespace = "wolfi"
 

@@ -39,6 +39,9 @@ class Config:
 
 
 class Provider(provider.Provider):
+
+    __distribution_version__ = int(schema.GithubSecurityAdvisorySchema().major_version)
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()

@@ -38,8 +38,10 @@ class Config:
 
 
 class Provider(provider.Provider):
-    # TODO: why not int(schema.NVDSchema().major_version) (@weston)
+    # this is the version for the behavior of the provider (processing) not an indication of the data shape.
     __version__ = 2
+
+    __distribution_version__ = int(schema.NVDSchema().major_version)
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:

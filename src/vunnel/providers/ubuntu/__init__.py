@@ -29,8 +29,10 @@ class Config:
 
 
 class Provider(provider.Provider):
-    # Bumping to version 2 because upstream changed the values of some data which requires reprocessing all of the history
+    # this is the version for the behavior of the provider (processing) not an indication of the data shape.
     __version__ = 2
+
+    __distribution_version__ = int(schema.OSSchema().major_version)
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
