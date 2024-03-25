@@ -12,7 +12,7 @@ import orjson
 import xxhash
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel import schema as schemaDef
+from vunnel import schema as schema_def
 from vunnel import utils
 from vunnel.utils import hasher
 
@@ -38,7 +38,7 @@ class State(DataClassDictMixin):
     timestamp: datetime.datetime
     version: int = 1
     listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
-    schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderStateSchema)
+    schema: schema_def.Schema = field(default_factory=schema_def.ProviderStateSchema)
     stale: bool = False
 
     @staticmethod

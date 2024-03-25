@@ -24,7 +24,8 @@ class Config:
 
 class Provider(provider.Provider):
 
-    __distribution_version__ = int(schema.OSSchema().major_version)
+    __schema__ = schema.OSSchema()
+    __distribution_version__ = int(__schema__.major_version)
 
     _url = "https://packages.cgr.dev/chainguard/security.json"
     _namespace = "chainguard"
@@ -37,7 +38,6 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.schema = schema.OSSchema()
         self.parser = Parser(
             workspace=self.workspace,
             url=self._url,
@@ -60,7 +60,7 @@ class Provider(provider.Provider):
                 for vuln_id, record in vuln_dict.items():
                     writer.write(
                         identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                        schema=self.schema,
+                        schema=self.__schema__,
                         payload=record,
                     )
 

@@ -40,7 +40,8 @@ class Config:
 
 class Provider(provider.Provider):
 
-    __distribution_version__ = int(schema.GithubSecurityAdvisorySchema().major_version)
+    __schema__ = schema.GithubSecurityAdvisorySchema()
+    __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -50,7 +51,6 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.schema = schema.GithubSecurityAdvisorySchema()
         self.parser = Parser(
             workspace=self.workspace,
             token=config.token,
@@ -82,7 +82,7 @@ class Provider(provider.Provider):
 
                     writer.write(
                         identifier=os.path.join(f"{namespace}:{ecosystem}", vuln_id),
-                        schema=self.schema,
+                        schema=self.__schema__,
                         payload={"Vulnerability": {}, "Advisory": dict(advisory)},
                     )
 

@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from vunnel.utils import archive, hasher, http
 
 from . import distribution, result, workspace
-from . import schema as schemaDef
+from . import schema as schema_def
 from .result import ResultStatePolicy
 
 
@@ -134,7 +134,7 @@ class Provider(abc.ABC):
         and results shape). This is slightly different from the `version` method which is specific to the provider,
         which encapsulates at least the distribution version + any other behavioral or data differences of the
         provider itself (which is valid during processing, but not strictly interpreting results)."""
-        workspace_version = int(schemaDef.ProviderStateSchema().major_version)
+        workspace_version = int(schema_def.ProviderStateSchema().major_version)
         return (workspace_version - 1) + cls.__distribution_version__
 
     @classmethod

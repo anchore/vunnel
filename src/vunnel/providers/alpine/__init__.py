@@ -25,7 +25,8 @@ class Config:
 
 class Provider(provider.Provider):
 
-    __distribution_version__ = int(schema.OSSchema().major_version)
+    __schema__ = schema.OSSchema()
+    __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -34,7 +35,6 @@ class Provider(provider.Provider):
         self.config = config
         self.logger.debug(f"config: {self.config}")
 
-        self.schema = schema.OSSchema()
         self.parser = Parser(
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
@@ -58,7 +58,7 @@ class Provider(provider.Provider):
 
                     writer.write(
                         identifier=os.path.join(namespace, vuln_id),
-                        schema=self.schema,
+                        schema=self.__schema__,
                         payload=record,
                     )
 

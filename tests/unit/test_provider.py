@@ -663,7 +663,7 @@ def assert_dummy_workspace_state(ws):
     assert current_state == expected_state
 
 
-@patch("vunnel.provider.schemaDef.ProviderStateSchema")
+@patch("vunnel.provider.schema_def.ProviderStateSchema")
 def test_version(mock_schema):
     mock_schema.return_value = MagicMock(major_version=3)
 
@@ -686,7 +686,7 @@ def test_version(mock_schema):
     assert Impl().version() == 7
 
 
-@patch("vunnel.provider.schemaDef.ProviderStateSchema")
+@patch("vunnel.provider.schema_def.ProviderStateSchema")
 def test_distribution_version(mock_schema):
     mock_schema.return_value = MagicMock(major_version=1)
 
