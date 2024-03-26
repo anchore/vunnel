@@ -75,7 +75,7 @@ def test_run(mocker, monkeypatch) -> None:
                     existing_results=provider.InputStatePolicy.KEEP,
                     result_store=result.StoreStrategy.SQLITE,
                     import_results_host="",
-                    import_results_path="{provider_name}/listing.json",
+                    import_results_path="providers/{provider_name}/listing.json",
                     import_results_enabled=False,
                 ),
                 request_timeout=125,
@@ -130,7 +130,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -145,7 +145,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -164,7 +164,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -176,7 +176,7 @@ providers:
     import_results:
       enabled: false
       host: ''
-      path: '{provider_name}/listing.json'
+      path: providers/{provider_name}/listing.json
   debian:
     releases:
       bookworm: '12'
@@ -193,7 +193,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -209,7 +209,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -228,7 +228,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -246,7 +246,7 @@ providers:
       existing_results: keep
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -261,7 +261,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -278,7 +278,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -300,7 +300,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -320,7 +320,7 @@ providers:
       existing_results: keep
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -335,7 +335,7 @@ providers:
       existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
-      import_results_path: '{provider_name}/listing.json'
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep

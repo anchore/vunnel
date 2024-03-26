@@ -18,9 +18,6 @@ class ListingEntry(DataClassDictMixin):
     # the date this archive was built relative to the data enclosed in the archive
     built: str
 
-    # the provider distribution version this archive was built with (different than the provider version)
-    distribution_version: int
-
     # the URL where the vunnel provider archive is located
     url: str
 
@@ -31,6 +28,9 @@ class ListingEntry(DataClassDictMixin):
     # the digest of the checksums file within the archive referenced at the URL
     # Note: all checksums are labeled with "algorithm:value" ( e.g. xxhash64:1234567890abcdef)
     enclosed_checksum: str
+
+    # the provider distribution version this archive was built with (different than the provider version)
+    distribution_version: int = 1
 
     def basename(self) -> str:
         basename = os.path.basename(urlparse(self.url, allow_fragments=False).path)

@@ -22,7 +22,7 @@ class ImportResults:
     """
 
     host: str = ""
-    path: str = "{provider_name}/listing.json"
+    path: str = "providers/{provider_name}/listing.json"
     enabled: bool = False
 
 
