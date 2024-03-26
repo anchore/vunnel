@@ -69,7 +69,7 @@ class RuntimeConfig:
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
     import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
-    import_results_path: str = "{provider_name}/listing.json"
+    import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
     import_results_enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
 
     def __post_init__(self) -> None:
@@ -85,7 +85,10 @@ class RuntimeConfig:
         return self.existing_input == InputStatePolicy.KEEP
 
     def import_url(self, provider_name: str) -> str:
-        path = self.import_results_path.format(provider_name=provider_name)
+        path = self.import_results_path
+        if path is None:
+            path = ""
+        path = path.format(provider_name=provider_name)
         host = self.import_results_host
         if host is None:
             host = ""

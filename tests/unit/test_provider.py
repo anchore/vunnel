@@ -137,6 +137,7 @@ def test_clear_existing_state_from_mismatched_distribution_versions(dummy_provid
         existing_input=provider.InputStatePolicy.KEEP,
         existing_results=provider.ResultStatePolicy.KEEP,
         import_results_enabled=True,
+        import_results_path="{provider_name}/listing.json",
         import_results_host="http://localhost",
     )
 
@@ -182,6 +183,7 @@ def test_mismatched_versions_has_no_effect_when_import_enabled(dummy_provider):
         existing_input=provider.InputStatePolicy.KEEP,
         existing_results=provider.ResultStatePolicy.KEEP,
         import_results_enabled=True,
+        import_results_path="{provider_name}/listing.json",
         import_results_host="http://localhost",
     )
 
@@ -561,6 +563,7 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
         existing_input=provider.InputStatePolicy.KEEP,
         existing_results=provider.ResultStatePolicy.KEEP,
         import_results_enabled=True,
+        import_results_path="{provider_name}/listing.json",
         import_results_host="http://localhost",
     )
 
@@ -626,6 +629,7 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
         existing_input=provider.InputStatePolicy.KEEP,
         existing_results=provider.ResultStatePolicy.KEEP,
         import_results_enabled=True,
+        import_results_path="{provider_name}/listing.json",
         import_results_host=f"http://localhost:{port}",
     )
 
@@ -736,6 +740,27 @@ def test_has_newer_archive_false(dummy_provider):
         url="http://example.com/some-example",
     )
     assert not subject._has_newer_archive(entry)
+
+
+@pytest.mark.parametrize(
+    "host,path,want",
+    [
+        ("http://example.com/", "{provider_name}/listing.json", "http://example.com/test-provider/listing.json"),
+        # extra leading and trailing slashes are handled correctly:
+        ("http://example.com////", "///{provider_name}/listing.json", "http://example.com/test-provider/listing.json"),
+        ("http://example.com/", "specific-path/listing.json", "http://example.com/specific-path/listing.json"),
+        ("http://sub.example.com/", "v1/{provider_name}/listing.json", "http://sub.example.com/v1/test-provider/listing.json"),
+        ("http://sub.example.com/v1", "/{provider_name}/listing.json", "http://sub.example.com/v1/test-provider/listing.json"),
+    ],
+)
+def test_import_url(host, path, want, dummy_provider):
+    subject = provider.RuntimeConfig(
+        import_results_path=path,
+        import_results_enabled=True,
+        import_results_host=host,
+    )
+    got = subject.import_url(provider_name="test-provider")
+    assert got == want
 
 
 def assert_dummy_workspace_state(ws):

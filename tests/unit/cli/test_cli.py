@@ -76,7 +76,7 @@ def test_run(mocker, monkeypatch) -> None:
                     result_store=result.StoreStrategy.SQLITE,
                     import_results_host="",
                     import_results_path="{provider_name}/listing.json",
-                    import_results_enabled=None,
+                    import_results_enabled=False,
                 ),
                 request_timeout=125,
                 api_key="secret",
@@ -128,7 +128,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -143,7 +143,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -162,7 +162,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -174,9 +174,9 @@ providers:
       result_store: sqlite
   common:
     import_results:
-      enabled: null
+      enabled: false
       host: ''
-      path: ''
+      path: '{provider_name}/listing.json'
   debian:
     releases:
       bookworm: '12'
@@ -191,7 +191,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -207,7 +207,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -226,7 +226,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -244,7 +244,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: keep
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -259,7 +259,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -276,7 +276,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -298,7 +298,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -318,7 +318,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: keep
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:
@@ -333,7 +333,7 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
-      import_results_enabled: null
+      import_results_enabled: false
       import_results_host: ''
       import_results_path: '{provider_name}/listing.json'
       on_error:

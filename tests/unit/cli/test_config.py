@@ -120,56 +120,85 @@ def test_full_config(helpers):
 
 
 @pytest.mark.parametrize(
-    "top_level_import_results,provider_host,provider_path,provider_enabled,want_import_results",
+    "common_enabled,provider_enabled,want",
     [
-        (
-            # top-level values propagate down
-            config.ImportResults("http://example.com", "", True),
-            "",
-            None,
-            None,
-            config.ImportResults("http://example.com", "{provider_name}/listing.json", True),
-        ),
-        (
-            # runtime defaults come through
-            config.ImportResults("", "", None),
-            "",
-            None,
-            None,
-            config.ImportResults("", "{provider_name}/listing.json", None),
-        ),
-        (
-            # specific values override top-level values
-            config.ImportResults("http://example.com", "some-specific-path/listing.json", False),
-            "http://somewhere-else.example.com",
-            "specific-path",
-            True,
-            config.ImportResults("http://somewhere-else.example.com", "specific-path", True),
-        ),
+        # default wins if provider is None
+        (True, None, True),
+        (False, None, False),
+        # provider always overrides default
+        (True, False, False),
+        (False, True, True),
+        # if everything agrees, that's the answer
+        (True, True, True),
+        (False, False, False),
     ],
 )
-def test_import_results_config(top_level_import_results, provider_host, provider_path, provider_enabled, want_import_results):
-    runtime_config_args = {}
-    if provider_path is not None:
-        runtime_config_args["import_results_path"] = provider_path
-    if provider_host is not None:
-        runtime_config_args["import_results_host"] = provider_host
-    if provider_enabled is not None:
-        runtime_config_args["import_results_enabled"] = provider_enabled
-
+def test_import_results_enabled(common_enabled: bool, provider_enabled: bool | None, want: bool):
     cfg = config.Application(
         providers=config.Providers(
             common=config.CommonProviderConfig(
-                import_results=top_level_import_results,
+                import_results=config.ImportResults(
+                    enabled=common_enabled,
+                )
             ),
             nvd=providers.nvd.Config(
                 runtime=provider.RuntimeConfig(
-                    **runtime_config_args,
-                ),
+                    import_results_enabled=provider_enabled,
+                )
             ),
-        ),
+        )
     )
+    assert cfg.providers.nvd.runtime.import_results_enabled == want
 
-    assert cfg.providers.nvd.runtime.import_results_host == want_import_results.host
-    assert cfg.providers.nvd.runtime.import_results_path == want_import_results.path
-    assert cfg.providers.nvd.runtime.import_results_enabled == want_import_results.enabled
+
+@pytest.mark.parametrize(
+    "common_path,provider_path,want",
+    [
+        ("default_value", None, "default_value"),
+        ("default_value", "specific_value", "specific_value"),
+        ("default_value", "", "default_value"),
+        ("default_value", "/", "/"),
+    ],
+)
+def test_import_results_path(common_path: str, provider_path: str | None, want: str):
+    cfg = config.Application(
+        providers=config.Providers(
+            common=config.CommonProviderConfig(
+                import_results=config.ImportResults(
+                    path=common_path,
+                )
+            ),
+            nvd=providers.nvd.Config(
+                runtime=provider.RuntimeConfig(
+                    import_results_path=provider_path,
+                )
+            ),
+        )
+    )
+    assert cfg.providers.nvd.runtime.import_results_path == want
+
+
+@pytest.mark.parametrize(
+    "common_host,provider_host,want",
+    [
+        ("default-host", None, "default-host"),
+        ("default-host", "specific-host", "specific-host"),
+        ("default-host", "", "default-host"),  # TODO: should this be "default-host"?
+    ],
+)
+def test_import_results_host(common_host: str, provider_host: str | None, want: str):
+    cfg = config.Application(
+        providers=config.Providers(
+            common=config.CommonProviderConfig(
+                import_results=config.ImportResults(
+                    host=common_host,
+                )
+            ),
+            nvd=providers.nvd.Config(
+                runtime=provider.RuntimeConfig(
+                    import_results_host=provider_host,
+                )
+            ),
+        )
+    )
+    assert cfg.providers.nvd.runtime.import_results_host == want

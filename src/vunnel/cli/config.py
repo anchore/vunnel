@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -16,9 +16,14 @@ from vunnel import provider, providers
 
 @dataclass
 class ImportResults:
+    """
+    These are the defaults for all providers. Corresponding
+    fields on specific providers override these values.
+    """
+
     host: str = ""
-    path: str = ""
-    enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
+    path: str = "{provider_name}/listing.json"
+    enabled: bool = False
 
 
 @dataclass
