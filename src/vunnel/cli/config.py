@@ -19,11 +19,19 @@ class ImportResults:
     """
     These are the defaults for all providers. Corresponding
     fields on specific providers override these values.
+
+    If a path is "" or None, path will be set to "providers/{provider_name}/listing.json".
+    If an empty path is needed, specify "/".
     """
 
+    __default_path__ = "providers/{provider_name}/listing.json"
     host: str = ""
-    path: str = "providers/{provider_name}/listing.json"
+    path: str = __default_path__
     enabled: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.path:
+            self.path = self.__default_path__
 
 
 @dataclass
