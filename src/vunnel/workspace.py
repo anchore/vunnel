@@ -6,14 +6,15 @@ import os
 import shutil
 import sqlite3
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 import orjson
 import xxhash
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel import schema as schemaDef
+from vunnel import schema as schema_def
 from vunnel import utils
+from vunnel.utils import hasher
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -36,8 +37,10 @@ class State(DataClassDictMixin):
     store: str
     timestamp: datetime.datetime
     version: int = 1
+    distribution_version: int = 1
     listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
-    schema: schemaDef.Schema = field(default_factory=schemaDef.ProviderStateSchema)
+    schema: schema_def.Schema = field(default_factory=schema_def.ProviderStateSchema)
+    stale: bool = False
 
     @staticmethod
     def read(root: str) -> State:
@@ -113,6 +116,14 @@ class Workspace:
         return os.path.join(self.path, "results")
 
     @property
+    def metadata_path(self) -> str:
+        return os.path.join(self.path, METADATA_FILENAME)
+
+    @property
+    def checksums_path(self) -> str:
+        return os.path.join(self.path, CHECKSUM_LISTING_FILENAME)
+
+    @property
     def input_path(self) -> str:
         return os.path.join(self.path, "input")
 
@@ -162,7 +173,15 @@ class Workspace:
             shutil.rmtree(self.input_path)
             os.makedirs(self.input_path, exist_ok=True)
 
-    def record_state(self, version: int, timestamp: datetime.datetime, urls: list[str], store: str) -> None:
+    def record_state(  # noqa: PLR0913
+        self,
+        version: int,
+        distribution_version: int,
+        timestamp: datetime.datetime,
+        urls: list[str],
+        store: str,
+        stale: bool = False,
+    ) -> None:
         try:
             current_state = State.read(root=self.path)
         except FileNotFoundError:
@@ -176,31 +195,68 @@ class Workspace:
 
         self.logger.info("recording workspace state")
 
-        state = State(provider=self.name, version=version, urls=urls, store=store, timestamp=timestamp)
+        state = State(
+            provider=self.name,
+            version=version,
+            distribution_version=distribution_version,
+            urls=urls,
+            store=store,
+            timestamp=timestamp,
+            stale=stale,
+        )
         metadata_path = state.write(self.path, self.results_path)
 
         self.logger.debug(f"wrote workspace state to {metadata_path}")
 
-    def state(self) -> State | None:
+    def state(self) -> State:
         return State.read(self.path)
 
+    def validate_checksums(self) -> None:
+        state = State.read(self.path)
+        if not state.listing:
+            raise RuntimeError("no file listing found in workspace state")
 
-def digest_path_with_hasher(path: str, hasher: Any, label: str | None, size: int = 65536) -> str:
-    with open(path, "rb") as f:
-        while b := f.read(size):
-            hasher.update(b)
+        full_path = os.path.join(self.path, state.listing.path)
 
-    if label:
-        return label + ":" + hasher.hexdigest()
-    return hasher.hexdigest()
+        # ensure the checksums file itself is not modified
+        if state.listing.digest != hasher.Method.XXH64.digest(full_path, label=False):
+            raise RuntimeError(f"file {full_path!r} has been modified")
 
+        # validate the checksums in the listing file
+        with open(full_path) as f:
+            for line in f.readlines():
+                digest, path = line.split()
+                full_path = os.path.join(self.path, path)
+                if not os.path.exists(full_path):
+                    raise RuntimeError(f"file {full_path!r} does not exist")
 
-# def sha256_digest(path: str, label: bool = True) -> str:
-#     return digest_path_with_hasher(path, hashlib.sha256(), "sha256" if label else None)
+                if digest != hasher.Method.XXH64.digest(full_path, label=False):
+                    raise RuntimeError(f"file {full_path!r} has been modified")
 
+    def overlay_existing(self, source: str, move: bool = False) -> None:
+        self.logger.info(f"overlaying existing workspace {source!r} to {self.path!r}")
 
-def xxhash64_digest(path: str, label: bool = True) -> str:
-    return digest_path_with_hasher(path, xxhash.xxh64(), "xxh64" if label else None)
+        for root, _, files in os.walk(source):
+            for file in files:
+                src = os.path.join(root, file)
+                dst = os.path.join(self.path, os.path.relpath(src, source))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+
+                if move:
+                    os.rename(src, dst)
+                else:
+                    shutil.copy2(src, dst)
+
+    def replace_results(self, temp_workspace: Workspace) -> None:
+        self.logger.info(f"replacing results in {self.path!r} with results from {temp_workspace.path!r}")
+        self.clear_results()
+        os.rename(temp_workspace.results_path, self.results_path)
+        self._clear_metadata()
+        os.rename(temp_workspace.metadata_path, self.metadata_path)
+        os.rename(temp_workspace.checksums_path, self.checksums_path)
+        state = self.state()
+        state.stale = True
+        self.record_state(state.version, state.distribution_version, state.timestamp, state.urls, state.store, True)
 
 
 def write_file_listing(output_file: str, path: str) -> str:
@@ -214,7 +270,7 @@ def write_file_listing(output_file: str, path: str) -> str:
                 path_relative_to_results = os.path.relpath(full_path, path)
                 path_relative_to_workspace = os.path.join(os.path.basename(path), path_relative_to_results)
 
-                contents = f"{xxhash64_digest(full_path, label=False)}  {path_relative_to_workspace}\n"
+                contents = f"{hasher.Method.XXH64.digest(full_path, label=False)}  {path_relative_to_workspace}\n"
                 listing_hasher.update(contents.encode("utf-8"))
 
                 f.write(contents)

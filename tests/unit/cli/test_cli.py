@@ -74,6 +74,9 @@ def test_run(mocker, monkeypatch) -> None:
                     existing_input=provider.InputStatePolicy.KEEP,
                     existing_results=provider.InputStatePolicy.KEEP,
                     result_store=result.StoreStrategy.SQLITE,
+                    import_results_host="",
+                    import_results_path="providers/{provider_name}/listing.json",
+                    import_results_enabled=False,
                 ),
                 request_timeout=125,
                 api_key="secret",
@@ -125,6 +128,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -137,6 +143,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -153,6 +162,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -160,6 +172,11 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+  common:
+    import_results:
+      enabled: false
+      host: ''
+      path: providers/{provider_name}/listing.json
   debian:
     releases:
       bookworm: '12'
@@ -174,6 +191,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -187,6 +207,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -203,6 +226,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -218,6 +244,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: keep
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -230,6 +259,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -244,6 +276,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -263,6 +298,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -280,6 +318,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: keep
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep
@@ -292,6 +333,9 @@ providers:
     runtime:
       existing_input: keep
       existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
       on_error:
         action: fail
         input: keep

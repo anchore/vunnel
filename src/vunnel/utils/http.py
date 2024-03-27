@@ -1,10 +1,14 @@
-import logging
+from __future__ import annotations
+
 import random
 import time
-from collections.abc import Callable
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import requests
+
+if TYPE_CHECKING:
+    import logging
+    from collections.abc import Callable
 
 DEFAULT_TIMEOUT = 30
 
@@ -15,7 +19,7 @@ def get(  # noqa: PLR0913
     retries: int = 5,
     backoff_in_seconds: int = 3,
     timeout: int = DEFAULT_TIMEOUT,
-    status_handler: Optional[Callable[[requests.Response], None]] = None,
+    status_handler: Optional[Callable[[requests.Response], None]] = None,  # noqa: UP007 - python 3.9
     **kwargs: Any,
 ) -> requests.Response:
     """
