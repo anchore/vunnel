@@ -38,7 +38,10 @@ class Config:
 
 
 class Provider(provider.Provider):
+    # this is the version for the behavior of the provider (processing) not an indication of the data shape.
     __version__ = 2
+    __schema__ = schema.NVDSchema()
+    __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -64,10 +67,9 @@ class Provider(provider.Provider):
                 "if 'overrides_enabled' is set then 'overrides_url' must be set",
             )
 
-        self.schema = schema.NVDSchema()
         self.manager = Manager(
             workspace=self.workspace,
-            schema=self.schema,
+            schema=self.__schema__,
             download_timeout=self.config.request_timeout,
             api_key=self.config.api_key,
             logger=self.logger,
@@ -87,7 +89,7 @@ class Provider(provider.Provider):
             ):
                 writer.write(
                     identifier=identifier.lower(),
-                    schema=self.schema,
+                    schema=self.__schema__,
                     payload=record,
                 )
 

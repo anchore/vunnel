@@ -4,11 +4,17 @@ import abc
 import datetime
 import enum
 import logging
+import os
+import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
+from urllib.parse import urlparse
 
-from . import result, workspace
+from vunnel.utils import archive, hasher, http
+
+from . import distribution, result, workspace
+from . import schema as schema_def
 from .result import ResultStatePolicy
 
 
@@ -62,6 +68,10 @@ class RuntimeConfig:
     # the format the results should be written in
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
 
+    import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
+    import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
+    import_results_enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
+
     def __post_init__(self) -> None:
         if not isinstance(self.existing_input, InputStatePolicy):
             self.existing_input = InputStatePolicy(self.existing_input)
@@ -74,6 +84,17 @@ class RuntimeConfig:
     def skip_if_exists(self) -> bool:
         return self.existing_input == InputStatePolicy.KEEP
 
+    def import_url(self, provider_name: str) -> str:
+        path = self.import_results_path
+        if path is None:
+            path = ""
+        path = path.format(provider_name=provider_name)
+        host = self.import_results_host
+        if host is None:
+            host = ""
+
+        return f"{host.strip('/')}/{path.strip('/')}"
+
 
 def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
     if cfg.existing_input != InputStatePolicy.KEEP:
@@ -83,20 +104,41 @@ def disallow_existing_input_policy(cfg: RuntimeConfig) -> None:
 
 
 class Provider(abc.ABC):
-    # a breaking change to the semantics or values that the provider writes out should incur a version bump here.
-    # this is used to determine if the provider can be run on an existing workspace or if it must be cleared first
-    # (regardless of the existing_input and existing_result policy is).
+    # a breaking change to the semantics of how the provider processes results.
+    #
+    # NOTE: this value should only be changed in classes that inherit this class. Do not change the value in this class!
     __version__: int = 1
+
+    # a breaking change to the schema of the results that the provider writes out should incur a version bump here.
+    #
+    # NOTE: this value should only be changed in classes that inherit this class. Do not change the value in this class!
+    __distribution_version__: int = 1
 
     def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):  # noqa: B008
         self.logger = logging.getLogger(self.name())
         self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
         self.urls: list[str] = []
+        if runtime_cfg.import_results_enabled:
+            if not runtime_cfg.import_results_host:
+                raise RuntimeError("enabling import results requires host")
+            if not runtime_cfg.import_results_path:
+                raise RuntimeError("enabling import results requires path")
+
         self.runtime_cfg = runtime_cfg
 
     @classmethod
     def version(cls) -> int:
-        return cls.__version__
+        return cls.__version__ + (cls.distribution_version() - 1)
+
+    @classmethod
+    def distribution_version(cls) -> int:
+        """This version represents when a breaking change is made for interpreting purely the provider results. This
+        tends to be an aggregation of all schema versions involved in the provider (i.e. the provider workspace state
+        and results shape). This is slightly different from the `version` method which is specific to the provider,
+        which encapsulates at least the distribution version + any other behavioral or data differences of the
+        provider itself (which is valid during processing, but not strictly interpreting results)."""
+        workspace_version = int(schema_def.ProviderStateSchema().major_version)
+        return (workspace_version - 1) + cls.__distribution_version__
 
     @classmethod
     @abc.abstractmethod
@@ -122,13 +164,21 @@ class Provider(abc.ABC):
 
         last_updated = None
         current_state = self.read_state()
-        if current_state:
+        if current_state and not current_state.stale:
             last_updated = current_state.timestamp
 
-        urls, count = self.update(last_updated=last_updated)
+        stale = False
+        if self.runtime_cfg.import_results_enabled:
+            urls, count = self._fetch_or_use_results_archive()
+            stale = True
+        else:
+            urls, count = self.update(last_updated=last_updated)
+
         if count > 0:
             self.workspace.record_state(
+                stale=stale,
                 version=self.version(),
+                distribution_version=self.distribution_version(),
                 timestamp=start,
                 urls=urls,
                 store=self.runtime_cfg.result_store.value,
@@ -136,11 +186,66 @@ class Provider(abc.ABC):
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 
+    def _fetch_or_use_results_archive(self) -> tuple[list[str], int]:
+        listing_doc = self._fetch_listing_document()
+        latest_entry = listing_doc.latest_entry(schema_version=self.distribution_version())
+        if not latest_entry:
+            raise RuntimeError("no listing entry found")
+
+        if self._has_newer_archive(latest_entry=latest_entry):
+            self._prep_workspace_from_listing_entry(entry=latest_entry)
+        state = self.workspace.state()
+        return state.urls, state.result_count(self.workspace.path)
+
+    def _fetch_listing_document(self) -> distribution.ListingDocument:
+        url = self.runtime_cfg.import_url(provider_name=self.name())
+        resp = http.get(url, logger=self.logger)
+        resp.raise_for_status()
+
+        return distribution.ListingDocument.from_dict(resp.json())
+
+    def _has_newer_archive(self, latest_entry: distribution.ListingEntry) -> bool:
+        if not os.path.exists(self.workspace.metadata_path):
+            return True
+
+        state = self.workspace.state()
+        if not state:
+            return True
+
+        if state.distribution_version != self.distribution_version():
+            return True
+
+        if not state.listing:
+            return True
+
+        # note: the checksum is the digest of the checksums file within the archive, which is in the form "algo:value"
+        return f"{state.listing.algorithm}:{state.listing.digest}" != latest_entry.enclosed_checksum
+
+    def _prep_workspace_from_listing_entry(self, entry: distribution.ListingEntry) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            unarchived_path = _fetch_listing_entry_archive(dest=temp_dir, entry=entry, logger=self.logger)
+
+            temp_ws = workspace.Workspace(unarchived_path, self.name(), logger=self.logger, create=False)
+
+            # validate that the workspace is in a good state
+            temp_ws.validate_checksums()
+
+            # then switch the existing workspace to the new one...
+            # move the contents of the tmp dir to the workspace destination
+            self.workspace.replace_results(temp_workspace=temp_ws)
+
     def run(self) -> None:
         self.logger.debug(f"using {self.workspace.path!r} as workspace")
 
         current_state = self.read_state()
-        if current_state and current_state.version != self.version():
+        if self.runtime_cfg.import_results_enabled:
+            if current_state and current_state.distribution_version != self.distribution_version():
+                self.logger.warning(
+                    f"provider distribution version has changed from {current_state.distribution_version} to {self.distribution_version()}",
+                )
+                self.logger.warning("clearing workspace to ensure consistency of existing results")
+                self.workspace.clear()
+        elif current_state and current_state.version != self.version():
             self.logger.warning(f"provider version has changed from {current_state.version} to {self.version()}")
             self.logger.warning("clearing workspace to ensure consistency of existing input and results")
             self.workspace.clear()
@@ -152,6 +257,7 @@ class Provider(abc.ABC):
                 self.workspace.clear_input()
 
         self.workspace.create()
+
         try:
             self._update()
         except Exception as e:
@@ -212,3 +318,28 @@ class Provider(abc.ABC):
             store_strategy=self.runtime_cfg.result_store,
             **kwargs,
         )
+
+
+def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, logger: logging.Logger) -> str:
+
+    archive_path = os.path.join(dest, os.path.basename(urlparse(entry.url, allow_fragments=False).path))
+
+    # download the URL for the archive
+    resp = http.get(entry.url, logger=logger, stream=True)
+    resp.raise_for_status()
+    logger.debug(f"downloading {entry.url} to {archive_path}")
+    with open(archive_path, "wb") as fp:
+        for chunk in resp.iter_content(chunk_size=None):
+            fp.write(chunk)
+
+    logger.debug(f"validating checksum for {archive_path}")
+    hashMethod = hasher.Method.parse(entry.distribution_checksum)
+    actual_labeled_digest = hashMethod.digest(archive_path)
+    if actual_labeled_digest != entry.distribution_checksum:
+        raise ValueError(f"archive checksum mismatch: {actual_labeled_digest} != {entry.distribution_checksum}")
+
+    unarchive_path = os.path.join(dest, "unarchived")
+    logger.debug(f"unarchiving {archive_path} to {unarchive_path}")
+    archive.extract(archive_path, unarchive_path)
+
+    return unarchive_path

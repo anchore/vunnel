@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "provider-workspace-state",
+  "description": "describes the filesystem state of a provider workspace directory",
+  "properties": {
+    "provider": {
+      "type": "string"
+    },
+    "urls": {
+      "type": "array",
+      "items": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "store": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "listing": {
+      "type": "object",
+      "properties": {
+        "digest": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "algorithm": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "digest",
+        "path",
+        "algorithm"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "description": "version describing the result data shape + the provider processing behavior semantics"
+    },
+    "distribution_version": {
+      "type": "integer",
+      "description": "version describing purely the result data shape"
+    },
+    "schema": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "url"
+      ]
+    },
+    "stale": {
+      "type": "boolean",
+      "description": "set to true if the workspace is stale and cannot be used for an incremental update"
+    }
+  },
+  "required": [
+    "provider",
+    "urls",
+    "store",
+    "timestamp",
+    "listing",
+    "version",
+    "schema"
+  ]
+}

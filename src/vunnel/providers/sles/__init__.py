@@ -28,15 +28,19 @@ class Config:
 
 
 class Provider(provider.Provider):
+
+    __schema__ = schema.OSSchema()
+    __distribution_version__ = int(__schema__.major_version)
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
+
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
         self.logger.debug(f"config: {config}")
 
-        self.schema = schema.OSSchema()
         self.parser = Parser(
             workspace=self.workspace,
             allow_versions=self.config.allow_versions,
@@ -59,7 +63,7 @@ class Provider(provider.Provider):
                 vuln_id = vuln_id.lower()
                 writer.write(
                     identifier=os.path.join(namespace, vuln_id),
-                    schema=self.schema,
+                    schema=self.__schema__,
                     payload=record,
                 )
 
