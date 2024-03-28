@@ -81,8 +81,8 @@ class Manager:
                     yield cve_to_id(cve), self._apply_override(cve, original_record)
 
             self.logger.debug(f"applied overrides for {len(override_remaining_cves)} CVEs")
-
-        self.logger.debug("overrides are not enabled, skipping...")
+        else:
+            self.logger.debug("overrides are not enabled, skipping...")
 
     def _download_nvd_input(
         self,
