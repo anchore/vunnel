@@ -92,13 +92,13 @@ class Parser:
                 content = fp.read()
             return content  # noqa: RET504
         try:
-            r = http.get(alas_url, self.logger, timeout=self.download_timeout)
+            r = http.get(alas_url, self.logger, retries=0, timeout=self.download_timeout)
             content = r.text
             with open(alas_file, "w", encoding="utf-8") as fp:
                 fp.write(content)
             return content
         except Exception:
-            self.logger.exception(f"error downloading data from {alas_url}")
+            self.logger.warning(f"error downloading data from {alas_url}")
             raise
 
     @staticmethod
@@ -134,20 +134,24 @@ class Parser:
             for alas in alas_summaries:
                 # download alas html content
                 alas_file = os.path.join(html_dir, alas.id)
-                html_content = self._get_alas_html(alas.url, alas_file)
+                try:
+                    html_content = self._get_alas_html(alas.url, alas_file)
 
-                # parse alas html for fixes
-                parser = PackagesHTMLParser()
-                parser.feed(html_content)
+                    # parse alas html for fixes
+                    parser = PackagesHTMLParser()
+                    parser.feed(html_content)
 
-                # split the package name and version of the fixed in packages and construct a set
-                fixed_in = {self.get_package_name_version(pkg_name) for pkg_name in parser.fixes}
+                    # split the package name and version of the fixed in packages and construct a set
+                    fixed_in = {self.get_package_name_version(pkg_name) for pkg_name in parser.fixes}
 
-                # concat the descriptions paragraph
-                description = "".join(parser.issue_overview_text)
+                    # concat the descriptions paragraph
+                    description = "".join(parser.issue_overview_text)
 
-                # construct a vulnerability object and yield it
-                yield map_to_vulnerability(version, alas, fixed_in, description)
+                    # construct a vulnerability object and yield it
+                    yield map_to_vulnerability(version, alas, fixed_in, description)
+                except Exception:
+                    self.logger.warning(f"error processing ALAS {alas.id}")
+                    continue
 
 
 class JsonifierMixin:
