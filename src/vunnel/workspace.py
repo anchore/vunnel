@@ -243,17 +243,17 @@ class Workspace:
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
 
                 if move:
-                    os.rename(src, dst)
+                    shutil.move(src, dst)
                 else:
                     shutil.copy2(src, dst)
 
     def replace_results(self, temp_workspace: Workspace) -> None:
         self.logger.info(f"replacing results in {self.path!r} with results from {temp_workspace.path!r}")
         self.clear_results()
-        os.rename(temp_workspace.results_path, self.results_path)
+        shutil.move(temp_workspace.results_path, self.results_path)
         self._clear_metadata()
-        os.rename(temp_workspace.metadata_path, self.metadata_path)
-        os.rename(temp_workspace.checksums_path, self.checksums_path)
+        shutil.move(temp_workspace.metadata_path, self.metadata_path)
+        shutil.move(temp_workspace.checksums_path, self.checksums_path)
         state = self.state()
         state.stale = True
         self.record_state(state.version, state.distribution_version, state.timestamp, state.urls, state.store, True)
