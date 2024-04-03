@@ -149,11 +149,12 @@ class Workspace:
         utils.silent_remove(os.path.join(self.path, METADATA_FILENAME))
         utils.silent_remove(os.path.join(self.path, CHECKSUM_LISTING_FILENAME))
 
-    def clear_results(self) -> None:
+    def clear_results(self, recreate_results_dir: bool = True) -> None:
         if os.path.exists(self.results_path):
             self.logger.debug("clearing existing results")
             shutil.rmtree(self.results_path)
-            os.makedirs(self.results_path, exist_ok=True)
+            if recreate_results_dir:
+                os.makedirs(self.results_path, exist_ok=True)
 
         try:
             current_state = State.read(root=self.path)
@@ -233,27 +234,13 @@ class Workspace:
                 if digest != hasher.Method.XXH64.digest(full_path, label=False):
                     raise RuntimeError(f"file {full_path!r} has been modified")
 
-    def overlay_existing(self, source: str, move: bool = False) -> None:
-        self.logger.info(f"overlaying existing workspace {source!r} to {self.path!r}")
-
-        for root, _, files in os.walk(source):
-            for file in files:
-                src = os.path.join(root, file)
-                dst = os.path.join(self.path, os.path.relpath(src, source))
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-
-                if move:
-                    os.rename(src, dst)
-                else:
-                    shutil.copy2(src, dst)
-
     def replace_results(self, temp_workspace: Workspace) -> None:
         self.logger.info(f"replacing results in {self.path!r} with results from {temp_workspace.path!r}")
-        self.clear_results()
-        os.rename(temp_workspace.results_path, self.results_path)
+        self.clear_results(recreate_results_dir=False)
+        shutil.move(temp_workspace.results_path, self.path)
         self._clear_metadata()
-        os.rename(temp_workspace.metadata_path, self.metadata_path)
-        os.rename(temp_workspace.checksums_path, self.checksums_path)
+        shutil.move(temp_workspace.metadata_path, self.metadata_path)
+        shutil.move(temp_workspace.checksums_path, self.checksums_path)
         state = self.state()
         state.stale = True
         self.record_state(state.version, state.distribution_version, state.timestamp, state.urls, state.store, True)
