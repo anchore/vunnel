@@ -234,20 +234,6 @@ class Workspace:
                 if digest != hasher.Method.XXH64.digest(full_path, label=False):
                     raise RuntimeError(f"file {full_path!r} has been modified")
 
-    def overlay_existing(self, source: str, move: bool = False) -> None:
-        self.logger.info(f"overlaying existing workspace {source!r} to {self.path!r}")
-
-        for root, _, files in os.walk(source):
-            for file in files:
-                src = os.path.join(root, file)
-                dst = os.path.join(self.path, os.path.relpath(src, source))
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-
-                if move:
-                    shutil.move(src, dst)
-                else:
-                    shutil.copy2(src, dst)
-
     def replace_results(self, temp_workspace: Workspace) -> None:
         self.logger.info(f"replacing results in {self.path!r} with results from {temp_workspace.path!r}")
         self.clear_results(recreate_results_dir=False)
