@@ -211,7 +211,7 @@ class SQLiteStore(Store):
             self.table = None
 
         if successful and os.path.exists(self.temp_db_file_path):
-            os.rename(self.temp_db_file_path, self.db_file_path)
+            shutil.move(self.temp_db_file_path, self.db_file_path)
         elif os.path.exists(self.temp_db_file_path):
             os.remove(self.temp_db_file_path)
 
