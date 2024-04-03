@@ -149,11 +149,12 @@ class Workspace:
         utils.silent_remove(os.path.join(self.path, METADATA_FILENAME))
         utils.silent_remove(os.path.join(self.path, CHECKSUM_LISTING_FILENAME))
 
-    def clear_results(self) -> None:
+    def clear_results(self, recreate_results_dir: bool = True) -> None:
         if os.path.exists(self.results_path):
             self.logger.debug("clearing existing results")
             shutil.rmtree(self.results_path)
-            os.makedirs(self.results_path, exist_ok=True)
+            if recreate_results_dir:
+                os.makedirs(self.results_path, exist_ok=True)
 
         try:
             current_state = State.read(root=self.path)
@@ -249,8 +250,8 @@ class Workspace:
 
     def replace_results(self, temp_workspace: Workspace) -> None:
         self.logger.info(f"replacing results in {self.path!r} with results from {temp_workspace.path!r}")
-        self.clear_results()
-        shutil.move(temp_workspace.results_path, self.results_path)
+        self.clear_results(recreate_results_dir=False)
+        shutil.move(temp_workspace.results_path, self.path)
         self._clear_metadata()
         shutil.move(temp_workspace.metadata_path, self.metadata_path)
         shutil.move(temp_workspace.checksums_path, self.checksums_path)
