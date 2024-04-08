@@ -84,6 +84,7 @@ ubuntu_version_names = {
     "kinetic": "22.10",
     "lunar": "23.04",
     "mantic": "23.10",
+    "numbat": "24.04",
 }
 
 # driver workspace
