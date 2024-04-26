@@ -218,6 +218,7 @@ tests:
       - sles:distro:sles:15.3
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
+      - sles:distro:sles:15.6
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
