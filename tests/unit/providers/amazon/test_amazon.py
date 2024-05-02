@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import shutil
+from requests.exceptions import HTTPError
+from unittest.mock import Mock
 
 import pytest
 from vunnel import result, workspace
-from vunnel.utils import http
+from vunnel.utils.http import requests
 from vunnel.providers.amazon import Config, Provider, parser
 
 
@@ -75,6 +77,44 @@ class TestParser:
         a = parser.Parser.get_package_name_version("java-1.8.0-openjdk-1.8.0.161-0.b14.amzn2.src")
         b = parser.Parser.get_package_name_version("java-1.8.0-openjdk-1.8.0.161-0.b14.amzn2.x86_64")
         assert a == b
+
+    def test_get_alas_html_403(self, helpers, monkeypatch, tmpdir):
+        # write a mock such that any http.get call will return a response with status code 403
+        def mock_get(*args, **kwargs):
+            return Mock(status_code=403)
+
+        monkeypatch.setattr(requests, "get", mock_get)
+
+        alas_file = tmpdir.join("alas.html")
+
+        p = parser.Parser(workspace=workspace.Workspace(helpers.local_dir("test-fixtures"), "test", create=True))
+        alas = p._get_alas_html("https://example.com", alas_file)
+        assert alas is None
+
+    def test_get_alas_html_raises_over_threshold(self, helpers, monkeypatch, tmpdir):
+        # write a mock such that any http.get call will return a response with status code 403
+        url = "https://example.com"
+
+        def mock_get(*args, **kwargs):
+            return Mock(status_code=403, url=url)
+
+        monkeypatch.setattr(requests, "get", mock_get)
+
+        alas_file = tmpdir.join("alas.html")
+
+        p = parser.Parser(workspace=workspace.Workspace(helpers.local_dir("test-fixtures"), "test", create=True))
+        p.max_allowed_alas_http_403 = 2
+
+        # assert does not raise when at the threshold
+        p.alas_403s = ["something"]
+        p._get_alas_html(url, alas_file)
+        assert p.alas_403s == ["something", url]
+
+        # assert raises when above the threshold
+        with pytest.raises(ValueError):
+            p._get_alas_html(url, alas_file)
+
+        assert p.alas_403s == ["something", url, url]
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):

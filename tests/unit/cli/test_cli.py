@@ -139,6 +139,7 @@ providers:
         retry_delay: 5
       result_store: sqlite
   amazon:
+    max_allowed_alas_http_403: 25
     request_timeout: 125
     runtime:
       existing_input: keep
