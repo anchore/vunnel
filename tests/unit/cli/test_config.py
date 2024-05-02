@@ -52,6 +52,7 @@ def test_full_config(helpers):
                 },
                 runtime=runtime_cfg,
                 request_timeout=20,
+                max_allowed_alas_http_403=33,
             ),
             chainguard=providers.chainguard.Config(
                 runtime=runtime_cfg,

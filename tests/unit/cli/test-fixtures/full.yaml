@@ -19,6 +19,7 @@ providers:
   amazon:
     runtime: *runtime
     request_timeout: 20
+    max_allowed_alas_http_403: 33
     security_advisories:
       42: "https://alas.aws.amazon.com/AL2/alas-42.rss"
   chainguard:
