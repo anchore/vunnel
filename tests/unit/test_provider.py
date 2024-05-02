@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import datetime
 import tarfile
 import json
 import logging
@@ -42,7 +43,8 @@ class DummyProvider(provider.Provider):
         assert_path(os.path.join(self.workspace.path, "state.json"), exists)
 
     def _fetch_or_use_results_archive(self):
-        return self.update()
+        urls, count = self.update()
+        return urls, count, datetime.datetime(2021, 1, 1, 0, 0, 0)
 
     def update(self, *args, **kwargs):
         self.count += 1
@@ -659,16 +661,85 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
 
     mock_requests.side_effect = handle_get_requests
 
-    urls, count = subject._fetch_or_use_results_archive()
+    urls, count, start = subject._fetch_or_use_results_archive()
     assert urls == ["http://localhost:8000/dummy-input-1.json"]
     assert count == 1
+    assert start == datetime.datetime(2021, 1, 1, 0, 0, 0)
+
+
+@patch("requests.get")
+def test_fetch_results_keeps_original_metadata(mock_requests, tmpdir, dummy_provider):
+    port = 8080
+
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
+        tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider
+    )
+    # fetch the tar file
+    tarfile_bytes = None
+    with open(tarfile_path, "rb") as f:
+        tarfile_bytes = f.read()
+
+    policy = provider.RuntimeConfig(
+        result_store=result.StoreStrategy.SQLITE,
+        existing_input=provider.InputStatePolicy.KEEP,
+        existing_results=provider.ResultStatePolicy.KEEP,
+        import_results_enabled=True,
+        import_results_path="{provider_name}/listing.json",
+        import_results_host=f"http://localhost:{port}",
+    )
+
+    subject = dummy_provider(populate=True, runtime_cfg=policy)
+
+    current = subject.workspace.state()
+
+    og_timestamp = datetime.datetime(2021, 1, 1, 0, 0, 0)
+    current.timestamp = og_timestamp
+
+    subject.workspace.record_state(
+        version=subject.version(),
+        distribution_version=subject.distribution_version(),
+        timestamp=og_timestamp,
+        urls=[subject.input_file],
+        store=result.StoreStrategy.FLAT_FILE.value,
+    )
+
+    def handle_get_requests(url, *args, **kwargs):
+        listing_response = MagicMock()
+        listing_response.status_code = 200
+        listing_response.raise_for_status.side_effect = None
+        listing_response.json.return_value = json.loads(open(listing_path, "r").read())
+
+        entry_response = MagicMock()
+        entry_response.status_code = 200
+        entry_response.raise_for_status.side_effect = None
+        entry_response.iter_content.return_value = [tarfile_bytes]
+
+        not_found_response = MagicMock()
+        not_found_response.status_code = 404
+        not_found_response.raise_for_status.side_effect = Exception("404")
+
+        if url == f"http://localhost:{port}/{subject.name()}/listing.json":
+            return listing_response
+        elif url == entry.url:
+            return entry_response
+        else:
+            return not_found_response
+
+    mock_requests.side_effect = handle_get_requests
+
+    subject.run()
+
+    updated_state = subject.workspace.state()
+
+    assert updated_state.timestamp == og_timestamp
+    assert updated_state.stale
 
 
 @pytest.mark.parametrize(
     "enabled,host,path,error_message",
     [
-        (True, "", "", "enablign import results requires host"),
-        (True, "http://example.com", "", "enablign import results requires path"),
+        (True, "", "", "enabling import results requires host"),
+        (True, "http://example.com", "", "enabling import results requires path"),
         (False, "", "", None),
     ],
 )

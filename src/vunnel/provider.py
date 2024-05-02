@@ -169,7 +169,7 @@ class Provider(abc.ABC):
 
         stale = False
         if self.runtime_cfg.import_results_enabled:
-            urls, count = self._fetch_or_use_results_archive()
+            urls, count, start = self._fetch_or_use_results_archive()
             stale = True
         else:
             urls, count = self.update(last_updated=last_updated)
@@ -186,7 +186,7 @@ class Provider(abc.ABC):
         else:
             self.logger.debug("skipping recording of workspace state (no new results found)")
 
-    def _fetch_or_use_results_archive(self) -> tuple[list[str], int]:
+    def _fetch_or_use_results_archive(self) -> tuple[list[str], int, datetime.datetime]:
         listing_doc = self._fetch_listing_document()
         latest_entry = listing_doc.latest_entry(schema_version=self.distribution_version())
         if not latest_entry:
@@ -195,7 +195,7 @@ class Provider(abc.ABC):
         if self._has_newer_archive(latest_entry=latest_entry):
             self._prep_workspace_from_listing_entry(entry=latest_entry)
         state = self.workspace.state()
-        return state.urls, state.result_count(self.workspace.path)
+        return state.urls, state.result_count(self.workspace.path), state.timestamp
 
     def _fetch_listing_document(self) -> distribution.ListingDocument:
         url = self.runtime_cfg.import_url(provider_name=self.name())
