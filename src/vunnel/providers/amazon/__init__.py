@@ -22,6 +22,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    max_allowed_alas_http_403: int = 25
 
     def __post_init__(self) -> None:
         self.security_advisories = {str(k): str(v) for k, v in self.security_advisories.items()}
@@ -45,6 +46,7 @@ class Provider(provider.Provider):
             security_advisories=config.security_advisories,
             download_timeout=config.request_timeout,
             logger=self.logger,
+            max_allowed_alas_http_403=config.max_allowed_alas_http_403,
         )
 
     @classmethod
