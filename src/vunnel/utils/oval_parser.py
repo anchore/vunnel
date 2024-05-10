@@ -48,7 +48,7 @@ class Config:
     ns_format = None
 
 
-def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901
+def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901, PLR0912
     """
     Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
     and tuple (version, vulnerability-dictionary) as the value
