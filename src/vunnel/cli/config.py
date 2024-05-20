@@ -28,6 +28,7 @@ class ImportResults:
     host: str = ""
     path: str = __default_path__
     enabled: bool = False
+    skip_newer_archive_check: bool = False
 
     def __post_init__(self) -> None:
         if not self.path:

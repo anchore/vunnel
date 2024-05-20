@@ -67,6 +67,8 @@ class RuntimeConfig:
     existing_results: ResultStatePolicy = ResultStatePolicy.KEEP
     # the format the results should be written in
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
+    # skip checks for newer archive if true (always download latest)
+    skip_newer_archive_check: bool = False
 
     import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
     import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
@@ -192,8 +194,14 @@ class Provider(abc.ABC):
         if not latest_entry:
             raise RuntimeError("no listing entry found")
 
-        if self._has_newer_archive(latest_entry=latest_entry):
+        if self.runtime_cfg.skip_newer_archive_check or self._has_newer_archive(latest_entry=latest_entry):
+            self.logger.info("fetching latest listing")
             self._prep_workspace_from_listing_entry(entry=latest_entry)
+        else:
+            # Update the timestamp of the state to the latest entry's built time
+            self.logger.info("using existing listing and updating timestamp")
+            self.workspace.state().timestamp = datetime.datetime.fromisoformat(latest_entry.built)
+
         state = self.workspace.state()
         return state.urls, state.result_count(self.workspace.path), state.timestamp
 
@@ -321,7 +329,6 @@ class Provider(abc.ABC):
 
 
 def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, logger: logging.Logger) -> str:
-
     archive_path = os.path.join(dest, os.path.basename(urlparse(entry.url, allow_fragments=False).path))
 
     # download the URL for the archive
