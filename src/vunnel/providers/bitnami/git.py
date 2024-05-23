@@ -16,6 +16,7 @@ class GitRevision:
     sha: str
     file: str
 
+
 class GitWrapper:
     _check_cmd_ = "git --version"
     _is_git_repo_cmd_ = "git rev-parse --is-inside-work-tree"
@@ -64,7 +65,6 @@ class GitWrapper:
         if os.path.exists(self.dest):
             self.logger.debug("deleting existing repository")
             shutil.rmtree(self.dest, ignore_errors=True)
-
 
     @utils.retry_with_backoff()
     def clone_repo(self):

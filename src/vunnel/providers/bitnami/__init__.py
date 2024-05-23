@@ -10,6 +10,7 @@ from .parser import Parser
 if TYPE_CHECKING:
     import datetime
 
+
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
@@ -19,6 +20,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
+
 
 class Provider(provider.Provider):
 

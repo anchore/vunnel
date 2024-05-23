@@ -13,6 +13,7 @@ from .git import GitWrapper
 
 namespace = "bitnami"
 
+
 class Parser:
     _git_src_url_ = "https://github.com/bitnami/vulndb.git"
     _git_src_branch_ = "main"
@@ -26,7 +27,12 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         _checkout_dst_ = os.path.join(self.workspace.input_path, "vulndb")
-        self.git_wrapper = GitWrapper(source=self.git_url, branch=self.git_branch, checkout_dest=_checkout_dst_, logger=self.logger)
+        self.git_wrapper = GitWrapper(
+            source=self.git_url,
+            branch=self.git_branch,
+            checkout_dest=_checkout_dst_,
+            logger=self.logger,
+        )
 
     def _load(self):
         self.logger.info("loading data from git repository")
@@ -61,12 +67,14 @@ class Parser:
                                     version = event["fixed"]
                                     break
 
-                fixed_in.append({
-                    "Name": affected["package"]["name"],
-                    "VersionFormat": "semver",
-                    "NamespaceName": namespace,
-                    "Version": version,
-                })
+                fixed_in.append(
+                    {
+                        "Name": affected["package"]["name"],
+                        "VersionFormat": "semver",
+                        "NamespaceName": namespace,
+                        "Version": version,
+                    },
+                )
         link = "None"
         if "references" in vuln_entry and len(vuln_entry["references"]) > 0:
             link = vuln_entry["references"][0]
