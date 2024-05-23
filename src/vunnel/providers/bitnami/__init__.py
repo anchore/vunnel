@@ -21,6 +21,10 @@ class Config:
     request_timeout: int = 125
 
 class Provider(provider.Provider):
+
+    __schema__ = schema.OSVSchema()
+    __distribution_version__ = int(__schema__.major_version)
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
@@ -29,7 +33,7 @@ class Provider(provider.Provider):
         self.config = config
         self.logger.debug(f"config: {config}")
 
-        self.schema = schema.OSVSchema()
+        self.schema = self.__schema__,
         self.parser = Parser(
             ws=self.workspace,
             logger=self.logger,

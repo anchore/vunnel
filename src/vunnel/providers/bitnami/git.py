@@ -34,7 +34,9 @@ class GitWrapper:
         self.branch = branch
         self.dest = checkout_dest
         self.workspace = workspace if workspace else tempfile.gettempdir()
-        self.logger = logger or logging.getLogger(__name__)
+        if not logger:
+            logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logger
 
         try:
             out = self._exec_cmd(self._check_cmd_)
