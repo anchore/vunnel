@@ -84,6 +84,7 @@ ubuntu_version_names = {
     "kinetic": "22.10",
     "lunar": "23.04",
     "mantic": "23.10",
+    "noble": "24.04",
 }
 
 # driver workspace
@@ -534,7 +535,7 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
                 pkg.Version = p.version
                 if pkg.Version is None:
                     logger.debug(
-                        'found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(  # noqa: E501, G001
+                        'found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(  # noqa: E501, G001, UP032
                             r.Name,
                             r.NamespaceName,
                             pkg.Name,
@@ -849,7 +850,7 @@ class Parser:
                     merged_patches.extend(resolved_patches)
                     if pending_dpt_list:
                         self.logger.debug(
-                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: G001
+                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: UP032, G001
                                 cve_rel_path,
                                 [to_be_merged_map[x] for x in pending_dpt_list],
                             ),

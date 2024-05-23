@@ -113,12 +113,12 @@ class SQLiteStore(Store):
     temp_filename = "results.db.tmp"
     table_name = "results"
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, write_location: str | None = None, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.conn = None
         self.engine = None
         self.table = None
-        self.write_location = kwargs.get("write_location", None)
+        self.write_location = write_location
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
             self.temp_filename = f"{self.filename}.tmp"
@@ -211,7 +211,7 @@ class SQLiteStore(Store):
             self.table = None
 
         if successful and os.path.exists(self.temp_db_file_path):
-            os.rename(self.temp_db_file_path, self.db_file_path)
+            shutil.move(self.temp_db_file_path, self.db_file_path)
         elif os.path.exists(self.temp_db_file_path):
             os.remove(self.temp_db_file_path)
 

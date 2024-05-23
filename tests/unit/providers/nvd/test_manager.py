@@ -35,3 +35,5 @@ def test_parser(tmpdir, helpers, mock_data_path, mocker):
     actual_vulns = list(subject.get(None))
 
     assert expected_vulns == actual_vulns
+    for vuln in actual_vulns:
+        assert subject._sqlite_reader().read(vuln[0].lower()) is not None

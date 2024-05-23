@@ -218,6 +218,7 @@ tests:
       - sles:distro:sles:15.3
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
+      - sles:distro:sles:15.6
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -249,6 +250,7 @@ tests:
       - ubuntu:distro:ubuntu:22.10
       - ubuntu:distro:ubuntu:23.04
       - ubuntu:distro:ubuntu:23.10
+      - ubuntu:distro:ubuntu:24.04
 
   - provider: wolfi
     additional_providers:

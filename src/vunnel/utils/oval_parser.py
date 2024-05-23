@@ -48,7 +48,7 @@ class Config:
     ns_format = None
 
 
-def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901
+def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901, PLR0912
     """
     Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
     and tuple (version, vulnerability-dictionary) as the value
@@ -183,7 +183,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
         if (name, ns_name) in vuln_dict:
             existing_version, _ = vuln_dict[(name, ns_name)]
             logger.debug(
-                "Found an existing record for {} under {}. Version attribute of definition oval element: existing: {}, new: {}".format(  # noqa: G001
+                "Found an existing record for {} under {}. Version attribute of definition oval element: existing: {}, new: {}".format(  # noqa: UP032, G001
                     name,
                     ns_name,
                     existing_version,

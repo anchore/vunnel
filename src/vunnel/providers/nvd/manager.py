@@ -5,13 +5,14 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-from vunnel import result, schema
+from vunnel import result
 from vunnel.providers.nvd.api import NvdAPI
 from vunnel.providers.nvd.overrides import NVDOverrides
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from vunnel import schema as schema_def
     from vunnel.workspace import Workspace
 
 
@@ -21,7 +22,7 @@ class Manager:
     def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
-        schema: schema.Schema,
+        schema: schema_def.Schema,
         overrides_url: str,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
@@ -67,7 +68,6 @@ class Manager:
             override_remaining_cves = override_cves - cves_processed
             with self._sqlite_reader() as reader:
                 for cve in override_remaining_cves:
-
                     original_record = reader.read(cve_to_id(cve))
                     if not original_record:
                         self.logger.warning(f"override for {cve} not found in original data")
@@ -81,8 +81,8 @@ class Manager:
                     yield cve_to_id(cve), self._apply_override(cve, original_record)
 
             self.logger.debug(f"applied overrides for {len(override_remaining_cves)} CVEs")
-
-        self.logger.debug("overrides are not enabled, skipping...")
+        else:
+            self.logger.debug("overrides are not enabled, skipping...")
 
     def _download_nvd_input(
         self,
@@ -165,7 +165,7 @@ class Manager:
             record_id = cve_to_id(cve_id)
 
             # keep input for future overrides
-            writer.write(record_id, self.schema, vuln)
+            writer.write(record_id.lower(), self.schema, vuln)
 
             # apply overrides to output
             yield record_id, self._apply_override(cve_id=cve_id, record=vuln)

@@ -29,8 +29,11 @@ class Config:
 
 
 class Provider(provider.Provider):
-    # Bumping to version 2 because upstream changed the values of some data which requires reprocessing all of the history
+    # this is the version for the behavior of the provider (processing) not an indication of the data shape.
     __version__ = 2
+
+    __schema__ = schema.OSSchema()
+    __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -40,7 +43,6 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.schema = schema.OSSchema()
         self.parser = Parser(
             workspace=self.workspace,
             logger=self.logger,
@@ -62,7 +64,7 @@ class Provider(provider.Provider):
                 vuln_id = vuln_id.lower()
                 writer.write(
                     identifier=os.path.join(namespace, vuln_id),
-                    schema=self.schema,
+                    schema=self.__schema__,
                     payload={"Vulnerability": record},
                 )
 

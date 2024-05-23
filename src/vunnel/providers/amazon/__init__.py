@@ -22,12 +22,17 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    max_allowed_alas_http_403: int = 25
 
     def __post_init__(self) -> None:
         self.security_advisories = {str(k): str(v) for k, v in self.security_advisories.items()}
 
 
 class Provider(provider.Provider):
+
+    __schema__ = schema.OSSchema()
+    __distribution_version__ = int(__schema__.major_version)
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
@@ -36,12 +41,12 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.schema = schema.OSSchema()
         self.parser = Parser(
             workspace=self.workspace,
             security_advisories=config.security_advisories,
             download_timeout=config.request_timeout,
             logger=self.logger,
+            max_allowed_alas_http_403=config.max_allowed_alas_http_403,
         )
 
     @classmethod
@@ -57,7 +62,7 @@ class Provider(provider.Provider):
 
                 writer.write(
                     identifier=os.path.join(namespace, vuln_id),
-                    schema=self.schema,
+                    schema=self.__schema__,
                     payload={"Vulnerability": vuln.json()},
                 )
 

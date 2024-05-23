@@ -36,11 +36,21 @@ class Parser:
     _rss_file_name_ = "{}_rss.xml"
     _html_dir_name_ = "{}_html"
 
-    def __init__(self, workspace, download_timeout=125, security_advisories=None, logger=None):
+    def __init__(  # noqa: PLR0913
+        self,
+        workspace,
+        download_timeout=125,
+        security_advisories=None,
+        logger=None,
+        max_allowed_alas_http_403=25,
+    ):
         self.workspace = workspace
         self.version_url_map = security_advisories if security_advisories else amazon_security_advisories
         self.download_timeout = download_timeout
+        self.max_allowed_alas_http_403 = max_allowed_alas_http_403
         self.urls = []
+
+        self.alas_403s = []
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -85,14 +95,31 @@ class Parser:
 
         return sorted(alas_summaries)
 
-    def _get_alas_html(self, alas_url, alas_file, skip_if_exists=True):
+    def _alas_response_handler(self, response):
+        if response.status_code == 403:
+            self.alas_403s.append(response.url)
+            self.logger.warning(f"403 Forbidden: {response.url}")
+        else:
+            response.raise_for_status()
+
+    def _get_alas_html(self, alas_url, alas_file, skip_if_exists=True) -> str | None:
+        # attempt to download the alas html content
+        # if there is a 403, we will skip the download and track the url in self.alas_403s
+        # otherwise we will raise the exception
         if skip_if_exists and os.path.exists(alas_file):  # read alas from disk if its available
             self.logger.debug(f"loading existing ALAS from {alas_file}")
             with open(alas_file, encoding="utf-8") as fp:
                 content = fp.read()
             return content  # noqa: RET504
         try:
-            r = http.get(alas_url, self.logger, timeout=self.download_timeout)
+            r = http.get(alas_url, self.logger, timeout=self.download_timeout, status_handler=self._alas_response_handler)
+            if r.status_code == 403:
+                if len(self.alas_403s) > self.max_allowed_alas_http_403:
+                    raise ValueError(
+                        f"exceeded maximum allowed 403 responses ({self.max_allowed_alas_http_403}) from ALAS requests",
+                    )
+
+                return None
             content = r.text
             with open(alas_file, "w", encoding="utf-8") as fp:
                 fp.write(content)
@@ -116,6 +143,15 @@ class Parser:
         return AlasFixedIn(pkg=name, ver=version)
 
     def get(self, skip_if_exists=False):
+        try:
+            yield from self._get(skip_if_exists)
+        finally:
+            if self.alas_403s:
+                self.logger.warning(f"failed to fetch {len(self.alas_403s)} ALAS entries due to HTTP 403 response code")
+                for url in self.alas_403s:
+                    self.logger.warning(f" - {url}")
+
+    def _get(self, skip_if_exists):
         for version, url in self.version_url_map.items():
             rss_file = os.path.join(self.workspace.input_path, self._rss_file_name_.format(version))
             html_dir = os.path.join(self.workspace.input_path, self._html_dir_name_.format(version))
@@ -134,7 +170,11 @@ class Parser:
             for alas in alas_summaries:
                 # download alas html content
                 alas_file = os.path.join(html_dir, alas.id)
-                html_content = self._get_alas_html(alas.url, alas_file)
+                html_content = self._get_alas_html(alas.url, alas_file, skip_if_exists=skip_if_exists)
+
+                if html_content is None:
+                    self.logger.warning(f"skipping {alas.id}")
+                    continue
 
                 # parse alas html for fixes
                 parser = PackagesHTMLParser()

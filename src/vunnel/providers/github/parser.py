@@ -61,10 +61,6 @@ class Parser:
         self.download_timeout = download_timeout
         self.api_url = api_url
         self.token = token
-
-        if not self.token:
-            raise ValueError("Github token must be defined")
-
         self.timestamp = None
         self.cursor = None
         if not logger:
@@ -72,6 +68,9 @@ class Parser:
         self.logger = logger
 
     def _download(self, vuln_cursor=None):
+        if not self.token:
+            raise ValueError("Github token must be defined")
+
         """
         Download the advisories from Github via the GraphQL API, using a cursor
         if it was defined in the class. Advisories stay in memory until
@@ -435,19 +434,19 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
     vuln_after = ""
     if timestamp:
         query_func = query_func % "UPDATED_AT"
-        updatedSince = 'updatedSince: "%s", ' % timestamp
+        updatedSince = f'updatedSince: "{timestamp}", '
     else:
         query_func = query_func % "PUBLISHED_AT"
 
     if cursor:
-        after = 'after: "%s", ' % cursor
+        after = f'after: "{cursor}", '
 
     caller = f"{query_func}{after}{updatedSince}classifications: [GENERAL, MALWARE], first: 100)"
 
     if vuln_cursor:
-        vuln_after = 'after: "%s", ' % vuln_cursor
+        vuln_after = f'after: "{vuln_cursor}", '
     vulnerabilities = (
-        "%sclassifications: [GENERAL, MALWARE], first: 100, orderBy: {field: UPDATED_AT, direction: ASC}" % vuln_after
+        f"{vuln_after}classifications: [GENERAL, MALWARE], first: 100, orderBy: {{field: UPDATED_AT, direction: ASC}}"
     )
 
     return f"""

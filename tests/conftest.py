@@ -115,12 +115,27 @@ class WorkspaceHelper:
             pytest.fail("\n".join(message_lines), pytrace=False)
 
 
+@pytest.fixture()
+def validate_json_schema():
+    def apply(content: str):
+        doc = json.loads(content)
+        schema_url = doc.get("schema", {}).get("url")
+        if not schema_url:
+            raise ValueError("No schema URL found in document")
+
+        schema_path = get_schema_repo_path(schema_url)
+        schema = load_json_schema(schema_path)
+        _validate_json_schema(instance=doc, schema=schema)
+
+    return apply
+
+
 def load_json_schema(path: str) -> dict:
     with open(path) as f:
         return json.load(f)
 
 
-def get_schema_repo_path(url: str):
+def get_schema_repo_path(url: str) -> str:
     # e.g. https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/nvd/schema-{version}.json
     relative_path = url.removeprefix("https://raw.githubusercontent.com/anchore/vunnel/main/")
     if relative_path == url:
