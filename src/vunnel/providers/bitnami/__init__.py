@@ -33,7 +33,7 @@ class Provider(provider.Provider):
         self.config = config
         self.logger.debug(f"config: {config}")
 
-        self.schema = self.__schema__,
+        self.schema = self.__schema__
         self.parser = Parser(
             ws=self.workspace,
             logger=self.logger,

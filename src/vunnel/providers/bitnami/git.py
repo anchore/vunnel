@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -10,6 +9,7 @@ import tempfile
 from dataclasses import dataclass
 
 from vunnel import utils
+
 
 @dataclass
 class GitRevision:
@@ -27,13 +27,13 @@ class GitWrapper:
         source: str,
         branch: str,
         checkout_dest: str,
-        workspace: str | None = None,
         logger: logging.Logger | None = None,
     ):
         self.src = source
         self.branch = branch
         self.dest = checkout_dest
-        self.workspace = workspace if workspace else tempfile.gettempdir()
+        self.workspace = tempfile.gettempdir()
+
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
@@ -59,7 +59,7 @@ class GitWrapper:
             return False
 
         return True
-    
+
     def delete_repo(self):
         if os.path.exists(self.dest):
             self.logger.debug("deleting existing repository")

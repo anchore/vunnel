@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import TYPE_CHECKING
 
 import orjson
-import requests
-from vunnel import utils, workspace
+
+if TYPE_CHECKING:
+    from vunnel.workspace import Workspace
 
 from .git import GitWrapper
 
@@ -15,7 +17,7 @@ class Parser:
     _git_src_url_ = "https://github.com/bitnami/vulndb.git"
     _git_src_branch_ = "main"
 
-    def __init__(self, ws: workspace.Workspace, logger: logging.Logger | None = None):
+    def __init__(self, ws: Workspace, logger: logging.Logger | None = None):
         self.workspace = ws
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
@@ -23,10 +25,11 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        self.git_wrapper = GitWrapper(source=self.git_url, branch=self.git_branch, checkout_dest=os.path.join(self.workspace.input_path, "vulndb"), logger=self.logger)
-    
+        _checkout_dst_ = os.path.join(self.workspace.input_path, "vulndb")
+        self.git_wrapper = GitWrapper(source=self.git_url, branch=self.git_branch, checkout_dest=_checkout_dst_, logger=self.logger)
+
     def _load(self):
-        self.logger.info(f"loading data from git repository")
+        self.logger.info("loading data from git repository")
 
         vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "data")
         for root, dirs, files in os.walk(vuln_data_dir):
@@ -37,8 +40,8 @@ class Parser:
                     yield orjson.loads(f.read())
 
     def _normalize(self, vuln_entry):
-        self.logger.info(f"normalizing vulnerability data")
-        
+        self.logger.info("normalizing vulnerability data")
+
         vuln_id = vuln_entry["id"]
         if "aliases" in vuln_entry and len(vuln_entry["aliases"]) > 0:
             vuln_id = vuln_entry["aliases"][0]
@@ -57,7 +60,7 @@ class Parser:
                                 if "fixed" in event:
                                     version = event["fixed"]
                                     break
-                        
+
                 fixed_in.append({
                     "Name": affected["package"]["name"],
                     "VersionFormat": "semver",
@@ -67,7 +70,7 @@ class Parser:
         link = "None"
         if "references" in vuln_entry and len(vuln_entry["references"]) > 0:
             link = vuln_entry["references"][0]
-        
+
         return vuln_id, {
             "Vulnerability": {
                 "Name": vuln_id,
