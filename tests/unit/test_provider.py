@@ -67,6 +67,12 @@ class DummyProvider(provider.Provider):
         return ["http://localhost:8000/dummy-input-1.json"], 1
 
 
+class DummyProviderWithZeroCountOnUpdate(DummyProvider):
+    def _fetch_or_use_results_archive(self):
+        urls, _ = self.update()
+        return urls, 0, datetime.datetime(2021, 1, 1, 0, 0, 0)
+
+
 def get_random_string(length=10):
     characters = string.ascii_letters + string.digits
     return "".join(random.choice(characters) for _ in range(length))
@@ -79,6 +85,30 @@ def dummy_provider(tmpdir):
             use_dir = tmpdir + get_random_string()
         # create a dummy provider
         subject = DummyProvider(root=use_dir, **kwargs)
+
+        if populate:
+            # update the provider
+            subject.run()
+
+            # check that the input and results are populated
+            assert os.path.exists(subject.input_file)
+            existing_results = os.listdir(subject.workspace.results_path)
+            assert len(existing_results) > 0
+        else:
+            subject.workspace.create()
+
+        return subject
+
+    return apply
+
+
+@pytest.fixture()
+def dummy_provider_with_zero_count_on_update(tmpdir):
+    def apply(populate=True, use_dir=None, **kwargs) -> provider.Provider:
+        if not use_dir:
+            use_dir = tmpdir + get_random_string()
+        # create a dummy provider
+        subject = DummyProviderWithZeroCountOnUpdate(root=use_dir, **kwargs)
 
         if populate:
             # update the provider
@@ -811,6 +841,30 @@ def test_has_newer_archive_false(dummy_provider):
         url="http://example.com/some-example",
     )
     assert not subject._has_newer_archive(entry)
+
+
+def test_timestamp_updated_on_fetch_or_use_results_archive(tmpdir, dummy_provider):
+    subject = dummy_provider(populate=True)
+    subject.runtime_cfg.import_results_enabled = True
+    subject.runtime_cfg.import_results_host = "http://localhost"
+    subject.runtime_cfg.import_results_path = "{provider_name}/listing.json"
+    current_state = subject.workspace.state()
+    # fetch the results archive
+    urls, count, timestamp = subject._fetch_or_use_results_archive()
+    assert current_state.timestamp != timestamp
+    assert timestamp == datetime.datetime(2021, 1, 1, 0, 0, 0)
+
+
+def test_state_update_on_stale(tmpdir, dummy_provider_with_zero_count_on_update):
+    subject = dummy_provider_with_zero_count_on_update(populate=True)
+    current_state = subject.workspace.state()
+    subject.runtime_cfg.import_results_enabled = True
+    subject.runtime_cfg.import_results_host = "http://localhost"
+    subject.runtime_cfg.import_results_path = "{provider_name}/listing.json"
+    subject._update()
+    new_state = subject.workspace.state()
+    assert new_state.timestamp is not None
+    assert new_state.timestamp == datetime.datetime(2021, 1, 1, 0, 0, 0)
 
 
 @pytest.mark.parametrize(
