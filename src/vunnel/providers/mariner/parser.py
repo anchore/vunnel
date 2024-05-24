@@ -127,6 +127,10 @@ class MarinerXmlFile:
         if not states or not objects:
             return None
 
+        name = objects[0].name
+        if not name:
+            return None
+
         fixed_version = None
 
         vulnerability_range = []
@@ -155,7 +159,7 @@ class MarinerXmlFile:
         vulnerability_range_str = " ".join(vulnerability_range)
 
         return FixedIn(
-            Name=objects[0].name,
+            Name=name,
             NamespaceName=self.namespace_name(),
             VersionFormat="rpm",
             Version=fixed_version,
