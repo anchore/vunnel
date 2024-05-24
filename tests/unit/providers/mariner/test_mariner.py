@@ -32,7 +32,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             Version="0:1.20.7-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
-                            VulnerableRange=">0:1.19.0.cm2 <0:1.20.7-1.cm2",
+                            VulnerableRange="> 0:1.19.0.cm2, < 0:1.20.7-1.cm2",
                         )
                     ],
                     Metadata={},
@@ -50,7 +50,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             NamespaceName="mariner:2.0",
                             VersionFormat="rpm",
                             Version="0:8.0.33-1.cm2",
-                            VulnerableRange="<0:8.0.33-1.cm2",
+                            VulnerableRange="< 0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
                         )
@@ -72,7 +72,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             Version="0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
-                            VulnerableRange="<0:8.0.33-1.cm2",
+                            VulnerableRange="< 0:8.0.33-1.cm2",
                         )
                     ],
                     Metadata={},
@@ -92,7 +92,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             Version="None",
                             Module=None,
                             VendorAdvisory=None,
-                            VulnerableRange="<=0:9.16.33-1.cm2",
+                            VulnerableRange="<= 0:9.16.33-1.cm2",
                         ),
                     ],
                 ),

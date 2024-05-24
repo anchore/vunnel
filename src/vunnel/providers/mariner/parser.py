@@ -137,14 +137,14 @@ class MarinerXmlFile:
         for state in states:
             if state.evr and state.evr.value:
                 if state.evr.operation == LESS_THAN:
-                    vulnerability_range.append(f"<{state.evr.value}")
+                    vulnerability_range.append(f"< {state.evr.value}")
                     # if vulnerability has an upper bound (< as opposed to <=),
                     # then assume the upper bound is the fixed version
                     fixed_version = state.evr.value
                 elif state.evr.operation == GREATER_THAN:
-                    vulnerability_range.append(f">{state.evr.value}")
+                    vulnerability_range.append(f"> {state.evr.value}")
                 elif state.evr.operation == LESS_THAN_OR_EQUAL_TO:
-                    vulnerability_range.append(f"<={state.evr.value}")
+                    vulnerability_range.append(f"<= {state.evr.value}")
 
         if not vulnerability_range:
             return None
@@ -156,7 +156,7 @@ class MarinerXmlFile:
         if not fixed_version:
             fixed_version = "None"  # a required string in JSON schema
 
-        vulnerability_range_str = " ".join(vulnerability_range)
+        vulnerability_range_str = ", ".join(vulnerability_range)
 
         return FixedIn(
             Name=name,
