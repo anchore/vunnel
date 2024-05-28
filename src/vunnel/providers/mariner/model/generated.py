@@ -272,8 +272,8 @@ class Criteria:
             "type": "Attribute",
         }
     )
-    criterion: Optional[Criterion] = field(
-        default=None,
+    criterion: List[Criterion] = field(
+        default_factory=list,
         metadata={
             "type": "Element",
         }

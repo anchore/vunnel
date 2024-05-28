@@ -18,6 +18,26 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
             "test-fixtures/mariner-truncated-2.0-oval.xml",
             [
                 Vulnerability(
+                    Name="CVE-2023-29404",
+                    NamespaceName="mariner:2.0",
+                    Description="CVE-2023-29404 affecting package golang for versions less than 1.20.7-1. A patched version of the package is available.",
+                    Severity="Critical",
+                    Link="https://nvd.nist.gov/vuln/detail/CVE-2023-29404",
+                    CVSS=[],
+                    FixedIn=[
+                        FixedIn(
+                            Name="golang",
+                            NamespaceName="mariner:2.0",
+                            VersionFormat="rpm",
+                            Version="0:1.20.7-1.cm2",
+                            Module=None,
+                            VendorAdvisory=None,
+                            VulnerableRange="> 0:1.19.0.cm2, < 0:1.20.7-1.cm2",
+                        )
+                    ],
+                    Metadata={},
+                ),
+                Vulnerability(
                     Name="CVE-2023-21980",
                     NamespaceName="mariner:2.0",
                     Description="CVE-2023-21980 affecting package mysql 8.0.32-1. An upgraded version of the package is available that resolves this issue.",
@@ -30,6 +50,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             NamespaceName="mariner:2.0",
                             VersionFormat="rpm",
                             Version="0:8.0.33-1.cm2",
+                            VulnerableRange="< 0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
                         )
@@ -51,6 +72,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             Version="0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
+                            VulnerableRange="< 0:8.0.33-1.cm2",
                         )
                     ],
                     Metadata={},
@@ -70,6 +92,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn
                             Version="None",
                             Module=None,
                             VendorAdvisory=None,
+                            VulnerableRange="<= 0:9.16.33-1.cm2",
                         ),
                     ],
                 ),
@@ -103,7 +126,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert 3 == workspace.num_result_entries()
+    assert 4 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
 
 
