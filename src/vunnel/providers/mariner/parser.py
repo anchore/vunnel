@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from vunnel.workspace import Workspace
 
 LESS_THAN_OR_EQUAL_TO = "less than or equal"
+LESS_THAN = "less than"
+GREATER_THAN = "greater than"
 
 IGNORED_PATCHABLE_VALUES = ["Not Applicable"]
 
@@ -90,45 +92,78 @@ class MarinerXmlFile:
     def namespace_name(self) -> str:
         return f"mariner:{self.mariner_version}"
 
-    def get_test(self, definition: Definition) -> RpminfoTest | None:
-        if definition is None or definition.criteria is None or definition.criteria.criterion is None:
-            return None
-        return self.tests_by_id.get(definition.criteria.criterion.test_ref, None)
+    def get_tests(self, definition: Definition) -> list[RpminfoTest]:
+        tests = []
+        if definition and definition.criteria and definition.criteria.criterion:
+            for criterion in definition.criteria.criterion:
+                test = self.tests_by_id.get(criterion.test_ref, None)
+                if test:
+                    tests.append(test)
+        return tests
 
-    def get_state(self, definition: Definition) -> RpminfoState | None:
-        test = self.get_test(definition)
-        if test is None or test.state is None or test.state.state_ref is None:
-            return None
-        return self.states_by_id.get(test.state.state_ref, None)
+    def get_states(self, tests: list[RpminfoTest]) -> list[RpminfoState]:
+        states = []
+        for test in tests:
+            if test and test.state and test.state.state_ref:
+                state = self.states_by_id.get(test.state.state_ref, None)
+                if state:
+                    states.append(state)
+        return states
 
-    def get_object(self, definition: Definition) -> RpminfoObject | None:
-        test = self.get_test(definition)
-        if test is None or test.object_value is None or test.object_value.object_ref is None:
-            return None
-        return self.objects_by_id.get(test.object_value.object_ref, None)
+    def get_objects(self, tests: list[RpminfoTest]) -> list[RpminfoObject]:
+        objects = []
+        for test in tests:
+            if test and test.object_value and test.object_value.object_ref:
+                obj = self.objects_by_id.get(test.object_value.object_ref, None)
+                if obj:
+                    objects.append(obj)
+        return objects
 
     def make_fixed_in(self, definition: Definition) -> FixedIn | None:
-        state = self.get_state(definition)
-        obj = self.get_object(definition)
-        if state is None or state.evr is None:
+        tests = self.get_tests(definition)
+        states = self.get_states(tests)
+        objects = self.get_objects(tests)
+
+        if not states or not objects:
             return None
-        if obj is None or obj.name is None:
+
+        name = objects[0].name
+        if not name:
             return None
-        version = state.evr.value
-        # There are 2 choices for state.ever.operation: "less than" or "less than or equal to".
-        # So for this vulnerability, either the statement, "versions < 3.2.1 are vulernable"
-        # or the statement "versions <= 3.2.1 are vulnerable". In the second statement,
-        # the data has no information about any fixed version, so we report "None"
-        # as the fixed version, meaning we consider all version vulnerable.
-        # For example, if version 3.2.1 of a library is vulnerable, and is the latest version
-        # mariner data might have "versions <= 3.2.1" is vulnerable.
-        if state.evr.operation == LESS_THAN_OR_EQUAL_TO:
-            version = "None"  # legacy API needs the string "None" instead of None
+
+        fixed_version = None
+
+        vulnerability_range = []
+        for state in states:
+            if state.evr and state.evr.value:
+                if state.evr.operation == LESS_THAN:
+                    vulnerability_range.append(f"< {state.evr.value}")
+                    # if vulnerability has an upper bound (< as opposed to <=),
+                    # then assume the upper bound is the fixed version
+                    fixed_version = state.evr.value
+                elif state.evr.operation == GREATER_THAN:
+                    vulnerability_range.append(f"> {state.evr.value}")
+                elif state.evr.operation == LESS_THAN_OR_EQUAL_TO:
+                    vulnerability_range.append(f"<= {state.evr.value}")
+
+        if not vulnerability_range:
+            return None
+
+        # make output deterministic. Reverse so that
+        # output reads like >1.2.3 <1.3.0 instead of the reverse.
+        vulnerability_range.sort(reverse=True)
+
+        if not fixed_version:
+            fixed_version = "None"  # a required string in JSON schema
+
+        vulnerability_range_str = ", ".join(vulnerability_range)
+
         return FixedIn(
-            Name=obj.name,
+            Name=name,
             NamespaceName=self.namespace_name(),
             VersionFormat="rpm",
-            Version=version,
+            Version=fixed_version,
+            VulnerableRange=vulnerability_range_str,
             Module=None,
             VendorAdvisory=None,
         )
