@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Union
-
 from xsdata.models.datatype import XmlDateTime
 
 
@@ -14,21 +13,16 @@ class Evr:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     operation: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     value: str = field(
-        default="",
-        metadata={
-            "required": True,
-        },
+        default=""
     )
 
 
@@ -42,8 +36,7 @@ class Object:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
 
 
@@ -57,22 +50,19 @@ class RpminfoObject:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     version: Optional[int] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     name: Optional[str] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
 
 
@@ -86,8 +76,7 @@ class State:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
 
 
@@ -101,15 +90,13 @@ class Affected:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     platform: Optional[str] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
 
 
@@ -123,15 +110,13 @@ class Criterion:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     test_ref: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
 
 
@@ -146,40 +131,35 @@ class Generator:
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-common-5",
-            "required": True,
-        },
+        }
     )
     product_version: Optional[int] = field(
         default=None,
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-common-5",
-            "required": True,
-        },
+        }
     )
     schema_version: Optional[float] = field(
         default=None,
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-common-5",
-            "required": True,
-        },
+        }
     )
     timestamp: Optional[XmlDateTime] = field(
         default=None,
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-common-5",
-            "required": True,
-        },
+        }
     )
     content_version: Optional[int] = field(
         default=None,
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-common-5",
-            "required": True,
-        },
+        }
     )
 
 
@@ -193,22 +173,19 @@ class Reference:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     ref_url: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     source: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
 
 
@@ -222,22 +199,19 @@ class RpminfoState:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     version: Optional[int] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     evr: Optional[Evr] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
 
 
@@ -251,44 +225,38 @@ class RpminfoTest:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     comment: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     id: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     version: Optional[int] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     object_value: Optional[Object] = field(
         default=None,
         metadata={
             "name": "object",
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     state: Optional[State] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
 
 
@@ -302,15 +270,13 @@ class Criteria:
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     criterion: List[Criterion] = field(
         default_factory=list,
         metadata={
             "type": "Element",
-            "min_occurs": 1,
-        },
+        }
     )
 
 
@@ -324,56 +290,49 @@ class Metadata:
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     affected: Optional[Affected] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     reference: Optional[Reference] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     patchable: Optional[Union[bool, str]] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     advisory_date: Optional[XmlDateTime] = field(
         default=None,
         metadata={
             "type": "Element",
-        },
+        }
     )
     advisory_id: Optional[Union[str, int]] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     severity: Optional[str] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     description: Optional[str] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
 
 
@@ -388,8 +347,7 @@ class Objects:
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-definitions-5#linux",
-            "min_occurs": 1,
-        },
+        }
     )
 
 
@@ -404,36 +362,31 @@ class Definition:
         metadata={
             "name": "class",
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     id: Optional[str] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     version: Optional[int] = field(
         default=None,
         metadata={
             "type": "Attribute",
-            "required": True,
-        },
+        }
     )
     metadata: Optional[Metadata] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     criteria: Optional[Criteria] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
 
 
@@ -448,8 +401,7 @@ class States:
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-definitions-5#linux",
-            "min_occurs": 1,
-        },
+        }
     )
 
 
@@ -464,8 +416,7 @@ class Tests:
         metadata={
             "type": "Element",
             "namespace": "http://oval.mitre.org/XMLSchema/oval-definitions-5#linux",
-            "min_occurs": 1,
-        },
+        }
     )
 
 
@@ -479,8 +430,7 @@ class Definitions:
         default_factory=list,
         metadata={
             "type": "Element",
-            "min_occurs": 1,
-        },
+        }
     )
 
 
@@ -496,41 +446,35 @@ class OvalDefinitions:
             "name": "schemaLocation",
             "type": "Attribute",
             "namespace": "http://www.w3.org/2001/XMLSchema-instance",
-            "required": True,
-        },
+        }
     )
     generator: Optional[Generator] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     definitions: Optional[Definitions] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     tests: Optional[Tests] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     objects: Optional[Objects] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
     states: Optional[States] = field(
         default=None,
         metadata={
             "type": "Element",
-            "required": True,
-        },
+        }
     )
