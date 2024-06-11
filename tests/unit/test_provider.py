@@ -974,7 +974,7 @@ def test_provider_versions(tmpdir):
         "oracle": 1,
         "rhel": 1,
         "sles": 1,
-        "ubuntu": 2,
+        "ubuntu": 3,
         "wolfi": 1,
     }
 

@@ -30,7 +30,7 @@ class Config:
 
 class Provider(provider.Provider):
     # this is the version for the behavior of the provider (processing) not an indication of the data shape.
-    __version__ = 2
+    __version__ = 3
 
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
