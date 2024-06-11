@@ -85,6 +85,7 @@ ubuntu_version_names = {
     "lunar": "23.04",
     "mantic": "23.10",
     "noble": "24.04",
+    "oracular": "24.10",
 }
 
 # driver workspace
