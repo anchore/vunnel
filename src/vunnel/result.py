@@ -285,9 +285,15 @@ class SQLiteReader:
 
             return orjson.loads(result.record)
 
+    def read_all(self) -> list[Envelope]:
+        conn, table = self.connection()
+        with conn.begin():
+            results = conn.execute(table.select()).fetchall()
+            return [Envelope(**orjson.loads(r.record)) for r in results]
+
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
-            self.engine = db.create_engine(f"sqlite:///{self.db_path}")
+            self.engine = db.create_engine(f"sqlite:///{self.db_path}?mode=ro")
             self.conn = self.engine.connect()  # type: ignore[attr-defined]
             metadata = db.MetaData(bind=self.engine)
             self.table = db.Table(self.table_name, metadata, autoload=True, autoload_with=self.engine)
