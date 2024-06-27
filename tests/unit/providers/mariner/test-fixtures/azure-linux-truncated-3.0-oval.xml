@@ -1,0 +1,98 @@
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:linux-def="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-common-5 https://oval.mitre.org/language/version5.11/ovaldefinition/complete/oval-common-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5 https://oval.mitre.org/language/version5.11/ovaldefinition/complete/oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#linux https://oval.mitre.org/language/version5.11/ovaldefinition/complete/linux-definitions-schema.xsd ">
+  <generator>
+    <oval:product_name>Azure Linux OVAL Definition Generator</oval:product_name>
+    <oval:product_version>17</oval:product_version>
+    <oval:schema_version>5.11</oval:schema_version>
+    <oval:timestamp>2024-05-08T12:04:07.046098262Z</oval:timestamp>
+    <oval:content_version>1715169847</oval:content_version>
+  </generator>
+  <definitions>
+    <definition class="vulnerability" id="oval:com.microsoft.azurelinux:def:39708" version="1">
+      <metadata>
+        <title>CVE-2024-24258 affecting package freeglut for versions less than 3.4.0-1</title>
+        <affected family="unix">
+          <platform>Azure Linux</platform>
+        </affected>
+        <reference ref_id="CVE-2024-24258" ref_url="https://nvd.nist.gov/vuln/detail/CVE-2024-24258" source="CVE"/>
+        <patchable>true</patchable>
+        <advisory_date>2024-04-17T22:02:46Z</advisory_date>
+        <advisory_id>39708-1</advisory_id>
+        <severity>High</severity>
+        <description>CVE-2024-24258 affecting package freeglut for versions less than 3.4.0-1. A patched version of the package is available.</description>
+      </metadata>
+      <criteria operator="AND">
+        <criterion comment="Package freeglut is earlier than 3.4.0-1, affected by CVE-2024-24258" test_ref="oval:com.microsoft.azurelinux:tst:39708000"/>
+      </criteria>
+    </definition>
+    <definition class="vulnerability" id="oval:com.microsoft.azurelinux:def:39694" version="1">
+      <metadata>
+        <title>CVE-2024-24259 affecting package freeglut for versions less than 3.4.0-1</title>
+        <affected family="unix">
+          <platform>Azure Linux</platform>
+        </affected>
+        <reference ref_id="CVE-2024-24259" ref_url="https://nvd.nist.gov/vuln/detail/CVE-2024-24259" source="CVE"/>
+        <patchable>true</patchable>
+        <advisory_date>2024-04-17T22:02:46Z</advisory_date>
+        <advisory_id>39694-1</advisory_id>
+        <severity>High</severity>
+        <description>CVE-2024-24259 affecting package freeglut for versions less than 3.4.0-1. A patched version of the package is available.</description>
+      </metadata>
+      <criteria operator="AND">
+        <criterion comment="Package freeglut is earlier than 3.4.0-1, affected by CVE-2024-24259" test_ref="oval:com.microsoft.azurelinux:tst:39694000"/>
+      </criteria>
+    </definition>
+    <definition class="vulnerability" id="oval:com.microsoft.azurelinux:def:39076" version="1">
+      <metadata>
+        <title>CVE-2020-27304 affecting package ceph for versions less than 18.2.1-1</title>
+        <affected family="unix">
+          <platform>Azure Linux</platform>
+        </affected>
+        <reference ref_id="CVE-2020-27304" ref_url="https://nvd.nist.gov/vuln/detail/CVE-2020-27304" source="CVE"/>
+        <patchable>true</patchable>
+        <advisory_date>2024-04-17T22:02:46Z</advisory_date>
+        <advisory_id>39076-1</advisory_id>
+        <severity>Critical</severity>
+        <description>CVE-2020-27304 affecting package ceph for versions less than 18.2.1-1. An upgraded version of the package is available that resolves this issue.</description>
+      </metadata>
+      <criteria operator="AND">
+        <criterion comment="Package ceph is earlier than 18.2.1-1, affected by CVE-2020-27304" test_ref="oval:com.microsoft.azurelinux:tst:39076000"/>
+      </criteria>
+    </definition>
+  </definitions>
+  <tests>
+    <linux-def:rpminfo_test check="at least one" comment="Package freeglut is earlier than 3.4.0-1, affected by CVE-2024-24258" id="oval:com.microsoft.azurelinux:tst:39708000" version="1">
+      <linux-def:object object_ref="oval:com.microsoft.azurelinux:obj:39708001"/>
+      <linux-def:state state_ref="oval:com.microsoft.azurelinux:ste:39708002"/>
+    </linux-def:rpminfo_test>
+    <linux-def:rpminfo_test check="at least one" comment="Package freeglut is earlier than 3.4.0-1, affected by CVE-2024-24259" id="oval:com.microsoft.azurelinux:tst:39694000" version="1">
+      <linux-def:object object_ref="oval:com.microsoft.azurelinux:obj:39694001"/>
+      <linux-def:state state_ref="oval:com.microsoft.azurelinux:ste:39694002"/>
+    </linux-def:rpminfo_test>
+    <linux-def:rpminfo_test check="at least one" comment="Package ceph is earlier than 18.2.1-1, affected by CVE-2020-27304" id="oval:com.microsoft.azurelinux:tst:39076000" version="1">
+      <linux-def:object object_ref="oval:com.microsoft.azurelinux:obj:39076001"/>
+      <linux-def:state state_ref="oval:com.microsoft.azurelinux:ste:39076002"/>
+    </linux-def:rpminfo_test>
+  </tests>
+  <objects>
+    <linux-def:rpminfo_object id="oval:com.microsoft.azurelinux:obj:39708001" version="1">
+      <linux-def:name>freeglut</linux-def:name>
+    </linux-def:rpminfo_object>
+    <linux-def:rpminfo_object id="oval:com.microsoft.azurelinux:obj:39694001" version="1">
+      <linux-def:name>freeglut</linux-def:name>
+    </linux-def:rpminfo_object>
+    <linux-def:rpminfo_object id="oval:com.microsoft.azurelinux:obj:39076001" version="1">
+      <linux-def:name>ceph</linux-def:name>
+    </linux-def:rpminfo_object>
+  </objects>
+  <states>
+    <linux-def:rpminfo_state id="oval:com.microsoft.azurelinux:ste:39708002" version="1">
+      <linux-def:evr datatype="evr_string" operation="less than">0:3.4.0-1.azl3</linux-def:evr>
+    </linux-def:rpminfo_state>
+    <linux-def:rpminfo_state id="oval:com.microsoft.azurelinux:ste:39694002" version="1">
+      <linux-def:evr datatype="evr_string" operation="less than">0:3.4.0-1.azl3</linux-def:evr>
+    </linux-def:rpminfo_state>
+    <linux-def:rpminfo_state id="oval:com.microsoft.azurelinux:ste:39076002" version="1">
+      <linux-def:evr datatype="evr_string" operation="less than">0:18.2.1-1.azl3</linux-def:evr>
+    </linux-def:rpminfo_state>
+  </states>
+</oval_definitions>
