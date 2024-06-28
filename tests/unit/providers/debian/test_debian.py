@@ -2,17 +2,40 @@ from __future__ import annotations
 
 import os.path
 import shutil
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.debian import Config, Provider, parser
 
 
+@pytest.fixture()
+def mock_legacy_db(mocker):
+    mock_record = {
+        "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json",
+        "identifier": "debian:10/cve-2012-0833",
+        "item": {
+            "Vulnerability": {
+                "Severity": "Negligible",
+                "NamespaceName": "debian:10",
+                "FixedIn": [],
+                "Link": "https://security-tracker.debian.org/tracker/CVE-2012-0833",
+                "Description": "The acllas__handle_group_entry function in servers/plugins/acl/acllas.c in 389 Directory Server before 1.2.10 does not properly handled access control instructions (ACIs) that use certificate groups, which allows remote authenticated LDAP users with a certificate group to cause a denial of service (infinite loop and CPU consumption) by binding to the server.",
+                "Metadata": {},
+                "Name": "CVE-2012-0833",
+                "CVSS": [],
+            }
+        },
+    }
+
+    mock_records = [result.Envelope(**mock_record)]
+
+    mocker.patch("vunnel.result.SQLiteReader.read_all", return_value=mock_records)
+
+
 class TestParser:
     _sample_dsa_data_ = "test-fixtures/input/DSA"
     _sample_json_data_ = "test-fixtures/input/debian.json"
-    _sample_legacy_data = "test-fixtures/input/legacy/vulnerabilities-debian:7-0.json"
 
     def test_normalize_dsa_list(self, tmpdir, helpers, disable_get_requests):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
@@ -84,7 +107,7 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
         assert not subject.logger.exception.called, "no exceptions should be logged"
 
-    def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests):
+    def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests, mock_legacy_db):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
 
         mock_data_path = helpers.local_dir("test-fixtures/input")
@@ -94,8 +117,18 @@ class TestParser:
 
         assert isinstance(legacy_records, dict)
         assert len(legacy_records) > 0
+
+        # from the feed service data dump
         assert "7" in legacy_records.keys()
         assert len(legacy_records["7"]) > 0
+        assert "CVE-2004-1653" in legacy_records["7"].keys()
+        assert len(legacy_records["7"]["CVE-2004-1653"]) > 0
+
+        # from the DB
+        assert "10" in legacy_records.keys()
+        assert len(legacy_records["10"]) > 0
+        assert "CVE-2012-0833" in legacy_records["10"].keys()
+        assert len(legacy_records["10"]["CVE-2012-0833"]) > 0
 
         for _rel, vuln_dict in legacy_records.items():
             assert isinstance(vuln_dict, dict)
@@ -107,7 +140,7 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, mock_legacy_db):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",
@@ -129,13 +162,13 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    # 17 entries from the legacy records, 21 from the mock json data
-    expected = 38
+    # 18 entries from the legacy FS records, 1 from legacy DB record, 21 from the mock json data
+    expected = 39
     assert workspace.num_result_entries() == expected
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, mock_legacy_db):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",
