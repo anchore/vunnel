@@ -355,9 +355,10 @@ class Parser:
 
                             # HACK: when we can represent per-package severity or have a good mechanism
                             # for overriding upstream data, we should take this out.
-                            if vid == "CVE-2023-44487":
+                            severity_override = {"CVE-2020-35525", "CVE-2020-35527", "CVE-2023-4863", "CVE-2023-44487"}
+                            if vid in severity_override:
                                 self.logger.info(
-                                    "clearing severity on CVE-2023-44487, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
+                                    f"clearing severity on {vid}, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
                                 )
                                 vuln_record["Vulnerability"]["Severity"] = "Unknown"
 
