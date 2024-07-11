@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import bz2
 import copy
 import gzip
 import logging
 import os
 import re
+from typing import Callable
 
 import defusedxml.ElementTree as ET
 
@@ -48,6 +50,14 @@ class Config:
     ns_format = None
 
 
+def get_opener(filename: str) -> Callable:
+    if filename.endswith(".gz"):
+        return gzip.open
+    if filename.endswith(".bz2"):
+        return bz2.open
+    return open
+
+
 def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901, PLR0912
     """
     Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
@@ -67,10 +77,7 @@ def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noq
 
     if os.path.exists(dest_file):
         processing = False
-        opener = open
-
-        if dest_file.endswith(".gz"):
-            opener = gzip.open
+        opener = get_opener(dest_file)
 
         with opener(dest_file, "rb") as f:  # noqa: F841
             for event, element in ET.iterparse(dest_file, events=("start", "end")):
