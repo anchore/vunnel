@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
+import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
@@ -39,6 +40,8 @@ PARSER_CONFIG = OVALParserConfig(
     severity_map={
         "low": "Low",
         "moderate": "Medium",
+        "medium": "Medium",
+        "high": "High",
         "important": "High",
         "critical": "Critical",
     },
@@ -46,8 +49,8 @@ PARSER_CONFIG = OVALParserConfig(
 
 
 class Parser:
-    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml.gz"
-    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml.gz"
+    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml.bz2"
+    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml.bz2"
     __oval_dir_path__ = "oval"
     __source_dir_path__ = "source"
 
@@ -79,6 +82,12 @@ class Parser:
 
         oval_file_path = os.path.join(self.oval_dir_path, self.__oval_file_name__.format(major_version))
         download_url = self.__oval_url__.format(major_version)
+
+        # We should prefer the .bz2 files going forward, but fall back to .gz if unavailable for a particular release
+        if requests.head(download_url, timeout=self.download_timeout).status_code == 404:
+            download_url = download_url.removesuffix(".bz2") + ".gz"
+            oval_file_path = oval_file_path.removesuffix(".bz2") + ".gz"
+
         self.urls.append(download_url)
 
         self.logger.info(
