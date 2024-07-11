@@ -353,15 +353,6 @@ class Parser:
                             ):
                                 vuln_record["Vulnerability"]["Severity"] = sev
 
-                            # HACK: when we can represent per-package severity or have a good mechanism
-                            # for overriding upstream data, we should take this out.
-                            severity_override = {"CVE-2020-35525", "CVE-2020-35527", "CVE-2023-4863", "CVE-2023-44487"}
-                            if vid in severity_override:
-                                self.logger.info(
-                                    f"clearing severity on {vid}, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
-                                )
-                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
-
                             # add fixedIn
                             skip_fixedin = False
                             fixed_el = {
@@ -550,6 +541,14 @@ class Parser:
         if vuln_records:
             for relno, vuln_dict in vuln_records.items():
                 for vid, vuln_record in vuln_dict.items():
+                    # HACK: when we can represent per-package severity or have a good mechanism
+                    # for overriding upstream data, we should take this out.
+                    severity_override = {"CVE-2020-35525", "CVE-2020-35527", "CVE-2023-4863", "CVE-2023-44487"}
+                    if vid in severity_override:
+                        self.logger.info(
+                            f"clearing severity on {vid}, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
+                        )
+                        vuln_record["Vulnerability"]["Severity"] = "Unknown"
                     yield relno, vid, vuln_record
         else:
             yield from ()
