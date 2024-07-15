@@ -438,7 +438,7 @@ class Parser:
                     name = colon_comps[0]  # best guess for name, fall back to rhsa for version lookup
 
         else:  # no epoch foo-bar-2.3.4-5.el6_7.8 or something else totally different  # noqa: PLR5501
-            if package.count("-") >= 2:  #
+            if package.count("-") >= 2:
                 name_other_comps = package.rsplit("-", 2)  # split name-version-release.arch.rpm into max 3 chunks
                 name = name_other_comps[0]  # only the name matters
                 version = "-".join(name_other_comps[1:])  # join the rest
