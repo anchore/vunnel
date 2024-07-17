@@ -22,7 +22,7 @@ class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
-            existing_results=provider.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
     request_timeout: int = 125
@@ -78,6 +78,8 @@ class Provider(provider.Provider):
 
         with self.results_writer() as writer:
             for vuln_id, record in self.parser.get():
+                if not vuln_id:
+                    continue
                 vuln_id = vuln_id.lower()
 
                 writer.write(
