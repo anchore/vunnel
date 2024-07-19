@@ -49,8 +49,8 @@ PARSER_CONFIG = OVALParserConfig(
 
 
 class Parser:
-    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}.xml.bz2"
-    __oval_file_name__ = "suse-linux-enterprise-server-{}.xml.bz2"
+    __oval_url__ = "https://ftp.suse.com/pub/projects/security/oval/suse.linux.enterprise.server.{}-affected.xml.bz2"
+    __oval_file_name__ = "suse-linux-enterprise-server-{}-affected.xml.bz2"
     __oval_dir_path__ = "oval"
     __source_dir_path__ = "source"
 
