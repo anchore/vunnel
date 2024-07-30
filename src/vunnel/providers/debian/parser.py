@@ -12,6 +12,7 @@ import orjson
 
 from vunnel.result import SQLiteReader
 from vunnel.utils import http, vulnerability
+from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
@@ -269,7 +270,7 @@ class Parser:
         if ns_cve_dsalist is None:
             ns_cve_dsalist = {}
 
-        vuln_records = {}
+        vuln_records: dict[str, dict[str, dict[str, Vulnerability]]] = {}
 
         for pkg in data:
             for vid in data[pkg]:
@@ -310,15 +311,18 @@ class Parser:
                         if complete:
                             if vid not in vuln_records[relno]:
                                 # create a new record
-                                vuln_records[relno][vid] = copy.deepcopy(vulnerability.vulnerability_element)
+                                # and populate the static information about the new vuln record
+                                vuln_records[relno][vid] = {"Vulnerability": Vulnerability(
+                                    Name=str(vid),
+                                    NamespaceName="debian:"+str(relno),
+                                    Description=vulnerability_data.get("description", ""),
+                                    Link="https://security-tracker.debian.org/tracker/" + str(vid),
+                                    Severity="Unknown",
+                                    CVSS=[],
+                                    FixedIn=[],
+                                )}
                                 vuln_record = vuln_records[relno][vid]
 
-                                # populate the static information about the new vuln record
-                                vuln_record["Vulnerability"]["Description"] = vulnerability_data.get("description", "")
-                                vuln_record["Vulnerability"]["Name"] = str(vid)
-                                vuln_record["Vulnerability"]["NamespaceName"] = "debian:" + str(relno)
-                                vuln_record["Vulnerability"]["Link"] = "https://security-tracker.debian.org/tracker/" + str(vid)
-                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
                             else:
                                 vuln_record = vuln_records[relno][vid]
 
@@ -349,9 +353,9 @@ class Parser:
                             if (
                                 sev
                                 and vulnerability.severity_order[sev]
-                                > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]
+                                > vulnerability.severity_order[vuln_record["Vulnerability"].Severity]
                             ):
-                                vuln_record["Vulnerability"]["Severity"] = sev
+                                vuln_record["Vulnerability"].Severity = sev
 
                             # add fixedIn
                             skip_fixedin = False
@@ -375,8 +379,8 @@ class Parser:
 
                             if not skip_fixedin:
                                 # collect metrics for vendor advisory
-                                met_ns = vuln_record["Vulnerability"]["NamespaceName"]
-                                met_sev = vuln_record["Vulnerability"]["Severity"]
+                                met_ns = vuln_record["Vulnerability"].NamespaceName
+                                met_sev = vuln_record["Vulnerability"].Severity
 
                                 if met_ns not in adv_mets:
                                     adv_mets[met_ns] = {
@@ -422,18 +426,12 @@ class Parser:
                                     ] += 1
 
                                 # append fixed in record to vulnerability
-                                vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
+                                if "Module" not in fixed_el:
+                                    fixed_el["Module"] = None
+                                vuln_record["Vulnerability"].FixedIn.append(FixedIn(**fixed_el))
 
-                            # strip out any top level that is not set
-                            final_record = {"Vulnerability": {}}
-                            for k in vuln_record["Vulnerability"]:
-                                if vuln_record["Vulnerability"][k]:
-                                    final_record["Vulnerability"][k] = copy.deepcopy(vuln_record["Vulnerability"][k])
-
-                            # retlists[relno].append(final_record)
-
-                    except Exception:
-                        self.logger.exception(f"ignoring error parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
+                    except Exception as e:
+                        self.logger.exception(f"ignoring error ({e.__class__.__name__}) parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
 
         self.logger.debug(f"metrics for advisory information: {orjson.dumps(adv_mets).decode('utf-8')}")
 
@@ -548,7 +546,7 @@ class Parser:
                         self.logger.info(
                             f"clearing severity on {vid}, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
                         )
-                        vuln_record["Vulnerability"]["Severity"] = "Unknown"
+                        vuln_record["Vulnerability"].Severity = "Unknown"
                     yield relno, vid, vuln_record
         else:
             yield from ()

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.debian import Config, Provider, parser
+from vunnel.utils.vulnerability import Vulnerability
 
 
 @pytest.fixture()
@@ -100,11 +101,14 @@ class TestParser:
         for _rel, vuln_dict in vuln_records.items():
             assert isinstance(vuln_dict, dict)
             assert len(vuln_dict) > 0
-            assert all("Vulnerability" in x for x in vuln_dict.values())
+            for vuln_holder in vuln_dict.values():
+                assert isinstance(vuln_holder, dict)
+                assert "Vulnerability" in vuln_holder
+                vuln = vuln_holder["Vulnerability"]
+                assert isinstance(vuln, Vulnerability)
+                assert len(vuln.Name) > 0
+                assert vuln.Description is not None
 
-            assert all(x.get("Vulnerability", {}).get("Name") for x in vuln_dict.values())
-
-            assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
         assert not subject.logger.exception.called, "no exceptions should be logged"
 
     def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests, mock_legacy_db):
