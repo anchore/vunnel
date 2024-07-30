@@ -479,7 +479,9 @@ class Parser:
                         legacy_records[relno] = {}
 
                     records += 1
-                    legacy_records[relno][vid] = envelope.item
+                    envelope.item["Vulnerability"].setdefault("CVSS", [])
+                    envelope.item["Vulnerability"].setdefault("FixedIn", [])
+                    legacy_records[relno][vid] = {"Vulnerability": Vulnerability(**envelope.item["Vulnerability"])}
 
             self.logger.debug(f"legacy dataset {file_path} contains {len(releases)} releases with {records} records")
 
@@ -507,8 +509,11 @@ class Parser:
                         del cvss_metadata["Vectors"]
                     record["Vulnerability"]["Metadata"]["NVD"]["CVSSv2"] = cvss_metadata
 
+                # default required fields for dataclass
+                record["Vulnerability"].setdefault("FixedIn", [])
+                record["Vulnerability"].setdefault("CVSS", [])
                 # write the record back
-                legacy_records[relno][vid] = record
+                legacy_records[relno][vid] = Vulnerability(**record["Vulnerability"])
 
         # read every json file in the legacy directory
         for root, _dirs, files in os.walk(self.legacy_records_path):
