@@ -312,15 +312,17 @@ class Parser:
                             if vid not in vuln_records[relno]:
                                 # create a new record
                                 # and populate the static information about the new vuln record
-                                vuln_records[relno][vid] = {"Vulnerability": Vulnerability(
-                                    Name=str(vid),
-                                    NamespaceName="debian:"+str(relno),
-                                    Description=vulnerability_data.get("description", ""),
-                                    Link="https://security-tracker.debian.org/tracker/" + str(vid),
-                                    Severity="Unknown",
-                                    CVSS=[],
-                                    FixedIn=[],
-                                )}
+                                vuln_records[relno][vid] = {
+                                    "Vulnerability": Vulnerability(
+                                        Name=str(vid),
+                                        NamespaceName="debian:" + str(relno),
+                                        Description=vulnerability_data.get("description", ""),
+                                        Link="https://security-tracker.debian.org/tracker/" + str(vid),
+                                        Severity="Unknown",
+                                        CVSS=[],
+                                        FixedIn=[],
+                                    ),
+                                }
                                 vuln_record = vuln_records[relno][vid]
 
                             else:
@@ -431,7 +433,9 @@ class Parser:
                                 vuln_record["Vulnerability"].FixedIn.append(FixedIn(**fixed_el))
 
                     except Exception as e:
-                        self.logger.exception(f"ignoring error ({e.__class__.__name__}) parsing vuln: {vid}, pkg: {pkg}, rel: {rel}")
+                        self.logger.exception(
+                            f"ignoring error ({e.__class__.__name__}) parsing vuln: {vid}, pkg: {pkg}, rel: {rel}",
+                        )
 
         self.logger.debug(f"metrics for advisory information: {orjson.dumps(adv_mets).decode('utf-8')}")
 
