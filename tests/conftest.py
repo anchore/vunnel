@@ -9,6 +9,7 @@ import os.path
 import shutil
 
 import jsonschema
+import orjson
 import pytest
 
 
@@ -93,7 +94,9 @@ class WorkspaceHelper:
                 if not self.snapshot._snapshot_update and not os.path.exists(snapshot_abs_path):
                     missing_snapshot_files.append(snapshot_abs_path)
                 else:
-                    self.snapshot.assert_match(f.read() + "\n", snapshot_path)
+                    d = orjson.loads(f.read())
+                    s = json.dumps(d, indent=4, sort_keys=True)
+                    self.snapshot.assert_match(s + "\n", snapshot_path)
 
                     if snapshot_abs_path in expected_files_to_test:
                         expected_files_to_test.remove(snapshot_abs_path)
