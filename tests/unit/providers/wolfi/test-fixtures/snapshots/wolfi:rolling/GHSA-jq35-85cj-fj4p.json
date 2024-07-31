@@ -1,23 +1,23 @@
 {
-    "identifier": "wolfi:rolling/GHSA-jq35-85cj-fj4p",
-    "item": {
-        "Vulnerability": {
-            "CVSS": [],
-            "Description": "",
-            "FixedIn": [
-                {
-                    "Name": "apko",
-                    "NamespaceName": "wolfi:rolling",
-                    "Version": "0",
-                    "VersionFormat": "apk"
-                }
-            ],
-            "Link": "https://github.com/advisories/GHSA-jq35-85cj-fj4p",
-            "Metadata": {},
-            "Name": "GHSA-jq35-85cj-fj4p",
-            "NamespaceName": "wolfi:rolling",
-            "Severity": "Unknown"
+  "identifier": "wolfi:rolling/GHSA-jq35-85cj-fj4p",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "",
+      "FixedIn": [
+        {
+          "Name": "apko",
+          "NamespaceName": "wolfi:rolling",
+          "Version": "0",
+          "VersionFormat": "apk"
         }
-    },
-    "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json"
+      ],
+      "Link": "https://github.com/advisories/GHSA-jq35-85cj-fj4p",
+      "Metadata": {},
+      "Name": "GHSA-jq35-85cj-fj4p",
+      "NamespaceName": "wolfi:rolling",
+      "Severity": "Unknown"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json"
 }

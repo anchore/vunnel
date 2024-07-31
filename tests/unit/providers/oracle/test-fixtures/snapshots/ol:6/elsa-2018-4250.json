@@ -1,80 +1,80 @@
 {
-    "identifier": "ol:6/elsa-2018-4250",
-    "item": {
-        "Vulnerability": {
-            "CVSS": [],
-            "Description": "[2.6.39-400.302.2]\n- Revert 'Fix up non-directory creation in SGID directories' (Brian Maly)  [Orabug: 28781234]\n\n[2.6.39-400.302.1]\n- Fix up non-directory creation in SGID directories (Linus Torvalds)  [Orabug: 28459479]  {CVE-2018-13405}\n- ALSA: seq: Make ioctls race-free (Takashi Iwai)  [Orabug: 28459730]  {CVE-2018-7566}\n- rds: CVE-2018-7492: Fix NULL pointer dereference in __rds_rdma_map (Hakon Bugge)  [Orabug: 28539910]  {CVE-2018-7492}\n- cdrom: Fix info leak/OOB read in cdrom_ioctl_drive_status (Scott Bauer)  [Orabug: 28664549]  {CVE-2018-16658}\n- ACPICA: acpi: acpica: fix acpi operand cache leak in nseval.c (Seunghun Han)  [Orabug: 28664580]  {CVE-2017-13695}\n- exec: Limit arg stack to at most 75% of _STK_LIM (Kees Cook)  [Orabug: 28710024]  {CVE-2018-14634}",
-            "FixedIn": [
-                {
-                    "Module": null,
-                    "Name": "kernel-uek",
-                    "NamespaceName": "ol:6",
-                    "Version": "0:2.6.39-400.302.2.el6uek",
-                    "VersionFormat": "rpm"
-                },
-                {
-                    "Module": null,
-                    "Name": "kernel-uek-debug",
-                    "NamespaceName": "ol:6",
-                    "Version": "0:2.6.39-400.302.2.el6uek",
-                    "VersionFormat": "rpm"
-                },
-                {
-                    "Module": null,
-                    "Name": "kernel-uek-debug-devel",
-                    "NamespaceName": "ol:6",
-                    "Version": "0:2.6.39-400.302.2.el6uek",
-                    "VersionFormat": "rpm"
-                },
-                {
-                    "Module": null,
-                    "Name": "kernel-uek-devel",
-                    "NamespaceName": "ol:6",
-                    "Version": "0:2.6.39-400.302.2.el6uek",
-                    "VersionFormat": "rpm"
-                },
-                {
-                    "Module": null,
-                    "Name": "kernel-uek-doc",
-                    "NamespaceName": "ol:6",
-                    "Version": "0:2.6.39-400.302.2.el6uek",
-                    "VersionFormat": "rpm"
-                },
-                {
-                    "Module": null,
-                    "Name": "kernel-uek-firmware",
-                    "NamespaceName": "ol:6",
-                    "Version": "0:2.6.39-400.302.2.el6uek",
-                    "VersionFormat": "rpm"
-                }
-            ],
-            "Link": "http://linux.oracle.com/errata/ELSA-2018-4250.html",
-            "Metadata": {
-                "CVE": [
-                    {
-                        "Link": "http://linux.oracle.com/cve/CVE-2018-7566.html",
-                        "Name": "CVE-2018-7566"
-                    },
-                    {
-                        "Link": "http://linux.oracle.com/cve/CVE-2017-13695.html",
-                        "Name": "CVE-2017-13695"
-                    },
-                    {
-                        "Link": "http://linux.oracle.com/cve/CVE-2018-16658.html",
-                        "Name": "CVE-2018-16658"
-                    },
-                    {
-                        "Link": "http://linux.oracle.com/cve/CVE-2018-7492.html",
-                        "Name": "CVE-2018-7492"
-                    }
-                ],
-                "Issued": "2018-10-12",
-                "RefId": "ELSA-2018-4250"
-            },
-            "Name": "ELSA-2018-4250",
-            "NamespaceName": "ol:6",
-            "Severity": "High"
+  "identifier": "ol:6/elsa-2018-4250",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "[2.6.39-400.302.2]\n- Revert 'Fix up non-directory creation in SGID directories' (Brian Maly)  [Orabug: 28781234]\n\n[2.6.39-400.302.1]\n- Fix up non-directory creation in SGID directories (Linus Torvalds)  [Orabug: 28459479]  {CVE-2018-13405}\n- ALSA: seq: Make ioctls race-free (Takashi Iwai)  [Orabug: 28459730]  {CVE-2018-7566}\n- rds: CVE-2018-7492: Fix NULL pointer dereference in __rds_rdma_map (Hakon Bugge)  [Orabug: 28539910]  {CVE-2018-7492}\n- cdrom: Fix info leak/OOB read in cdrom_ioctl_drive_status (Scott Bauer)  [Orabug: 28664549]  {CVE-2018-16658}\n- ACPICA: acpi: acpica: fix acpi operand cache leak in nseval.c (Seunghun Han)  [Orabug: 28664580]  {CVE-2017-13695}\n- exec: Limit arg stack to at most 75% of _STK_LIM (Kees Cook)  [Orabug: 28710024]  {CVE-2018-14634}",
+      "FixedIn": [
+        {
+          "Module": null,
+          "Name": "kernel-uek",
+          "NamespaceName": "ol:6",
+          "Version": "0:2.6.39-400.302.2.el6uek",
+          "VersionFormat": "rpm"
+        },
+        {
+          "Module": null,
+          "Name": "kernel-uek-debug",
+          "NamespaceName": "ol:6",
+          "Version": "0:2.6.39-400.302.2.el6uek",
+          "VersionFormat": "rpm"
+        },
+        {
+          "Module": null,
+          "Name": "kernel-uek-debug-devel",
+          "NamespaceName": "ol:6",
+          "Version": "0:2.6.39-400.302.2.el6uek",
+          "VersionFormat": "rpm"
+        },
+        {
+          "Module": null,
+          "Name": "kernel-uek-devel",
+          "NamespaceName": "ol:6",
+          "Version": "0:2.6.39-400.302.2.el6uek",
+          "VersionFormat": "rpm"
+        },
+        {
+          "Module": null,
+          "Name": "kernel-uek-doc",
+          "NamespaceName": "ol:6",
+          "Version": "0:2.6.39-400.302.2.el6uek",
+          "VersionFormat": "rpm"
+        },
+        {
+          "Module": null,
+          "Name": "kernel-uek-firmware",
+          "NamespaceName": "ol:6",
+          "Version": "0:2.6.39-400.302.2.el6uek",
+          "VersionFormat": "rpm"
         }
-    },
-    "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json"
+      ],
+      "Link": "http://linux.oracle.com/errata/ELSA-2018-4250.html",
+      "Metadata": {
+        "CVE": [
+          {
+            "Link": "http://linux.oracle.com/cve/CVE-2018-7566.html",
+            "Name": "CVE-2018-7566"
+          },
+          {
+            "Link": "http://linux.oracle.com/cve/CVE-2017-13695.html",
+            "Name": "CVE-2017-13695"
+          },
+          {
+            "Link": "http://linux.oracle.com/cve/CVE-2018-16658.html",
+            "Name": "CVE-2018-16658"
+          },
+          {
+            "Link": "http://linux.oracle.com/cve/CVE-2018-7492.html",
+            "Name": "CVE-2018-7492"
+          }
+        ],
+        "Issued": "2018-10-12",
+        "RefId": "ELSA-2018-4250"
+      },
+      "Name": "ELSA-2018-4250",
+      "NamespaceName": "ol:6",
+      "Severity": "High"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.0.json"
 }

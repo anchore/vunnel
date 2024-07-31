@@ -95,8 +95,8 @@ class WorkspaceHelper:
                     missing_snapshot_files.append(snapshot_abs_path)
                 else:
                     d = orjson.loads(f.read())
-                    s = json.dumps(d, indent=4, sort_keys=True)
-                    self.snapshot.assert_match(s + "\n", snapshot_path)
+                    expected_bytes = orjson.dumps(d, option=orjson.OPT_APPEND_NEWLINE | orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS)
+                    self.snapshot.assert_match(expected_bytes, snapshot_path)
 
                     if snapshot_abs_path in expected_files_to_test:
                         expected_files_to_test.remove(snapshot_abs_path)

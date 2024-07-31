@@ -1,49 +1,49 @@
 {
-    "identifier": "github:npm/ghsa-mh6f-8j2x-4483",
-    "item": {
-        "Advisory": {
-            "CVE": [],
-            "CVSS": {
-                "base_metrics": {
-                    "base_score": 9.8,
-                    "base_severity": "Critical",
-                    "exploitability_score": 3.9,
-                    "impact_score": 5.9
-                },
-                "status": "N/A",
-                "vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-                "version": "3.1"
-            },
-            "Classification": "GENERAL",
-            "FixedIn": [
-                {
-                    "ecosystem": "npm",
-                    "identifier": "None",
-                    "name": "flatmap-stream",
-                    "namespace": "github:npm",
-                    "range": ""
-                },
-                {
-                    "ecosystem": "npm",
-                    "identifier": "4.0.0",
-                    "name": "event-stream",
-                    "namespace": "github:npm",
-                    "range": ""
-                }
-            ],
-            "Metadata": {
-                "CVE": []
-            },
-            "Severity": "Critical",
-            "Summary": "Critical severity vulnerability that affects flatmap-stream and event-stream",
-            "ghsaId": "GHSA-mh6f-8j2x-4483",
-            "namespace": "github:npm",
-            "published": "2018-11-26T23:58:21Z",
-            "updated": "2023-01-12T05:08:40Z",
-            "url": "https://github.com/advisories/GHSA-mh6f-8j2x-4483",
-            "withdrawn": null
+  "identifier": "github:npm/ghsa-mh6f-8j2x-4483",
+  "item": {
+    "Advisory": {
+      "CVE": [],
+      "CVSS": {
+        "base_metrics": {
+          "base_score": 9.8,
+          "base_severity": "Critical",
+          "exploitability_score": 3.9,
+          "impact_score": 5.9
         },
-        "Vulnerability": {}
+        "status": "N/A",
+        "vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "version": "3.1"
+      },
+      "Classification": "GENERAL",
+      "FixedIn": [
+        {
+          "ecosystem": "npm",
+          "identifier": "None",
+          "name": "flatmap-stream",
+          "namespace": "github:npm",
+          "range": ""
+        },
+        {
+          "ecosystem": "npm",
+          "identifier": "4.0.0",
+          "name": "event-stream",
+          "namespace": "github:npm",
+          "range": ""
+        }
+      ],
+      "Metadata": {
+        "CVE": []
+      },
+      "Severity": "Critical",
+      "Summary": "Critical severity vulnerability that affects flatmap-stream and event-stream",
+      "ghsaId": "GHSA-mh6f-8j2x-4483",
+      "namespace": "github:npm",
+      "published": "2018-11-26T23:58:21Z",
+      "updated": "2023-01-12T05:08:40Z",
+      "url": "https://github.com/advisories/GHSA-mh6f-8j2x-4483",
+      "withdrawn": null
     },
-    "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.1.json"
+    "Vulnerability": {}
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.1.json"
 }
