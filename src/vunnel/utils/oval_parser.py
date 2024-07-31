@@ -58,7 +58,7 @@ def get_opener(filename: str) -> Callable:
     return open
 
 
-def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):  # noqa: C901, PLR0912
+def parse(dest_file: str, config: Config, vuln_dict: dict | None = None):
     """
     Parse the oval file and return a dictionary with tuple (ID, namespace) as the key
     and tuple (version, vulnerability-dictionary) as the value

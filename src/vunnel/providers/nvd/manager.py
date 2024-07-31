@@ -45,7 +45,7 @@ class Manager:
             download_timeout=download_timeout,
         )
 
-        self.urls = [self.api._cve_api_url_]  # noqa: SLF001
+        self.urls = [self.api._cve_api_url_]
         self.schema = schema
 
     def get(
