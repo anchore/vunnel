@@ -1,4 +1,5 @@
 import os
+
 import orjson
 
 root_directory = "tests/unit/providers"
