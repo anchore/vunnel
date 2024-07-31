@@ -4,7 +4,6 @@ requires-python = ">=3.9.0"
 
 [tool.poetry.scripts]
 vunnel = "vunnel.cli:run"
-format-snapshots = "scripts.format-json-snapshots:main"
 
 [tool.poetry]
 name = "vunnel"
