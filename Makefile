@@ -111,6 +111,7 @@ lint-fix: virtual-env-check  ## Fix linting issues (ruff)
 .PHONY: format
 format: virtual-env-check  ## Format all code (black)
 	black src tests
+	poetry run python scripts/format-json-snapshots.py
 
 .PHONY: check-types
 check-types: virtual-env-check  ## Run type checks (mypy)
