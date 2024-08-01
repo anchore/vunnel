@@ -44,7 +44,7 @@ class OnErrorConfig:
     # the number of seconds to wait between retries
     retry_delay: int = 5
     # what to do with the input directory when an error occurs
-    input: InputStatePolicy = InputStatePolicy.KEEP  # noqa: A003
+    input: InputStatePolicy = InputStatePolicy.KEEP
     # what to do with the result directory when an error occurs
     results: ResultStatePolicy = ResultStatePolicy.KEEP
 

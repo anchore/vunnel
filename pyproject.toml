@@ -187,7 +187,6 @@ ignore = [
   "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
   "PLR2004", # a little too agressive, not allowing any magic numbers
   "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
-  "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
   "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)` -- not compatible with python 3.9 (even with __future__ import)
 ]
 
