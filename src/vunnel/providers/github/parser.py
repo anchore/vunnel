@@ -49,7 +49,7 @@ GITHUB_RATE_LIMIT_RESET_HEADER = "x-ratelimit-reset"
 
 
 class Parser:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         workspace,
         token,

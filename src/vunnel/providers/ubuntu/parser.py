@@ -742,7 +742,7 @@ class Parser:
             self._delete_merged_cve(cve_id)
         self.logger.info("finish processing deletes")
 
-    def _process_cve(  # noqa: PLR0913
+    def _process_cve(
         self,
         cve_id: str,
         cve_rel_path: str,
@@ -982,7 +982,7 @@ class Parser:
 
         return parsed_cve
 
-    def _resolve_patches_using_history(  # noqa: C901, PLR0912, PLR0915, PLR0913
+    def _resolve_patches_using_history(  # noqa: C901, PLR0912, PLR0915
         self,
         cve_id: str,
         cve_rel_path: str,

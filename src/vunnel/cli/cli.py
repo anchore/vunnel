@@ -92,7 +92,7 @@ def show_config(cfg: config.Application) -> None:
     logging.info("showing application config")
 
     class IndentDumper(yaml.Dumper):
-        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:  # noqa: ARG002
+        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
             return super().increase_indent(flow, False)
 
     def enum_asdict_factory(data: list[tuple[str, Any]]) -> dict[Any, Any]:
@@ -189,7 +189,7 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
         error: str | None = None
         enabled: bool = True
 
-        def format(self, fill: str) -> str:  # noqa: A003
+        def format(self, fill: str) -> str:
             if self.error:
                 return f"""\
 {fill}      unable to load state: {self.error}"""

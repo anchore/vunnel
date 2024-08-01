@@ -36,7 +36,7 @@ class Parser:
     _rss_file_name_ = "{}_rss.xml"
     _html_dir_name_ = "{}_html"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         workspace,
         download_timeout=125,
