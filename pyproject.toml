@@ -77,7 +77,7 @@ types-requests = "^2.28.11.7"
 mypy = "^1.1"
 radon = ">=5.1,<7.0"
 dunamai = "^1.15.0"
-ruff = ">=0.5.1,<0.5.3"
+ruff = ">=0.5.1,<0.5.7"
 yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.9.2"}
 tabulate = "0.9.0"
 tox = "^4.11.3"
@@ -187,7 +187,6 @@ ignore = [
   "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
   "PLR2004", # a little too agressive, not allowing any magic numbers
   "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
-  "RUF100", # no blanket "noqa" usage, can be improved over time, but not now
   "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)` -- not compatible with python 3.9 (even with __future__ import)
 ]
 

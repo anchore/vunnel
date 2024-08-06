@@ -115,7 +115,7 @@ class KspliceFilterer:
         epoch, version, release = rpm.split_fullversion(version)
         return cls.ksplice_regex.match(release) is not None
 
-    def filter(self, vuln_dict: dict) -> dict:  # noqa: A003
+    def filter(self, vuln_dict: dict) -> dict:
         """
 
         Filters affected packages and ELSAs that are for ksplice packages since the matching logic for these in Grype isn't

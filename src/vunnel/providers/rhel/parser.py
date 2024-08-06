@@ -866,7 +866,7 @@ class Parser:
 
 
 class AffectedRelease:
-    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None):  # noqa: PLR0913
+    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None):
         self.name = name
         self.version = version
         self.platform = platform

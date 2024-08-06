@@ -53,7 +53,7 @@ class GitWrapper:
     _head_rev_cmd_ = "git rev-parse HEAD"
     _ubuntu_server_503_message = "error: RPC failed; HTTP 503 curl 22 The requested URL returned error: 503"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         source: str,
         branch: str,
