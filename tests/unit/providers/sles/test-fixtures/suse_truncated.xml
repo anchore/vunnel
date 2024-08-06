@@ -227,6 +227,77 @@
         </criteria>
       </criteria>
     </definition>
+      <definition id="oval:org.opensuse.security:def:20101323" version="1" class="vulnerability">
+          <metadata>
+              <title>CVE-2010-1323</title>
+              <affected family="unix">
+                  <platform>SUSE Linux Enterprise Desktop 15</platform>
+                  <platform>SUSE Linux Enterprise High Performance Computing 15</platform>
+                  <platform>SUSE Linux Enterprise Module for Basesystem 15</platform>
+                  <platform>SUSE Linux Enterprise Module for Server Applications 15</platform>
+                  <platform>SUSE Linux Enterprise Server 15</platform>
+                  <platform>SUSE Linux Enterprise Server for SAP Applications 15</platform>
+              </affected>
+              <reference source="CVE" ref_id="Mitre CVE-2010-1323" ref_url="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-1323"></reference>
+              <reference source="SUSE CVE" ref_id="SUSE CVE-2010-1323" ref_url="https://www.suse.com/security/cve/CVE-2010-1323"></reference>
+              <reference source="SUSE-SU" ref_id="SUSE-SR:2010:023" ref_url="https://lists.opensuse.org/archives/list/security-announce@lists.opensuse.org/thread/JM6O73UJO5HWG5
+RGIFFSFKGTDNFSGYWB/#JM6O73UJO5HWG5RGIFFSFKGTDNFSGYWB"></reference>
+              <reference source="SUSE-SU" ref_id="SUSE-SR:2010:024" ref_url="https://lists.opensuse.org/archives/list/security-announce@lists.opensuse.org/thread/QQHP7MDAGKGRMV
+UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
+              <reference source="SUSE-SU" ref_id="TID7008287" ref_url="https://www.suse.com/support/kb/doc/?id=7008287"></reference>
+              <description>&#xA;    MIT Kerberos 5 (aka krb5) 1.3.x, 1.4.x, 1.5.x, 1.6.x, 1.7.x, and 1.8.x through 1.8.3 does not properly determine the acceptability of checks
+                  ums, which might allow remote attackers to modify user-visible prompt text, modify a response to a Key Distribution Center (KDC), or forge a KRB-SAFE message via certain
+                  checksums that (1) are unkeyed or (2) use RC4 keys.&#xA;    </description>
+              <advisory>
+                  <severity>Moderate</severity>
+                  <cve cwe="" impact="" href="https://www.suse.com/security/cve/CVE-2010-1323/" public="">CVE-2010-1323 at SUSE</cve>
+                  <cve cvss3="3.7/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" cwe="" impact="low" href="https://nvd.nist.gov/vuln/detail/CVE-2010-1323" public="">CVE-2010-1323
+                      at NVD</cve>
+                  <bugzilla id="" href="https://bugzilla.suse.com/650650">SUSE bug 650650</bugzilla>
+                  <affected_cpe_list>
+                      <cpe>cpe:/o:suse:sle-module-basesystem:15</cpe>
+                      <cpe>cpe:/o:suse:sle-module-server-applications:15</cpe>
+                      <cpe>cpe:/o:suse:sle_hpc:15</cpe>
+                      <cpe>cpe:/o:suse:sled:15</cpe>
+                      <cpe>cpe:/o:suse:sles:15</cpe>
+                      <cpe>cpe:/o:suse:sles_sap:15</cpe>
+                  </affected_cpe_list>
+                  <issued date="2021-04-30"></issued>
+                  <updated date="2024-07-31"></updated>
+              </advisory>
+          </metadata>
+          <criteria operator="OR">
+              <criteria operator="AND">
+                  <criteria operator="OR">
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009669873" comment="SUSE Linux Enterprise Desktop 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009669871" comment="SUSE Linux Enterprise High Performance Computing 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009223735" comment="SUSE Linux Enterprise Module for Basesystem 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009242640" comment="SUSE Linux Enterprise Server 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009276218" comment="SUSE Linux Enterprise Server for SAP Applications 15 is installed"></criterion>
+                  </criteria>
+                  <criteria operator="OR">
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009480345" comment="krb5-1.15.2-4.25 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009480346" comment="krb5-32bit-1.15.2-4.25 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009480347" comment="krb5-client-1.15.2-4.25 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009480348" comment="krb5-devel-1.15.2-4.25 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009480349" comment="krb5-plugin-preauth-otp-1.15.2-4.25 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009480350" comment="krb5-plugin-preauth-pkinit-1.15.2-4.25 is installed"></criterion>
+                  </criteria>
+              </criteria>
+              <criteria operator="AND">
+                  <criteria operator="OR">
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009669871" comment="SUSE Linux Enterprise High Performance Computing 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009228795" comment="SUSE Linux Enterprise Module for Server Applications 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009242640" comment="SUSE Linux Enterprise Server 15 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009276218" comment="SUSE Linux Enterprise Server for SAP Applications 15 is installed"></criterion>
+                  </criteria>
+                  <criteria operator="OR">
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009488167" comment="krb5-plugin-kdb-ldap-1.15.2-4.25 is installed"></criterion>
+                      <criterion test_ref="oval:org.opensuse.security:tst:2009488168" comment="krb5-server-1.15.2-4.25 is installed"></criterion>
+                  </criteria>
+              </criteria>
+          </criteria>
+      </definition>
   </definitions>
   <tests>
     <rpminfo_test id="oval:org.opensuse.security:tst:2009302033" version="1" comment="sles-ltss-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -253,6 +324,62 @@
       <object object_ref="oval:org.opensuse.security:obj:2009030416"/>
       <state state_ref="oval:org.opensuse.security:ste:2009118764"/>
     </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009276218" comment="SLES_SAP-release is ==15" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009047546"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009061809"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009669873" comment="sled-release is ==15" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009031917"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009061809"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009669871" comment="SLE_HPC-release is ==15" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009051714"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009061809"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009242640" comment="sles-release is ==15" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009030884"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009061809"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009223735" comment="sle-module-basesystem-release is ==15" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009042619"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009061809"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009228795" comment="sle-module-server-applications-release is ==15" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009046430"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009061809"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009480345" comment="krb5 is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009031044"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009480346" comment="krb5-32bit is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009031038"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009480347" comment="krb5-client is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009031041"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009480348" comment="krb5-devel is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009031478"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009480349" comment="krb5-plugin-preauth-otp is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009038448"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009480350" comment="krb5-plugin-preauth-pkinit is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009033580"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009488167" comment="krb5-plugin-kdb-ldap is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009033579"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009488168" comment="krb5-server is &lt;1.15.2-4.25" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009031042"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
+      </rpminfo_test>
   </tests>
   <objects>
     <rpminfo_object id="oval:org.opensuse.security:obj:2009049560" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -264,6 +391,48 @@
     <rpminfo_object id="oval:org.opensuse.security:obj:2009030416" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
       <name>kernel-default</name>
     </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009051714" version="1">
+          <name>SLE_HPC-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009030884" version="1">
+          <name>sles-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009047546" version="1">
+          <name>SLES_SAP-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009031917" version="1">
+          <name>sled-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009042619" version="1">
+          <name>sle-module-basesystem-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009046430" version="1">
+          <name>sle-module-server-applications-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009031044" version="1">
+          <name>krb5</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009031038" version="1">
+          <name>krb5-32bit</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009031041" version="1">
+          <name>krb5-client</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009031478" version="1">
+          <name>krb5-devel</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009038448" version="1">
+          <name>krb5-plugin-preauth-otp</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009033580" version="1">
+          <name>krb5-plugin-preauth-pkinit</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009033579" version="1">
+          <name>krb5-plugin-kdb-ldap</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009031042" version="1">
+          <name>krb5-server</name>
+      </rpminfo_object>
   </objects>
   <state>
     <rpminfo_state id="oval:org.opensuse.security:ste:2009061809" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -280,5 +449,8 @@
       <arch datatype="string" operation="pattern match">(aarch64|ppc64le|s390x|x86_64)</arch>
       <evr datatype="evr_string" operation="less than">0:4.12.14-197.89.2</evr>
     </rpminfo_state>
+      <rpminfo_state id="oval:org.opensuse.security:ste:2009111500" version="1">
+          <evr operation="6">0:1.15.2-4.25</evr>
+      </rpminfo_state>
   </state>
 </oval_definitions>
