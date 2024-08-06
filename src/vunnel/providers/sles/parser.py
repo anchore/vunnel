@@ -323,7 +323,12 @@ class Parser:
                 if release_version not in version_release_feed:
                     version_release_feed[release_version] = defaultdict(Vulnerability)
 
-                version_release_feed[release_version][release_name] = feed_obj
+                if release_name not in version_release_feed[release_version]:
+                    version_release_feed[release_version][release_name] = feed_obj
+                else:
+                    old_feed_obj = version_release_feed[release_version][release_name]
+                    feed_obj.FixedIn.extend(old_feed_obj.FixedIn)
+                    version_release_feed[release_version][release_name] = feed_obj
 
             # resolve multiple normalized entries per version
             results.extend(cls._release_resolver(version_release_feed, vulnerability_obj.name))
