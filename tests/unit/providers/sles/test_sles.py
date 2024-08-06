@@ -5,8 +5,8 @@ import shutil
 import defusedxml.ElementTree as ET
 import pytest
 
-from vunnel import result, workspace
-from vunnel.providers.sles import Config, Provider, parser
+from vunnel import result
+from vunnel.providers.sles import Config, Provider
 from vunnel.providers.sles.parser import (
     PARSER_CONFIG,
     Parser,
@@ -21,7 +21,7 @@ from vunnel.utils.oval_v2 import (
     VersionParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability, VendorAdvisory
 
 
 class TestSLESVulnerabilityParser:
@@ -151,6 +151,98 @@ class TestSLESParser:
                         Module=None,
                         VendorAdvisory=None,
                     )
+                ],
+                Metadata={},
+            ),
+            Vulnerability(
+                Name="CVE-2010-1323",
+                NamespaceName="sles:15",
+                Description="MIT Kerberos 5 (aka krb5) 1.3.x, 1.4.x, 1.5.x, 1.6.x, 1.7.x, and 1.8.x through 1.8.3 does not properly determine the acceptability of checks\n                  ums, which might allow remote attackers to modify user-visible prompt text, modify a response to a Key Distribution Center (KDC), or forge a KRB-SAFE message via certain\n                  checksums that (1) are unkeyed or (2) use RC4 keys.",
+                Severity="Medium",
+                Link="https://www.suse.com/security/cve/CVE-2010-1323",
+                CVSS=[
+                    CVSS(
+                        version="3.0",
+                        vector_string="CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
+                        base_metrics=CVSSBaseMetrics(
+                            base_score=3.7, exploitability_score=2.2, impact_score=1.4, base_severity="Low"
+                        ),
+                        status="N/A",
+                    )
+                ],
+                FixedIn=[
+                    FixedIn(
+                        Name="krb5-plugin-kdb-ldap",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5-server",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5-32bit",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5-client",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5-devel",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5-plugin-preauth-otp",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
+                    FixedIn(
+                        Name="krb5-plugin-preauth-pkinit",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0:1.15.2-4.25",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    ),
                 ],
                 Metadata={},
             ),
@@ -298,7 +390,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert 2 == workspace.num_result_entries()
+    assert 3 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
 
 
