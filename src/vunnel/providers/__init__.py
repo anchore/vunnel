@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from vunnel.providers import (
     alpine,
     amazon,
+    bitnami,
     chainguard,
     debian,
     github,
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 _providers: dict[str, type[provider.Provider]] = {
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
+    bitnami.Provider.name(): bitnami.Provider,
     debian.Provider.name(): debian.Provider,
     github.Provider.name(): github.Provider,
     mariner.Provider.name(): mariner.Provider,
