@@ -277,6 +277,35 @@ class TestSLESParser:
                 ],
                 Metadata={},
             ),
+            Vulnerability(
+                Name="CVE-2010-2322",
+                NamespaceName="sles:15.1",
+                Description="Absolute path traversal vulnerability in the extract_jar function in jartool.c in FastJar 0.98 allows remote attackers to create or overwrite arbitrary files via\n                  a full pathname for a file within a .jar archive, a related issue to CVE-2010-0831.  NOTE: this vulnerability exists because of an incomplete fix for CVE-2006-3619.",
+                Severity="Low",
+                Link="https://www.suse.com/security/cve/CVE-2010-2322",
+                CVSS=[
+                    CVSS(
+                        version="3.1",
+                        vector_string="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
+                        base_metrics=CVSSBaseMetrics(
+                            base_score=3.7, exploitability_score=2.2, impact_score=1.4, base_severity="Low"
+                        ),
+                        status="N/A",
+                    )
+                ],
+                FixedIn=[
+                    FixedIn(
+                        Name="fastjar",
+                        NamespaceName="sles:15.1",
+                        VersionFormat="rpm",
+                        Version="None",
+                        Module="",
+                        VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                        VulnerableRange=None,
+                    )
+                ],
+                Metadata={},
+            ),
         ]
 
     @pytest.mark.parametrize(

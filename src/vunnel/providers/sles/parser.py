@@ -35,7 +35,7 @@ namespace = "sles"
 
 PARSER_CONFIG = OVALParserConfig(
     platform_regex=re.compile(r"SUSE Linux Enterprise Server \d+.* is installed"),
-    artifact_regex=re.compile(r".* is installed"),
+    artifact_regex=re.compile(r"(.* is installed)|(.* is affected)"),
     source_url_xpath_query='{0}metadata/{0}reference[@source="SUSE CVE"]',
     severity_map={
         "low": "Low",
@@ -142,6 +142,10 @@ class Parser:
 
         name = name_obj.name
         version = version_obj.value
+        if version_obj.operation == "greater than" and version_obj.value == "0:0-0":
+            # This indicates that any version of the software is vulnerable, so make fixed-in version "None"
+            # to signify vulnerability without a fix available.
+            return name, "None"
 
         return name, version
 
