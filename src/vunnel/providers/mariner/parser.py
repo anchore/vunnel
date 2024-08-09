@@ -208,6 +208,19 @@ class MarinerXmlFile:
 
 MARINER_URL_BASE = "https://raw.githubusercontent.com/microsoft/CBL-MarinerVulnerabilityData/main/{}"
 MARINER_URL_FILENAME = "cbl-mariner-{}-oval.xml"
+AL3_URL = "https://raw.githubusercontent.com/microsoft/AzureLinuxVulnerabilityData/main/azurelinux-3.0-oval.xml"
+
+VERSION_TO_URL = {
+    "1.0": MARINER_URL_BASE.format(MARINER_URL_FILENAME.format("1.0")),
+    "2.0": MARINER_URL_BASE.format(MARINER_URL_FILENAME.format("2.0")),
+    "3.0": AL3_URL,
+}
+
+VERSION_TO_FILENAME = {
+    "1.0": MARINER_URL_FILENAME.format("1.0"),
+    "2.0": MARINER_URL_FILENAME.format("2.0"),
+    "3.0": "azurelinux-3.0-oval.xml",
+}
 
 
 class Parser:
@@ -222,8 +235,12 @@ class Parser:
         return [self._download_version(v) for v in self.allow_versions]
 
     def _download_version(self, version: str) -> str:
-        filename = MARINER_URL_FILENAME.format(version)
-        url = MARINER_URL_BASE.format(filename)
+        filename = VERSION_TO_FILENAME[version]
+        if not filename:
+            raise Exception(f"mariner/azurelinux provider misconfigured: no filename for version {version}")
+        url = VERSION_TO_URL[version]
+        if not url:
+            raise Exception(f"mariner/azurelinux provider misconfigured: no URL for version {version}")
         r = http.get(url, self.logger, timeout=self.download_timeout)
         destination = os.path.join(self.workspace.input_path, filename)
         with open(destination, "wb") as writer:
