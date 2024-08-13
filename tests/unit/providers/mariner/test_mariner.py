@@ -114,6 +114,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             NamespaceName="mariner:3.0",
                             VersionFormat="rpm",
                             Version="0:3.4.0-1.azl3",
+                            VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         )
@@ -133,6 +134,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             NamespaceName="mariner:3.0",
                             VersionFormat="rpm",
                             Version="0:3.4.0-1.azl3",
+                            VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         )
@@ -152,6 +154,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             NamespaceName="mariner:3.0",
                             VersionFormat="rpm",
                             Version="0:18.2.1-1.azl3",
+                            VulnerableRange="< 0:18.2.1-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         )
