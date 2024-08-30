@@ -78,7 +78,8 @@ mypy = "^1.1"
 radon = ">=5.1,<7.0"
 dunamai = "^1.15.0"
 ruff = ">=0.5.1,<0.5.7"
-yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.9.2"}
+yardstick = {git = "https://github.com/anchore/yardstick", rev = "feat-validate-subcommand"}
+# yardstick = {path = "../yardstick", develop=true }
 tabulate = "0.9.0"
 tox = "^4.11.3"
 

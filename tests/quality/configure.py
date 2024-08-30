@@ -23,6 +23,7 @@ from yardstick.cli.config import (
     ResultSet,
     ScanMatrix,
     Tool,
+    Validation,
 )
 from yardstick.cli.config import Application as YardstickApplication
 
@@ -45,6 +46,7 @@ class ConfigurationState(DataClassDictMixin):
 class Yardstick:
     default_max_year: int = 2021
     tools: list[Tool] = field(default_factory=list)
+    use_namespaces_from_db: str | None = None
 
 
 @dataclass
@@ -58,6 +60,7 @@ class Test:
     provider: str
     use_cache: bool = False
     images: list[str] = field(default_factory=list)
+    validations: list[Validation] = field(default_factory=list)
     additional_providers: list[AdditionalProvider] = field(default_factory=list)
     additional_trigger_globs: list[str] = field(default_factory=list)
     expected_namespaces: list[str] = field(default_factory=list)
@@ -100,21 +103,62 @@ class Config(DataClassDictMixin):
         return cfg
 
     def yardstick_application_config(self, test_configurations: list[Test]) -> Application:
+        # tests is the set of providers explicitly requested
+        # each provider is associated with the set of images it needs to scan
+        # and the set of validations it needs to perform.
         images = []
         for test in test_configurations:
             images += test.images
+
+        if self.yardstick.use_namespaces_from_db:
+            namespaces = self.get_namespaces_from_db()
+            for test in test_configurations:
+                for validation in test.validations:
+                    validation.allowed_namespaces = namespaces
+
+        def result_set_from_test(t: Test) -> ResultSet:
+            return ResultSet(
+                description=f"latest vulnerability data vs current vunnel data with latest grype tooling (via SBOM ingestion) for {test.provider}",
+                validations=test.validations,
+                matrix=ScanMatrix(
+                    images=t.images,
+                    tools=self.yardstick.tools,
+                ),
+            )
+
+        result_sets = {f"pr_vs_latest_via_sbom_{test.provider}": result_set_from_test(test) for test in test_configurations}
         return Application(
             default_max_year=self.yardstick.default_max_year,
-            result_sets={
-                "pr_vs_latest_via_sbom": ResultSet(
-                    description="latest vulnerability data vs current vunnel data with latest grype tooling (via SBOM ingestion)",
-                    matrix=ScanMatrix(
-                        images=images,
-                        tools=self.yardstick.tools,
-                    ),
-                ),
-            },
+            result_sets=result_sets,
         )
+
+    def get_namespaces_from_db(self) -> list[str]:
+        if not self.yardstick.use_namespaces_from_db:
+            return []
+        # open sqlite db at build/vulnerability.db and get a list of unique values in the namespace column
+        import sqlite3
+
+        conn = sqlite3.connect(self.yardstick.use_namespaces_from_db)
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT namespace FROM vulnerability")
+        actual_namespaces = [row[0] for row in c.fetchall()]
+
+        # validate that the namespaces we got are 100% what we expect. If there are any missing or extra namespaces we should fail
+        config = Config.load()
+        state = read_config_state()
+        providers = state.cached_providers + state.uncached_providers
+
+        expected_namespaces = []
+        for test in config.tests:
+            if test.provider in providers:
+                expected_namespaces.extend(test.expected_namespaces)
+
+        extra = set(actual_namespaces) - set(expected_namespaces)
+        missing = set(expected_namespaces) - set(actual_namespaces)
+        if extra or missing:
+            raise RuntimeError(f"mismatched namespaces:\nextra:   {extra}\nmissing: {missing}")
+
+        return actual_namespaces
 
     def test_configuration_by_provider(self, provider: str) -> Test | None:
         for test in self.tests:
