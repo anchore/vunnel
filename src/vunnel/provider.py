@@ -162,7 +162,7 @@ class Provider(abc.ABC):
             return None
 
     def _update(self) -> None:
-        start = datetime.datetime.now(tz=datetime.timezone.utc)
+        start = datetime.datetime.now(tz=datetime.UTC)
 
         last_updated = None
         current_state = self.read_state()

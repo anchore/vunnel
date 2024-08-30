@@ -173,7 +173,7 @@ class Parser:
         if self.timestamp:
             self.timestamp = self.timestamp.rstrip("Z")
 
-        current_timestamp = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        current_timestamp = datetime.datetime.now(tz=datetime.UTC).isoformat()
         has_cursor = True
 
         # Process everything that was persisted first
