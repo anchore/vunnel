@@ -61,16 +61,16 @@ build-db:  ## Build a grype database for the given provider
 
 .PHONY: vulns
 vulns: ## Collect and store all grype results
-	poetry run yardstick -v result capture -r $(RESULT_SET)
+	poetry run yardstick -v result capture -r $(RESULT_SET)_$(provider)
 
 .PHONY: sboms
 sboms: $(YARDSTICK_RESULT_DIR) clear-results ## Collect and store all syft results (deletes all existing results)
-	bash -c "make download-sboms || (yardstick -v result capture -r $(RESULT_SET) --only-producers)"
+	bash -c "make download-sboms || (yardstick -v result capture -r $(RESULT_SET)_$(provider) --only-producers)"
 
 .PHONY: download-sboms
 download-sboms:
 	cd vulnerability-match-labels && make venv
-	bash -c "export ORAS_CACHE=$(shell pwd)/.oras-cache && . vulnerability-match-labels/venv/bin/activate && ./vulnerability-match-labels/sboms.py download -r $(RESULT_SET)"
+	bash -c "export ORAS_CACHE=$(shell pwd)/.oras-cache && . vulnerability-match-labels/venv/bin/activate && ./vulnerability-match-labels/sboms.py download -r $(RESULT_SET)_$(provider)"
 
 $(YARDSTICK_RESULT_DIR):
 	mkdir -p $(YARDSTICK_RESULT_DIR)

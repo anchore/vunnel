@@ -8,8 +8,6 @@ x-ref:
 yardstick:
   default_max_year: 2021
 
-  use_namespaces_from_db: ./build/vulnerability.db # only validate against namespaces from this database
-
   tools:
     - name: syft
       # note: if there is ever a problem with the syft version, it can be pinned explicitly here (instead of "latest")
