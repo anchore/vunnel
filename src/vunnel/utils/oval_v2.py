@@ -16,9 +16,12 @@ import xml.etree.ElementTree as ET  # nosec (this is only used to get the defini
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from defusedxml.ElementTree import iterparse
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class OVALElementEnum(enum.Enum):

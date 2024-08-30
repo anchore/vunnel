@@ -40,12 +40,6 @@ jobs:
       matrix:
         # note: this is not a single source of truth (this is also in the tox.ini)
         python:
-          - version: '3.9'
-            toxEnv: py39
-
-          - version: '3.10'
-            toxEnv: py310
-
           - version: '3.11'
             toxEnv: py311
 

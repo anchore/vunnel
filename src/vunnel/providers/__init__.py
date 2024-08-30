@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import sys
+from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
 from vunnel.providers import (
@@ -18,11 +18,6 @@ from vunnel.providers import (
     ubuntu,
     wolfi,
 )
-
-if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points
-else:
-    from importlib.metadata import entry_points
 
 if TYPE_CHECKING:
     from vunnel import provider
