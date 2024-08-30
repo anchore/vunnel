@@ -6,11 +6,14 @@ import gzip
 import logging
 import os
 import re
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as ET
 
 from vunnel.utils.vulnerability import vulnerability_element
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger("oval-parser")
 
