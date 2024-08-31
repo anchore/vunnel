@@ -102,6 +102,7 @@ tests:
       - ghcr.io/chainguard-images/scanner-test:latest@sha256:59bddc101fba0c45d5c093575c6bc5bfee7f0e46ff127e6bb4e5acaaafb525f9
     expected_namespaces:
       - chainguard:distro:chainguard:rolling
+    validations: *standard-validations
 
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
@@ -154,6 +155,7 @@ tests:
       - github:language:ruby
       - github:language:rust
       - github:language:swift
+    validations: *standard-validations
 
   - provider: mariner
     images:
@@ -161,12 +163,14 @@ tests:
     expected_namespaces:
       - mariner:distro:mariner:1.0
       - mariner:distro:mariner:2.0
+    validations: *standard-validations
 
   - provider: nvd
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
     expected_namespaces:
       - nvd:cpe
+    validations: *standard-validations
 
   - provider: oracle
     additional_trigger_globs:
@@ -180,6 +184,7 @@ tests:
       - oracle:distro:oraclelinux:7
       - oracle:distro:oraclelinux:8
       - oracle:distro:oraclelinux:9
+    validations: *standard-validations
 
   - provider: rhel
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -195,6 +200,7 @@ tests:
       - docker.io/anchore/test_images:appstreams-centos-stream-8-1a287dd@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
       - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
+    validations: *standard-validations
 
     expected_namespaces:
       - redhat:distro:redhat:5
@@ -230,6 +236,7 @@ tests:
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
+    validations: *standard-validations
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -266,6 +273,7 @@ tests:
       - ubuntu:distro:ubuntu:23.04
       - ubuntu:distro:ubuntu:23.10
       - ubuntu:distro:ubuntu:24.04
+    validations: *standard-validations
 
   - provider: wolfi
     additional_providers:
@@ -275,3 +283,4 @@ tests:
       - cgr.dev/chainguard/wolfi-base:latest-20221001@sha256:be3834598c3c4b76ace6a866edcbbe1fa18086f9ee238b57769e4d230cd7d507
     expected_namespaces:
       - wolfi:distro:wolfi:rolling
+    validations: *standard-validations
