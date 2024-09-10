@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: latest+import-db=build/grype-db.tar.gz
+      version: feat-azure-linux-3-support+import-db=build/grype-db.tar.gz
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: latest
+      version: feat-azure-linux-3-support
       takes: SBOM
       label: reference
 
@@ -47,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: latest
+  version: feat-azure-linux-3-support
 
 tests:
 
@@ -169,11 +169,15 @@ tests:
   - provider: mariner
     images:
       - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
+      - anchore/test_images:azurelinux3-63671fe@sha256:2d761ba36575ddd4e07d446f4f2a05448298c20e5bdcd3dedfbbc00f9865240d
     expected_namespaces:
       - mariner:distro:mariner:1.0
       - mariner:distro:mariner:2.0
+      - mariner:distro:azurelinux:3.0
     validations:
-      - *default-validations
+      - <<: *default-validations
+        max_year: 2022 # important - Azure Linux 3 doesn't have much to match on going back to 2021
+        candidate_tool_label: custom-db
 
   - provider: nvd
     images:
