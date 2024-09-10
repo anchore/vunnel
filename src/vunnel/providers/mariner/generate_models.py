@@ -1,9 +1,9 @@
 import os
 import tempfile
-from parser import VERSION_TO_FILENAME, VERSION_TO_URL
 from subprocess import PIPE, Popen
 
 import requests
+from parser import VERSION_TO_FILENAME, VERSION_TO_URL
 
 
 def download_version(version: str, dest_dir: str) -> None:
