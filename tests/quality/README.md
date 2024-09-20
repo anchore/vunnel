@@ -36,7 +36,7 @@ While developing it may be useful to only run one provider for rapid troubleshoo
 
 ```
 make capture provider=github
-make validate
+make validate provider=github
 ```
 
 ## What is the quality gate criteria
@@ -50,6 +50,8 @@ specifically with the following criteria:
  - fail when there is a rise in FNs relative to the results from the last grype
    release
  - otherwise, pass
+
+These criteria are configured per provider in `tests/quality/config.yaml`.
 
 F1 score is the primary way that tool matching performance is characterized. F1
 score combines the TP, FP, and FN counts into a single metric between 0 and 1.
@@ -113,7 +115,7 @@ To reduce the eroding value over time we've decided to change as many moving
 targets into fixed targets as possible:
 
 - Vulnerability results beyond a particular year are ignored (the current config
-  allows for <= 2020). Though there are still retroactive CVEs created, this
+  allows for <= 2021). Though there are still retroactive CVEs created, this
   helps a lot in terms of keeping vulnerability results relatively stable.
 
 - SBOMs are used as input into grype instead of the raw container images. This
@@ -144,14 +146,18 @@ to keep in mind:
   assets that are no longer useful for comparison, but this should rarely be
   done.
 
-- Consider not changing the CVE year max-ceiling (currently set to 2020).
+- Consider not changing the CVE year max-ceiling (currently set to 2021).
   Pushing this ceiling will likely raise the number of unlabled matches
   significantly for all images. Only bump this ceiling if all possible matches
   are labeled.
 
+- If the CVE year max-ceiling needs to be pushed, try to push it only for one
+  provider. That is, edit the max-year value on the validation for that
+  provider in `tests/quality/config.yaml`.
+
 ## Workflow
 
-One way of working is to simply run `yardstick` and `gate.py` in the `test/quality` directory.
+One way of working is to simply run `yardstick` in the `test/quality` directory.
 You will need to make sure the `vulnerabilty-match-labels` submodule has been initialized. This happens automatically
 for some `make` commands, but you can ensure this by `git submodule update --init`. After the submodule has been
 initialized, the match data from `vulnerabilty-match-labels` will be available locally.
@@ -174,7 +180,7 @@ After `make capture` has finished, we should have results and can now start insp
 modifying the comparison labels.
 
 To get started, let's assume we see some quality gate failure in like this (something found in CI
-or after running `./gate.py`):
+or after running `yardstick validate --result-set pr_vs_latest_via_sbom`):
 ```
 Running comparison against labels...
    Results used:
@@ -218,7 +224,7 @@ At this point you can run the quality gate using updated label data. The quality
 just one image, for example the image we first found in the failure, so run the quality gate and see
 how changes to the label data have affected the result:
 ```shell
-./gate.py --image docker.io/anchore/test_images@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
+yardstick validate -r pr_vs_latest_via_sbom --image docker.io/anchore/test_images@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
 ```
 
 After iterating on all the changes we need using `yardstick label explore`, we're now ready to commit changes. Since
@@ -307,7 +313,8 @@ like this:
 (venv) user@HOST quality %
 ```
 
-Now you should be able to run both `yardstick` and `./gate.py`.
+Now you should be able to run both `yardstick` to see and update labels and
+`make validate provider=<some provider` to validate the results.
 
 ## Troubleshooting
 
