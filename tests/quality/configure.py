@@ -615,8 +615,8 @@ def build_db(cfg: Config):
         subprocess.run(["vunnel", "-v", "run", provider], check=True)
 
     logging.info("building DB")
-    subprocess.run([GRYPE_DB, "build", "-v"], check=True)
-    subprocess.run([GRYPE_DB, "package", "-v"], check=True)
+    subprocess.run([GRYPE_DB, "build", "-v", "-c", ".grype-db.yaml"], check=True)
+    subprocess.run([GRYPE_DB, "package", "-v", "-c", ".grype-db.yaml"], check=True)
 
     archives = glob.glob(f"{build_dir}/*.tar.gz")
     if not archives:
