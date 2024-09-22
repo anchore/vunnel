@@ -79,6 +79,7 @@ tests:
       - alpine:distro:alpine:3.19
       - alpine:distro:alpine:3.20
       - alpine:distro:alpine:edge
+      - nvd:cpe # alpine lists fixes to NVD entries, so NVD entries are also expected
     validations: *standard-validations
 
   - provider: amazon

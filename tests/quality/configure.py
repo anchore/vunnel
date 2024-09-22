@@ -296,6 +296,7 @@ def write_yardstick_config(cfg: Application, path: str = ".yardstick.yaml"):
 
 
 def write_grype_db_config(providers: set[str], path: str = ".grype-db.yaml"):
+    logging.info(f"writing grype-db config to {path!r}")
     with open(path, "w") as f:
         f.write(
             """
@@ -474,6 +475,7 @@ def configure(cfg: Config, provider_names: list[str]):
 
     providers = set(cached_providers + uncached_providers)
 
+    logging.info(f"writing grype-db config for {' '.join(providers)}")
     write_grype_db_config(providers)
     write_yardstick_config(yardstick_app_cfg)
 
