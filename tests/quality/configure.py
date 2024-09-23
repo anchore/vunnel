@@ -23,6 +23,7 @@ from yardstick.cli.config import (
     ResultSet,
     ScanMatrix,
     Tool,
+    Validation,
 )
 from yardstick.cli.config import Application as YardstickApplication
 
@@ -58,6 +59,7 @@ class Test:
     provider: str
     use_cache: bool = False
     images: list[str] = field(default_factory=list)
+    validations: list[Validation] = field(default_factory=list)
     additional_providers: list[AdditionalProvider] = field(default_factory=list)
     additional_trigger_globs: list[str] = field(default_factory=list)
     expected_namespaces: list[str] = field(default_factory=list)
@@ -100,20 +102,30 @@ class Config(DataClassDictMixin):
         return cfg
 
     def yardstick_application_config(self, test_configurations: list[Test]) -> Application:
+        # tests is the set of providers explicitly requested
+        # each provider is associated with the set of images it needs to scan
+        # and the set of validations it needs to perform.
         images = []
         for test in test_configurations:
             images += test.images
+            for validation in test.validations:
+                if test.expected_namespaces:
+                    validation.allowed_namespaces = test.expected_namespaces
+
+        def result_set_from_test(t: Test) -> ResultSet:
+            return ResultSet(
+                description=f"latest vulnerability data vs current vunnel data with latest grype tooling (via SBOM ingestion) for {test.provider}",
+                validations=test.validations,
+                matrix=ScanMatrix(
+                    images=t.images,
+                    tools=self.yardstick.tools,
+                ),
+            )
+
+        result_sets = {f"pr_vs_latest_via_sbom_{test.provider}": result_set_from_test(test) for test in test_configurations}
         return Application(
             default_max_year=self.yardstick.default_max_year,
-            result_sets={
-                "pr_vs_latest_via_sbom": ResultSet(
-                    description="latest vulnerability data vs current vunnel data with latest grype tooling (via SBOM ingestion)",
-                    matrix=ScanMatrix(
-                        images=images,
-                        tools=self.yardstick.tools,
-                    ),
-                ),
-            },
+            result_sets=result_sets,
         )
 
     def test_configuration_by_provider(self, provider: str) -> Test | None:
@@ -284,6 +296,7 @@ def write_yardstick_config(cfg: Application, path: str = ".yardstick.yaml"):
 
 
 def write_grype_db_config(providers: set[str], path: str = ".grype-db.yaml"):
+    logging.info(f"writing grype-db config to {path!r}")
     with open(path, "w") as f:
         f.write(
             """
@@ -462,6 +475,7 @@ def configure(cfg: Config, provider_names: list[str]):
 
     providers = set(cached_providers + uncached_providers)
 
+    logging.info(f"writing grype-db config for {' '.join(providers)}")
     write_grype_db_config(providers)
     write_yardstick_config(yardstick_app_cfg)
 
@@ -601,8 +615,8 @@ def build_db(cfg: Config):
         subprocess.run(["vunnel", "-v", "run", provider], check=True)
 
     logging.info("building DB")
-    subprocess.run([GRYPE_DB, "build", "-v"], check=True)
-    subprocess.run([GRYPE_DB, "package", "-v"], check=True)
+    subprocess.run([GRYPE_DB, "build", "-v", "-c", ".grype-db.yaml"], check=True)
+    subprocess.run([GRYPE_DB, "package", "-v", "-c", ".grype-db.yaml"], check=True)
 
     archives = glob.glob(f"{build_dir}/*.tar.gz")
     if not archives:
