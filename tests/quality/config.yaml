@@ -1,3 +1,10 @@
+x-ref:
+  default-validations: &default-validations
+    max-f1-regression: 0.0
+    max-new-false-negatives: 0
+    max-unlabeled-percent: 10
+    max_year: 2021
+    candidate_tool_label: custom-db
 yardstick:
   default_max_year: 2021
 
@@ -31,6 +38,7 @@ yardstick:
       #  - this version should ALWAYS match that of the other "grype" tool above
       version: latest
       takes: SBOM
+      label: reference
 
 grype_db:
   # values:
@@ -71,8 +79,17 @@ tests:
       - alpine:distro:alpine:3.19
       - alpine:distro:alpine:3.20
       - alpine:distro:alpine:edge
+      - nvd:cpe # alpine lists fixes to NVD entries, so NVD entries are also expected
+    validations:
+      - *default-validations
 
   - provider: amazon
+    validations:
+      - <<: *default-validations
+        # TODO: docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
+        # has no matches before 2022. Label more things, move max_year to 2022, and then
+        # change fail_on_empty_match_set back to true (the default).
+        fail_on_empty_match_set: false
     images:
       - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
       - docker.io/anchore/test_images:vulnerabilities-amazonlinux-2-5c26ce9@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
@@ -92,6 +109,8 @@ tests:
       - ghcr.io/chainguard-images/scanner-test:latest@sha256:59bddc101fba0c45d5c093575c6bc5bfee7f0e46ff127e6bb4e5acaaafb525f9
     expected_namespaces:
       - chainguard:distro:chainguard:rolling
+    validations:
+      - *default-validations
 
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
@@ -144,6 +163,8 @@ tests:
       - github:language:ruby
       - github:language:rust
       - github:language:swift
+    validations:
+      - *default-validations
 
   - provider: mariner
     images:
@@ -151,12 +172,16 @@ tests:
     expected_namespaces:
       - mariner:distro:mariner:1.0
       - mariner:distro:mariner:2.0
+    validations:
+      - *default-validations
 
   - provider: nvd
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
     expected_namespaces:
       - nvd:cpe
+    validations:
+      - *default-validations
 
   - provider: oracle
     additional_trigger_globs:
@@ -170,6 +195,13 @@ tests:
       - oracle:distro:oraclelinux:7
       - oracle:distro:oraclelinux:8
       - oracle:distro:oraclelinux:9
+    validations:
+      - <<: *default-validations
+        # TODO: docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728
+        # has no matches before 2022. Label more things, move max_year to 2022, and then
+        # change fail_on_empty_match_set back to true (the default).
+        max_year: 2021
+        fail_on_empty_match_set: false
 
   - provider: rhel
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -185,6 +217,8 @@ tests:
       - docker.io/anchore/test_images:appstreams-centos-stream-8-1a287dd@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
       - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
+    validations:
+      - *default-validations
 
     expected_namespaces:
       - redhat:distro:redhat:5
@@ -220,6 +254,8 @@ tests:
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
+    validations:
+      - *default-validations
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
@@ -256,6 +292,8 @@ tests:
       - ubuntu:distro:ubuntu:23.04
       - ubuntu:distro:ubuntu:23.10
       - ubuntu:distro:ubuntu:24.04
+    validations:
+      - *default-validations
 
   - provider: wolfi
     additional_providers:
@@ -265,3 +303,5 @@ tests:
       - cgr.dev/chainguard/wolfi-base:latest-20221001@sha256:be3834598c3c4b76ace6a866edcbbe1fa18086f9ee238b57769e4d230cd7d507
     expected_namespaces:
       - wolfi:distro:wolfi:rolling
+    validations:
+      - *default-validations
