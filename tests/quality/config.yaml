@@ -185,7 +185,16 @@ tests:
       - oracle:distro:oraclelinux:7
       - oracle:distro:oraclelinux:8
       - oracle:distro:oraclelinux:9
-    validations: *standard-validations
+    validations:
+    - max-f1-regression: 0.0
+      max-new-false-negatives: 00
+      max-unlabeled-percent: 10
+      # TODO: docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728
+      # has no matches before 2022. Label more things, move max_year to 2022, and then
+      # change fail_on_empty_match_set back to true (the default).
+      max_year: 2021
+      fail_on_empty_match_set: false
+      candidate_tool_label: custom-db
 
   - provider: rhel
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
