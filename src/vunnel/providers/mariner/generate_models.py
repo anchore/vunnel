@@ -3,14 +3,16 @@ import tempfile
 from subprocess import PIPE, Popen
 
 import requests
-
-MARINER_URL_BASE = "https://raw.githubusercontent.com/microsoft/CBL-MarinerVulnerabilityData/main/{}"
-MARINER_URL_FILENAME = "cbl-mariner-{}-oval.xml"
+from parser import VERSION_TO_FILENAME, VERSION_TO_URL
 
 
 def download_version(version: str, dest_dir: str) -> None:
-    filename = MARINER_URL_FILENAME.format(version)
-    url = MARINER_URL_BASE.format(filename)
+    filename = VERSION_TO_FILENAME[version]
+    if not filename:
+        raise Exception(f"mariner/azurelinux provider misconfigured: no filename for version {version}")
+    url = VERSION_TO_URL[version]
+    if not url:
+        raise Exception(f"mariner/azurelinux provider misconfigured: no URL for version {version}")
     r = requests.get(url, timeout=125)
     destination = os.path.join(dest_dir, filename)
     with open(destination, "wb") as w:
@@ -18,7 +20,7 @@ def download_version(version: str, dest_dir: str) -> None:
 
 
 def main() -> None:
-    versions = ["2.0"]
+    versions = ["2.0", "3.0"]
     dest_path = tempfile.TemporaryDirectory()
     for v in versions:
         download_version(v, dest_path.name)
