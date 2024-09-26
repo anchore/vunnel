@@ -42,6 +42,9 @@ ifndef PACKAGE_VERSION
 endif
 
 .DEFAULT_GOAL := all
+.SHELLFLAGS := -c
+
+SHELL := /bin/bash
 
 .PHONY: all
 all: static-analysis test  ## Run all validations
