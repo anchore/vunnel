@@ -1,8 +1,8 @@
 x-ref:
   default-validations: &default-validations
-    max-f1-regression: 0.0
-    max-new-false-negatives: 0
-    max-unlabeled-percent: 10
+    max_f1_regression: 0.0
+    max_new_false_negatives: 0
+    max_unlabeled_percent: 10
     max_year: 2021
     candidate_tool_label: custom-db
 yardstick:
