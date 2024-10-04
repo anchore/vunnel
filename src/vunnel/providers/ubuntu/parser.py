@@ -562,8 +562,7 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
             # Check for max priority of all packages with it set
             if p.priority:
                 pkg_sev = getattr(Severity, p.priority.capitalize())
-                if pkg_sev > r.Severity:
-                    r.Severity = pkg_sev
+                r.Severity = max(pkg_sev, r.Severity)
 
     return set(vulns.values())
 
