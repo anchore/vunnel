@@ -1,9 +1,9 @@
-from dataclasses import dataclass, field
-from mashumaro.mixins.dict import DataClassDictMixin
-from mashumaro.config import BaseConfig
-from collections import defaultdict
-import orjson
 import re
+from dataclasses import dataclass, field
+
+import orjson
+from mashumaro.config import BaseConfig
+from mashumaro.mixins.dict import DataClassDictMixin
 
 
 # Custom Config to handle camel case for mashumaro
