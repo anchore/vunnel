@@ -2,10 +2,12 @@ import re
 from dataclasses import dataclass, field
 
 import orjson
+from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.dict import DataClassDictMixin
 
 
+# TODO: is this still doing anything?
 # Custom Config to handle camel case for mashumaro
 class CamelCaseConfig(BaseConfig):
     @staticmethod
@@ -16,18 +18,18 @@ class CamelCaseConfig(BaseConfig):
 
 @dataclass
 class CVSS_V3(DataClassDictMixin):
-    attack_complexity: str
-    attack_vector: str
-    availability_impact: str
-    base_score: str
-    base_severity: str
-    confidentiality_impact: str
-    integrity_impact: str
-    privileges_required: str
-    scope: str
-    user_interaction: str
-    vector_string: str
-    version: str
+    attack_complexity: str = field(metadata=field_options(alias="attackComplexity"))
+    attack_vector: str = field(metadata=field_options(alias="attackVector"))
+    availability_impact: str = field(metadata=field_options(alias="availabilityImpact"))
+    base_score: float = field(metadata=field_options(alias="baseScore"))
+    base_severity: str = field(metadata=field_options(alias="baseSeverity"))
+    confidentiality_impact: str = field(metadata=field_options(alias="confidentialityImpact"))
+    integrity_impact: str = field(metadata=field_options(alias="integrityImpact"))
+    privileges_required: str = field(metadata=field_options(alias="privilegesRequired"))
+    scope: str = field(metadata=field_options(alias="scope"))
+    user_interaction: str = field(metadata=field_options(alias="userInteraction"))
+    vector_string: str = field(metadata=field_options(alias="vectorString"))
+    version: str = field(metadata=field_options(alias="version"))
 
     class Config(CamelCaseConfig):
         pass
@@ -36,6 +38,22 @@ class CVSS_V3(DataClassDictMixin):
     def from_json(cls, json_data: str):
         data = orjson.loads(json_data)
         return cls.from_dict(data)
+
+
+@dataclass
+class CVSS_V2(DataClassDictMixin):
+    access_complexity: str = field(metadata=field_options(alias="accessComplexity"))
+    access_vector: str = field(metadata=field_options(alias="accessVector"))
+    authentication: str = field(metadata=field_options(alias="authentication"))
+    availability_impact: str = field(metadata=field_options(alias="availabilityImpact"))
+    base_score: float = field(metadata=field_options(alias="baseScore"))
+    confidentiality_impact: str = field(metadata=field_options(alias="confidentialityImpact"))
+    integrity_impact: str = field(metadata=field_options(alias="integrityImpact"))
+    vector_string: str = field(metadata=field_options(alias="vectorString"))
+    version: str = field(metadata=field_options(alias="version"))
+
+    class Config(CamelCaseConfig):
+        pass
 
 
 @dataclass
@@ -94,8 +112,9 @@ class Remediation(DataClassDictMixin):
 
 @dataclass
 class Score(DataClassDictMixin):
-    cvss_v3: CVSS_V3
     products: list[str]
+    cvss_v3: CVSS_V3 | None = None
+    cvss_v2: CVSS_V2 | None = None
 
 
 @dataclass
@@ -111,6 +130,7 @@ class Vulnerability(DataClassDictMixin):
     references: list[Reference] | None = None
     release_date: str | None = None
     remediations: list[Remediation] = field(default_factory=list)
+    scores: list[Score] = field(default_factory=list)
     threats: list[Threat] = field(default_factory=list)
 
     def all_advisory_urls(self) -> set[str]:
