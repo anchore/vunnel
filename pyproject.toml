@@ -59,6 +59,8 @@ pytest-snapshot = "^0.9.0"
 mashumaro = "^3.10"
 iso8601 = "^2.1.0"
 zstandard = ">=0.22,<0.24"
+packageurl-python = "^0.16.0"
+deepdiff = "^8.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.2.2,<9.0.0"
@@ -110,8 +112,8 @@ exclude = '''(?x)(
     | ^src/vunnel/providers/mariner/model/        # generated code
     | ^src/vunnel/providers/nvd/parser\.py$       # ported from enterprise, never had type hints
     | ^src/vunnel/providers/oracle/parser\.py$    # ported from enterprise, never had type hints
-    | ^src/vunnel/providers/rhel/parser\.py$      # ported from enterprise, never had type hints
-    | ^src/vunnel/providers/rhel/oval_parser\.py$      # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/rhel_legacy/parser\.py$      # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/rhel_legacy/oval_parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/sles/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/ubuntu/git\.py$       # ported from enterprise, never had type hints
     | ^src/vunnel/providers/ubuntu/parser\.py$    # ported from enterprise, never had type hints

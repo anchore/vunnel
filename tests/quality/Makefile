@@ -32,6 +32,9 @@ validate:  ## Run all quality checks against already collected data
 
 ## Data management targets #################################
 
+.PHONY: scan
+scan: sboms vulns
+
 .PHONY: capture
 capture: clear-data clear-results configure sboms build-db vulns ## Collect and store all syft and grype results relative to the given provider
 
