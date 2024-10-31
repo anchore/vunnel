@@ -6,7 +6,7 @@ import orjson
 from cvss import CVSS2, CVSS3
 
 from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary
 
 RHEL_FLAVOR_REGEXES = [
     r"Red Hat Enterprise Linux AppStream \(v\. (\d+)\)",
@@ -114,7 +114,8 @@ class RHEL_CSAFDocument:
     products_to_namespace: dict[ProductID, str] = field(init=False)
     products_to_purls: dict[ProductID, str] = field(init=False)
     cvss_objects_with_product_ids: list[tuple[CVSS, set[ProductID]]] = field(init=False)
-    product_ids_to_advisories: dict[ProductID, VendorAdvisory] = field(init=False)
+    vendor_advisories_with_product_ids: list[VendorAdvisory, set[ProductID]] = field(init=False)
+    product_ids_to_fixed_versions: dict[ProductID, list[FixedIn]] = field(init=False)
 
     def initialize_product_id_maps(self):
         parents = set(self.csaf.product_tree.product_id_to_parent.values())
@@ -181,6 +182,54 @@ class RHEL_CSAFDocument:
                 )
                 self.cvss_objects_with_product_ids.append((vunnel_cvss_obj, product_set))
 
+    def initialize_advisories_map(self):
+        for rem in self.csaf.vulnerabilities[0].remediations:
+            if rem.category != "vendor_fix":
+                continue
+            # make a vendor advisory from a url like
+            # "https://access.redhat.com/errata/RHSA-2020:5246"
+            _, _, advisory_id = rem.url.rpartition("/")
+            summary = AdvisorySummary(ID=advisory_id, Link=rem.url)
+            product_set = { value for key, value in self.product_ids.items() if key in rem.product_ids }
+            advisory = VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
+            self.vendor_advisories_with_product_ids.append((advisory, product_set))
+
+    def initialize_fixed_ins(self):
+        for str_id, pid in self.product_ids.items():
+            remediations = [r for r in self.csaf.vulnerabilities[0].remediations if r.category == "vendor_fix" and str_id in r.product_ids]
+            fixes = []
+            namespace = self.products_to_namespace.get(pid)
+            if not namespace:
+                continue
+            vendor_advisory = None
+            for va, pids in self.vendor_advisories_with_product_ids:
+                if pid in pids:
+                    vendor_advisory = va
+                    break
+
+            if not remediations:
+                fixes.append(
+                    FixedIn(Name=pid.normalized_name,
+                            NamespaceName=namespace,
+                            VersionFormat="rpm",
+                            Version="None",
+                            Module=pid.module,
+                            VendorAdvisory=vendor_advisory,
+                            ),
+                )
+            else:
+                purl = self.products_to_purls.get(pid)
+                version = purl.split("@")[1].split("?")[0]
+                fixes.append(
+                    FixedIn(Name=pid.normalized_name,
+                            NamespaceName=namespace,
+                            VersionFormat="rpm",
+                            Version=version,
+                            Module=pid.module,
+                            VendorAdvisory=vendor_advisory,
+                            ),
+                )
+
     def __post_init__(self) -> None:
         self.product_ids = {}
         self.normalized_product_names_to_product_ids = {}
@@ -188,8 +237,23 @@ class RHEL_CSAFDocument:
         self.products_to_namespace = {}
         self.products_to_purls = {}
         self.cvss_objects_with_product_ids = []
+        self.vendor_advisories_with_product_ids = []
+        self.product_ids_to_fixed_versions = {}
 
         self.initialize_product_id_maps()
         self.initialize_distro_map()
         self.initialize_purl_map()
         self.initialize_cvss_objects()
+        self.initialize_advisories_map()
+
+    @classmethod
+    def from_path(cls, path: str) -> "RHEL_CSAFDocument":
+        with open(path) as fh:
+            data = orjson.loads(fh.read())
+            c = CSAF_JSON.from_dict(data)
+            return cls(csaf=c)
+
+
+# TEMP
+if __name__ == "__main__":
+    r = RHEL_CSAFDocument.from_path("data/rhel_csaf/input/csaf/2023/cve-2023-39332.json")
