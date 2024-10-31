@@ -1,11 +1,12 @@
-from decimal import Decimal
 import re
 from dataclasses import dataclass, field
+from decimal import Decimal
 
+import orjson
 from cvss import CVSS2, CVSS3
 
-from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V3, CVSS_V2
-from vunnel.utils.vulnerability import VendorAdvisory, CVSS, FixedIn, CVSSBaseMetrics
+from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory
 
 RHEL_FLAVOR_REGEXES = [
     r"Red Hat Enterprise Linux AppStream \(v\. (\d+)\)",
@@ -72,17 +73,26 @@ class ProductID:
     # therefore, make a dataclass that can be either
     distribution: str
     module: str | None
-    modularity: str | None
     product: str
 
     @classmethod
     def create(cls, distribution: str, module: str | None, product: str) -> "ProductID":
+        # Some product IDs have 3 components, distro:module:product
+        # like AppStream-8.9.0.Z.MAIN:nodejs:20:8090020231019152822:a75119d5:nodejs-packaging-0:2021.06-4.module+el8.9.0+19519+e25b965a.noarch
+        # which means "for the RHEL 8 appstream, for the nodejs:20 module, the product nodejs-packaging-..."
+        # whereas the modularity is for when product names have a / in them, like
+        # "red_hat_enterprise_linux_8:nodejs:16/nodejs", which means
+        # "for RHEL 8, for the module nodejs:16, the product nodejs"
+        if module and "/" in product:
+            raise ValueError(
+                f"for {distribution}:{module}:{product}, cannot specify module via / delimit and explicit module element",
+            )
         if "/" in product:
-            modularity, _, p = product.partition("/")
+            m, _, p = product.partition("/")
         else:
-            modularity = None
+            m = module
             p = product
-        return cls(distribution=distribution, module=module, modularity=modularity, product=p)
+        return cls(distribution=distribution, module=m, product=p)
 
     @property
     def full_product_id(self) -> str:
@@ -99,13 +109,14 @@ class ProductID:
 class RHEL_CSAFDocument:
     csaf: CSAF_JSON
     product_ids: dict[str, ProductID] = field(init=False)
+    normalized_product_names_to_product_ids: dict[str, set[ProductID]] = field(init=False)
     distribution_ids_to_names: dict[str, str] = field(init=False)
     products_to_namespace: dict[ProductID, str] = field(init=False)
     products_to_purls: dict[ProductID, str] = field(init=False)
     cvss_objects_with_product_ids: list[tuple[CVSS, set[ProductID]]] = field(init=False)
     product_ids_to_advisories: dict[ProductID, VendorAdvisory] = field(init=False)
 
-    def initialize_product_id_map(self):
+    def initialize_product_id_maps(self):
         parents = set(self.csaf.product_tree.product_id_to_parent.values())
         leaf_products = {key for key in self.csaf.product_tree.product_id_to_parent if key not in parents}
         for p in leaf_products:
@@ -114,7 +125,13 @@ class RHEL_CSAFDocument:
             product_part = p.removeprefix(distribution)
             if module:
                 product_part = product_part.removeprefix(module)
+                module = module.removeprefix(distribution)
             self.product_ids[p] = ProductID.create(distribution=distribution, module=module, product=product_part)
+        # reverse dictionary as well
+        for k, v in self.product_ids.items():
+            if v.normalized_name not in self.normalized_product_names_to_product_ids:
+                self.normalized_product_names_to_product_ids[v.normalized_name] = set()
+            self.normalized_product_names_to_product_ids[v.normalized_name].add(k)
 
     def initialize_distro_map(self):
         # make a map from distro IDs (like AppStream-GA:8.3.2)
@@ -166,12 +183,13 @@ class RHEL_CSAFDocument:
 
     def __post_init__(self) -> None:
         self.product_ids = {}
+        self.normalized_product_names_to_product_ids = {}
         self.distribution_ids_to_names = {}
         self.products_to_namespace = {}
         self.products_to_purls = {}
         self.cvss_objects_with_product_ids = []
 
-        self.initialize_product_id_map()
+        self.initialize_product_id_maps()
         self.initialize_distro_map()
         self.initialize_purl_map()
         self.initialize_cvss_objects()
