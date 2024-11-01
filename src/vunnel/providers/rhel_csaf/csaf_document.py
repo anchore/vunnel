@@ -19,9 +19,11 @@ RHEL_FLAVOR_REGEXES = [
     r"^Red Hat Enterprise Linux Workstation \(v\. (\d+)\)"
     r"Red Hat Enterprise Linux Client Optional \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Client \(v\. (\d+)\)",
+    # ways of spelling "real time":
     r"Red Hat Enterprise Linux RT \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux for Real Time \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Real Time \(v\. (\d+)\)",
+    r"Red Hat Enterprise Linux Realtime \(v\. (\d+)\)",
     r"Red Hat CodeReady Linux Builder \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux ComputeNode Optional \(v\. (\d+)\)"
 ]
@@ -82,10 +84,10 @@ class ProductID:
     # therefore, make a dataclass that can be either
     distribution: str
     module: str | None
-    product: str
+    product: str | None
 
     @classmethod
-    def create(cls, distribution: str, module: str | None, product: str) -> "ProductID":
+    def create(cls, distribution: str, module: str | None, product: str | None) -> "ProductID":
         # Some product IDs have 3 components, distro:module:product
         # like AppStream-8.9.0.Z.MAIN:nodejs:20:8090020231019152822:a75119d5:nodejs-packaging-0:2021.06-4.module+el8.9.0+19519+e25b965a.noarch
         # which means "for the RHEL 8 appstream, for the nodejs:20 module, the product nodejs-packaging-..."
@@ -105,7 +107,8 @@ class ProductID:
 
     @property
     def full_product_id(self) -> str:
-        return f"{self.distribution}:{self.module or ''}:{self.product}"
+        mod_str = f"{self.module}:" if self.module else ''
+        return f"{self.distribution}:{mod_str}{self.product}"
 
     @property
     def normalized_name(self) -> str:
@@ -142,10 +145,26 @@ class RHEL_CSAFDocument:
     cve_id: str = field(init=False)
     vuln_url: str = field(init=False)
 
+    def logical_products(self) -> list[ProductID]:
+        """logical products returns a list of products that should be reported
+        in a UI or to a user on a Grype match. It is the set of all modules, and
+        all source RPMs that are not descended from modules, that are mentioned
+        in the CSAF JSON that self was created from"""
+        known_affected = [val for key, val in self.product_ids.items() if key in self.csaf.vulnerabilities[0].product_status.known_affected]
+        return [pid for pid in self.product_ids.values() if pid.is_logical_product] + known_affected
 
     def initialize_product_id_maps(self):
+        self.product_ids = {}
+        # self.logical_products = []
         parents = set(self.csaf.product_tree.product_id_to_parent.values())
-        leaf_products = {key for key in self.csaf.product_tree.product_id_to_parent if key not in parents}
+        children = set(self.csaf.product_tree.product_id_to_parent.keys())
+        modules = parents & children  # modules a products that a descended from a distro and have
+        # components descended from them
+        for m in modules:
+            distro_part = self.csaf.product_tree.first_parent(m)
+            module_part = m.removeprefix(distro_part).removeprefix(":")
+            self.product_ids[m] = ProductID.create(distribution=distro_part, module=module_part, product=None)
+        leaf_products = children - parents
         for p in leaf_products:
             distribution = self.csaf.product_tree.first_parent(p)
             module = self.csaf.product_tree.second_parent(p)
@@ -282,7 +301,6 @@ class RHEL_CSAFDocument:
         self.vuln_url = next((reference.url for reference in self.csaf.vulnerabilities[0].references if reference.category == "self"), "")
 
     def __post_init__(self) -> None:
-        self.product_ids = {}
         self.normalized_product_names_to_product_ids = {}
         self.distribution_ids_to_names = {}
         self.products_to_namespace = {}
@@ -309,6 +327,73 @@ class RHEL_CSAFDocument:
 
 
 # TEMP
+import sqlite3
+import os
+
+KNOWN_WEIRD_PATHS = {
+    "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
+}
+
+def get_package_names(cve_id: str) -> set[str]:
+    db_path = "~/Library/Caches/grype/db/5/vulnerability.db"
+
+    # Expand `~` to the full home directory path
+    db_path = os.path.expanduser(db_path)
+
+    # Connect to the database
+    with sqlite3.connect(db_path) as conn:
+        # Create a cursor to execute the query
+        cursor = conn.cursor()
+
+        # Define the query with a placeholder for the CVE ID
+        query = """
+            SELECT DISTINCT package_name
+            FROM vulnerability
+            WHERE id LIKE ? AND namespace LIKE "%red%"
+        """
+
+        # Execute the query, passing the CVE ID as a parameter
+        cursor.execute(query, (cve_id,))
+
+        # Fetch all results and convert them to a set of strings
+        package_names = {row[0] for row in cursor.fetchall()}
+
+    return package_names
+
+
+def main(json_path):
+    cve_id = json_path.split("/")[-1].removesuffix(".json").upper()
+    r = RHEL_CSAFDocument.from_path(json_path)
+    namespaces_to_care_about = {"rhel:5", "rhel:6", "rhel:7", "rhel:8", "rhel:9"}
+    logical_products = r.logical_products()
+    logical_products_to_care_about = [p for p in logical_products if
+                                      r.products_to_namespace.get(p) in namespaces_to_care_about]
+    new_names = {l.normalized_name for l in logical_products_to_care_about}
+    old_names = get_package_names(cve_id)
+    extra = new_names - old_names
+    missing = old_names - new_names
+    if extra:
+        print("NEW NAMES INTRODUCED BY CHANGE")
+        print(extra)
+    if missing:
+        print("OLD NAMES LOST BY CHANGE")
+        print(missing)
+    if extra or missing:
+        print(f"failed! {cve_id} from {json_path}")
+        print("try again!")
+        print(f"poetry run python {sys.argv[0]} {json_path}")
+        sys.exit(1)
+    else:
+        print(f"great victory! not diff for {cve_id} from {json_path}")
+
 if __name__ == "__main__":
-    r = RHEL_CSAFDocument.from_path('./data/rhel_csaf/input/csaf/2020/cve-2020-13529.json')
-    print(r.product_ids_to_fixed_versions)
+    import sys
+    for json_path in sys.argv[1:]:
+        try:
+            main(json_path)
+        except Exception as e:
+            print(f"Exception! {e}")
+            print("try again!")
+            print(f"poetry run python {sys.argv[0]} {sys.argv[1]}")
+            sys.exit(1)
+
