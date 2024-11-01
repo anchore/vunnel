@@ -1,16 +1,18 @@
-from decimal import Decimal
 import logging
 import os
 import re
 from collections import defaultdict
 from collections.abc import Generator
+from decimal import Decimal
 
 from cvss import CVSS3
 
+from vunnel.providers.rhel_csaf.csaf_document import RHEL_CSAFDocument
 from vunnel.utils import http
 from vunnel.utils.archive import extract
-from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V3 as CSAF_CVSS_V3, from_path
-from vunnel.utils.vulnerability import FixedIn, Vulnerability, CVSS, CVSSBaseMetrics
+from vunnel.utils.csaf_types import CSAF_JSON, from_path
+from vunnel.utils.csaf_types import CVSS_V3 as CSAF_CVSS_V3
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
 from vunnel.workspace import Workspace
 
 namespace = "rhel"
@@ -178,6 +180,27 @@ class Parser:
             yield from self._process_csaf_vuln(csaf_doc, i)
 
     def _process_csaf_vuln(self, csaf_doc: CSAF_JSON, vuln_index: int) -> Generator[tuple[str, str, Vulnerability]]:
+        rhel_doc = RHEL_CSAFDocument(csaf=csaf_doc)
+        for ns, product_id_set in rhel_doc.namespaces_to_product_ids.items():
+            fixed_ins = []
+            fixed_in_lists = [fix for pid, fix in rhel_doc.product_ids_to_fixed_versions.items() if pid in product_id_set]
+            for f in fixed_in_lists:
+                fixed_ins.extend(f)
+            if not fixed_ins:
+                continue
+            vuln = Vulnerability(
+                Name=rhel_doc.cve_id,
+                NamespaceName=ns,
+                Description=rhel_doc.description,
+                Severity=rhel_doc.severity,
+                Link=rhel_doc.vuln_url,
+                CVSS=[c for c, p in rhel_doc.cvss_objects_with_product_ids
+                      if not p.isdisjoint(p)],
+                FixedIn=fixed_ins,
+            )
+            yield ns, rhel_doc.cve_id.lower(), vuln
+
+    def _process_csaf_vuln_old(self, csaf_doc: CSAF_JSON, vuln_index: int) -> Generator[tuple[str, str, Vulnerability]]:
         v = csaf_doc.vulnerabilities[vuln_index]
         vuln_id = v.cve
         vuln_records = []
@@ -244,7 +267,8 @@ class Parser:
             if s.cvss_v3:
                 cvss_obj = cvss_from_csaf_score(s.cvss_v3, verified=csaf_doc.document.tracking.status == "final")
                 for p in s.products:
-                    full_product_id_to_cvss[p] = cvss_obj
+                    if p in fixed | not_fixed:
+                        full_product_id_to_cvss[p] = cvss_obj
 
         for full_product_id, logical_product_name in product_ids_to_logical_products.items():
             namespace = product_ids_to_namespaces.get(full_product_id)
@@ -314,4 +338,5 @@ class Parser:
         # TODO: configurable to skip exists
         # self.fetch()
         for namespace, vuln_id, record in self.process():
-            yield namespace, vuln_id, record.to_payload()
+            yield namespace, vuln_id, record.to_payload_omit_empty()
+
