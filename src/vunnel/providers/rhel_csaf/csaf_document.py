@@ -9,29 +9,35 @@ from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary
 
 RHEL_FLAVOR_REGEXES = [
+    r"^Red Hat Enterprise Linux (\d+)",
     r"Red Hat Enterprise Linux AppStream \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux BaseOS \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux \(v\. (\d+) server\)",
     r"^Red Hat Enterprise Linux Server \(v\. (\d+)\)",
     r"^Red Hat Enterprise Linux Desktop \(v\. (\d+) client\)",
     r"^Red Hat Enterprise Linux Desktop \(v\. (\d+)\)",
+    r"^Red Hat Enterprise Linux Workstation \(v\. (\d+)\)"
     r"Red Hat Enterprise Linux Client Optional \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Client \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux RT \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux for Real Time \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Real Time \(v\. (\d+)\)",
     r"Red Hat CodeReady Linux Builder \(v\. (\d+)\)",
+    r"Red Hat Enterprise Linux ComputeNode Optional \(v\. (\d+)\)"
 ]
 
 MODULE_VERSION_REGEX = r":(rhel)?\d+(\.\d)*:\d{19}:[a-fA-F0-9]{8}$"
 PACKAGE_VERSION_REGEX = r"-(\d+):.*$"
 
+SEVERITY_DICT = {
+    "low": "Low",
+    "moderate": "Medium",
+    "important": "High",
+    "critical": "Critical",
+}
 
-def cvss3_from_csaf_score(score: CVSS_V3, verified: bool) -> CVSS:
+def cvss3_from_csaf_score(score: CVSS_V3, status: str = "draft") -> CVSS:
     cvss3_obj = CVSS3(score.vector_string)
-    status = "draft"
-    if verified:
-        status = "verified"
     return CVSS(
         version=score.version,
         vector_string=score.vector_string,
@@ -43,6 +49,9 @@ def cvss3_from_csaf_score(score: CVSS_V3, verified: bool) -> CVSS:
         ),
         status=status,
     )
+
+def parse_severity(text: str) -> str | None:
+    return SEVERITY_DICT.get(text)
 
 
 # def cvss2_from_csaf_score(score: CVSS_V2, verified: bool) -> CVSS:
@@ -104,6 +113,17 @@ class ProductID:
             return re.sub(MODULE_VERSION_REGEX, "", self.module)
         return re.sub(PACKAGE_VERSION_REGEX, "", self.product)
 
+    @property
+    def is_logical_product(self) -> bool:
+        """is_logical_product returns true if the product would be reported
+        in its own line in Red Hat vulnerability UIs, or should be its own line
+        in grype-db. If the product is a module or a source RPM, return true"""
+        if self.module and len(self.product) == 0:
+            return True
+        if self.product.endswith("arch=src") or self.product.endswith(".src"):
+            return True
+        return False
+
 
 @dataclass
 class RHEL_CSAFDocument:
@@ -112,10 +132,16 @@ class RHEL_CSAFDocument:
     normalized_product_names_to_product_ids: dict[str, set[ProductID]] = field(init=False)
     distribution_ids_to_names: dict[str, str] = field(init=False)
     products_to_namespace: dict[ProductID, str] = field(init=False)
+    namespaces_to_product_ids: dict[str, set[ProductID]] = field(init=False)
     products_to_purls: dict[ProductID, str] = field(init=False)
     cvss_objects_with_product_ids: list[tuple[CVSS, set[ProductID]]] = field(init=False)
     vendor_advisories_with_product_ids: list[VendorAdvisory, set[ProductID]] = field(init=False)
     product_ids_to_fixed_versions: dict[ProductID, list[FixedIn]] = field(init=False)
+    severity: str = field(init=False)
+    description: str = field(init=False)
+    cve_id: str = field(init=False)
+    vuln_url: str = field(init=False)
+
 
     def initialize_product_id_maps(self):
         parents = set(self.csaf.product_tree.product_id_to_parent.values())
@@ -123,10 +149,11 @@ class RHEL_CSAFDocument:
         for p in leaf_products:
             distribution = self.csaf.product_tree.first_parent(p)
             module = self.csaf.product_tree.second_parent(p)
-            product_part = p.removeprefix(distribution)
+            product_part = p.removeprefix(distribution).removeprefix(":")
             if module:
-                product_part = product_part.removeprefix(module)
-                module = module.removeprefix(distribution)
+                module = module.removeprefix(distribution).removeprefix(":")
+                product_part = product_part.removeprefix(module).removeprefix(":")
+                module = module.removeprefix(distribution).removeprefix(":")
             self.product_ids[p] = ProductID.create(distribution=distribution, module=module, product=product_part)
         # reverse dictionary as well
         for k, v in self.product_ids.items():
@@ -148,7 +175,12 @@ class RHEL_CSAFDocument:
                 match = re.search(r, distro_name)
                 if match:
                     version = match.group(1)
-                    self.products_to_namespace[pid] = f"rhel:{version}"
+                    ns = f"rhel:{version}"
+                    self.products_to_namespace[pid] = ns
+                    if ns not in self.namespaces_to_product_ids:
+                        self.namespaces_to_product_ids[ns] = set()
+                    self.namespaces_to_product_ids[ns].add(pid)
+                    break
 
     def initialize_purl_map(self):
         # initialize a dict[ProductID, str] so that clients can easily exchange
@@ -175,10 +207,9 @@ class RHEL_CSAFDocument:
             # TODO: also handle cvss_v2
             if score.cvss_v3:
                 product_set = {value for key, value in self.product_ids.items() if key in score.products}
-                doc_is_final = self.csaf.document.tracking.status == "final"
                 vunnel_cvss_obj = cvss3_from_csaf_score(
                     score.cvss_v3,
-                    verified=doc_is_final,
+                    status=self.csaf.document.tracking.status,
                 )
                 self.cvss_objects_with_product_ids.append((vunnel_cvss_obj, product_set))
 
@@ -196,6 +227,15 @@ class RHEL_CSAFDocument:
 
     def initialize_fixed_ins(self):
         for str_id, pid in self.product_ids.items():
+            # keep product IDs that appear literally in "known_affected"
+            # or that look like patched modules or src rpms in "fixed"
+            # as long as they aren't in "known_not_affected"
+            not_fixed = (str_id in self.csaf.vulnerabilities[0].product_status.known_affected)
+            fixed_and_src_rpm_or_module = pid.is_logical_product and str_id in self.csaf.vulnerabilities[0].product_status.fixed
+            affected = str_id not in self.csaf.vulnerabilities[0].product_status.known_not_affected
+            keep = affected and (not_fixed or fixed_and_src_rpm_or_module)
+            if not keep:
+                continue
             remediations = [r for r in self.csaf.vulnerabilities[0].remediations if r.category == "vendor_fix" and str_id in r.product_ids]
             fixes = []
             namespace = self.products_to_namespace.get(pid)
@@ -214,12 +254,15 @@ class RHEL_CSAFDocument:
                             VersionFormat="rpm",
                             Version="None",
                             Module=pid.module,
-                            VendorAdvisory=vendor_advisory,
+                            VendorAdvisory=VendorAdvisory(NoAdvisory=True, AdvisorySummary=None),
                             ),
                 )
             else:
                 purl = self.products_to_purls.get(pid)
+                if not purl:
+                    raise ValueError(f"no purl for {pid.full_product_id}")
                 version = purl.split("@")[1].split("?")[0]
+
                 fixes.append(
                     FixedIn(Name=pid.normalized_name,
                             NamespaceName=namespace,
@@ -229,12 +272,21 @@ class RHEL_CSAFDocument:
                             VendorAdvisory=vendor_advisory,
                             ),
                 )
+            self.product_ids_to_fixed_versions[pid] = fixes
+
+    def initialize_metadata(self):
+        v = self.csaf.vulnerabilities[0]
+        self.description = next((n.text for n in v.notes if n.category == "description"), "")
+        self.cve_id = v.cve
+        self.severity = parse_severity(self.csaf.document.aggregate_severity.text) or ""
+        self.vuln_url = next((reference.url for reference in self.csaf.vulnerabilities[0].references if reference.category == "self"), "")
 
     def __post_init__(self) -> None:
         self.product_ids = {}
         self.normalized_product_names_to_product_ids = {}
         self.distribution_ids_to_names = {}
         self.products_to_namespace = {}
+        self.namespaces_to_product_ids = {}
         self.products_to_purls = {}
         self.cvss_objects_with_product_ids = []
         self.vendor_advisories_with_product_ids = []
@@ -245,6 +297,8 @@ class RHEL_CSAFDocument:
         self.initialize_purl_map()
         self.initialize_cvss_objects()
         self.initialize_advisories_map()
+        self.initialize_fixed_ins()
+        self.initialize_metadata()
 
     @classmethod
     def from_path(cls, path: str) -> "RHEL_CSAFDocument":
@@ -256,4 +310,5 @@ class RHEL_CSAFDocument:
 
 # TEMP
 if __name__ == "__main__":
-    r = RHEL_CSAFDocument.from_path("data/rhel_csaf/input/csaf/2023/cve-2023-39332.json")
+    r = RHEL_CSAFDocument.from_path('./data/rhel_csaf/input/csaf/2020/cve-2020-13529.json')
+    print(r.product_ids_to_fixed_versions)

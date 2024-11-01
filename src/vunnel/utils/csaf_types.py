@@ -34,11 +34,6 @@ class CVSS_V3(DataClassDictMixin):
     class Config(CamelCaseConfig):
         pass
 
-    @classmethod
-    def from_json(cls, json_data: str):
-        data = orjson.loads(json_data)
-        return cls.from_dict(data)
-
 
 @dataclass
 class CVSS_V2(DataClassDictMixin):
@@ -72,9 +67,9 @@ class Note(DataClassDictMixin):
 
 @dataclass
 class ProductStatus(DataClassDictMixin):
-    fixed: list[str] = field(default_factory=list)
-    known_affected: list[str] = field(default_factory=list)
-    known_not_affected: list[str] = field(default_factory=list)
+    fixed: set[str] = field(default_factory=list)
+    known_affected: set[str] = field(default_factory=list)
+    known_not_affected: set[str] = field(default_factory=list)
 
 
 @dataclass
@@ -106,13 +101,13 @@ class VulnID(DataClassDictMixin):
 class Remediation(DataClassDictMixin):
     category: str
     details: str
-    product_ids: list[str]
+    product_ids: set[str]
     url: str | None = None
 
 
 @dataclass
 class Score(DataClassDictMixin):
-    products: list[str]
+    products: set[str]
     cvss_v3: CVSS_V3 | None = None
     cvss_v2: CVSS_V2 | None = None
 
@@ -136,7 +131,7 @@ class Vulnerability(DataClassDictMixin):
     def all_advisory_urls(self) -> set[str]:
         result = set()
         for r in self.remediations:
-            if r.category == "vendor_fix":
+            if r.category == "vendor_fix" and r.url:
                 result.add(r.url)
 
         return result
@@ -182,7 +177,7 @@ class Branch:
     branches: list["Branch"] = field(default_factory=list)
     product: Product | None = None
 
-    def acculumulate_categories_recursively(self, accumulator: set[str]):
+    def acculumulate_categories_recursively(self, accumulator: set[str]) -> None:
         accumulator.add(self.category)
         for b in self.branches:
             b.acculumulate_categories_recursively(accumulator)
@@ -240,7 +235,7 @@ class ProductTree(DataClassDictMixin):
     branches: list[Branch] = field(default_factory=list)
     product_id_to_parent: dict[str, str] = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.product_id_to_parent = {}
         for r in self.relationships:
             self.product_id_to_parent[r.full_product_name.product_id] = r.relates_to_product_reference
@@ -266,7 +261,9 @@ class ProductTree(DataClassDictMixin):
             previous = here  # Track the child of the root
             here = self.parent(here)  # Move up one level
 
-        return previous  # This is the immediate child of the root
+        if previous != product_id:
+            return previous
+        return None
 
     def distinct_branch_categories(self) -> set[str]:
         result = set()
