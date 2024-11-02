@@ -6,7 +6,7 @@ import orjson
 from cvss import CVSS2, CVSS3
 
 from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary, Vulnerability
 
 # TODO: use CPE not human name
 RHEL_FLAVOR_REGEXES = [
@@ -31,7 +31,7 @@ RHEL_FLAVOR_REGEXES = [
 ]
 
 RHEL_CPE_REGEXES = [
-    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos))*$",  # appstream has :a:
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos|realtime))*$",  # appstream has :a:
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
 ]
@@ -367,6 +367,46 @@ class RHEL_CSAFDocument:
                     in r.product_ids for r
                     in self.csaf.vulnerabilities[0].remediations))
 
+    def vulnerabilities(self, namespaces: set[str] | None = None) -> list[Vulnerability]:
+        if namespaces is None:
+            namespaces = {"rhel:5", "rhel:6", "rhel:7", "rhel:8", "rhel:9"}
+        result = []
+        logical_products = self.logical_products()
+        top_level_product_names = self.top_level_products()
+        for pid in logical_products:
+            named_for_top_level_product = (
+                not top_level_product_names or
+                any(RHEL_CSAFDocument.fuzzy_name_match(pid.normalized_name, tln) for tln in top_level_product_names))
+            ns = self.products_to_namespace.get(pid)
+            include = ns in namespaces and (named_for_top_level_product or self.is_fixed_src_rpm(pid))
+            fixed_ins = self.product_ids_to_fixed_versions.get(pid)
+            if include and fixed_ins:
+                v = Vulnerability(
+                    Name=self.cve_id,
+                    NamespaceName=ns,
+                    Description=self.description,
+                    Severity=self.severity,
+                    Link=self.vuln_url,
+                    CVSS=[cvss for cvss, pids  in self.cvss_objects_with_product_ids if pid in pids],
+                    FixedIn=fixed_ins,
+                )
+                result.append(v)
+        return result
+
+    @classmethod
+    def fuzzy_name_match(cls, a: str, b: str) -> bool:
+        # TODO: is this better accomplished by referencing RHSAs?
+        a = re.sub(r"\d+", "", a.lower())
+        b = re.sub(r"\d+", "", b.lower())
+        if 'kernel' in b or 'kernel' in a:
+            a = a.removesuffix("-alt")
+            b = b.removesuffix("-alt")
+            a = a.removesuffix("-rt")
+            b = b.removesuffix("-rt")
+            a = a.removeprefix("realtime-")
+            b = b.removeprefix("realtime-")
+        return a in b or b in a  # TODO: which way?
+
     @classmethod
     def from_path(cls, path: str) -> "RHEL_CSAFDocument":
         with open(path) as fh:
@@ -388,6 +428,7 @@ KNOWN_WEIRD_PATHS = {
     ## Extra packages I think are correct to include
     "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
     "data/rhel_csaf/input/csaf/2022/cve-2022-0435.json" : "adds kpatch-patch, but I think correctly",
+    "data/rhel_csaf/input/csaf/2020/cve-2020-10768.json": "adds kpatch-patch, but I think correctly",
 
     ## Extra packages and I don't know why
     "data/rhel_csaf/input/csaf/2021/cve-2021-30749.json": "probably need to query RHSA data: gtk3 should be excluded but isn't",
@@ -461,6 +502,29 @@ def main(json_path):
     else:
         print(f"great victory! no diff for {cve_id} from {json_path}")
 
+def alt_main(json_path):
+    cve_id = json_path.split("/")[-1].removesuffix(".json").upper()
+    r = RHEL_CSAFDocument.from_path(json_path)
+    new_names = {
+        f.Name for v in r.vulnerabilities() for f in v.FixedIn
+    }
+    old_names = get_package_names(cve_id)
+    extra = new_names - old_names
+    missing = old_names - new_names
+    if extra:
+        print("NEW NAMES INTRODUCED BY CHANGE")
+        print(extra)
+    if missing:
+        print("OLD NAMES LOST BY CHANGE")
+        print(missing)
+    if extra or missing:
+        print(f"failed! {cve_id} from {json_path}")
+        print("try again!")
+        print(f"poetry run python {sys.argv[0]} {json_path}")
+        sys.exit(1)
+    else:
+        print(f"great victory! no diff for {cve_id} from {json_path}")
+
 if __name__ == "__main__":
     import sys
     for json_path in sys.argv[1:]:
@@ -470,7 +534,7 @@ if __name__ == "__main__":
             print(f"skipping {json_path}: {KNOWN_WEIRD_PATHS[json_path]}")
             continue
         try:
-            main(json_path)
+            alt_main(json_path)
         except Exception as e:
             print(f"Exception! {e}")
             print("try again!")
