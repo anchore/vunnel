@@ -31,7 +31,7 @@ RHEL_FLAVOR_REGEXES = [
 ]
 
 RHEL_CPE_REGEXES = [
-    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation))*$",  # appstream has :a:
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream))*$",  # appstream has :a:
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
 ]
