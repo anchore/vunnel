@@ -31,7 +31,7 @@ RHEL_FLAVOR_REGEXES = [
 ]
 
 RHEL_CPE_REGEXES = [
-    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream))*$",  # appstream has :a:
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos))*$",  # appstream has :a:
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
 ]
@@ -361,9 +361,11 @@ class RHEL_CSAFDocument:
         self.initialize_metadata()
 
     def is_fixed_src_rpm(self, pid: ProductID) -> bool:
-        return pid.product.endswith(".src") and any(pid.full_product_id
-                                                    in r.product_ids for r
-                                                    in self.csaf.vulnerabilities[0].remediations)
+        return (pid.product
+                and pid.product.endswith(".src")
+                and any(pid.full_product_id
+                    in r.product_ids for r
+                    in self.csaf.vulnerabilities[0].remediations))
 
     @classmethod
     def from_path(cls, path: str) -> "RHEL_CSAFDocument":
