@@ -30,8 +30,10 @@ RHEL_FLAVOR_REGEXES = [
     r"Red Hat Enterprise Linux ComputeNode Optional \(v\. (\d+)\)",
 ]
 
-RHEL_CPE_PREFIXES = [
-    "cpe:/o:redhat:enterprise_linux",
+RHEL_CPE_REGEXES = [
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)",  # appstream has :a:
+    r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
+    r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
 ]
 
 MODULE_VERSION_REGEX = r":(rhel)?\d+(\.\d)*:\d{19}:[a-fA-F0-9]{8}$"
@@ -199,15 +201,22 @@ class RHEL_CSAFDocument:
     def initialize_distro_map(self):
         # make a map from distro IDs (like AppStream-GA:8.3.2)
         # to product names like "Red Hat Enterprise Linux AppStream (v. 9)"
+        distro_ids_to_cpe = {}
         for distro_branch in self.csaf.product_tree.branches[0].product_name_branches():
             if distro_branch.product:
                 self.distribution_ids_to_names[distro_branch.product.product_id] = distro_branch.product.name
+                pih = distro_branch.product.product_identification_helper
+                if pih and pih.cpe:
+                    distro_ids_to_cpe[distro_branch.product.product_id] = pih.cpe
+
+
         # use that map to map to make a map of product_ids to
         # to namespaces so that clients can easily get a vunnel namespace from each product id.
         for pid in self.product_ids.values():
-            distro_name = self.distribution_ids_to_names.get(pid.distribution, "")
-            for r in RHEL_FLAVOR_REGEXES:
-                match = re.search(r, distro_name)
+            # distro_name = self.distribution_ids_to_names.get(pid.distribution, "")
+            distro_cpe = distro_ids_to_cpe.get(pid.distribution, "")
+            for r in RHEL_CPE_REGEXES:
+                match = re.search(r, distro_cpe)
                 if match:
                     version = match.group(1)
                     ns = f"rhel:{version}"
@@ -230,12 +239,22 @@ class RHEL_CSAFDocument:
             and purl_branch.product.product_identification_helper.purl
         }
 
+        # modules_to_purls = {
+        #     purl_branch.product.product_id: purl_branch.product.product_identification_helper.purl
+        #     for purl_branch in self.csaf.product_tree.branches[0].product_version_branches()
+        #     if purl_branch.product
+        #        and purl_branch.product.product_identification_helper
+        #        and purl_branch.product.product_identification_helper.purl
+        # }
+
         # go through the set of full product IDs
         # and, if the product component matches a value from the previous dictionary
         # associate it with the purl
         for pid in self.product_ids.values():
             if pid.product in product_id_component_to_purl:
                 self.products_to_purls[pid] = product_id_component_to_purl[pid.product]
+            elif pid.module in product_id_component_to_purl:
+                self.products_to_purls[pid] = product_id_component_to_purl[pid.module]
 
     def initialize_cvss_objects(self):
         for score in self.csaf.vulnerabilities[0].scores:
@@ -378,8 +397,13 @@ def get_package_names(cve_id: str) -> set[str]:
     return package_names
 
 def kinda_same_package(human_name: str, machine_name: str) -> bool:
+    # TODO: is this better accomplished by referencing RHSAs?
     m = re.sub(r"\d+", "", machine_name.lower())
     h = re.sub(r"\d+", "", human_name.lower())
+    m = m.removesuffix("-alt")
+    h = h.removesuffix("-alt")
+    m = m.removesuffix("-rt")
+    h = h.removesuffix("-rt")
     return m == h
 
 def main(json_path):
@@ -387,11 +411,11 @@ def main(json_path):
     r = RHEL_CSAFDocument.from_path(json_path)
     namespaces_to_care_about = {"rhel:5", "rhel:6", "rhel:7", "rhel:8", "rhel:9"}
     logical_products = r.logical_products()
-    logical_products_to_care_about = [p for p in logical_products if
+    logical_products_in_namespaces = [p for p in logical_products if
                                       r.products_to_namespace.get(p) in namespaces_to_care_about]
     top_level_names = r.top_level_products()
     # try grepping with top-level product
-    logical_products_to_care_about = [p for p in logical_products_to_care_about if any(kinda_same_package(n, p.normalized_name) for n in top_level_names) or not top_level_names]
+    logical_products_to_care_about = [p for p in logical_products_in_namespaces if any(kinda_same_package(n, p.normalized_name) for n in top_level_names) or not top_level_names]
     new_names = {l.normalized_name for l in logical_products_to_care_about}
     old_names = get_package_names(cve_id)
     extra = new_names - old_names
