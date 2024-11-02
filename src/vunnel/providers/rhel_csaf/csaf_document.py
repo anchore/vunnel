@@ -358,6 +358,11 @@ class RHEL_CSAFDocument:
         self.initialize_fixed_ins()
         self.initialize_metadata()
 
+    def is_fixed_src_rpm(self, pid: ProductID) -> bool:
+        return pid.product.endswith(".src") and any(pid.full_product_id
+                                                    in r.product_ids for r
+                                                    in self.csaf.vulnerabilities[0].remediations)
+
     @classmethod
     def from_path(cls, path: str) -> "RHEL_CSAFDocument":
         with open(path) as fh:
@@ -376,7 +381,9 @@ KNOWN_WEIRD_PATHS = {
     "data/rhel_csaf/input/csaf/2017/cve-2017-10295.json" : "jvm is weird",
     "data/rhel_csaf/input/csaf/2018/cve-2018-2790.json" : "jvm is weird",
     "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
-    "data/rhel_csaf/input/csaf/2018/cve-2018-19872.json" : "probably need to query RHSA data",
+    # "data/rhel_csaf/input/csaf/2018/cve-2018-19872.json" : "probably need to query RHSA data: sip should be included but isn't",
+    "data/rhel_csaf/input/csaf/2021/cve-2021-30749.json": "probably need to query RHSA data: gtk3 should be excluded but isn't",
+    # "data/rhel_csaf/input/csaf/2019/cve-2019-14907.json" : "probably need to query RHSA data: openchange excluded but shouldn't be"
 }
 
 def get_package_names(cve_id: str) -> set[str]:
@@ -427,7 +434,7 @@ def main(json_path):
                                       r.products_to_namespace.get(p) in namespaces_to_care_about]
     top_level_names = r.top_level_products()
     # try grepping with top-level product
-    logical_products_to_care_about = [p for p in logical_products_in_namespaces if any(kinda_same_package(n, p.normalized_name) for n in top_level_names) or not top_level_names]
+    logical_products_to_care_about = [p for p in logical_products_in_namespaces if any(kinda_same_package(n, p.normalized_name) for n in top_level_names) or not top_level_names or r.is_fixed_src_rpm(p)]
     new_names = {l.normalized_name for l in logical_products_to_care_about}
     old_names = get_package_names(cve_id)
     extra = new_names - old_names
