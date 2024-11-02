@@ -368,6 +368,8 @@ import os
 KNOWN_WEIRD_PATHS = {
     # "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
     "data/rhel_csaf/input/csaf/2019/cve-2019-2983.json" : "jvm ibm is weird",
+    "data/rhel_csaf/input/csaf/2017/cve-2017-10295.json" : "jvm is weird",
+    "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
 }
 
 def get_package_names(cve_id: str) -> set[str]:
@@ -400,10 +402,13 @@ def kinda_same_package(human_name: str, machine_name: str) -> bool:
     # TODO: is this better accomplished by referencing RHSAs?
     m = re.sub(r"\d+", "", machine_name.lower())
     h = re.sub(r"\d+", "", human_name.lower())
-    m = m.removesuffix("-alt")
-    h = h.removesuffix("-alt")
-    m = m.removesuffix("-rt")
-    h = h.removesuffix("-rt")
+    if 'kernel' in h or 'kernel' in m:
+        m = m.removesuffix("-alt")
+        h = h.removesuffix("-alt")
+        m = m.removesuffix("-rt")
+        h = h.removesuffix("-rt")
+        m = m.removeprefix("realtime-")
+        h = h.removeprefix("realtime-")
     return m == h
 
 def main(json_path):
@@ -432,7 +437,7 @@ def main(json_path):
         print(f"poetry run python {sys.argv[0]} {json_path}")
         sys.exit(1)
     else:
-        print(f"great victory! not diff for {cve_id} from {json_path}")
+        print(f"great victory! no diff for {cve_id} from {json_path}")
 
 if __name__ == "__main__":
     import sys
