@@ -8,15 +8,17 @@ from cvss import CVSS2, CVSS3
 from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary
 
+# TODO: use CPE not human name
 RHEL_FLAVOR_REGEXES = [
     r"^Red Hat Enterprise Linux (\d+)",
+    r"^Red Hat Enterprise Linux (\d+) Supplementary",
     r"Red Hat Enterprise Linux AppStream \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux BaseOS \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux \(v\. (\d+) server\)",
     r"^Red Hat Enterprise Linux Server \(v\. (\d+)\)",
     r"^Red Hat Enterprise Linux Desktop \(v\. (\d+) client\)",
     r"^Red Hat Enterprise Linux Desktop \(v\. (\d+)\)",
-    r"^Red Hat Enterprise Linux Workstation \(v\. (\d+)\)"
+    r"^Red Hat Enterprise Linux Workstation \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Client Optional \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Client \(v\. (\d+)\)",
     # ways of spelling "real time":
@@ -25,7 +27,11 @@ RHEL_FLAVOR_REGEXES = [
     r"Red Hat Enterprise Linux Real Time \(v\. (\d+)\)",
     r"Red Hat Enterprise Linux Realtime \(v\. (\d+)\)",
     r"Red Hat CodeReady Linux Builder \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux ComputeNode Optional \(v\. (\d+)\)"
+    r"Red Hat Enterprise Linux ComputeNode Optional \(v\. (\d+)\)",
+]
+
+RHEL_CPE_PREFIXES = [
+    "cpe:/o:redhat:enterprise_linux",
 ]
 
 MODULE_VERSION_REGEX = r":(rhel)?\d+(\.\d)*:\d{19}:[a-fA-F0-9]{8}$"
@@ -94,11 +100,11 @@ class ProductID:
         # whereas the modularity is for when product names have a / in them, like
         # "red_hat_enterprise_linux_8:nodejs:16/nodejs", which means
         # "for RHEL 8, for the module nodejs:16, the product nodejs"
-        if module and "/" in product:
+        if module and product and "/" in product:
             raise ValueError(
                 f"for {distribution}:{module}:{product}, cannot specify module via / delimit and explicit module element",
             )
-        if "/" in product:
+        if product and "/" in product:
             m, _, p = product.partition("/")
         else:
             m = module
@@ -108,30 +114,34 @@ class ProductID:
     @property
     def full_product_id(self) -> str:
         mod_str = f"{self.module}:" if self.module else ''
-        return f"{self.distribution}:{mod_str}{self.product}"
+        return f"{self.distribution}:{mod_str}{self.product or ''}"
 
     @property
     def normalized_name(self) -> str:
         if self.module:
-            return re.sub(MODULE_VERSION_REGEX, "", self.module)
-        return re.sub(PACKAGE_VERSION_REGEX, "", self.product)
+           name = re.sub(MODULE_VERSION_REGEX, "", self.module)
+        else:
+          name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
+        return name.lower()
 
     @property
     def is_logical_product(self) -> bool:
         """is_logical_product returns true if the product would be reported
         in its own line in Red Hat vulnerability UIs, or should be its own line
         in grype-db. If the product is a module or a source RPM, return true"""
-        if self.module and len(self.product) == 0:
-            return True
-        if self.product.endswith("arch=src") or self.product.endswith(".src"):
-            return True
-        return False
+        if self.module and not self.product:
+            return True  # modules are always logical products
+        if self.product and self.product.endswith(".src"):
+            return not self.module  # source RPMs are logical products unless descended from modules
+        return False  # this is not a module or a src rpm - it's some component we shouldn't
+        # report on separately
 
 
 @dataclass
 class RHEL_CSAFDocument:
     csaf: CSAF_JSON
     product_ids: dict[str, ProductID] = field(init=False)
+    # logical_products: list[ProductID] = field(init=False)
     normalized_product_names_to_product_ids: dict[str, set[ProductID]] = field(init=False)
     distribution_ids_to_names: dict[str, str] = field(init=False)
     products_to_namespace: dict[ProductID, str] = field(init=False)
@@ -152,6 +162,12 @@ class RHEL_CSAFDocument:
         in the CSAF JSON that self was created from"""
         known_affected = [val for key, val in self.product_ids.items() if key in self.csaf.vulnerabilities[0].product_status.known_affected]
         return [pid for pid in self.product_ids.values() if pid.is_logical_product] + known_affected
+
+    def top_level_products(self) -> set[str]:
+        return {
+            b.name for b in self.csaf.product_tree.branches[0].branches
+            if b.category == "product_version"
+        }
 
     def initialize_product_id_maps(self):
         self.product_ids = {}
@@ -331,7 +347,8 @@ import sqlite3
 import os
 
 KNOWN_WEIRD_PATHS = {
-    "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
+    # "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
+    "data/rhel_csaf/input/csaf/2019/cve-2019-2983.json" : "jvm ibm is weird",
 }
 
 def get_package_names(cve_id: str) -> set[str]:
@@ -360,6 +377,10 @@ def get_package_names(cve_id: str) -> set[str]:
 
     return package_names
 
+def kinda_same_package(human_name: str, machine_name: str) -> bool:
+    m = re.sub(r"\d+", "", machine_name.lower())
+    h = re.sub(r"\d+", "", human_name.lower())
+    return m == h
 
 def main(json_path):
     cve_id = json_path.split("/")[-1].removesuffix(".json").upper()
@@ -368,6 +389,9 @@ def main(json_path):
     logical_products = r.logical_products()
     logical_products_to_care_about = [p for p in logical_products if
                                       r.products_to_namespace.get(p) in namespaces_to_care_about]
+    top_level_names = r.top_level_products()
+    # try grepping with top-level product
+    logical_products_to_care_about = [p for p in logical_products_to_care_about if any(kinda_same_package(n, p.normalized_name) for n in top_level_names) or not top_level_names]
     new_names = {l.normalized_name for l in logical_products_to_care_about}
     old_names = get_package_names(cve_id)
     extra = new_names - old_names
@@ -389,11 +413,15 @@ def main(json_path):
 if __name__ == "__main__":
     import sys
     for json_path in sys.argv[1:]:
+        if not json_path:
+            continue
+        if json_path in KNOWN_WEIRD_PATHS:
+            print(f"skipping {json_path}: {KNOWN_WEIRD_PATHS[json_path]}")
         try:
             main(json_path)
         except Exception as e:
             print(f"Exception! {e}")
             print("try again!")
             print(f"poetry run python {sys.argv[0]} {sys.argv[1]}")
-            sys.exit(1)
+            raise e
 
