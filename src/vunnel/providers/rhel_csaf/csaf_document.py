@@ -93,6 +93,7 @@ class ProductID:
     distribution: str
     module: str | None
     product: str | None
+    module_from_slash: bool = False
 
     @classmethod
     def create(cls, distribution: str, module: str | None, product: str | None) -> "ProductID":
@@ -102,16 +103,18 @@ class ProductID:
         # whereas the modularity is for when product names have a / in them, like
         # "red_hat_enterprise_linux_8:nodejs:16/nodejs", which means
         # "for RHEL 8, for the module nodejs:16, the product nodejs"
+        module_from_slash = False
         if module and product and "/" in product:
             raise ValueError(
                 f"for {distribution}:{module}:{product}, cannot specify module via / delimit and explicit module element",
             )
         if product and "/" in product:
             m, _, p = product.partition("/")
+            module_from_slash = True
         else:
             m = module
             p = product
-        return cls(distribution=distribution, module=m, product=p)
+        return cls(distribution=distribution, module=m, product=p, module_from_slash=module_from_slash)
 
     @property
     def full_product_id(self) -> str:
@@ -120,7 +123,9 @@ class ProductID:
 
     @property
     def normalized_name(self) -> str:
-        if self.module:
+        if self.module_from_slash:
+            name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
+        elif self.module:
            name = re.sub(MODULE_VERSION_REGEX, "", self.module)
         else:
           name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
@@ -369,7 +374,9 @@ KNOWN_WEIRD_PATHS = {
     # "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
     "data/rhel_csaf/input/csaf/2019/cve-2019-2983.json" : "jvm ibm is weird",
     "data/rhel_csaf/input/csaf/2017/cve-2017-10295.json" : "jvm is weird",
+    "data/rhel_csaf/input/csaf/2018/cve-2018-2790.json" : "jvm is weird",
     "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
+    "data/rhel_csaf/input/csaf/2018/cve-2018-19872.json" : "probably need to query RHSA data",
 }
 
 def get_package_names(cve_id: str) -> set[str]:
@@ -409,7 +416,7 @@ def kinda_same_package(human_name: str, machine_name: str) -> bool:
         h = h.removesuffix("-rt")
         m = m.removeprefix("realtime-")
         h = h.removeprefix("realtime-")
-    return m == h
+    return m in h or h in m # TODO: which way?
 
 def main(json_path):
     cve_id = json_path.split("/")[-1].removesuffix(".json").upper()
@@ -446,6 +453,7 @@ if __name__ == "__main__":
             continue
         if json_path in KNOWN_WEIRD_PATHS:
             print(f"skipping {json_path}: {KNOWN_WEIRD_PATHS[json_path]}")
+            continue
         try:
             main(json_path)
         except Exception as e:
