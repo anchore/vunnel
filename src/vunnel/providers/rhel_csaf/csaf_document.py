@@ -31,13 +31,14 @@ RHEL_FLAVOR_REGEXES = [
 ]
 
 RHEL_CPE_REGEXES = [
-    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)",  # appstream has :a:
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation))*$",  # appstream has :a:
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
 ]
 
 MODULE_VERSION_REGEX = r":(rhel)?\d+(\.\d)*:\d{19}:[a-fA-F0-9]{8}$"
 PACKAGE_VERSION_REGEX = r"-(\d+):.*$"
+PACKAGE_VERSION_REGEX_UNDER = r"-[\d_-]+$"
 
 SEVERITY_DICT = {
     "low": "Low",
@@ -128,7 +129,8 @@ class ProductID:
         elif self.module:
            name = re.sub(MODULE_VERSION_REGEX, "", self.module)
         else:
-          name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
+            name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
+            name = re.sub(PACKAGE_VERSION_REGEX_UNDER, "", name)
         return name.lower()
 
     @property
@@ -377,13 +379,17 @@ import os
 
 KNOWN_WEIRD_PATHS = {
     # "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
+    ## JVM ISSUES!
     "data/rhel_csaf/input/csaf/2019/cve-2019-2983.json" : "jvm ibm is weird",
     "data/rhel_csaf/input/csaf/2017/cve-2017-10295.json" : "jvm is weird",
     "data/rhel_csaf/input/csaf/2018/cve-2018-2790.json" : "jvm is weird",
+    ## Extra packages I think are correct to include
     "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
-    # "data/rhel_csaf/input/csaf/2018/cve-2018-19872.json" : "probably need to query RHSA data: sip should be included but isn't",
+    "data/rhel_csaf/input/csaf/2022/cve-2022-0435.json" : "adds kpatch-patch, but I think correctly",
+
+    ## Extra packages and I don't know why
     "data/rhel_csaf/input/csaf/2021/cve-2021-30749.json": "probably need to query RHSA data: gtk3 should be excluded but isn't",
-    # "data/rhel_csaf/input/csaf/2019/cve-2019-14907.json" : "probably need to query RHSA data: openchange excluded but shouldn't be"
+    "data/rhel_csaf/input/csaf/2023/cve-2023-41081.json" : "mod_proxy_cluster is included but shouldn't be; no idea yet",
 }
 
 def get_package_names(cve_id: str) -> set[str]:
