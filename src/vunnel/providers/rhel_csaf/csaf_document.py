@@ -170,7 +170,8 @@ class RHEL_CSAFDocument:
         all source RPMs that are not descended from modules, that are mentioned
         in the CSAF JSON that self was created from"""
         known_affected = [val for key, val in self.product_ids.items() if key in self.csaf.vulnerabilities[0].product_status.known_affected]
-        return [pid for pid in self.product_ids.values() if pid.is_logical_product] + known_affected
+        under_investigation = [val for key, val in self.product_ids.items() if key in self.csaf.vulnerabilities[0].product_status.under_investigation]
+        return [pid for pid in self.product_ids.values() if pid.is_logical_product] + known_affected + under_investigation
 
     def top_level_products(self) -> set[str]:
         return {
@@ -292,9 +293,10 @@ class RHEL_CSAFDocument:
             # or that look like patched modules or src rpms in "fixed"
             # as long as they aren't in "known_not_affected"
             not_fixed = (str_id in self.csaf.vulnerabilities[0].product_status.known_affected)
+            under_investigation = (str_id in self.csaf.vulnerabilities[0].product_status.under_investigation)
             fixed_and_src_rpm_or_module = pid.is_logical_product and str_id in self.csaf.vulnerabilities[0].product_status.fixed
             affected = str_id not in self.csaf.vulnerabilities[0].product_status.known_not_affected
-            keep = affected and (not_fixed or fixed_and_src_rpm_or_module)
+            keep = affected and (not_fixed or under_investigation or fixed_and_src_rpm_or_module)
             if not keep:
                 continue
             remediations = [r for r in self.csaf.vulnerabilities[0].remediations if r.category == "vendor_fix" and str_id in r.product_ids]
@@ -429,6 +431,9 @@ KNOWN_WEIRD_PATHS = {
     "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
     "data/rhel_csaf/input/csaf/2022/cve-2022-0435.json" : "adds kpatch-patch, but I think correctly",
     "data/rhel_csaf/input/csaf/2020/cve-2020-10768.json": "adds kpatch-patch, but I think correctly",
+    "data/rhel_csaf/input/csaf/2022/cve-2022-41222.json": "adds kpatch-patch, but I think correctly",
+    "data/rhel_csaf/input/csaf/2019/cve-2019-15239.json": "adds kpatch-patch, but I think correctly",
+    "data/rhel_csaf/input/csaf/2022/cve-2022-27650.json" : "adds container-tools, but I think correctly",
 
     ## Extra packages and I don't know why
     "data/rhel_csaf/input/csaf/2021/cve-2021-30749.json": "probably need to query RHSA data: gtk3 should be excluded but isn't",
