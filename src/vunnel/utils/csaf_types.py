@@ -67,9 +67,10 @@ class Note(DataClassDictMixin):
 
 @dataclass
 class ProductStatus(DataClassDictMixin):
-    fixed: set[str] = field(default_factory=list)
-    known_affected: set[str] = field(default_factory=list)
-    known_not_affected: set[str] = field(default_factory=list)
+    fixed: set[str] = field(default_factory=set)
+    known_affected: set[str] = field(default_factory=set)
+    known_not_affected: set[str] = field(default_factory=set)
+    under_investigation: set[str] = field(default_factory=set)
 
 
 @dataclass
