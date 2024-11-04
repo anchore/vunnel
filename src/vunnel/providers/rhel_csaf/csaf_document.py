@@ -36,7 +36,6 @@ RHEL_CPE_REGEXES = [
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
 ]
 
-MODULE_VERSION_REGEX = r":(rhel)?\d+(\.\d)*:\d{19}:[a-fA-F0-9]{8}$"
 PACKAGE_VERSION_REGEX = r"-(\d+):.*$"
 PACKAGE_VERSION_REGEX_UNDER = r"-[\d_-]+$"
 
@@ -127,7 +126,7 @@ class ProductID:
         if self.module_from_slash:
             name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
         elif self.module:
-           name = re.sub(MODULE_VERSION_REGEX, "", self.module)
+            name, _, _ = self.module.partition(":")
         else:
             name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
             name = re.sub(PACKAGE_VERSION_REGEX_UNDER, "", name)
