@@ -4,37 +4,16 @@ from decimal import Decimal
 
 import orjson
 from cvss import CVSS2, CVSS3
+from packageurl import PackageURL
 
 from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary, Vulnerability
 
-# TODO: use CPE not human name
-RHEL_FLAVOR_REGEXES = [
-    r"^Red Hat Enterprise Linux (\d+)",
-    r"^Red Hat Enterprise Linux (\d+) Supplementary",
-    r"Red Hat Enterprise Linux AppStream \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux BaseOS \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux \(v\. (\d+) server\)",
-    r"^Red Hat Enterprise Linux Server \(v\. (\d+)\)",
-    r"^Red Hat Enterprise Linux Desktop \(v\. (\d+) client\)",
-    r"^Red Hat Enterprise Linux Desktop \(v\. (\d+)\)",
-    r"^Red Hat Enterprise Linux Workstation \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux Client Optional \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux Client \(v\. (\d+)\)",
-    # ways of spelling "real time":
-    r"Red Hat Enterprise Linux RT \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux for Real Time \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux Real Time \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux Realtime \(v\. (\d+)\)",
-    r"Red Hat CodeReady Linux Builder \(v\. (\d+)\)",
-    r"Red Hat Enterprise Linux ComputeNode Optional \(v\. (\d+)\)",
-]
-
 RHEL_CPE_REGEXES = [
-    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos|realtime|crb))*$",  # appstream has :a:
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos|realtime|crb|supplementary))*$",  # appstream has :a:
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
-    r"cpe:/a:redhat:rhel_virtualization:(\d+)(::(server))?",
+    r"^cpe:/a:redhat:rhel_virtualization:(\d+)(::(client|server))?",
 ]
 
 MODULE_VERSION_REGEX = r":(rhel)?\d+(\.\d+)*:\d{19}:([a-fA-F0-9]{8}|rhel\d+)$"
@@ -66,6 +45,7 @@ def parse_severity(text: str) -> str | None:
     return SEVERITY_DICT.get(text)
 
 
+# TODO: figure out cvss2 and 4
 # def cvss2_from_csaf_score(score: CVSS_V2, verified: bool) -> CVSS:
 #     cvss2_obj = CVSS2(score.vector_string)
 #     status = "draft"
@@ -92,13 +72,15 @@ class ProductID:
     # for human display, we want the last part, or even the last part sans version info
     # but for looking up in the rest of the document, we want the full string.
     # therefore, make a dataclass that can be either
+    raw: str  # the product ID as it appears in CSAF JSON
     distribution: str
     module: str | None
     product: str | None
+    purl: PackageURL | None
     module_from_slash: bool = False
 
     @classmethod
-    def create(cls, distribution: str, module: str | None, product: str | None) -> "ProductID":
+    def create(cls, raw: str, distribution: str, module: str | None, product: str | None, package_url: str | None) -> "ProductID":
         # Some product IDs have 3 components, distro:module:product
         # like AppStream-8.9.0.Z.MAIN:nodejs:20:8090020231019152822:a75119d5:nodejs-packaging-0:2021.06-4.module+el8.9.0+19519+e25b965a.noarch
         # which means "for the RHEL 8 appstream, for the nodejs:20 module, the product nodejs-packaging-..."
@@ -116,23 +98,34 @@ class ProductID:
         else:
             m = module
             p = product
-        return cls(distribution=distribution, module=m, product=p, module_from_slash=module_from_slash)
+        purl = PackageURL.from_string(package_url) if package_url else None
+        return cls(raw=raw, distribution=distribution, module=m, product=p, module_from_slash=module_from_slash, purl=purl)
 
     @property
     def full_product_id(self) -> str:
-        mod_str = f"{self.module}:" if self.module else ''
-        return f"{self.distribution}:{mod_str}{self.product or ''}"
+        return self.raw
+
 
     @property
     def normalized_name(self) -> str:
+        if self.product:
+            name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
+            name = re.sub(PACKAGE_VERSION_REGEX_UNDER, "", name)
+        elif self.module:
+            name = re.sub(MODULE_VERSION_REGEX, "", self.module)
+        else:
+            raise ValueError(f"for {self.full_product_id}, must set module or product")
+        return name.lower()
+
+    @property
+    def module_name(self) -> str | None:
+        # TODO: make module version available to avoid regex use
         if self.module_from_slash:
             name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
         elif self.module:
             name = re.sub(MODULE_VERSION_REGEX, "", self.module)
         else:
-            name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
-            name = re.sub(PACKAGE_VERSION_REGEX_UNDER, "", name)
-        return name.lower()
+            return None
 
     @property
     def is_logical_product(self) -> bool:
@@ -144,7 +137,12 @@ class ProductID:
         if self.product and self.product.endswith(".src"):
             return not self.module  # source RPMs are logical products unless descended from modules
         return False  # this is not a module or a src rpm - it's some component we shouldn't
-        # report on separately
+
+    @property
+    def version(self) -> str | None:
+        if self.purl:
+            return self.purl.version
+        return None
 
 
 @dataclass
@@ -160,6 +158,8 @@ class RHEL_CSAFDocument:
     cvss_objects_with_product_ids: list[tuple[CVSS, set[ProductID]]] = field(init=False)
     vendor_advisories_with_product_ids: list[VendorAdvisory, set[ProductID]] = field(init=False)
     product_ids_to_fixed_versions: dict[ProductID, list[FixedIn]] = field(init=False)
+    namespaces_to_fixedins: dict[str, list[FixedIn]] = field(init=False)
+    namespaces_to_vulnerabilities: dict[str, list[Vulnerability]] = field(init=False)
     severity: str = field(init=False)
     description: str = field(init=False)
     cve_id: str = field(init=False)
@@ -182,6 +182,13 @@ class RHEL_CSAFDocument:
 
     def initialize_product_id_maps(self):
         self.product_ids = {}
+        str_ids_to_str_purls = {
+            purl_branch.product.product_id: purl_branch.product.product_identification_helper.purl
+            for purl_branch in self.csaf.product_tree.branches[0].product_version_branches()
+            if purl_branch.product
+            and purl_branch.product.product_identification_helper
+            and purl_branch.product.product_identification_helper.purl
+        }
         # self.logical_products = []
         parents = set(self.csaf.product_tree.product_id_to_parent.values())
         children = set(self.csaf.product_tree.product_id_to_parent.keys())
@@ -190,7 +197,11 @@ class RHEL_CSAFDocument:
         for m in modules:
             distro_part = self.csaf.product_tree.first_parent(m)
             module_part = m.removeprefix(distro_part).removeprefix(":")
-            self.product_ids[m] = ProductID.create(distribution=distro_part, module=module_part, product=None)
+            self.product_ids[m] = ProductID.create(raw=m,
+                                                   distribution=distro_part,
+                                                   module=module_part,
+                                                   product=None,
+                                                   package_url=str_ids_to_str_purls.get(m))
         leaf_products = children - parents
         for p in leaf_products:
             distribution = self.csaf.product_tree.first_parent(p)
@@ -200,7 +211,12 @@ class RHEL_CSAFDocument:
                 module = module.removeprefix(distribution).removeprefix(":")
                 product_part = product_part.removeprefix(module).removeprefix(":")
                 module = module.removeprefix(distribution).removeprefix(":")
-            self.product_ids[p] = ProductID.create(distribution=distribution, module=module, product=product_part)
+            self.product_ids[p] = ProductID.create(raw=p,
+                                                   distribution=distribution,
+                                                   module=module,
+                                                   product=product_part,
+                                                   package_url=str_ids_to_str_purls.get(p))
+        # TODO: is this needed?
         # reverse dictionary as well
         for k, v in self.product_ids.items():
             if v.normalized_name not in self.normalized_product_names_to_product_ids:
@@ -326,7 +342,10 @@ class RHEL_CSAFDocument:
                 if not purl:
                     raise ValueError(f"no purl for {pid.full_product_id}")
                 version = purl.split("@")[1].split("?")[0]
-
+                for va, pids in self.vendor_advisories_with_product_ids:
+                    if pid in pids:
+                        vendor_advisory = va
+                        break
                 fixes.append(
                     FixedIn(Name=pid.normalized_name,
                             NamespaceName=namespace,
@@ -337,6 +356,56 @@ class RHEL_CSAFDocument:
                             ),
                 )
             self.product_ids_to_fixed_versions[pid] = fixes
+
+    def initialize_namespaces_to_fixed_ins_and_vulnerabilities(self):
+        self.namespaces_to_fixedins = {}
+        self.namespaces_to_vulnerabilities = {}
+        for ns, products in self.namespaces_to_product_ids.items():
+            if ns not in self.namespaces_to_fixedins:
+                self.namespaces_to_fixedins[ns] = []
+            if ns not in self.namespaces_to_vulnerabilities:
+                self.namespaces_to_vulnerabilities[ns] = []
+
+            cvss_objects = [ c for c, prods in self.cvss_objects_with_product_ids
+                             if any(p in prods for p in products)]
+            for pid in products:
+                fixed_in = None
+                vendor_advisory = None
+                for va, fixed_products in self.vendor_advisories_with_product_ids:
+                    if pid in fixed_products:
+                        vendor_advisory=va
+                if self.is_fixed_src_rpm(pid):
+                    fixed_in = FixedIn(
+                        Name=pid.normalized_name,
+                        NamespaceName=ns,
+                        VersionFormat="rpm",
+                        Version=pid.version or "None", # TODO: the "or None" should be unreachable
+                        Module=pid.module_name,
+                        VendorAdvisory=vendor_advisory,
+                    )
+                elif self.is_known_affected(pid):
+                    fixed_in = FixedIn(
+                        Name=pid.normalized_name,
+                        NamespaceName=ns,
+                        VersionFormat="rpm",
+                        Version="None",
+                        Module=pid.module_name,
+                        VendorAdvisory=vendor_advisory,
+                    )
+                if fixed_in:
+                    self.namespaces_to_fixedins[ns].append(fixed_in)
+
+            if self.namespaces_to_fixedins.get(ns):
+                vuln = Vulnerability(
+                    NamespaceName=ns,
+                    Name=self.cve_id,
+                    Description=self.description,
+                    Severity=self.severity,
+                    Link=self.vuln_url,
+                    CVSS=cvss_objects,
+                    FixedIn=self.namespaces_to_fixedins.get(ns),
+                )
+                self.namespaces_to_vulnerabilities[ns].append(vuln)
 
     def initialize_metadata(self):
         v = self.csaf.vulnerabilities[0]
@@ -396,6 +465,15 @@ class RHEL_CSAFDocument:
                 result.append(v)
         return result
 
+    def vulnerabilities(self, namespaces: set[str] | None = None) -> list[Vulnerability]:
+        if namespaces is None:
+            namespaces = {"rhel:5", "rhel:6", "rhel:7", "rhel:8", "rhel:9"}
+        result = []
+        for ns, vulns in self.namespaces_to_vulnerabilities.items():
+            if ns in namespaces:
+                result.extend(vulns)
+        return result
+
     @classmethod
     def fuzzy_name_match(cls, a: str, b: str) -> bool:
         # TODO: is this better accomplished by referencing RHSAs?
@@ -425,9 +503,12 @@ import os
 KNOWN_WEIRD_PATHS = {
     # "data/rhel_csaf/input/csaf/2017/cve-2017-7541.json" : "kernel-rt"
     ## JVM ISSUES!
+    ## JVM src rpms sometimes look like
+    ## Supplementary-8.5.0.Z.MAIN:java-1.8.0-ibm-src-1:1.8.0.7.5-1.el8_5.x86_64
     "data/rhel_csaf/input/csaf/2019/cve-2019-2983.json" : "jvm ibm is weird",
     "data/rhel_csaf/input/csaf/2017/cve-2017-10295.json" : "jvm is weird",
     "data/rhel_csaf/input/csaf/2018/cve-2018-2790.json" : "jvm is weird",
+    # "data/rhel_csaf/input/csaf/2022/cve-2022-21341.json" : "java-1.8.0-ibm is being weird",
     ## Extra packages I think are correct to include
     "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": "adds python27, but I think correctly",
     "data/rhel_csaf/input/csaf/2022/cve-2022-0435.json" : "adds kpatch-patch, but I think correctly",
@@ -435,10 +516,29 @@ KNOWN_WEIRD_PATHS = {
     "data/rhel_csaf/input/csaf/2022/cve-2022-41222.json": "adds kpatch-patch, but I think correctly",
     "data/rhel_csaf/input/csaf/2019/cve-2019-15239.json": "adds kpatch-patch, but I think correctly",
     "data/rhel_csaf/input/csaf/2022/cve-2022-27650.json" : "adds container-tools, but I think correctly",
+    # "data/rhel_csaf/input/csaf/2021/cve-2021-3507.json" : "adds 'virt",
+
+    ## Extra packages from module stuff
+    "data/rhel_csaf/input/csaf/2023/cve-2023-45287.json" : "modules!!!",
+    "data/rhel_csaf/input/csaf/2020/cve-2020-13956.json": "modules!!!",
 
     ## Extra packages and I don't know why
     "data/rhel_csaf/input/csaf/2021/cve-2021-30749.json": "probably need to query RHSA data: gtk3 should be excluded but isn't",
     "data/rhel_csaf/input/csaf/2023/cve-2023-41081.json" : "mod_proxy_cluster is included but shouldn't be; no idea yet",
+}
+
+
+EXPECTED_EXTRA_NAMES = {
+    ## Extra packages I think are correct to include
+    "data/rhel_csaf/input/csaf/2020/cve-2020-26116.json": { "python27" },
+    "data/rhel_csaf/input/csaf/2022/cve-2022-0435.json" : { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2020/cve-2020-10768.json": { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2022/cve-2022-41222.json": { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2019/cve-2019-15239.json": { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2019/cve-2019-14835.json": { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2023/cve-2023-0386.json": { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2022/cve-2022-0330.json": { "kpatch-patch" },
+    "data/rhel_csaf/input/csaf/2022/cve-2022-27650.json" : { "container-tools" },
 }
 
 def get_package_names(cve_id: str) -> set[str]:
@@ -516,6 +616,8 @@ def alt_main(json_path):
     }
     old_names = get_package_names(cve_id)
     extra = new_names - old_names
+    allowed_extra = EXPECTED_EXTRA_NAMES.get(json_path, set())
+    extra = extra - allowed_extra
     missing = old_names - new_names
     if extra:
         print("NEW NAMES INTRODUCED BY CHANGE")
