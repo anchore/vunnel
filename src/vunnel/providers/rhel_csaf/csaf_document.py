@@ -429,23 +429,31 @@ class RHEL_CSAFDocument:
         self.initialize_purl_map()
         self.initialize_cvss_objects()
         self.initialize_advisories_map()
-        self.initialize_fixed_ins()
+        # self.initialize_fixed_ins2()
         self.initialize_metadata()
+        self.initialize_namespaces_to_fixed_ins_and_vulnerabilities()
 
     def is_fixed_src_rpm(self, pid: ProductID) -> bool:
+        # TODO: java-1.8.0-ibm-src should be a fixed product,
+        # but has no src rpm by this naming convention
         return (pid.product
                 and pid.product.endswith(".src")
                 and any(pid.full_product_id
                     in r.product_ids for r
-                    in self.csaf.vulnerabilities[0].remediations))
+                    in self.csaf.vulnerabilities[0].remediations if r.category == "vendor_fix"))
 
-    def vulnerabilities(self, namespaces: set[str] | None = None) -> list[Vulnerability]:
+    def is_known_affected(self, pid: ProductID) -> bool:
+        return pid.full_product_id in self.csaf.vulnerabilities[0].product_status.known_affected
+
+    def vulnerabilities_old(self, namespaces: set[str] | None = None) -> list[Vulnerability]:
         if namespaces is None:
             namespaces = {"rhel:5", "rhel:6", "rhel:7", "rhel:8", "rhel:9"}
         result = []
         logical_products = self.logical_products()
         top_level_product_names = self.top_level_products()
         for pid in logical_products:
+            if pid in self.csaf.vulnerabilities[0].product_status.known_not_affected:
+                continue
             named_for_top_level_product = (
                 not top_level_product_names or
                 any(RHEL_CSAFDocument.fuzzy_name_match(pid.normalized_name, tln) for tln in top_level_product_names))
