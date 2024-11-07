@@ -15,9 +15,6 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    request_timeout: int = 125
-    parallelism: int = 4
-    full_sync_interval: int = 2
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
 
 
@@ -37,7 +34,7 @@ class Provider(provider.Provider):
 
     @classmethod
     def name(cls) -> str:
-        return "rhel_csaf"
+        return "rhel"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
