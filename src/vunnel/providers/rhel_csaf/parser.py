@@ -31,7 +31,7 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        self.logger.info("starting of RHEL CSAF parser")
+        self.logger.debug("starting of RHEL CSAF parser")
 
     def download(self):
         latest_resp = http.get(url=VEX_LATEST_URL, logger=self.logger)

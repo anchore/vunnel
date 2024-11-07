@@ -283,6 +283,7 @@ providers:
   rhel:
     full_sync_interval: 2
     parallelism: 4
+    provider_type: csaf
     request_timeout: 125
     runtime:
       existing_input: keep
