@@ -1,7 +1,11 @@
+import concurrent.futures
+import csv
 import logging
 import os
 from collections.abc import Generator
 
+
+from datetime import datetime, timedelta, timezone
 from vunnel.providers.rhel_csaf.csaf_document import RHEL_CSAFDocument
 from vunnel.utils import http
 from vunnel.utils.archive import extract
@@ -10,6 +14,10 @@ from vunnel.workspace import Workspace
 
 
 VEX_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/vex/archive_latest.txt"
+VEX_CHANGES_URL = "https://security.access.redhat.com/data/csaf/v2/vex/changes.csv"
+VEX_DELETIONS_URL = "https://security.access.redhat.com/data/csaf/v2/vex/deletions.csv"
+ADVISORIES_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/advisories/archive_latest.txt"
+
 
 class Parser:
     def __init__(
@@ -24,32 +32,97 @@ class Parser:
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
         self.urls = []
+        self.vex_archive_date = None
 
         self.download_path = os.path.join(self.workspace.input_path, "vex_archive.tar.zst")
+        self.advisory_download_path = os.path.join(self.workspace.input_path, "advisory_archive.tar.zst")
         self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
+        self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self.logger.debug("starting of RHEL CSAF parser")
 
-    def download(self):
+    def get_archive_date(self, archive_filename: str) -> datetime:
+        date_part = archive_filename.removeprefix("csaf_vex_").removesuffix(".tar.zst")
+        return datetime.strptime(date_part, "%Y-%m-%d").replace(tzinfo=timezone.utc)  # noqa: UP017
+
+    def download_stream(self, url: str, dest: str):
+        with http.get(url, logger=self.logger, stream=True) as resp, open(dest, "wb") as fh:
+            for chunk in resp.iter_content(chunk_size=65536):  # 64k chunks
+                if chunk:
+                    fh.write(chunk)
+
+    def download_vex_archive(self):
         latest_resp = http.get(url=VEX_LATEST_URL, logger=self.logger)
         archive_filename = latest_resp.content.decode()
+        self.vex_archive_date = self.get_archive_date(archive_filename)
         archive_url = VEX_LATEST_URL.replace("archive_latest.txt", archive_filename)
         self.urls = [archive_url]
-        with http.get(archive_url, logger=self.logger, stream=True) as resp, open(self.download_path, "wb") as fh:
+        self.download_stream(archive_url, self.download_path)
+        changes_path = os.path.join(self.csaf_path, "changes.csv")
+        self.download_stream(VEX_CHANGES_URL, changes_path)
+        deletions_path = os.path.join(self.csaf_path, "deletions.csv")
+        self.download_stream(VEX_DELETIONS_URL, deletions_path)
+
+    def download_advisory_archive(self):
+        latest_resp = http.get(url=ADVISORIES_LATEST_URL, logger=self.logger)
+        archive_filename = latest_resp.content.decode()
+        archive_url = ADVISORIES_LATEST_URL.replace("archive_latest.txt", archive_filename)
+        with http.get(archive_url, logger=self.logger, stream=True) as resp, open(self.advisory_download_path, "wb") as fh:
             for chunk in resp.iter_content(chunk_size=65536):  # 64k chunks
                 if chunk:
                     fh.write(chunk)
 
     def extract_all(self):
         os.makedirs(self.csaf_path, exist_ok=True)
+        # os.makedirs(self.advisories_path, exist_ok=True)
         extract(self.download_path, self.csaf_path)
+        # extract(self.advisory_download_path, self.advisories_path)
+
+    def process_changes_and_deletions(self):
+        changes_path = os.path.join(self.csaf_path, "changes.csv")
+        deletions_path = os.path.join(self.csaf_path, "deletions.csv")
+        with open(deletions_path, newline="") as fh:
+            reader = csv.reader(fh)
+            for row in reader:
+                deleted_fragement = row[0]
+                try:
+                    os.remove(os.path.join(self.csaf_path, deleted_fragement))
+                except FileNotFoundError:
+                    pass  # trying to delete a file that already doesn't exist
+        seen_files = set()
+        with open(changes_path, newline="") as fh:
+            reader = csv.reader(fh)
+            for row in reader:
+                # row is like "2021/cve-2021-47265.json","2024-11-08T18:28:22+00:00"
+                changed_file = row[0]
+                date_str = row[1]
+                change_date = datetime.fromisoformat(date_str)
+                if self.vex_archive_date and change_date < self.vex_archive_date:
+                    break
+                if changed_file in seen_files:
+                    continue
+                seen_files.add(changed_file)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+            futures = {
+                executor.submit(
+                    self.download_stream,
+                    url=VEX_LATEST_URL.replace("archive_latest.txt", changed_file),
+                    dest=os.path.join(self.csaf_path, changed_file),
+                ) : changed_file for changed_file in seen_files
+            }
+            concurrent.futures.wait(futures.keys())
+            for future, changed_file in futures.items():
+                if future.exception() is not None:
+                    self.logger.warning(f"Failed to download {changed_file}: {future.exception()}")
 
     def fetch(self):
-        self.download()
+        self.download_vex_archive()
+        # self.download_advisory_archive()
         self.extract_all()
+        self.process_changes_and_deletions()
 
     def _csaf_vex_files(self) -> Generator[str]:
         for root, _, files in os.walk(self.csaf_path):
@@ -72,4 +145,3 @@ class Parser:
         self.fetch()
         for namespace, vuln_id, record in self.process():
             yield namespace, vuln_id, record.to_payload()
-
