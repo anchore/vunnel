@@ -42,7 +42,7 @@ def cvss3_from_csaf_score(score: CVSS_V3, status: str = "draft") -> CVSS:
     )
 
 def parse_severity(text: str) -> str | None:
-    return SEVERITY_DICT.get(text)
+    return SEVERITY_DICT.get(text.lower())
 
 
 # TODO: figure out cvss2 and 4
@@ -141,7 +141,15 @@ class ProductID:
     @property
     def version(self) -> str | None:
         if self.purl:
-            return self.purl.version
+            version_maybe_epoch = self.purl.version
+            epoch_qualifier = self.purl.qualifiers.get('epoch')
+            # TODO: validate whether it's double specified?
+            if re.match(r"^\d+:", version_maybe_epoch):
+                return version_maybe_epoch
+            elif epoch_qualifier:
+                return f"{epoch_qualifier}:{version_maybe_epoch}"
+            else:
+                return f"0:{version_maybe_epoch}"
         return None
 
 
@@ -201,7 +209,7 @@ class RHEL_CSAFDocument:
                                                    distribution=distro_part,
                                                    module=module_part,
                                                    product=None,
-                                                   package_url=str_ids_to_str_purls.get(m))
+                                                   package_url=str_ids_to_str_purls.get(module_part))
         leaf_products = children - parents
         for p in leaf_products:
             distribution = self.csaf.product_tree.first_parent(p)
@@ -215,7 +223,7 @@ class RHEL_CSAFDocument:
                                                    distribution=distribution,
                                                    module=module,
                                                    product=product_part,
-                                                   package_url=str_ids_to_str_purls.get(p))
+                                                   package_url=str_ids_to_str_purls.get(product_part))
         # TODO: is this needed?
         # reverse dictionary as well
         for k, v in self.product_ids.items():
@@ -371,9 +379,20 @@ class RHEL_CSAFDocument:
             for pid in products:
                 fixed_in = None
                 vendor_advisory = None
-                for va, fixed_products in self.vendor_advisories_with_product_ids:
-                    if pid in fixed_products:
-                        vendor_advisory=va
+                # for va, fixed_products in self.vendor_advisories_with_product_ids:
+                #     if pid in fixed_products:
+                #         vendor_advisory=va
+                for rem in self.csaf.vulnerabilities[0].remediations:
+                    if pid.full_product_id in rem.product_ids:
+                        if rem.category == "vendor_fix":
+                            _, _, advisory_id = rem.url.rpartition("/")
+                            summary = AdvisorySummary(ID=advisory_id, Link=rem.url)
+                            vendor_advisory = VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
+                            break
+                        elif rem.category == "no_fix_planned":
+                            vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
+                            break
+
                 if self.is_fixed_src_rpm(pid):
                     fixed_in = FixedIn(
                         Name=pid.normalized_name,
@@ -403,7 +422,7 @@ class RHEL_CSAFDocument:
                     Severity=self.severity,
                     Link=self.vuln_url,
                     CVSS=cvss_objects,
-                    FixedIn=self.namespaces_to_fixedins.get(ns),
+                    FixedIn=sorted(self.namespaces_to_fixedins.get(ns), key=lambda f: (f.NamespaceName,f.Name,f.Version)),
                 )
                 self.namespaces_to_vulnerabilities[ns].append(vuln)
 
