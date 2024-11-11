@@ -77,10 +77,17 @@ class ProductID:
     module: str | None
     product: str | None
     purl: PackageURL | None
+    module_purl: PackageURL | None
     module_from_slash: bool = False
 
     @classmethod
-    def create(cls, raw: str, distribution: str, module: str | None, product: str | None, package_url: str | None) -> "ProductID":
+    def create(cls,
+               raw: str,
+               distribution: str,
+               module: str | None,
+               product: str | None,
+               package_url: str | None,
+               module_purl: str | None) -> "ProductID":
         # Some product IDs have 3 components, distro:module:product
         # like AppStream-8.9.0.Z.MAIN:nodejs:20:8090020231019152822:a75119d5:nodejs-packaging-0:2021.06-4.module+el8.9.0+19519+e25b965a.noarch
         # which means "for the RHEL 8 appstream, for the nodejs:20 module, the product nodejs-packaging-..."
@@ -99,7 +106,8 @@ class ProductID:
             m = module
             p = product
         purl = PackageURL.from_string(package_url) if package_url else None
-        return cls(raw=raw, distribution=distribution, module=m, product=p, module_from_slash=module_from_slash, purl=purl)
+        m_purl = PackageURL.from_string(module_purl) if module_purl else None
+        return cls(raw=raw, distribution=distribution, module=m, product=p, module_from_slash=module_from_slash, purl=purl, module_purl=m_purl)
 
     @property
     def full_product_id(self) -> str:
@@ -120,6 +128,11 @@ class ProductID:
     @property
     def module_name(self) -> str | None:
         # TODO: make module version available to avoid regex use
+        if self.module_purl:
+            if self.module_purl.version and ":" in self.module_purl.version:
+                return f"{self.module_purl.name}:{self.module_purl.version.split(':')[0]}"
+            return self.module_purl.name
+
         if self.module_from_slash:
             name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
         elif self.module:
@@ -209,21 +222,25 @@ class RHEL_CSAFDocument:
                                                    distribution=distro_part,
                                                    module=module_part,
                                                    product=None,
-                                                   package_url=str_ids_to_str_purls.get(module_part))
+                                                   package_url=str_ids_to_str_purls.get(module_part),
+                                                   module_purl=None)  # TODO: really?
         leaf_products = children - parents
         for p in leaf_products:
             distribution = self.csaf.product_tree.first_parent(p)
             module = self.csaf.product_tree.second_parent(p)
             product_part = p.removeprefix(distribution).removeprefix(":")
+            module_purl = None
             if module:
                 module = module.removeprefix(distribution).removeprefix(":")
                 product_part = product_part.removeprefix(module).removeprefix(":")
                 module = module.removeprefix(distribution).removeprefix(":")
+                module_purl = str_ids_to_str_purls.get(module)
             self.product_ids[p] = ProductID.create(raw=p,
                                                    distribution=distribution,
                                                    module=module,
                                                    product=product_part,
-                                                   package_url=str_ids_to_str_purls.get(product_part))
+                                                   package_url=str_ids_to_str_purls.get(product_part),
+                                                   module_purl=module_purl)
         # TODO: is this needed?
         # reverse dictionary as well
         for k, v in self.product_ids.items():
@@ -390,6 +407,9 @@ class RHEL_CSAFDocument:
                             vendor_advisory = VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
                             break
                         elif rem.category == "no_fix_planned":
+                            vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
+                            break
+                        elif rem.category == "none_available" and rem.details == "Fix deferred":
                             vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
                             break
 
