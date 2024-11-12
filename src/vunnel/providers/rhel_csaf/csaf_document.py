@@ -6,7 +6,7 @@ import orjson
 from cvss import CVSS2, CVSS3
 from packageurl import PackageURL
 
-from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3
+from vunnel.utils.csaf_types import CSAF_JSON, CVSS_V2, CVSS_V3, Remediation
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, VendorAdvisory, AdvisorySummary, Vulnerability
 
 RHEL_CPE_REGEXES = [
@@ -393,7 +393,16 @@ class RHEL_CSAFDocument:
             for pid in products:
                 fixed_in = None
 
-                if self.is_fixed_src_rpm(pid):
+                if self.is_fixed_src_rpm(pid) and not pid.module:
+                    fixed_in = FixedIn(
+                        Name=pid.normalized_name,
+                        NamespaceName=ns,
+                        VersionFormat="rpm",
+                        Version=pid.version or "None", # TODO: the "or None" should be unreachable
+                        Module=pid.module_name,
+                        VendorAdvisory=self.best_applicable_vendor_advisory(pid),
+                    )
+                elif pid.module and not pid.product:
                     fixed_in = FixedIn(
                         Name=pid.normalized_name,
                         NamespaceName=ns,
@@ -428,9 +437,14 @@ class RHEL_CSAFDocument:
 
     def best_applicable_vendor_advisory(self, pid) -> VendorAdvisory | None:
         vendor_advisory = None
+        relevant_categories = {
+            "no_fix_planned",
+            "none_available",
+            "vendor_fix",
+        }
         applicable_remediations = [
             rem for rem in self.csaf.vulnerabilities[0].remediations
-            if pid.full_product_id in rem.product_ids
+            if pid.full_product_id in rem.product_ids and rem.category in relevant_categories
         ]
         fixed_remediations = [
             rem for rem in applicable_remediations
@@ -444,19 +458,32 @@ class RHEL_CSAFDocument:
         ]
         if fixed_remediations and wont_fix_remediations:
             raise ValueError(f"for {pid.full_product_id}, found fixes and wont fix remediations")
-        elif fixed_remediations:
-            fixed_remediations.sort(reverse=True, )
-        if len(applicable_remediations) > 0:
-            latest_rem = applicable_remediations[0]
-            if latest_rem.category == "vendor_fix":
-                _, _, advisory_id = latest_rem.url.rpartition("/")
-                summary = AdvisorySummary(ID=advisory_id, Link=latest_rem.url)
-                vendor_advisory = VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
-            elif latest_rem.category == "no_fix_planned":
-                vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
-            elif latest_rem.category == "none_available" and latest_rem.details == "Fix deferred":
-                vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
-        return vendor_advisory
+
+        if fixed_remediations:
+            fixed_remediations.sort(reverse=True, key=lambda x: x.url or "")
+            return self.vendor_advisory_from_csaf_remediation(fixed_remediations[0])
+
+        if wont_fix_remediations:
+            return self.vendor_advisory_from_csaf_remediation(wont_fix_remediations[0])
+
+        return None
+
+    def vendor_advisory_from_csaf_remediation(self, rem: Remediation | None) -> VendorAdvisory | None:
+        if not rem:
+            return VendorAdvisory(NoAdvisory=False, AdvisorySummary=[])
+
+        if rem.category == "vendor_fix":
+            _, _, advisory_id = rem.url.rpartition("/")
+            summary = AdvisorySummary(ID=advisory_id, Link=rem.url)
+            return VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
+
+        if rem.category == "no_fix_planned":
+            return VendorAdvisory(NoAdvisory=True, AdvisorySummary=[])
+
+        if rem.category == "none_available" and rem.details == "Fix deferred":
+            return VendorAdvisory(NoAdvisory=True, AdvisorySummary=[])
+
+        return VendorAdvisory(NoAdvisory=False, AdvisorySummary=[])
 
     def initialize_metadata(self):
         v = self.csaf.vulnerabilities[0]
