@@ -37,6 +37,7 @@ class Parser:
         self.download_path = os.path.join(self.workspace.input_path, "vex_archive.tar.zst")
         self.advisory_download_path = os.path.join(self.workspace.input_path, "advisory_archive.tar.zst")
         self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
+        os.makedirs(self.csaf_path, exist_ok=True)
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
 
         if not logger:
@@ -82,14 +83,21 @@ class Parser:
         # extract(self.advisory_download_path, self.advisories_path)
 
     def process_changes_and_deletions(self):
+        """process the changes and deletions. deletions.csv is the list of CSAF JSON
+        files that have been deleted. Download it and loop over it, deleting all
+        referenced files. changes.csv is a date-sorted list of when each CSAF JSON
+        file changed. Download it, and loop over the rows, until we get back to the
+        date of the archive, keeping a list of unique files, to get the set of files
+        that have changed since the archive was published. Re-download all of them, over-writing
+        whatever data was in the archive."""
         changes_path = os.path.join(self.csaf_path, "changes.csv")
         deletions_path = os.path.join(self.csaf_path, "deletions.csv")
         with open(deletions_path, newline="") as fh:
             reader = csv.reader(fh)
             for row in reader:
-                deleted_fragement = row[0]
+                deleted_fragment = row[0]
                 try:
-                    os.remove(os.path.join(self.csaf_path, deleted_fragement))
+                    os.remove(os.path.join(self.csaf_path, deleted_fragment))
                 except FileNotFoundError:
                     pass  # trying to delete a file that already doesn't exist
         seen_files = set()
