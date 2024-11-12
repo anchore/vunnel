@@ -127,18 +127,15 @@ class ProductID:
 
     @property
     def module_name(self) -> str | None:
-        # TODO: make module version available to avoid regex use
         if self.module_purl:
             if self.module_purl.version and ":" in self.module_purl.version:
                 return f"{self.module_purl.name}:{self.module_purl.version.split(':')[0]}"
             return self.module_purl.name
 
-        if self.module_from_slash:
-            name = re.sub(PACKAGE_VERSION_REGEX, "", self.product)
-        elif self.module:
-            name = re.sub(MODULE_VERSION_REGEX, "", self.module)
-        else:
-            return None
+        if self.module:
+            return self.module
+
+        return None
 
     @property
     def is_logical_product(self) -> bool:
@@ -395,23 +392,6 @@ class RHEL_CSAFDocument:
                              if any(p in prods for p in products)]
             for pid in products:
                 fixed_in = None
-                vendor_advisory = None
-                # for va, fixed_products in self.vendor_advisories_with_product_ids:
-                #     if pid in fixed_products:
-                #         vendor_advisory=va
-                for rem in self.csaf.vulnerabilities[0].remediations:
-                    if pid.full_product_id in rem.product_ids:
-                        if rem.category == "vendor_fix":
-                            _, _, advisory_id = rem.url.rpartition("/")
-                            summary = AdvisorySummary(ID=advisory_id, Link=rem.url)
-                            vendor_advisory = VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
-                            break
-                        elif rem.category == "no_fix_planned":
-                            vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
-                            break
-                        elif rem.category == "none_available" and rem.details == "Fix deferred":
-                            vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
-                            break
 
                 if self.is_fixed_src_rpm(pid):
                     fixed_in = FixedIn(
@@ -420,7 +400,7 @@ class RHEL_CSAFDocument:
                         VersionFormat="rpm",
                         Version=pid.version or "None", # TODO: the "or None" should be unreachable
                         Module=pid.module_name,
-                        VendorAdvisory=vendor_advisory,
+                        VendorAdvisory=self.best_applicable_vendor_advisory(pid),
                     )
                 elif self.is_known_affected(pid):
                     fixed_in = FixedIn(
@@ -429,7 +409,7 @@ class RHEL_CSAFDocument:
                         VersionFormat="rpm",
                         Version="None",
                         Module=pid.module_name,
-                        VendorAdvisory=vendor_advisory,
+                        VendorAdvisory=self.best_applicable_vendor_advisory(pid),
                     )
                 if fixed_in:
                     self.namespaces_to_fixedins[ns].append(fixed_in)
@@ -442,9 +422,41 @@ class RHEL_CSAFDocument:
                     Severity=self.severity,
                     Link=self.vuln_url,
                     CVSS=cvss_objects,
-                    FixedIn=sorted(self.namespaces_to_fixedins.get(ns), key=lambda f: (f.NamespaceName,f.Name,f.Version)),
+                    FixedIn=sorted(self.namespaces_to_fixedins.get(ns), key=lambda f: (f.NamespaceName,f.Name,f.Module or "",f.Version)),
                 )
                 self.namespaces_to_vulnerabilities[ns].append(vuln)
+
+    def best_applicable_vendor_advisory(self, pid) -> VendorAdvisory | None:
+        vendor_advisory = None
+        applicable_remediations = [
+            rem for rem in self.csaf.vulnerabilities[0].remediations
+            if pid.full_product_id in rem.product_ids
+        ]
+        fixed_remediations = [
+            rem for rem in applicable_remediations
+            if rem.category == "vendor_fix"
+        ]
+        wont_fix_remediations = [
+            rem for rem in applicable_remediations
+            if (rem.category == "no_fix_planned" or
+                (rem.category == "none_available" and rem.details == "Fix deferred")
+                )
+        ]
+        if fixed_remediations and wont_fix_remediations:
+            raise ValueError(f"for {pid.full_product_id}, found fixes and wont fix remediations")
+        elif fixed_remediations:
+            fixed_remediations.sort(reverse=True, )
+        if len(applicable_remediations) > 0:
+            latest_rem = applicable_remediations[0]
+            if latest_rem.category == "vendor_fix":
+                _, _, advisory_id = latest_rem.url.rpartition("/")
+                summary = AdvisorySummary(ID=advisory_id, Link=latest_rem.url)
+                vendor_advisory = VendorAdvisory(AdvisorySummary=[summary], NoAdvisory=False)
+            elif latest_rem.category == "no_fix_planned":
+                vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
+            elif latest_rem.category == "none_available" and latest_rem.details == "Fix deferred":
+                vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=None)
+        return vendor_advisory
 
     def initialize_metadata(self):
         v = self.csaf.vulnerabilities[0]
