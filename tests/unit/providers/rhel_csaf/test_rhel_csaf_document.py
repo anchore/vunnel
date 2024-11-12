@@ -11,7 +11,7 @@ FIXTURE_DIR = Path(__file__).parent / "test-fixtures"
 csaf_test_cases = [
     # "cve-2021-46661.json",
     # "cve-2019-12900.json",
-    # "cve-2019-18276.json",
+    "cve-2019-18276.json",
     # "cve-2024-27316.json",
     "cve-2019-16161.json",
 ]
