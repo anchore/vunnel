@@ -4,7 +4,7 @@ import os.path
 from dataclasses import dataclass
 
 # Note: this metadata.json file currently is not allowed to have a breaking change
-PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION = "1.0.2"
+PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION = "1.0.3"
 
 PROVIDER_ARCHIVE_LISTING_SCHEMA_VERSION = "1.0.0"
 MATCH_EXCLUSION_SCHEMA_VERSION = "1.0.0"
