@@ -9,6 +9,7 @@ from vunnel.providers import (
     amazon,
     chainguard,
     debian,
+    epss,
     github,
     mariner,
     nvd,
@@ -35,6 +36,7 @@ _providers: dict[str, type[provider.Provider]] = {
     ubuntu.Provider.name(): ubuntu.Provider,
     wolfi.Provider.name(): wolfi.Provider,
     chainguard.Provider.name(): chainguard.Provider,
+    epss.Provider.name(): epss.Provider,
 }
 
 
