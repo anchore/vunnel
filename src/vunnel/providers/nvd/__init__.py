@@ -20,6 +20,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    request_retry_count: int = 10
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
     overrides_url: str = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
     overrides_enabled: bool = False
@@ -71,6 +72,7 @@ class Provider(provider.Provider):
             workspace=self.workspace,
             schema=self.__schema__,
             download_timeout=self.config.request_timeout,
+            download_retry_count=self.config.request_retry_count,
             api_key=self.config.api_key,
             logger=self.logger,
             overrides_enabled=self.config.overrides_enabled,

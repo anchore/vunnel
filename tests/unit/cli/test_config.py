@@ -84,6 +84,7 @@ def test_full_config(helpers):
             nvd=providers.nvd.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
+                request_retry_count=50,
                 overrides_enabled=True,
                 overrides_url="https://github.com/anchore/nvd-data-overrides/SOMEWHEREELSE/main.tar.gz",
             ),
