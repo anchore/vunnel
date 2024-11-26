@@ -133,3 +133,32 @@ class TestGetRequests:
         # custom status handler raised the first time it was called,
         # so we expect the second mock response to be returned overall
         assert result == error_response
+
+
+@pytest.mark.parametrize(
+    "interval, jitter, max_value, expected",
+    [
+        (
+            30,  # interval
+            False,  # jitter
+            None,  # max_value
+            [30, 60, 120, 240, 480, 960, 1920, 3840, 7680, 15360, 30720, 61440, 122880, 245760, 491520],  # expected
+        ),
+        (
+            3,  # interval
+            False,  # jitter
+            1000,  # max_value
+            [3, 6, 12, 24, 48, 96, 192, 384, 768, 1000, 1000, 1000, 1000, 1000, 1000],  # expected
+        ),
+    ],
+)
+def test_backoff_sleep_interval(interval, jitter, max_value, expected):
+    actual = [
+        http.backoff_sleep_interval(interval, attempt, jitter=jitter, max_value=max_value) for attempt in range(len(expected))
+    ]
+
+    if not jitter:
+        assert actual == expected
+    else:
+        for i, (a, e) in enumerate(zip(actual, expected)):
+            assert a >= e and a <= e + 1, f"Jittered value out of bounds at attempt {i}: {a} (expected ~{e})"

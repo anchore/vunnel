@@ -20,6 +20,7 @@ def get(  # noqa: PLR0913
     backoff_in_seconds: int = 3,
     timeout: int = DEFAULT_TIMEOUT,
     status_handler: Optional[Callable[[requests.Response], None]] = None,  # noqa: UP007 - python 3.9
+    max_interval: int = 600,
     **kwargs: Any,
 ) -> requests.Response:
     """
@@ -48,7 +49,7 @@ def get(  # noqa: PLR0913
     last_exception: Exception | None = None
     for attempt in range(retries + 1):
         if last_exception:
-            sleep_interval = backoff_in_seconds * 2 ** (attempt - 1) + random.uniform(0, 1)  # noqa: S311
+            sleep_interval = backoff_sleep_interval(backoff_in_seconds, attempt - 1, max_value=max_interval)
             logger.warning(f"will retry in {int(sleep_interval)} seconds...")
             time.sleep(sleep_interval)
 
@@ -73,3 +74,14 @@ def get(  # noqa: PLR0913
         logger.error(f"last retry of GET {url} failed with {last_exception}")
         raise last_exception
     raise Exception("unreachable")
+
+
+def backoff_sleep_interval(interval: int, attempt: int, max_value: None | int = None, jitter: bool = True) -> float:
+    # this is an exponential backoff
+    val = interval * 2**attempt
+    if max_value and val > max_value:
+        val = max_value
+    if jitter:
+        val += random.uniform(0, 1)  # noqa: S311
+        # explanation of S311 disable: rng is not used cryptographically
+    return val

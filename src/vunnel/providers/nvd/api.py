@@ -164,7 +164,6 @@ class NvdAPI:
         response = http.get(
             url,
             self.logger,
-            backoff_in_seconds=30,
             params=payload_str,
             headers=headers,
             timeout=self.timeout,
