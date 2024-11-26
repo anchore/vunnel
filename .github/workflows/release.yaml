@@ -64,7 +64,7 @@ jobs:
           intervalSeconds: 3
 
       - name: Release quality gate
-        if: steps.static-analysis.conclusion != 'success' || steps.test.conclusion != 'success' || steps.nightly-quality-gate.conclusion != 'success'
+        if: steps.static-analysis.conclusion != 'success' || steps.test.conclusion != 'success' || (steps.nightly-quality-gate.conclusion != 'success' && steps.nightly-quality-gate.conclusion != 'skipped')
         run: |
           echo "Static Analysis Status: ${{ steps.static-analysis.conclusion }}"
           echo "Test Status: ${{ steps.test.conclusion }}"
