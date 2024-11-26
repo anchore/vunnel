@@ -38,6 +38,7 @@ providers:
   nvd:
     runtime: *runtime
     request_timeout: 20
+    request_retry_count: 50
     overrides_enabled: true
     overrides_url: https://github.com/anchore/nvd-data-overrides/SOMEWHEREELSE/main.tar.gz
   oracle:

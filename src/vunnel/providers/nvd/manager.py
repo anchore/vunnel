@@ -26,6 +26,7 @@ class Manager:
         overrides_url: str,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
+        download_retry_count: int = 10,
         api_key: str | None = None,
         overrides_enabled: bool = False,
     ) -> None:
@@ -35,7 +36,7 @@ class Manager:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-        self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout)
+        self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout, retries=download_retry_count)
 
         self.overrides = NVDOverrides(
             enabled=overrides_enabled,
@@ -43,6 +44,7 @@ class Manager:
             workspace=workspace,
             logger=logger,
             download_timeout=download_timeout,
+            retries=download_retry_count,
         )
 
         self.urls = [self.api._cve_api_url_]
