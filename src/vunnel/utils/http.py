@@ -45,15 +45,15 @@ def get(  # noqa: PLR0913
                  status_handler= lambda response: None if response.status_code in [200, 201, 405] else response.raise_for_status())
 
     """
-    logger.debug(f"http GET {url}")
     last_exception: Exception | None = None
-    sleep_interval = backoff_in_seconds
     for attempt in range(retries + 1):
         if last_exception:
+            sleep_interval = backoff_in_seconds * 2**(attempt-1) + random.uniform(0, 1)  # noqa: S311
+            logger.warning(f"will retry in {int(sleep_interval)} seconds...")
             time.sleep(sleep_interval)
-            sleep_interval = backoff_in_seconds * 2**attempt + random.uniform(0, 1)  # noqa: S311
-            # explanation of S311 disable: rng is not used cryptographically
+
         try:
+            logger.debug(f"http GET {url} timeout={timeout} retries={retries} backoff={backoff_in_seconds}")
             response = requests.get(url, timeout=timeout, **kwargs)
             if status_handler:
                 status_handler(response)
@@ -62,19 +62,13 @@ def get(  # noqa: PLR0913
             return response
         except requests.exceptions.HTTPError as e:
             last_exception = e
-            will_retry = ""
-            if attempt < retries:
-                will_retry = f" (will retry in {int(backoff_in_seconds)} seconds) "
             # HTTPError includes the attempted request, so don't include it redundantly here
-            logger.warning(f"attempt {attempt + 1} of {retries + 1} failed:{will_retry}{e}")
+            logger.warning(f"attempt {attempt + 1} of {retries + 1} failed: {e}")
         except Exception as e:
             last_exception = e
-            will_retry = ""
-            if attempt < retries:
-                will_retry = f" (will retry in {int(sleep_interval)} seconds) "
             # this is an unexpected exception type, so include the attempted request in case the
             # message from the unexpected exception doesn't.
-            logger.warning(f"attempt {attempt + 1} of {retries + 1}{will_retry}: unexpected exception during GET {url}: {e}")
+            logger.warning(f"attempt {attempt + 1} of {retries + 1}: unexpected exception during GET {url}: {e}")
     if last_exception:
         logger.error(f"last retry of GET {url} failed with {last_exception}")
         raise last_exception
