@@ -5,6 +5,10 @@ on:
       version:
         description: tag the latest commit on main with the given version (prefixed with v)
         required: true
+      bypassQualityGate:
+        description: bypass the quality gate check
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -49,6 +53,7 @@ jobs:
       - name: Check nightly quality gate results
         uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be #v1.2.0
         id: nightly-quality-gate
+        if: ${{ github.event.inputs.bypassQualityGate != 'true' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # This check name is defined as the github action job name (in .github/workflows/nightly-quality-gate.yaml)
