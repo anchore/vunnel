@@ -21,7 +21,13 @@ class NvdAPI:
     _max_results_per_page_: int = 2000
     max_date_range_days: int = 120
 
-    def __init__(self, api_key: str | None = None, logger: logging.Logger | None = None, timeout: int = 30, retries: int = 10) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        logger: logging.Logger | None = None,
+        timeout: int = 30,
+        retries: int = 10,
+    ) -> None:
         self.api_key = api_key
         self.timeout = timeout
         self.retries = retries
@@ -155,7 +161,15 @@ class NvdAPI:
 
         # NVD rate-limiting is detailed at https://nvd.nist.gov/developers/start-here and currently resets on a 30 second
         # rolling window, so setting retry to start trying again after 30 seconds.
-        response = http.get(url, self.logger, backoff_in_seconds=30, params=payload_str, headers=headers, timeout=self.timeout, retries=self.retries)
+        response = http.get(
+            url,
+            self.logger,
+            backoff_in_seconds=30,
+            params=payload_str,
+            headers=headers,
+            timeout=self.timeout,
+            retries=self.retries,
+        )
         response.encoding = "utf-8"
 
         return response

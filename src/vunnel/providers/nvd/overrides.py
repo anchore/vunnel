@@ -17,7 +17,7 @@ class NVDOverrides:
     __file_name__ = "nvd-overrides.tar.gz"
     __extract_name__ = "nvd-overrides"
 
-    def __init__( # noqa: PLR0913
+    def __init__(  # noqa: PLR0913
         self,
         enabled: bool,
         url: str,

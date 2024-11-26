@@ -48,7 +48,7 @@ def get(  # noqa: PLR0913
     last_exception: Exception | None = None
     for attempt in range(retries + 1):
         if last_exception:
-            sleep_interval = backoff_in_seconds * 2**(attempt-1) + random.uniform(0, 1)  # noqa: S311
+            sleep_interval = backoff_in_seconds * 2 ** (attempt - 1) + random.uniform(0, 1)  # noqa: S311
             logger.warning(f"will retry in {int(sleep_interval)} seconds...")
             time.sleep(sleep_interval)
 

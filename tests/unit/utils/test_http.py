@@ -53,7 +53,9 @@ class TestGetRequests:
     @patch("time.sleep")
     @patch("requests.get")
     @patch("random.uniform")
-    def test_succeeds_if_retries_succeed(self, mock_uniform_random, mock_requests, mock_sleep, mock_logger, error_response, success_response):
+    def test_succeeds_if_retries_succeed(
+        self, mock_uniform_random, mock_requests, mock_sleep, mock_logger, error_response, success_response
+    ):
         mock_uniform_random.side_effect = [0.1]
         mock_requests.side_effect = [error_response, success_response]
         http.get("http://example.com/some-path", mock_logger, retries=1, backoff_in_seconds=22)
@@ -97,7 +99,9 @@ class TestGetRequests:
         logged_warnings = [call.args[0] for call in mock_logger.warning.call_args_list]
 
         assert any("HTTP ERROR" in message for message in logged_warnings), "Expected 'HTTP ERROR' in logged warnings."
-        assert any("will retry in 33 seconds" in message for message in logged_warnings), "Expected retry message in logged warnings."
+        assert any(
+            "will retry in 33 seconds" in message for message in logged_warnings
+        ), "Expected retry message in logged warnings."
 
     @patch("time.sleep")
     @patch("requests.get")
