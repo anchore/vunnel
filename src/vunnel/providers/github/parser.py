@@ -33,6 +33,7 @@ from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
 ecosystem_map = {
     "COMPOSER": "composer",
+    "ERLANG": "erlang",
     "GO": "go",
     "MAVEN": "java",
     "NPM": "npm",
