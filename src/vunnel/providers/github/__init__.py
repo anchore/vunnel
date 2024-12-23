@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
-    token: str = "env:GITHUB_TOKEN"
+    token: str = "env:GITHUB_TOKEN"  # noqa: S105
     api_url: str = "https://api.github.com/graphql"
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
