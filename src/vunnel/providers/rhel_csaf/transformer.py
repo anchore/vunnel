@@ -1,7 +1,8 @@
 import re
+from typing import Callable
 
 from vunnel.utils.csaf_types import CSAF_JSON
-from vunnel.utils.vulnerability import FixedIn, Vulnerability
+from vunnel.utils.vulnerability import FixedIn, VendorAdvisory, Vulnerability
 
 RHEL_CPE_REGEXES = [
     r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos|realtime|crb|supplementary))*$",  # appstream has :a:
@@ -47,17 +48,47 @@ class NamespaceMatcher:
         return None
 
 
-def transform_csaf_json(csaf_json: CSAF_JSON) -> list[Vulnerability]:
+def fixed_in_from_product_id(csaf: CSAF_JSON, product_id: str, namespace: str, fixed: bool) -> FixedIn:
+    version = ""
+    if not fixed:
+        version = "None"
+
+    va = VendorAdvisory(NoAdvisory=True, AdvisorySummary=[])
+    if fixed:
+        # TODO: get the fix info from the csaf doc
+        pass
+    return FixedIn(
+        Name="TODO",
+        Module="TODO",
+        VendorAdvisory=va,
+        NamespaceName=namespace,
+        VersionFormat="rpm",
+        Version=version,
+    )
+
+
+def src_only(_csaf: CSAF_JSON, product_id: str) -> bool:
+    return product_id.endswith(".src")
+
+
+def transform_csaf_json(csaf_json: CSAF_JSON, filter: Callable[[CSAF_JSON, str], bool] = src_only) -> list[Vulnerability]:
     ns_matcher = NamespaceMatcher(csaf=csaf_json)
-    ns_to_vulns = {}
+    vuln_dicts = []
+
+    if filter is None:
+        filter = lambda _a, _b: True
+
     for v in csaf_json.vulnerabilities:
+        ns_to_vulns = {}
         cve_name = v.cve
         severity = SEVERITY_DICT.get(csaf_json.document.aggregate_severity.text.lower()) or ""
-        link = next((reference.url for reference in v.references if reference.category == "self"), "")
+        link = next((reference.url for reference in v.references or [] if reference.category == "self"), "")
         description = next((n.text for n in v.notes if n.category == "description"), "")
         for fixed_product_id in sorted(list(v.product_status.fixed)):
+            if not filter(csaf_json, fixed_product_id):
+                continue
             ns = ns_matcher.namespace_from_product_id(fixed_product_id)
-            if ns:
+            if ns and not ns in ns_to_vulns:
                 ns_to_vulns[ns] = Vulnerability(
                     Name=cve_name,
                     NamespaceName=ns,
@@ -67,10 +98,14 @@ def transform_csaf_json(csaf_json: CSAF_JSON) -> list[Vulnerability]:
                     CVSS=[],
                     FixedIn=[],
                 )
+            if ns:
+                ns_to_vulns[ns].FixedIn.append(fixed_in_from_product_id(csaf_json, fixed_product_id, ns, True))
 
         for vulnerable_product_id in sorted(list(v.product_status.known_affected)):
+            # if not filter(csaf_json, vulnerable_product_id):
+            #     continue
             ns = ns_matcher.namespace_from_product_id(vulnerable_product_id)
-            if ns:
+            if ns and not ns in ns_to_vulns:
                 ns_to_vulns[ns] = Vulnerability(
                     Name=cve_name,
                     NamespaceName=ns,
@@ -80,9 +115,12 @@ def transform_csaf_json(csaf_json: CSAF_JSON) -> list[Vulnerability]:
                     CVSS=[],
                     FixedIn=[],
                 )
+            if ns:
+                ns_to_vulns[ns].FixedIn.append(fixed_in_from_product_id(csaf_json, vulnerable_product_id, ns, False))
 
         for likely_vulnerable_product_id in sorted(list(v.product_status.under_investigation)):
             # TODO: convert to "None" fixed in
             pass
+        vuln_dicts.append(ns_to_vulns)
 
-    return list(ns_to_vulns.values())
+    return [vuln for vuln_dict in vuln_dicts for vuln in vuln_dict.values()]
