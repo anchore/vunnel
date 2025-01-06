@@ -38,11 +38,18 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
             if purl.type == "rpmmod":
                 module_pid_to_purl[b.product.product_id] = purl
 
+    affected_top_level_products = []
+    for b in csaf.product_tree.branches[0].branches:
+        if b.category == "product_version" and b.product and b.product.product_id:
+            affected_top_level_products.append(b.product.product_id)
+
     for b in csaf.product_tree.branches[0].product_version_branches():
         if b.product and b.product.product_identification_helper and b.product.product_identification_helper.purl:
             purl_str = b.product.product_identification_helper.purl
             purl = PackageURL.from_string(purl_str)
             if purl.type not in ["rpm", "rpmmod"]:
+                continue
+            if purl.name not in affected_top_level_products:
                 continue
             product_id = b.product.product_id
             qualified_product_ids = [
@@ -52,6 +59,7 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
             for qpi in qualified_product_ids:
                 vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=[])
                 name = purl.name
+
                 namespace_name = ns_matcher.namespace_from_product_id(qpi)
                 if not namespace_name:
                     continue
@@ -99,6 +107,9 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
                 elif qpi in csaf.vulnerabilities[0].product_status.known_affected:
                     version = "None"
                 elif qpi in csaf.vulnerabilities[0].product_status.known_not_affected:
+                    continue
+                elif qpi in csaf.vulnerabilities[0].product_status.under_investigation:
+                    # TODO: is this right?
                     continue
 
                 if version != "None" and ":" not in version:
