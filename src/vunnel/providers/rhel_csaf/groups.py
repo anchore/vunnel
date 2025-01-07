@@ -11,6 +11,30 @@ class RedHatCSAFWrapper:
         self.csaf = csaf
 
 
+class NameFilter:
+    def __init__(self, csaf: CSAF_JSON):
+        affected_top_level_products = []
+        for b in csaf.product_tree.branches[0].branches:
+            if b.category == "product_version" and b.product and b.product.product_id:
+                affected_top_level_products.append(b.product.product_id)
+
+        versionless_source_rpms = []
+        rpm_module_names = []
+        for b in csaf.product_tree.branches[0].product_version_branches():
+            maybe_purl = b.purl()
+            if maybe_purl:
+                purl = PackageURL.from_string(maybe_purl)
+                if purl.qualifiers.get("arch") in ["src", "noarch"] and not purl.version:
+                    versionless_source_rpms.append(purl.name)
+
+                if purl.type == "rpmmod" and purl.name:
+                    rpm_module_names.append(purl.name)
+        self.included = set(affected_top_level_products + versionless_source_rpms + rpm_module_names)
+
+    def include(self, product_name: str) -> bool:
+        return product_name in self.included
+
+
 def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
     """
     namespace -> vulnerabilities -> fixed-ins
@@ -38,18 +62,14 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
             if purl.type == "rpmmod":
                 module_pid_to_purl[b.product.product_id] = purl
 
-    affected_top_level_products = []
-    for b in csaf.product_tree.branches[0].branches:
-        if b.category == "product_version" and b.product and b.product.product_id:
-            affected_top_level_products.append(b.product.product_id)
+    name_filter = NameFilter(csaf=csaf)
+    seen_already = set()
 
     for b in csaf.product_tree.branches[0].product_version_branches():
         if b.product and b.product.product_identification_helper and b.product.product_identification_helper.purl:
             purl_str = b.product.product_identification_helper.purl
             purl = PackageURL.from_string(purl_str)
             if purl.type not in ["rpm", "rpmmod"]:
-                continue
-            if purl.name not in affected_top_level_products:
                 continue
             product_id = b.product.product_id
             qualified_product_ids = [
@@ -62,6 +82,8 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
 
                 namespace_name = ns_matcher.namespace_from_product_id(qpi)
                 if not namespace_name:
+                    continue
+                if namespace_name.endswith(":3") or namespace_name.endswith(":4"):
                     continue
                 if namespace_name not in ns_to_vulnerability:
                     ns_to_vulnerability[namespace_name] = Vulnerability(
@@ -88,12 +110,27 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
                         continue
                     module = purl.namespace.removeprefix("redhat/")
                 else:  # "rpm"
-                    module_pid = csaf.product_tree.second_parent(qpi)
+                    module_pid = None
+                    parent = csaf.product_tree.parent(qpi)
+                    grand_parent = csaf.product_tree.parent(parent or "NONE")
+                    if grand_parent:
+                        module_pid = parent.removeprefix(grand_parent).removeprefix(":")
+                    if not module_pid:
+                        module_pid = csaf.product_tree.second_parent(qpi)
                     if module_pid:
                         module_purl = module_pid_to_purl.get(module_pid)
                         if module_purl:
                             module = f"{module_purl.name}:{module_purl.version.split(':')[0]}"
                 if qpi in csaf.vulnerabilities[0].product_status.fixed:
+                    # a module might be patched all at once, in which case
+                    # there are "fixed" products that were never vulnerable.
+                    # Check whether each fixed product was reported in the top of the
+                    # doc before emitting a FixedIn for it.
+                    if module:
+                        # if not hydra_filter.include(cve_id, purl.name):
+                        #     continue
+                        if not name_filter.include(purl.name):
+                            continue
                     if purl.version:
                         version = purl.version
                     remediations = [r for r in csaf.vulnerabilities[0].remediations if qpi in r.product_ids]
@@ -118,6 +155,12 @@ def all_the_groups(csaf: CSAF_JSON) -> dict[str, Vulnerability]:
                     else:
                         epoch = "0"
                     version = f"{epoch}:{version}"
+
+                fi_tuple = (name, namespace_name, version_format, version, module)
+                if fi_tuple in seen_already:
+                    continue
+
+                seen_already.add(fi_tuple)
 
                 fixed_in = FixedIn(
                     Name=name,

@@ -3,15 +3,15 @@ import csv
 import logging
 import os
 from collections.abc import Generator
-
-
 from datetime import datetime, timedelta, timezone
+
 from vunnel.providers.rhel_csaf.csaf_document import RHEL_CSAFDocument
+from vunnel.providers.rhel_csaf.groups import all_the_groups
 from vunnel.utils import http
 from vunnel.utils.archive import extract
+from vunnel.utils.csaf_types import from_path
 from vunnel.utils.vulnerability import Vulnerability
 from vunnel.workspace import Workspace
-
 
 VEX_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/vex/archive_latest.txt"
 VEX_CHANGES_URL = "https://security.access.redhat.com/data/csaf/v2/vex/changes.csv"
@@ -119,7 +119,8 @@ class Parser:
                     self.download_stream,
                     url=VEX_LATEST_URL.replace("archive_latest.txt", changed_file),
                     dest=os.path.join(self.csaf_path, changed_file),
-                ) : changed_file for changed_file in seen_files
+                ): changed_file
+                for changed_file in seen_files
             }
             concurrent.futures.wait(futures.keys())
             for future, changed_file in futures.items():
@@ -141,10 +142,14 @@ class Parser:
     def process(self) -> Generator[tuple[str, str, Vulnerability]]:
         for file_path in self._csaf_vex_files():
             try:
-                self.logger.debug(f"processing {file_path}")
-                r_doc = RHEL_CSAFDocument.from_path(file_path)
-                for vuln in r_doc.vulnerabilities():
-                    yield vuln.NamespaceName, vuln.Name, vuln
+                self.logger.info(f"processing {file_path}")
+                # r_doc = RHEL_CSAFDocument.from_path(file_path)
+                # for vuln in r_doc.vulnerabilities():
+                #     yield vuln.NamespaceName, vuln.Name, vuln
+                c = from_path(file_path)
+                ns_to_vulns = all_the_groups(c)
+                for ns, vuln in ns_to_vulns.items():
+                    yield ns, vuln.Name, vuln
 
             except Exception as e:
                 self.logger.warning(f"failed to process {file_path}: {e}")
