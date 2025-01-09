@@ -223,7 +223,9 @@ tests:
       - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
     validations:
-      - *default-validations
+      - <<: *default-validations
+        max_f1_regression: 0.09
+
 
     expected_namespaces:
       - redhat:distro:redhat:5

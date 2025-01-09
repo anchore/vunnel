@@ -6,8 +6,8 @@ import shutil
 import pytest
 
 from vunnel import result, workspace
-from vunnel.providers.rhel import Config, Provider, parser
-from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
+from vunnel.providers.rhel_legacy import Config, Provider, parser
+from vunnel.providers.rhel_legacy.parser import Advisory, FixedIn, Parser
 
 
 class TestParser:

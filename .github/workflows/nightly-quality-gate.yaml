@@ -33,7 +33,7 @@ jobs:
           echo "providers=$content" >> $GITHUB_OUTPUT
 
   validate-provider:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-4core-16gb
     needs: select-providers
     strategy:
       matrix:
