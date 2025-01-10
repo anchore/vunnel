@@ -2,7 +2,7 @@ import re
 
 from packageurl import PackageURL
 
-from vunnel.utils.csaf_types import CSAFDoc, Score
+from vunnel.utils.csaf_types import CSAFDoc, Remediation, Score
 from vunnel.utils.vulnerability import CVSS, AdvisorySummary, FixedIn, VendorAdvisory, Vulnerability
 
 RHEL_CPE_REGEXES = [
@@ -93,6 +93,10 @@ def parse_cvss(scores: list[Score], status: str, full_product_id: str) -> CVSS |
     return None
 
 
+def marked_will_not_fix(remediations: list[Remediation], qpi: str) -> bool:
+    return any(r for r in remediations if qpi in r.product_ids and r.category == "no_fix_planned")
+
+
 def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
     csaf: CSAFDoc,
     skip_namespaces: set[str] | None = None,
@@ -147,7 +151,7 @@ def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
             ]
 
             for qpi in qualified_product_ids:
-                vendor_advisory = VendorAdvisory(NoAdvisory=True, AdvisorySummary=[])
+                vendor_advisory = VendorAdvisory(NoAdvisory=marked_will_not_fix(vuln.remediations, qpi), AdvisorySummary=[])
                 name = purl.name
 
                 namespace_name = ns_matcher.namespace_from_product_id(qpi)
