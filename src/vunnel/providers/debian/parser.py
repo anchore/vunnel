@@ -30,6 +30,8 @@ debian_distro_map = {
     "sid": "unstable",
 }
 
+# namespace should match the value found in the /etc/os-release ID field
+namespace = "debian"
 
 class Parser:
     _json_url_ = "https://security-tracker.debian.org/tracker/data/json"
@@ -316,7 +318,7 @@ class Parser:
                                 # populate the static information about the new vuln record
                                 vuln_record["Vulnerability"]["Description"] = vulnerability_data.get("description", "")
                                 vuln_record["Vulnerability"]["Name"] = str(vid)
-                                vuln_record["Vulnerability"]["NamespaceName"] = "debian:" + str(relno)
+                                vuln_record["Vulnerability"]["NamespaceName"] = namespace + ":" + str(relno)
                                 vuln_record["Vulnerability"]["Link"] = "https://security-tracker.debian.org/tracker/" + str(vid)
                                 vuln_record["Vulnerability"]["Severity"] = "Unknown"
                             else:
@@ -357,8 +359,12 @@ class Parser:
                             skip_fixedin = False
                             fixed_el = {
                                 "Name": pkg,
-                                "NamespaceName": "debian:" + str(relno),
+                                "NamespaceName": namespace + ":" + str(relno),
                                 "VersionFormat": "dpkg",
+                                "OS": {
+                                    "ID": namespace,
+                                    "Version": str(relno),
+                                }
                             }
 
                             if "fixed_version" in distro_record:
