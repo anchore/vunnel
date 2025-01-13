@@ -19,10 +19,16 @@ SEVERITY_DICT = {
     "critical": "Critical",
 }
 
+# Product names like this are rarely vulnerable in and of themselves, but
+# are listed in the RHEL CSAF data only because their src RPM or module
+# versioned
+DENY_SUBSTRINGS = ["-langpack-", "-debug", "-debuginfo"]
+
 
 class NamespaceMatcher:
-    def __init__(self, csaf: CSAFDoc):
+    def __init__(self, csaf: CSAFDoc, skip_namespaces: set[str] | None = None):
         prefixes_to_namespaces = {}
+        self.skip_namespaces = skip_namespaces or set()
         for b in csaf.product_tree.branches[0].product_name_branches():
             prefix = b.product_id()
             cpe = b.cpe()
@@ -38,6 +44,8 @@ class NamespaceMatcher:
 
     def namespace_from_product_id(self, pid: str) -> str | None:
         for prefix, ns in self.prefixes_to_namespaces.items():
+            if ns in self.skip_namespaces:
+                continue
             if pid.startswith(prefix):
                 return ns
         return None
@@ -45,27 +53,29 @@ class NamespaceMatcher:
 
 class NameFilter:
     def __init__(self, csaf: CSAFDoc):
-        affected_top_level_products = []
+        self.affected_top_level_products: set[str] = set()
         for b in csaf.product_tree.branches[0].branches:
             if b.category == "product_version" and b.product and b.product.product_id:
-                affected_top_level_products.append(b.product.product_id)
+                self.affected_top_level_products.add(b.product.product_id)
 
-        versionless_source_rpms = []
-        rpm_module_names = []
+        self.versionless_source_rpms: set[str] = set()
+        self.rpm_module_names: set[str] = set()
         for b in csaf.product_tree.branches[0].product_version_branches():
             maybe_purl = b.purl()
             if maybe_purl:
                 purl = PackageURL.from_string(maybe_purl)
                 if purl and purl.qualifiers and isinstance(purl.qualifiers, dict):  # noqa: SIM102
                     if purl.qualifiers.get("arch") in ["src", "noarch"] and not purl.version:
-                        versionless_source_rpms.append(purl.name)
+                        self.versionless_source_rpms.add(purl.name)
 
                 if purl.type == "rpmmod" and purl.name:
-                    rpm_module_names.append(purl.name)
-        self.included = set(affected_top_level_products + versionless_source_rpms + rpm_module_names)
+                    self.rpm_module_names.add(purl.name)
+        self.all_expected_names = self.affected_top_level_products | self.rpm_module_names | self.versionless_source_rpms
 
-    def include(self, product_name: str) -> bool:
-        return product_name in self.included
+    def include(self, product_name: str, module_name: str | None) -> bool:
+        if module_name:
+            return product_name in self.all_expected_names
+        return not any(deny in product_name for deny in DENY_SUBSTRINGS)
 
 
 def base_vulnerability(csaf: CSAFDoc, namespace_name: str) -> Vulnerability:
@@ -124,7 +134,7 @@ def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
     if not csaf.product_tree.branches:
         return {}
 
-    ns_matcher = NamespaceMatcher(csaf=csaf)
+    ns_matcher = NamespaceMatcher(csaf=csaf, skip_namespaces=skip_namespaces)
     ns_to_vulnerability = {}
     module_pid_to_purl = {}
     # Keep a map of product IDs that represent modules to the PURLs
@@ -199,7 +209,7 @@ def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
                     # doc before emitting a FixedIn for it.
                     # Therefore, only include packages that are part of a module if the
                     # name filter includes them
-                    if module and not name_filter.include(purl.name):
+                    if not name_filter.include(purl.name, module):
                         continue
                     if purl.version:
                         version = purl.version
