@@ -122,11 +122,16 @@ class Parser:
                         "Version": pkg_version,
                         "VersionFormat": "apk",
                         "NamespaceName": self.namespace + ":" + str(release),
+                        "OS": self.os_info(release),
                     }
 
                     vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
         return vuln_dict
+
+    def os_info(self, release: any) -> dict[str, str]:
+        # note: ID is based off of the /etc/os-release ID field
+        return {"ID": self.namespace, "Version": str(release)}
 
     def get(self):
         """
