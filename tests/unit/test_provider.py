@@ -899,7 +899,7 @@ def assert_dummy_workspace_state(ws):
         store=result.StoreStrategy.FLAT_FILE.value,
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
-        listing=workspace.File(digest="b23db1a0e34dad13", algorithm="xxh64", path="checksums"),
+        listing=workspace.File(digest="b49b381435d0d63a", algorithm="xxh64", path="checksums"),
         timestamp=None,
         schema=schema.ProviderStateSchema(),
     )

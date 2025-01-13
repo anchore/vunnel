@@ -46,6 +46,7 @@ packages:
 reponame: main
 urlprefix: http://dl-cdn.alpinelinux.org/alpine
 """
+
     @pytest.fixture()
     def mock_parsed_data(self):
         """

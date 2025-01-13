@@ -154,10 +154,12 @@ class FixedIn(JsonifierMixin):
         self.VendorAdvisory = None
         self.OS = None
 
+
 class OperatingSystem(JsonifierMixin):
     def __init__(self, identifier=None, version=None):
         self.ID = identifier
         self.Version = version
+
 
 class Severity(enum.IntEnum):
     Unknown = 1

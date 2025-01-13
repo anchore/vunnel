@@ -264,5 +264,3 @@ class Parser:
         for release, dbtype_data_dict in self._load():
             # normalize the loaded data
             yield release, self._normalize(release, dbtype_data_dict)
-
-

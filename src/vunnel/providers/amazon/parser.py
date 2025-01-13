@@ -244,6 +244,7 @@ class OperatingSystem(JsonifierMixin):
         self.ID = identifier
         self.Version = version
 
+
 class PackagesHTMLParser(HTMLParser):
     _new_packages_tuple_ = ("id", "new_packages")
     _arch_list_ = ["x86_64:", "noarch:", "src:"]  # noqa: RUF012

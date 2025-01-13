@@ -25,7 +25,7 @@ from vunnel.utils.oval_v2 import (
     VulnerabilityParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability, OperatingSystem
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, OperatingSystem, Vulnerability
 
 if TYPE_CHECKING:
     from vunnel.workspace import Workspace
@@ -308,7 +308,7 @@ class Parser:
                             Version=pkg_version,
                             Module=None,
                             VendorAdvisory=None,
-                            OS=OperatingSystem(ID=namespace, Version=release_version)
+                            OS=OperatingSystem(ID=namespace, Version=release_version),
                         ),
                     )
 

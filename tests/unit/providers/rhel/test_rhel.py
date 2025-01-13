@@ -510,88 +510,36 @@ class TestParser:
         assert Parser._get_name_version(package) == (name, version)
 
 
-@pytest.mark.parametrize("fix_version, platform, expected", [
-    # go case
-    (
-        "0:1.0.0-8.el8_8.1",
-        "8.0",
-        "8.8.1"
-    ),
-    (
-        "0:2.3.4-10.el9_2.5",
-        "9.0",
-        "9.2.5"
-    ),
-    # no minor version after underscore
-    (
-        "1:3.4.5-2.el7",
-        "7.0",
-        "7"
-    ),
-    # non-digit after underscore
-    (
-        "0:1.2.3-4.el8_beta2",
-        "8.0",
-        "8"
-    ),
-    # multiple hyphens in version
-    (
-        "0:1.2-3-4.el9_4.3",
-        "9.0",
-        "9.4.3"
-    ),
-    # platform fallback cases
-    (
-        "invalid-format",  # no hyphen
-        "7.0",
-        "7.0"
-    ),
-    (
-        "1.0.0-noel8",  # no .el format
-        "8.0",
-        "8.0"
-    ),
-    (
-        "1.0.0-8el8",  # missing dot before el
-        "9.0",
-        "9.0"
-    ),
-    # edge cases
-    (
-        "",  # empty string
-        "8.0",
-        "8.0"
-    ),
-    (
-        "0:1.0.0-8.el",  # missing version after el
-        "7.0",
-        "7.0"
-    ),
-    (
-        "0:1.0.0-8.el8_",  # empty after underscore
-        "8.0",
-        "8"
-    ),
-    (
-        "0:1.0.0-8.el8a_2.1",  # non-digit in major version
-        "8.0",
-        "8"
-    ),
-    # complex version strings
-    (
-        "0:1.2.3-4.el8_4_beta1",  # multiple underscores
-        "8.0",
-        "8.4"
-    ),
-    (
-        "1:2.3.4-5.el9_0.1",  # zero in minor version
-        "9.0",
-        "9.0.1"
-    ),
-])
+@pytest.mark.parametrize(
+    "fix_version, platform, expected",
+    [
+        # go case
+        ("0:1.0.0-8.el8_8.1", "8.0", "8.8.1"),
+        ("0:2.3.4-10.el9_2.5", "9.0", "9.2.5"),
+        # no minor version after underscore
+        ("1:3.4.5-2.el7", "7.0", "7"),
+        # non-digit after underscore
+        ("0:1.2.3-4.el8_beta2", "8.0", "8"),
+        # multiple hyphens in version
+        ("0:1.2-3-4.el9_4.3", "9.0", "9.4.3"),
+        # platform fallback cases
+        ("invalid-format", "7.0", "7.0"),  # no hyphen
+        ("1.0.0-noel8", "8.0", "8.0"),  # no .el format
+        ("1.0.0-8el8", "9.0", "9.0"),  # missing dot before el
+        # edge cases
+        ("", "8.0", "8.0"),  # empty string
+        ("0:1.0.0-8.el", "7.0", "7.0"),  # missing version after el
+        ("0:1.0.0-8.el8_", "8.0", "8"),  # empty after underscore
+        ("0:1.0.0-8.el8a_2.1", "8.0", "8"),  # non-digit in major version
+        # complex version strings
+        ("0:1.2.3-4.el8_4_beta1", "8.0", "8.4"),  # multiple underscores
+        ("1:2.3.4-5.el9_0.1", "9.0", "9.0.1"),  # zero in minor version
+    ],
+)
 def test_parse_release(fix_version: str, platform: str, expected: str):
     result = parse_release(fix_version, platform)
     assert result == expected, f"Expected {expected} for fix_version={fix_version}, platform={platform}, but got {result}"
+
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(

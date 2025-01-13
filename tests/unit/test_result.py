@@ -74,18 +74,18 @@ def sqlite_existing_workspace_with_partial_results(sqlite_existing_workspace: wo
         (
             result.ResultStatePolicy.DELETE_BEFORE_WRITE,
             [
-                workspace.File(digest="fc882c085f58a6b4", path="results/dummy-result-3.json", algorithm="xxh64"),
-                workspace.File(digest="7811995c51f2fdd0", path="results/dummy-result-4.json", algorithm="xxh64"),
+                workspace.File(digest="c85bdf1476529126", path="results/dummy-result-3.json", algorithm="xxh64"),
+                workspace.File(digest="f1857a0441964840", path="results/dummy-result-4.json", algorithm="xxh64"),
             ],
             2,
         ),
         (
             result.ResultStatePolicy.KEEP,
             [
-                workspace.File(digest="903bd98818e2382e", path="results/dummy-result-1.json", algorithm="xxh64"),
-                workspace.File(digest="19d53931485fa9d0", path="results/dummy-result-2.json", algorithm="xxh64"),
-                workspace.File(digest="fc882c085f58a6b4", path="results/dummy-result-3.json", algorithm="xxh64"),
-                workspace.File(digest="7811995c51f2fdd0", path="results/dummy-result-4.json", algorithm="xxh64"),
+                workspace.File(digest="e2dede98a3ac7ca2", path="results/dummy-result-1.json", algorithm="xxh64"),
+                workspace.File(digest="62006fc5eff60d91", path="results/dummy-result-2.json", algorithm="xxh64"),
+                workspace.File(digest="c85bdf1476529126", path="results/dummy-result-3.json", algorithm="xxh64"),
+                workspace.File(digest="f1857a0441964840", path="results/dummy-result-4.json", algorithm="xxh64"),
             ],
             4,
         ),

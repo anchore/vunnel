@@ -9,7 +9,7 @@ from xsdata.formats.dataclass.parsers.config import ParserConfig
 
 from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoState, RpminfoTest
 from vunnel.utils import http
-from vunnel.utils.vulnerability import FixedIn, Vulnerability, OperatingSystem
+from vunnel.utils.vulnerability import FixedIn, OperatingSystem, Vulnerability
 
 if TYPE_CHECKING:
     import logging
@@ -241,6 +241,7 @@ VERSION_TO_OS_ID = {
     "1.0": "mariner",
     "2.0": "mariner",
 }
+
 
 class Parser:
     def __init__(self, workspace: Workspace, download_timeout: int, allow_versions: list[Any], logger: logging.Logger):

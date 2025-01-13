@@ -33,6 +33,7 @@ debian_distro_map = {
 # namespace should match the value found in the /etc/os-release ID field
 namespace = "debian"
 
+
 class Parser:
     _json_url_ = "https://security-tracker.debian.org/tracker/data/json"
     _dsa_url_ = "https://salsa.debian.org/security-tracker-team/security-tracker/raw/master/data/DSA/list"
@@ -364,7 +365,7 @@ class Parser:
                                 "OS": {
                                     "ID": namespace,
                                     "Version": str(relno),
-                                }
+                                },
                             }
 
                             if "fixed_version" in distro_record:

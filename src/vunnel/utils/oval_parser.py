@@ -183,7 +183,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
                     "Module": x[2],
                     "VersionFormat": "rpm",  # hard code version format for now
                     "NamespaceName": ns_name,
-                    "OS": _craft_os(ns_name,  x[1]),
+                    "OS": _craft_os(ns_name, x[1]),
                 }
                 for x in ns_pkgs_dict[ns_name]
             ]
@@ -211,29 +211,28 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
         else:
             vuln_dict[(name, ns_name)] = (def_version, v)
 
-def _craft_os(ns_name: str,  fix_version: str) -> dict[str, str]:
-    name = ns_name.split(":")[0]
+
+def _craft_os(ns_name: str, fix_version: str) -> dict[str, str]:
     # the fix version is in the form: name-version-release, for example tigervnc-server-1.13.1-8.el9_4.3.
     # we need to get the OS version from the fix version (in this example, 9.4.3)
+    name = ns_name.split(":", maxsplit=1)[0]
 
-    release_info = fix_version.split("-")[-1]
-    major_version_section = release_info.split("_")[0].split("el")[-1]
-    # get any digits before any non-digit character, split so the remaining version info can be extracted later
-    major_version = re.search(r"\d+", major_version_section).group(0)
-    if not major_version:
-        raise ValueError(f"Unable to extract major version from {fix_version!r}")
+    version_pattern = r"\.el(\d+)(?:_([0-9.]+))?"
+    match = re.search(version_pattern, fix_version)
+    if not match:
+        raise ValueError(f"Unable to extract version from {fix_version!r}")
 
-    remaining_version = major_version_section[len(major_version):]
-    if "_" in release_info:
-        remaining_version = remaining_version.split("_")[-1]
-    else:
-        remaining_version = ""
+    major_version = match.group(1)
+    minor_version = match.group(2)
 
     version = major_version
-    if remaining_version:
-        version = f"{major_version}.{remaining_version}"
+    if minor_version:
+        version = f"{major_version}.{minor_version}"
 
-    return {"ID": name, "Version": f"{version}"}
+    return {
+        "ID": name,
+        "Version": version,
+    }
 
 
 def _process_criteria(element_a, oval_ns, config: Config):

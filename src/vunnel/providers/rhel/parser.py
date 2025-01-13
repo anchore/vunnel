@@ -899,6 +899,7 @@ class RHELCVSS3:
             },
         }
 
+
 def parse_release(fix_version: str, platform: str) -> str:
     # attempt to parse 0:1.0.0-8.el8_8.1 for the release info (8.8.1)
     # otherwise fallback to the platform version
@@ -907,7 +908,7 @@ def parse_release(fix_version: str, platform: str) -> str:
     except IndexError:
         return platform
 
-    el_match = re.search(r'\.el(\d+)(?:_([0-9.]+))?', last_section)
+    el_match = re.search(r"\.el(\d+)(?:_([0-9.]+))?", last_section)
     if not el_match:
         return platform
 
