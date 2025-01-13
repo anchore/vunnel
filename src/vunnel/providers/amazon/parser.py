@@ -236,7 +236,7 @@ class FixedIn(JsonifierMixin):
         self.NamespaceName = None
         self.VersionFormat = None
         self.Version = None
-        self.OperatingSystem = None
+        self.OS = None
 
 
 class OperatingSystem(JsonifierMixin):
@@ -324,7 +324,7 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         f.NamespaceName = v.NamespaceName
         f.VersionFormat = "rpm"
         f.Version = item.ver
-        f.OperatingSystem = OperatingSystem(identifier=namespace, version=version)
+        f.OS = OperatingSystem(identifier=namespace, version=version)
         v.FixedIn.append(f)
 
     return v

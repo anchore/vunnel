@@ -7,7 +7,7 @@
         {
           "Name": "device-mapper-multipath",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -17,7 +17,7 @@
         {
           "Name": "device-mapper-multipath-debuginfo",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -27,7 +27,7 @@
         {
           "Name": "device-mapper-multipath-debugsource",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -37,7 +37,7 @@
         {
           "Name": "device-mapper-multipath-devel",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -47,7 +47,7 @@
         {
           "Name": "device-mapper-multipath-libs",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -57,7 +57,7 @@
         {
           "Name": "device-mapper-multipath-libs-debuginfo",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -67,7 +67,7 @@
         {
           "Name": "kpartx",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -77,7 +77,7 @@
         {
           "Name": "kpartx-debuginfo",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -87,7 +87,7 @@
         {
           "Name": "libdmmp",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -97,7 +97,7 @@
         {
           "Name": "libdmmp-debuginfo",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
@@ -107,7 +107,7 @@
         {
           "Name": "libdmmp-devel",
           "NamespaceName": "amzn:2023",
-          "OperatingSystem": {
+          "OS": {
             "ID": "amzn",
             "Version": "2023"
           },
