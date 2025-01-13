@@ -8,7 +8,7 @@ from pytest_unordered import unordered
 from vunnel import result, workspace, utils
 from vunnel.providers.mariner import Config, Provider, parser
 from vunnel.providers.mariner.parser import MarinerXmlFile
-from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
+from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory, OperatingSystem
 
 
 @pytest.mark.parametrize(
@@ -33,6 +33,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="> 0:1.19.0.cm2, < 0:1.20.7-1.cm2",
+                            OS=OperatingSystem(ID="mariner", Version="2.0"),
                         )
                     ],
                     Metadata={},
@@ -53,6 +54,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
+                            OS=OperatingSystem(ID="mariner", Version="2.0"),
                         )
                     ],
                     Metadata={},
@@ -73,6 +75,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="< 0:8.0.33-1.cm2",
+                            OS=OperatingSystem(ID="mariner", Version="2.0"),
                         )
                     ],
                     Metadata={},
@@ -93,6 +96,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="<= 0:9.16.33-1.cm2",
+                            OS=OperatingSystem(ID="mariner", Version="2.0"),
                         ),
                     ],
                 ),
@@ -117,6 +121,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            OS=OperatingSystem(ID="azurelinux", Version="3.0"),
                         )
                     ],
                     Metadata={},
@@ -137,6 +142,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            OS=OperatingSystem(ID="azurelinux", Version="3.0"),
                         )
                     ],
                     Metadata={},
@@ -157,6 +163,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:18.2.1-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            OS=OperatingSystem(ID="azurelinux", Version="3.0"),
                         )
                     ],
                     Metadata={},
