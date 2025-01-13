@@ -9,6 +9,10 @@
           "Module": null,
           "Name": "kernel-uek",
           "NamespaceName": "ol:6",
+          "OS": {
+            "ID": "ol",
+            "Version": "6"
+          },
           "Version": "0:2.6.39-400.302.2.el6uek",
           "VersionFormat": "rpm"
         },
@@ -16,6 +20,10 @@
           "Module": null,
           "Name": "kernel-uek-debug",
           "NamespaceName": "ol:6",
+          "OS": {
+            "ID": "ol",
+            "Version": "6"
+          },
           "Version": "0:2.6.39-400.302.2.el6uek",
           "VersionFormat": "rpm"
         },
@@ -23,6 +31,10 @@
           "Module": null,
           "Name": "kernel-uek-debug-devel",
           "NamespaceName": "ol:6",
+          "OS": {
+            "ID": "ol",
+            "Version": "6"
+          },
           "Version": "0:2.6.39-400.302.2.el6uek",
           "VersionFormat": "rpm"
         },
@@ -30,6 +42,10 @@
           "Module": null,
           "Name": "kernel-uek-devel",
           "NamespaceName": "ol:6",
+          "OS": {
+            "ID": "ol",
+            "Version": "6"
+          },
           "Version": "0:2.6.39-400.302.2.el6uek",
           "VersionFormat": "rpm"
         },
@@ -37,6 +53,10 @@
           "Module": null,
           "Name": "kernel-uek-doc",
           "NamespaceName": "ol:6",
+          "OS": {
+            "ID": "ol",
+            "Version": "6"
+          },
           "Version": "0:2.6.39-400.302.2.el6uek",
           "VersionFormat": "rpm"
         },
@@ -44,6 +64,10 @@
           "Module": null,
           "Name": "kernel-uek-firmware",
           "NamespaceName": "ol:6",
+          "OS": {
+            "ID": "ol",
+            "Version": "6"
+          },
           "Version": "0:2.6.39-400.302.2.el6uek",
           "VersionFormat": "rpm"
         }
@@ -76,5 +100,5 @@
       "Severity": "High"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.3.json"
 }
