@@ -25,11 +25,13 @@ from vunnel.utils.oval_v2 import (
     VulnerabilityParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability, OperatingSystem
 
 if TYPE_CHECKING:
     from vunnel.workspace import Workspace
 
+
+# namespace should match the value found in the /etc/os-release ID field (e.g. registry.suse.com/suse/sle15:15.2)
 namespace = "sles"
 
 
@@ -306,6 +308,7 @@ class Parser:
                             Version=pkg_version,
                             Module=None,
                             VendorAdvisory=None,
+                            OS=OperatingSystem(ID=namespace, Version=release_version)
                         ),
                     )
 
