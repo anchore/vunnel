@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from vunnel import workspace
 
+# namespace should match the value found in the /etc/os-release ID field
 namespace = "alpine"
 feedtype = "vulnerabilities"
 purge_unreported = True
@@ -242,10 +243,15 @@ class Parser:
                             fixed_el["NamespaceName"] = namespace + ":" + str(release)
                             fixed_el["Name"] = pkg
                             fixed_el["Version"] = pkg_version
+                            fixed_el["OS"] = self.os_info(release)
 
                             vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
         return vuln_dict
+
+    def os_info(self, release: any) -> dict[str, str]:
+        # note: ID is based off of the /etc/os-release ID field
+        return {"ID": namespace, "Version": str(release)}
 
     def get(self):
         """
@@ -258,3 +264,5 @@ class Parser:
         for release, dbtype_data_dict in self._load():
             # normalize the loaded data
             yield release, self._normalize(release, dbtype_data_dict)
+
+
