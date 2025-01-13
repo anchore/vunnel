@@ -7,66 +7,110 @@
         {
           "Name": "device-mapper-multipath",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "device-mapper-multipath-debuginfo",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "device-mapper-multipath-debugsource",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "device-mapper-multipath-devel",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "device-mapper-multipath-libs",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "device-mapper-multipath-libs-debuginfo",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kpartx",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kpartx-debuginfo",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "libdmmp",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "libdmmp-debuginfo",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         },
         {
           "Name": "libdmmp-devel",
           "NamespaceName": "amzn:2023",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2023"
+          },
           "Version": "0.8.7-16.amzn2023.0.1",
           "VersionFormat": "rpm"
         }
@@ -90,5 +134,5 @@
       "Severity": "High"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.3.json"
 }

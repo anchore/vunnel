@@ -7,78 +7,130 @@
         {
           "Name": "vim",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-X11",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-X11-debuginfo",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-common",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-common-debuginfo",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-debuginfo",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-debugsource",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-default-editor",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-enhanced",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-enhanced-debuginfo",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-filesystem",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-minimal",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
           "Name": "vim-minimal-debuginfo",
           "NamespaceName": "amzn:2022",
+          "OperatingSystem": {
+            "ID": "amzn",
+            "Version": "2022"
+          },
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         }
@@ -105,5 +157,5 @@
       "Severity": "Medium"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.3.json"
 }
