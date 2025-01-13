@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import os
-import shutil
 
 import pytest
 
 from vunnel import result, workspace
-from vunnel.providers.rhel import Config, Provider, parser
-from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
+from vunnel.providers.rhel import Config, Provider
+from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser, parse_release
 
 
 class TestParser:
@@ -510,6 +509,89 @@ class TestParser:
     def test_get_name_version(self, package, name, version):
         assert Parser._get_name_version(package) == (name, version)
 
+
+@pytest.mark.parametrize("fix_version, platform, expected", [
+    # go case
+    (
+        "0:1.0.0-8.el8_8.1",
+        "8.0",
+        "8.8.1"
+    ),
+    (
+        "0:2.3.4-10.el9_2.5",
+        "9.0",
+        "9.2.5"
+    ),
+    # no minor version after underscore
+    (
+        "1:3.4.5-2.el7",
+        "7.0",
+        "7"
+    ),
+    # non-digit after underscore
+    (
+        "0:1.2.3-4.el8_beta2",
+        "8.0",
+        "8"
+    ),
+    # multiple hyphens in version
+    (
+        "0:1.2-3-4.el9_4.3",
+        "9.0",
+        "9.4.3"
+    ),
+    # platform fallback cases
+    (
+        "invalid-format",  # no hyphen
+        "7.0",
+        "7.0"
+    ),
+    (
+        "1.0.0-noel8",  # no .el format
+        "8.0",
+        "8.0"
+    ),
+    (
+        "1.0.0-8el8",  # missing dot before el
+        "9.0",
+        "9.0"
+    ),
+    # edge cases
+    (
+        "",  # empty string
+        "8.0",
+        "8.0"
+    ),
+    (
+        "0:1.0.0-8.el",  # missing version after el
+        "7.0",
+        "7.0"
+    ),
+    (
+        "0:1.0.0-8.el8_",  # empty after underscore
+        "8.0",
+        "8"
+    ),
+    (
+        "0:1.0.0-8.el8a_2.1",  # non-digit in major version
+        "8.0",
+        "8"
+    ),
+    # complex version strings
+    (
+        "0:1.2.3-4.el8_4_beta1",  # multiple underscores
+        "8.0",
+        "8.4"
+    ),
+    (
+        "1:2.3.4-5.el9_0.1",  # zero in minor version
+        "9.0",
+        "9.0.1"
+    ),
+])
+def test_parse_release(fix_version: str, platform: str, expected: str):
+    result = parse_release(fix_version, platform)
+    assert result == expected, f"Expected {expected} for fix_version={fix_version}, platform={platform}, but got {result}"
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(

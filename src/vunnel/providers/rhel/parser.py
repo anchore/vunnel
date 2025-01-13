@@ -24,6 +24,7 @@ from .oval_parser import Parser as RHELOvalParser
 if TYPE_CHECKING:
     import requests
 
+# namespace should match the value found in the /etc/os-release ID field
 namespace = "rhel"
 
 
@@ -816,6 +817,7 @@ class Parser:
                             "VersionFormat": "rpm",  # hard code version format for now
                             "NamespaceName": ns,
                             "VendorAdvisory": a,
+                            "OS": {"ID": namespace, "Version": parse_release(artifact.version, platform)},
                         },
                     )
 
@@ -896,3 +898,23 @@ class RHELCVSS3:
                 "base_severity": self.cvss3_obj.severities()[0],
             },
         }
+
+def parse_release(fix_version: str, platform: str) -> str:
+    # attempt to parse 0:1.0.0-8.el8_8.1 for the release info (8.8.1)
+    # otherwise fallback to the platform version
+    try:
+        last_section = fix_version.split("-")[-1]
+    except IndexError:
+        return platform
+
+    el_match = re.search(r'\.el(\d+)(?:_([0-9.]+))?', last_section)
+    if not el_match:
+        return platform
+
+    major_version = el_match.group(1)
+    minor_version = el_match.group(2)
+
+    if not minor_version:
+        return major_version
+
+    return f"{major_version}.{minor_version}"
