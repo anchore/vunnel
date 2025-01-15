@@ -78,19 +78,21 @@ def test_base_vulnerability():
     assert vuln.Link == link
 
 
-@pytest.mark.parametrize("remediations,product_id,want_marked_will_not_fix",
-                         [
-                         ([], "any", False),
-                         (
-                            [Remediation(category="no_fix_planned", product_ids=set(["too-old-product"]), details="seriuosly, upgrade")],
-                            "too-old-product",
-                            True
-                         ),
-                         (
-                            [Remediation(category="no_fix_planned", product_ids=set(["too-old-product"]), details="seriuosly, upgrade")],
-                            "newer-product",
-                            False,
-                         )
-                         ])
+@pytest.mark.parametrize(
+    "remediations,product_id,want_marked_will_not_fix",
+    [
+        ([], "any", False),
+        (
+            [Remediation(category="no_fix_planned", product_ids=set(["too-old-product"]), details="seriuosly, upgrade")],
+            "too-old-product",
+            True,
+        ),
+        (
+            [Remediation(category="no_fix_planned", product_ids=set(["too-old-product"]), details="seriuosly, upgrade")],
+            "newer-product",
+            False,
+        ),
+    ],
+)
 def test_marked_will_not_fix(remediations, product_id, want_marked_will_not_fix):
     assert marked_will_not_fix(remediations, product_id) == want_marked_will_not_fix

@@ -126,7 +126,7 @@ exclude = '''(?x)(
 )'''
 
 [tool.black]
-line-length = 130 # this should match tool.ruff.line-length below
+line-length = 130
 exclude = '''
 (
   /(
@@ -175,7 +175,7 @@ dirty = true
 [tool.ruff]
 cache-dir = ".cache/ruff"
 # allow for a wide-birth relative to what black will correct to
-line-length = 130 # this should match tool.black.line-length above
+line-length = 150
 
 extend-exclude = [
   "**/tests/**",
