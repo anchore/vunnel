@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/grype-db.tar.gz
+      version: fix-rpm-release-without-build-no+import-db=build/grype-db.tar.gz
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main
+      version: fix-rpm-release-without-build-no
       takes: SBOM
       label: reference
 
@@ -223,8 +223,7 @@ tests:
       - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
     validations:
-      - <<: *default-validations
-        max_f1_regression: 0.09
+      - *default-validations
 
 
     expected_namespaces:
