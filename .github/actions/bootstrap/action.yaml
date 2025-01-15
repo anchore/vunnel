@@ -14,7 +14,7 @@ inputs:
   poetry-version:
     description: "Poetry version to install"
     required: true
-    default: "1.8.3"
+    default: "2.0.0"
   use-poetry-cache:
     description: "Restore poetry cache"
     required: true
