@@ -6,7 +6,8 @@ from vunnel.utils.csaf_types import CSAFDoc, Remediation, Score
 from vunnel.utils.vulnerability import CVSS, AdvisorySummary, FixedIn, VendorAdvisory, Vulnerability
 
 RHEL_CPE_REGEXES = [
-    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos|realtime|crb|supplementary))*$",  # appstream has :a:
+    # AppStream sometimes has ":a:" in CPE, not ":o:"
+    r"^cpe:/[ao]:redhat:enterprise_linux:(\d+)(::(client|server|workstation|appstream|baseos|realtime|crb|supplementary))*$",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_extras_rt:(\d+)",
     r"^cpe:/a:redhat:rhel_virtualization:(\d+)(::(client|server))?",
@@ -161,13 +162,12 @@ def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
             ]
 
             for qpi in qualified_product_ids:
-                vendor_advisory = VendorAdvisory(NoAdvisory=marked_will_not_fix(vuln.remediations, qpi), AdvisorySummary=[])
+                if qpi in vuln.product_status.known_not_affected or qpi in vuln.product_status.under_investigation:
+                    continue
                 name = purl.name
 
                 namespace_name = ns_matcher.namespace_from_product_id(qpi)
                 if not namespace_name:
-                    continue
-                if skip_namespaces and namespace_name in skip_namespaces:
                     continue
                 if namespace_name not in ns_to_vulnerability:
                     ns_to_vulnerability[namespace_name] = base_vulnerability(csaf, namespace_name)
@@ -213,7 +213,7 @@ def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
                         continue
                     if purl.version:
                         version = purl.version
-                    remediations = [r for r in vuln.remediations if qpi in r.product_ids]
+                    remediations = [r for r in vuln.remediations if qpi in r.product_ids and r.category == "vendor_fix"]
                     if remediations and remediations[0].url:
                         vendor_advisory = VendorAdvisory(
                             NoAdvisory=False,
@@ -222,12 +222,8 @@ def vulnerabilities_by_namespace(  # noqa: C901, PLR0912, PLR0915
                             ],
                         )
                 elif qpi in vuln.product_status.known_affected:
+                    vendor_advisory = VendorAdvisory(NoAdvisory=marked_will_not_fix(vuln.remediations, qpi), AdvisorySummary=[])
                     version = "None"
-                elif qpi in vuln.product_status.known_not_affected:
-                    continue
-                elif qpi in vuln.product_status.under_investigation:
-                    # TODO: should this be configurable?
-                    continue
 
                 if version != "None" and ":" not in version:
                     epoch = purl.qualifiers.get("epoch", "0") if purl.qualifiers and isinstance(purl.qualifiers, dict) else "0"
