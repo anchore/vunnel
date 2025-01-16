@@ -522,6 +522,10 @@ class TestParser:
         ("0:1.2.3-4.el8_beta2", "8.0", "8"),
         # multiple hyphens in version
         ("0:1.2-3-4.el9_4.3", "9.0", "9.4.3"),
+        # with metadata after "+"
+        ("0:1.0.0-8.el8_8.1+meta123", "8.0", "8.8.1"),
+        ("0:2.3.4-10.el9_2.5+build456", "9.0", "9.2.5"),
+        ("1:3.4.5-2.el7+commit789", "7.0", "7"),
         # platform fallback cases
         ("invalid-format", "7.0", "7.0"),  # no hyphen
         ("1.0.0-noel8", "8.0", "8.0"),  # no .el format
@@ -534,6 +538,14 @@ class TestParser:
         # complex version strings
         ("0:1.2.3-4.el8_4_beta1", "8.0", "8.4"),  # multiple underscores
         ("1:2.3.4-5.el9_0.1", "9.0", "9.0.1"),  # zero in minor version
+        # module cases
+        ("3:10.3.28-1.module_el8.3.0+757+d382997d", "8.3", "8.3.0"),
+        ("1:3.5.4-5.module_el8.6.0+1030+8d97e896", "8.6", "8.6.0"),
+        ("1:14.18.2-2.module_el8.7.0+1151+0d09c14c", "8.7", "8.7.0"),
+        # fallback for invalid module cases
+        ("3:10.3.28-1.module_el8+hashmeta", "8.0", "8"),  # no minor version
+        ("1:14.18.2-2.module_el8_", "8.0", "8"),  # underscore but no version
+        ("1:14.18.2-2.module_el8a_7", "8.0", "8"),  # non-digit major version
     ],
 )
 def test_parse_release(fix_version: str, platform: str, expected: str):

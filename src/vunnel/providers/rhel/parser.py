@@ -903,12 +903,10 @@ class RHELCVSS3:
 def parse_release(fix_version: str, platform: str) -> str:
     # attempt to parse 0:1.0.0-8.el8_8.1 for the release info (8.8.1)
     # otherwise fallback to the platform version
-    try:
-        last_section = fix_version.split("-")[-1]
-    except IndexError:
-        return platform
+    before_metadata = fix_version.split("+")[0]
+    last_section = before_metadata.split("-")[-1]
 
-    el_match = re.search(r"\.el(\d+)(?:_([0-9.]+))?", last_section)
+    el_match = re.search(r"[._]el(\d+)(?:[_.]?([0-9.]+))?", last_section)
     if not el_match:
         return platform
 
