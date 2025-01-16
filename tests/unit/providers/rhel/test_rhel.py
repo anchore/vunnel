@@ -546,6 +546,10 @@ class TestParser:
         ("3:10.3.28-1.module_el8+hashmeta", "8.0", "8"),  # no minor version
         ("1:14.18.2-2.module_el8_", "8.0", "8"),  # underscore but no version
         ("1:14.18.2-2.module_el8a_7", "8.0", "8"),  # non-digit major version
+        # older patterns
+        ("2.4.37-47.module+el8.6.0+15654+427eba2e.2", "8.6", "8.6.0"),
+        ("1:14.20.0-2.module+el8.6.0+16231+7c1b33d9", "8.6", "8.6.0"),
+        ("2.4.37-47.module+el8.6.0", "8.6", "8.6.0"),
     ],
 )
 def test_parse_release(fix_version: str, platform: str, expected: str):
