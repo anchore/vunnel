@@ -166,7 +166,6 @@ dirty = true
 
 [tool.ruff]
 cache-dir = ".cache/ruff"
-# set this to what black was set to, to avoid huge diff on switch
 line-length = 150
 
 extend-exclude = [
