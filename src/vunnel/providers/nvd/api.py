@@ -143,7 +143,7 @@ class NvdAPI:
         index = results_per_page
 
         for page in range(pages):
-            self.logger.debug(f"{message} (page {page+2} of {pages})")
+            self.logger.debug(f"{message} (page {page + 2} of {pages})")
 
             parameters["resultsPerPage"] = str(results_per_page)
             parameters["startIndex"] = str(index)

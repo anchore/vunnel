@@ -575,7 +575,7 @@ class Parser:
                         final_ar_objs[(ar_obj.name, ar_obj.platform, ar_obj.module)] = ar_obj
 
                 except Exception:
-                    self.logger.exception(f"error processing {cve_id} affected release object: { ar_obj.__dict__}")
+                    self.logger.exception(f"error processing {cve_id} affected release object: {ar_obj.__dict__}")
 
             # construct the final fixed in objects
             fixed_ins = [
