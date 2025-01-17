@@ -521,9 +521,7 @@ class Parser:
                             f"{cve_id}, platform={ar_obj.platform} : missing package, trying to find a match using {ar_obj.rhsa_id} and other affected releases",  # noqa: E501
                         )
 
-                        possible_packages = (
-                            set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
-                        )
+                        possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
                             rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, pkg_name)

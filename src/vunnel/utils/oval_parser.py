@@ -165,9 +165,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
 
         v["Vulnerability"]["NamespaceName"] = ns_name
         v["Vulnerability"]["Severity"] = severity or ""
-        v["Vulnerability"]["Metadata"] = (
-            {"Issued": issued, "Updated": updated, "RefId": ref_id} if updated else {"Issued": issued, "RefId": ref_id}
-        )
+        v["Vulnerability"]["Metadata"] = {"Issued": issued, "Updated": updated, "RefId": ref_id} if updated else {"Issued": issued, "RefId": ref_id}
         v["Vulnerability"]["Name"] = name
         v["Vulnerability"]["Link"] = link
         v["Vulnerability"]["Description"] = description

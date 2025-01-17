@@ -1007,9 +1007,7 @@ class Parser:
         pending_dpt_list: list[DistroPkg] = copy.deepcopy(to_be_merged_dpt_list)
 
         # last processed commit
-        saved_cve_last_processed_rev = (
-            saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
-        )
+        saved_cve_last_processed_rev = saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
 
         # fetch log of revision history for this file, its in the most recent - least recent order
         since_revs = self.git_wrapper.get_revision_history(cve_id, cve_rel_path, saved_cve_last_processed_rev)
