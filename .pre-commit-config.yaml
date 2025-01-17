@@ -57,8 +57,8 @@ repos:
     hooks:
 
       # note: this is used in lieu of autopep8 and yapf
-      - id: black
-        name: black
+      - id: format
+        name: format
         # note: why not use the official black pre-commit hook? so we can use poetry to control which version of black is used.
         entry: make format
         pass_filenames: false
