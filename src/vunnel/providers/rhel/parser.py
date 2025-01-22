@@ -316,7 +316,14 @@ class Parser:
         elif r.status_code == 404:
             self.logger.warning(f"GET {url} returned 404 not found error")
 
-    def _fetch_rhsa_fix_version(self, rhsa_id, platform, package):
+    def _fetch_rhsa_fix_version(self, ar_obj: AffectedRelease, override_package_name: str | None = None):
+        """Fetch RHSA information, either from OVAL parsing or CSAF parsing depending
+        on configuration."""
+        rhsa_id = ar_obj.rhsa_id
+        platform = ar_obj.platform
+        package = ar_obj.name  # TODO: switch to package on CSAF parsing
+        if override_package_name:
+            package = override_package_name
         fixed_ver = None
         module_name = None
         try:
@@ -478,6 +485,7 @@ class Parser:
 
                     package = item.get("package", None)
                     if package:
+                        ar_obj.package = package
                         ar_obj.name, ar_obj.version = self._get_name_version(package)
                         platform_packages[ar_obj.platform].add(ar_obj.name)
                     else:
@@ -499,7 +507,7 @@ class Parser:
 
                     if ar_obj.name:
                         if ar_obj.rhsa_id:  # rhsa lookup for version information tends to make version consistent
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, ar_obj.name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj)
                             if rhsa_version:
                                 final_v = rhsa_version
                                 final_m = rhsa_module
@@ -521,10 +529,11 @@ class Parser:
                             f"{cve_id}, platform={ar_obj.platform} : missing package, trying to find a match using {ar_obj.rhsa_id} and other affected releases",  # noqa: E501
                         )
 
+                        # TODO: doc comment here. What is this line doing? Why is this a good way to get package names?
                         possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, pkg_name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj, override_package_name=pkg_name)
 
                             if rhsa_version:
                                 self.logger.debug(
@@ -864,12 +873,13 @@ class Parser:
 
 
 class AffectedRelease:
-    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None):
+    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None, package=None):  # noqa: PLR0913
         self.name = name
         self.version = version
         self.platform = platform
         self.rhsa_id = rhsa_id
         self.module = module
+        self.package = package  # the raw "package" field from Hydra JSON API
 
 
 class RHELCVSS3:

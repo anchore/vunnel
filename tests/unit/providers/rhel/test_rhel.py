@@ -7,7 +7,7 @@ import pytest
 
 from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider, parser
-from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
+from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser
 
 
 class TestParser:
@@ -431,13 +431,14 @@ class TestParser:
                 ],
             ),
         ],
+        ids=["case1" , "case2", "case3", "case4", "case5", "case6", "case7"],
     )
     def test_parse_affected_releases(self, tmpdir, affected_releases, fixed_ins, mock_rhsa_dict_2):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = mock_rhsa_dict_2
 
         results = driver._parse_affected_release(affected_releases.get("name"), affected_releases)
-        assert isinstance(results, list) and len(results) == len(fixed_ins)
+        assert isinstance(results, list)
         results.sort(key=lambda x: x.platform)
         fixed_ins.sort(key=lambda x: x.platform)
         assert results == fixed_ins
@@ -489,8 +490,9 @@ class TestParser:
     def test_fetch_rhsa_fix_version(self, tmpdir, mock_rhsa_dict, test_id, test_p, test_pkg, expected):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_dict = mock_rhsa_dict
+        ar_obj = AffectedRelease(rhsa_id=test_id, platform=test_p, name=test_pkg)
 
-        assert driver._fetch_rhsa_fix_version(test_id, test_p, test_pkg) == expected
+        assert driver._fetch_rhsa_fix_version(ar_obj) == expected
 
     @pytest.mark.parametrize(
         "package,name,version",
