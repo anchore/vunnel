@@ -24,6 +24,7 @@ class Config:
     parallelism: int = 4
     full_sync_interval: int = 2
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
+    rhsa_source: str = "OVAL"  # "CSAF" or "OVAL"
 
 
 class Provider(provider.Provider):

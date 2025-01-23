@@ -1,0 +1,127 @@
+import logging
+import os
+import re
+from abc import ABC, abstractmethod
+
+from vunnel.providers.rhel.oval_parser import Parser as OVALParser
+from vunnel.utils.oval_parser import Config as OVALConfig
+from vunnel.workspace import Workspace
+
+
+class RHSAProvider(ABC):
+    def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger):
+        """
+        Initialize the RHSAProvider with a workspace, configuration, and logger.
+
+        :param workspace: The workspace directory.
+        :param config: Configuration settings as a dictionary.
+        :param logger: Logger instance for logging.
+        """
+        self.workspace = workspace
+        self.request_timeout = download_timeout_seconds
+        self.logger = logger
+        self.urls: list[str] = []
+
+    @abstractmethod
+    def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+        """
+        Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
+
+        :param rhsa_id: The RHSA ID (e.g., "RHSA-2025:1234").
+        :param platform: The platform (e.g., "RHEL 8").
+        :param package_name: The name of the package (e.g., "httpd").
+        :return: A tuple containing the fixed version and module.
+        """
+
+
+class OVALRHSAProvider(RHSAProvider):
+    def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger, rhsa_dir_path: str):
+        """
+        Initialize the OVALRHSAProvider with a workspace, configuration, and logger.
+
+        :param workspace: The workspace directory.
+        :param config: Configuration settings as a dictionary.
+        :param logger: Logger instance for logging.
+        """
+        super().__init__(workspace, download_timeout_seconds, logger)
+        if not os.path.exists(rhsa_dir_path):
+            self.logger.debug(f"creating workspace for rhsa source data at {rhsa_dir_path}")
+            os.makedirs(rhsa_dir_path)
+
+        # initialize config
+        oval_parser_config = OVALConfig()
+
+        # regexes
+        oval_parser_config.tag_pattern = re.compile(r"\{http://oval.mitre.org/XMLSchema/.*\}(\w*)")
+        oval_parser_config.ns_pattern = re.compile(r"(\{http://oval.mitre.org/XMLSchema/.*\})\w*")
+        oval_parser_config.is_installed_pattern = re.compile(r"Red Hat Enterprise Linux (\d+).*is installed")
+        oval_parser_config.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
+        oval_parser_config.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
+        oval_parser_config.signed_with_pattern = re.compile(r"(.*) is signed with (.*) key")
+        oval_parser_config.platform_version_pattern = re.compile(r"Red Hat Enterprise Linux (\d+)")
+
+        # xpath queries
+        oval_parser_config.title_xpath_query = "{0}metadata/{0}title"
+        oval_parser_config.severity_xpath_query = "{0}metadata/{0}advisory/{0}severity"
+        oval_parser_config.platform_xpath_query = "{0}metadata/{0}affected/{0}platform"
+        oval_parser_config.date_issued_xpath_query = "{0}metadata/{0}advisory/{0}issued"
+        oval_parser_config.date_updated_xpath_query = "{0}metadata/{0}advisory/{0}updated"
+        oval_parser_config.description_xpath_query = "{0}metadata/{0}description"
+        oval_parser_config.sa_ref_xpath_query = '{0}metadata/{0}reference[@source="RHSA"]'
+        oval_parser_config.cve_xpath_query = "{0}metadata/{0}advisory/{0}cve"
+        oval_parser_config.criteria_xpath_query = "{0}criteria"
+        oval_parser_config.criterion_xpath_query = ".//{0}criterion"
+
+        # maps
+        oval_parser_config.severity_dict = {
+            "low": "Low",
+            "moderate": "Medium",
+            "important": "High",
+            "critical": "Critical",
+        }
+
+        # string formats
+        oval_parser_config.ns_format = "{}"
+        self.oval_parser = OVALParser(
+            workspace,
+            oval_parser_config,
+            logger=logging.getLogger("rhel.oval_parser.Parser"),
+            download_timeout=self.request_timeout,
+        )
+        self.logger.debug("parsing RHSA data using RHEL oval parser")
+        self.rhsa_dict = self.oval_parser.get()
+        self.urls.extend(self.oval_parser.urls)
+
+        if not self.rhsa_dict:
+            raise Exception("RHSA data not initialized")
+
+    @classmethod
+    def from_rhsa_dict(cls, rhsa_dict) -> "OVALRHSAProvider":
+        """
+        Create an OVALRHSAProvider instance from a vulnerability dictionary.
+
+        :return: An OVALRHSAProvider instance.
+        """
+        instance = cls.__new__(cls)
+        instance.rhsa_dict = rhsa_dict
+        return instance
+
+    def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+        """
+        Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
+
+        :param rhsa_id: The RHSA ID (e.g., "RHSA-2025:1234").
+        :param platform: The platform, which is a RHEL major version, (e.g., "8" for RHEL 8).
+        :param package_name: The name of the package (e.g., "httpd").
+        :return: A tuple containing the fixed version and module.
+        """
+        if self.rhsa_dict is None:
+            self.rhsa_dict = self.oval_parser.get()
+        _, p = self.rhsa_dict.get((rhsa_id, platform), (None, None))
+        if p:
+            fixed_ver, module_name = next(
+                ([item["Version"], item.get("Module")] for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package_name),
+                [None, None],
+            )
+            return fixed_ver, module_name
+        return None, None
