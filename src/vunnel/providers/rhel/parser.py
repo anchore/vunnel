@@ -15,14 +15,14 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
+from vunnel.providers.rhel.rhsa_provider import OVALRHSAProvider
 from vunnel.utils import http, rpm
-from vunnel.utils.oval_parser import Config
 from vunnel.utils.vulnerability import vulnerability_element
-
-from .oval_parser import Parser as RHELOvalParser
 
 if TYPE_CHECKING:
     import requests
+
+    from .rhsa_provider import RHSAProvider
 
 namespace = "rhel"
 
@@ -66,6 +66,7 @@ class Parser:
         self.full_sync_interval = full_sync_interval if isinstance(full_sync_interval, int) else 2
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
+        self.rhsa_provider: RHSAProvider | None = None
 
         self.urls = [self.__summary_url__]
 
@@ -319,26 +320,10 @@ class Parser:
     def _fetch_rhsa_fix_version(self, ar_obj: AffectedRelease, override_package_name: str | None = None):
         """Fetch RHSA information, either from OVAL parsing or CSAF parsing depending
         on configuration."""
-        rhsa_id = ar_obj.rhsa_id
-        platform = ar_obj.platform
-        package = ar_obj.name  # TODO: switch to package on CSAF parsing
+        package = ar_obj.name  # TODO: switch to ar_obj.package on CSAF parsing
         if override_package_name:
             package = override_package_name
-        fixed_ver = None
-        module_name = None
-        try:
-            p = self._fetch_rhsa(rhsa_id, platform)
-            if p:
-                fixed_ver, module_name = next(
-                    ([item["Version"], item.get("Module")] for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package),
-                    [None, None],
-                )
-            else:
-                self.logger.debug(f"{rhsa_id} not found for platform {platform}")
-        except Exception:
-            self.logger.exception(f"error looking up {package} in {rhsa_id} for {platform}")
-
-        return fixed_ver, module_name
+        return self.rhsa_provider.get_fixed_version_and_module(ar_obj.rhsa_id, ar_obj.platform, package)
 
     def _fetch_rhsa(self, rhsa_id, platform):
         if self.rhsa_dict is not None:  # explicit check to allow for easy testing without actually initializing it
@@ -348,65 +333,7 @@ class Parser:
         return p
 
     def _init_rhsa_data(self, skip_if_exists=False):
-        # setup workspace directory
-        if not os.path.exists(self.rhsa_dir_path):
-            self.logger.debug(f"creating workspace for rhsa source data at {self.rhsa_dir_path}")
-            os.makedirs(self.rhsa_dir_path)
-
-        # initialize config
-        cc = Config()
-
-        # regexes
-        cc.tag_pattern = re.compile(r"\{http://oval.mitre.org/XMLSchema/.*\}(\w*)")
-        cc.ns_pattern = re.compile(r"(\{http://oval.mitre.org/XMLSchema/.*\})\w*")
-        cc.is_installed_pattern = re.compile(r"Red Hat Enterprise Linux (\d+).*is installed")
-        cc.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
-        cc.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
-        cc.signed_with_pattern = re.compile(r"(.*) is signed with (.*) key")
-        cc.platform_version_pattern = re.compile(r"Red Hat Enterprise Linux (\d+)")
-
-        # xpath queries
-        cc.title_xpath_query = "{0}metadata/{0}title"
-        cc.severity_xpath_query = "{0}metadata/{0}advisory/{0}severity"
-        cc.platform_xpath_query = "{0}metadata/{0}affected/{0}platform"
-        cc.date_issued_xpath_query = "{0}metadata/{0}advisory/{0}issued"
-        cc.date_updated_xpath_query = "{0}metadata/{0}advisory/{0}updated"
-        cc.description_xpath_query = "{0}metadata/{0}description"
-        cc.sa_ref_xpath_query = '{0}metadata/{0}reference[@source="RHSA"]'
-        cc.cve_xpath_query = "{0}metadata/{0}advisory/{0}cve"
-        cc.criteria_xpath_query = "{0}criteria"
-        cc.criterion_xpath_query = ".//{0}criterion"
-
-        # maps
-        cc.severity_dict = {
-            "low": "Low",
-            "moderate": "Medium",
-            "important": "High",
-            "critical": "Critical",
-        }
-
-        # string formats
-        cc.ns_format = "{}"
-
-        # initialize provider
-        rhsa_provider = RHELOvalParser(
-            # workspace=os.path.join(self.rhsa_dir_path),
-            workspace=self.workspace,
-            config=cc,
-            download_timeout=self.download_timeout,
-            logger=logging.getLogger("rhel.oval_parser.Parser"),
-        )
-
-        # get all data
-        self.logger.debug("parsing RHSA data using RHEL oval parser")
-        self.rhsa_dict = rhsa_provider.get()
-
-        self.urls.extend(rhsa_provider.urls)
-
-        if not self.rhsa_dict:
-            raise Exception("RHSA data not initialized")
-
-        return self.rhsa_dict
+        self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
 
     @staticmethod
     def _get_name_version(package):
@@ -874,12 +801,12 @@ class Parser:
 
 class AffectedRelease:
     def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None, package=None):  # noqa: PLR0913
-        self.name = name
-        self.version = version
-        self.platform = platform
-        self.rhsa_id = rhsa_id
-        self.module = module
-        self.package = package  # the raw "package" field from Hydra JSON API
+        self.name: str | None = name
+        self.version: str | None = version
+        self.platform: str | None = platform
+        self.rhsa_id: str | None = rhsa_id
+        self.module: str | None = module
+        self.package: str | None = package  # the raw "package" field from Hydra JSON API
 
 
 class RHELCVSS3:
