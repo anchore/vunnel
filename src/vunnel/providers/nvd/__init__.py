@@ -54,8 +54,7 @@ class Provider(provider.Provider):
 
         if self.config.runtime.skip_if_exists and config.runtime.existing_results != result.ResultStatePolicy.KEEP:
             raise ValueError(
-                "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' "
-                "(otherwise incremental updates will fail)",
+                "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' (otherwise incremental updates will fail)",
             )
 
         if self.config.runtime.result_store != result.StoreStrategy.SQLITE:

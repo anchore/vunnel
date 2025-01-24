@@ -28,7 +28,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 

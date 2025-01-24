@@ -63,7 +63,6 @@ zstandard = ">=0.22,<0.24"
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.2.2,<9.0.0"
 pre-commit = ">=3.2,<5.0"
-black = ">=23.1,<25.0"
 jsonschema = "^4.17.3"
 pytest-unordered = ">=0.5.2,<0.7.0"
 pytest-sugar = ">=0.9.6,<1.1.0"
@@ -77,7 +76,7 @@ types-requests = "^2.28.11.7"
 mypy = "^1.1"
 radon = ">=5.1,<7.0"
 dunamai = "^1.15.0"
-ruff = ">=0.5.1,<0.9.2"
+ruff = "^0.9.2"
 yardstick = {git = "https://github.com/anchore/yardstick", rev = "dd0410273860e765386bc29046cb26dd9d5fda8c"}
 # yardstick = {path = "../yardstick", develop=true }
 tabulate = "0.9.0"
@@ -123,32 +122,27 @@ exclude = '''(?x)(
     | ^tests/.*$     # any tests
 )'''
 
-[tool.black]
-line-length = 130
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | data
-    | backup
-    | src/vunnel/providers/mariner/model # files in here are generated
-    | tests/quality/vulnerability-match-labels
-    | tests/quality/.yardstick
-    | tests/quality/data
-    | tests/quality/build
-    | tests/quality/bin
-  )/
-)
-'''
+[tool.ruff.format]
+exclude = [
+    ".eggs",         # exclude a few common directories in the
+    ".git",          # root of the project
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "data",
+    "backup",
+    "src/vunnel/providers/mariner/model", # files in here are generated
+    "tests/quality/vulnerability-match-labels",
+    "tests/quality/.yardstick",
+    "tests/quality/data",
+    "tests/quality/build",
+    "tests/quality/bin",
+]
 
 [tool.coverage.run]
 omit = [
@@ -172,7 +166,6 @@ dirty = true
 
 [tool.ruff]
 cache-dir = ".cache/ruff"
-# allow for a wide-birth relative to what black will correct to
 line-length = 150
 
 extend-exclude = [
