@@ -346,11 +346,7 @@ class Parser:
                             else:
                                 sev = "Unknown"
 
-                            if (
-                                sev
-                                and vulnerability.severity_order[sev]
-                                > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]
-                            ):
+                            if sev and vulnerability.severity_order[sev] > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]:
                                 vuln_record["Vulnerability"]["Severity"] = sev
 
                             # add fixedIn
@@ -404,22 +400,16 @@ class Parser:
                                         "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
                                     }
                                     # all_matched_dsas |= set([x.dsa for x in matched_dsas])
-                                    adv_mets[met_ns][met_sev]["dsa"][
-                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
-                                    ] += 1
+                                    adv_mets[met_ns][met_sev]["dsa"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
                                 elif "nodsa" in distro_record:
                                     fixed_el["VendorAdvisory"] = {"NoAdvisory": True}
-                                    adv_mets[met_ns][met_sev]["nodsa"][
-                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
-                                    ] += 1
+                                    adv_mets[met_ns][met_sev]["nodsa"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
                                 else:
                                     fixed_el["VendorAdvisory"] = {
                                         "NoAdvisory": False,
                                         "AdvisorySummary": [],
                                     }
-                                    adv_mets[met_ns][met_sev]["neither"][
-                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
-                                    ] += 1
+                                    adv_mets[met_ns][met_sev]["neither"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)

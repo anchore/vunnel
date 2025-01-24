@@ -445,9 +445,7 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
 
     if vuln_cursor:
         vuln_after = f'after: "{vuln_cursor}", '
-    vulnerabilities = (
-        f"{vuln_after}classifications: [GENERAL, MALWARE], first: 100, orderBy: {{field: UPDATED_AT, direction: ASC}}"
-    )
+    vulnerabilities = f"{vuln_after}classifications: [GENERAL, MALWARE], first: 100, orderBy: {{field: UPDATED_AT, direction: ASC}}"
 
     return f"""
     {{
