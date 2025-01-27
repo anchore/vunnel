@@ -19,7 +19,7 @@ class RedHatAdvisoryID:
         rhsa = rhsa.upper()
         rhsa = rhsa.removeprefix(__class__.RH_URL_PREFIX)
         if "-" and ":" in rhsa:
-            self.year = rhsa.split("-")[0].split(":")[0]
+            self.year = rhsa.split("-")[1].split(":")[0]
             self.rhsa = rhsa
         else:
             raise ValueError(f"Invalid RHSA ID: {rhsa}, please provide like RHSA-2021:1234")
@@ -48,10 +48,11 @@ class CSAFClient:
         self.workspace = workspace
         self.latest_url = latest_url
         self.latest_filename = "archive_latest.txt"
-        self.archive_latest_url = None
+        self.latest_archive_url = None
         self.archive_date = None
         self.logger = logger
-        self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
+        # self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
+        self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
 
     def _changes_url(self) -> str:
         return self.latest_url.replace(self.latest_filename, "changes.csv")
@@ -60,16 +61,16 @@ class CSAFClient:
         return self.latest_url.replace(self.latest_filename, "deletions.csv")
 
     def _archive_url(self) -> str:
-        if not self.archive_latest_url:
+        if not self.latest_archive_url:
             latest_resp = http.get(self.latest_url, logger=self.logger)
             latest_name = latest_resp.text.strip()
-            self.archive_latest_url = self.latest_url.replace(self.latest_filename, latest_name)
+            self.latest_archive_url = self.latest_url.replace(self.latest_filename, latest_name)
             date_part = latest_name.removeprefix("csaf_advisories_").removesuffix(".tar.zst")
             self.archive_date = datetime.strptime(date_part, "%Y-%m-%d").replace(tzinfo=UTC)
-        return self.archive_latest_url
+        return self.latest_archive_url
 
     def _local_archive_path(self) -> str:
-        return os.path.join(self.workspace.input_path, self.archive_latest_url.split("/")[-1])
+        return os.path.join(self.workspace.input_path, self.latest_archive_url.split("/")[-1])
 
     def _local_changes_path(self) -> str:
         return os.path.join(self.workspace.input_path, "changes.csv")
@@ -78,7 +79,7 @@ class CSAFClient:
         return os.path.join(self.workspace.input_path, "deletions.csv")
 
     def _download_stream(self, url: str, path: str):
-        with http.get(url, path, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
+        with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
             for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
                 if chunk:
                     fh.write(chunk)
@@ -100,7 +101,7 @@ class CSAFClient:
                 # suppress FileNotFound because deleting the same file twice
                 # should no-op rather than raise an error
                 with contextlib.suppress(FileNotFoundError):
-                    os.remove(os.path.join(self.csaf_path, deleted_fragment))
+                    os.remove(os.path.join(self.advisories_path, deleted_fragment))
         seen_files = set()
         with open(changes_path, newline="") as fh:
             reader = csv.reader(fh)
@@ -119,7 +120,7 @@ class CSAFClient:
                 executor.submit(
                     self._download_stream,
                     url=self.latest_url.replace("archive_latest.txt", changed_file),
-                    path=os.path.join(self.csaf_path, changed_file),
+                    path=os.path.join(self.advisories_path, changed_file),
                 ): changed_file
                 for changed_file in seen_files
             }
@@ -129,20 +130,26 @@ class CSAFClient:
                     self.logger.warning(f"Failed to download {changed_file}: {future.exception()}")
 
     def _download_and_update_archive(self):
+        if not self.latest_archive_url:
+            self.latest_archive_url = self._archive_url()
         archive_path = self._local_archive_path()
+        print(f"archive_path: {archive_path}")
         self._download_stream(self._archive_url(), archive_path)
         self._download_stream(self._changes_url(), os.path.join(self.workspace.input_path, "changes.csv"))
         self._download_stream(self._deletions_url(), os.path.join(self.workspace.input_path, "deletions.csv"))
-        extract(archive_path, self.csaf_path)
+        if not os.path.exists(self.advisories_path):
+            os.makedirs(self.advisories_path)
+        extract(archive_path, self.advisories_path)
         self.process_changes_and_deletions()
 
-    def year_from_rhsa_id(self, rhsa_id: RedHatAdvisoryID) -> str:
+    def path_from_rhsa_id(self, rhsa_id: RedHatAdvisoryID) -> str:
         # https://security.access.redhat.com/data/csaf/v2/advisories/2024/rhba-2024_0599.json
-        return os.path.join(self.csaf_path, rhsa_id.advisory_year(), rhsa_id.advisory_id().lower().replace(":", "_") + ".json")
+        return os.path.join(self.advisories_path, rhsa_id.advisory_year(), rhsa_id.advisory_id().lower().replace(":", "_") + ".json")
 
     def csaf_doc_for_rhsa(self, rhsa: str) -> CSAFDoc:
         """Get the CSAF document for a given RHSA ID"""
         # TODO: pull through cache instead of big up front download?
-        if not os.path.exists(self.csaf_path):
-            self._download_and_update_archive()
-        return csaf_from_path(self.year_from_rhsa_id(RedHatAdvisoryID(rhsa)))
+        # TODO: don't just check that the dir exists, check that the file exists
+        # if not self.latest_url:
+        # self._download_and_update_archive()
+        return csaf_from_path(self.path_from_rhsa_id(RedHatAdvisoryID(rhsa)))

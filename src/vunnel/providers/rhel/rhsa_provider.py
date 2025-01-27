@@ -3,6 +3,7 @@ import os
 import re
 from abc import ABC, abstractmethod
 
+from vunnel.providers.rhel.csaf_parser import CSAFParser
 from vunnel.providers.rhel.oval_parser import Parser as OVALParser
 from vunnel.utils.oval_parser import Config as OVALConfig
 from vunnel.workspace import Workspace
@@ -124,4 +125,38 @@ class OVALRHSAProvider(RHSAProvider):
                 [None, None],
             )
             return fixed_ver, module_name
+        return None, None
+
+
+class CSAFRHSAProvider(RHSAProvider):
+    def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger):
+        """
+        Initialize the CSAFRHSAProvider with a workspace, configuration, and logger.
+
+        :param workspace: The workspace directory.
+        :param config: Configuration settings as a dictionary.
+        :param logger: Logger instance for logging.
+        """
+        super().__init__(workspace, download_timeout_seconds, logger)
+        self.logger.debug("parsing RHSA data using RHEL csaf parser")
+        self.csaf_parser = CSAFParser(
+            workspace,
+            download_timeout=download_timeout_seconds,
+            logger=logging.getLogger("rhel.csaf_parser.CSAFParser"),
+        )
+        self.urls.extend(self.csaf_parser.urls)
+
+    def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+        """
+        Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
+
+        :param rhsa_id: The RHSA ID (e.g., "RHSA-2025:1234").
+        :param platform: The platform, which is a RHEL major version, (e.g., "8" for RHEL 8).
+        :param package_name: The name of the package (e.g., "httpd").
+        :return: A tuple containing the fixed version and module.
+        """
+        if not rhsa_id or not platform or not package_name:
+            return None, None
+        return self.csaf_parser.get_fix_information(rhsa_id, platform, package_name)
+
         return None, None
