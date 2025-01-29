@@ -15,7 +15,7 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
-from vunnel.providers.rhel.rhsa_provider import OVALRHSAProvider
+from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
 from vunnel.utils import http, rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
@@ -56,6 +56,7 @@ class Parser:
         max_workers=None,
         full_sync_interval=None,
         skip_namespaces=None,
+        rhsa_provider_type=None,
         logger=None,
     ):
         self.workspace = workspace
@@ -67,6 +68,7 @@ class Parser:
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
         self.rhsa_provider: RHSAProvider | None = None
+        self.rhsa_provider_type: str | None = rhsa_provider_type
 
         self.urls = [self.__summary_url__]
 
@@ -317,13 +319,13 @@ class Parser:
         elif r.status_code == 404:
             self.logger.warning(f"GET {url} returned 404 not found error")
 
-    def _fetch_rhsa_fix_version(self, ar_obj: AffectedRelease, override_package_name: str | None = None):
+    def _fetch_rhsa_fix_version(self, cve_id: str, ar_obj: AffectedRelease, override_package_name: str | None = None):
         """Fetch RHSA information, either from OVAL parsing or CSAF parsing depending
         on configuration."""
-        package = ar_obj.name  # TODO: switch to ar_obj.package on CSAF parsing
-        if override_package_name:
-            package = override_package_name
-        return self.rhsa_provider.get_fixed_version_and_module(ar_obj.rhsa_id, ar_obj.platform, package)
+        # TODO: this needs to call one of the two RHSA providers, but they want slighly different things
+        # get_fixed_version_and_module shuold just take an AffectedRelease object and a package name
+
+        return self.rhsa_provider.get_fixed_version_and_module(cve_id, ar_obj, override_package_name)
 
     def _fetch_rhsa(self, rhsa_id, platform):
         if self.rhsa_dict is not None:  # explicit check to allow for easy testing without actually initializing it
@@ -333,7 +335,11 @@ class Parser:
         return p
 
     def _init_rhsa_data(self, skip_if_exists=False):
-        self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
+        self.logger.info(f"instantiating RHSA provider of type {self.rhsa_provider_type}")
+        if self.rhsa_provider_type.lower() == "oval":
+            self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
+        elif self.rhsa_provider_type.lower() == "csaf":
+            self.rhsa_provider = CSAFRHSAProvider(self.workspace, self.download_timeout, self.logger)
 
     @staticmethod
     def _get_name_version(package):
@@ -413,7 +419,7 @@ class Parser:
                     ar_obj = AffectedRelease(platform=platform)
                     if ar_obj.platform not in platform_packages:
                         platform_packages[ar_obj.platform] = set()
-
+                    ar_obj.platform_cpe = item.get("cpe", None)
                     package = item.get("package", None)
                     if package:
                         ar_obj.package = package
@@ -438,7 +444,7 @@ class Parser:
 
                     if ar_obj.name:
                         if ar_obj.rhsa_id:  # rhsa lookup for version information tends to make version consistent
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj)
                             if rhsa_version:
                                 final_v = rhsa_version
                                 final_m = rhsa_module
@@ -465,7 +471,7 @@ class Parser:
                         possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj, override_package_name=pkg_name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj, override_package_name=pkg_name)
 
                             if rhsa_version:
                                 self.logger.debug(
@@ -804,16 +810,6 @@ class Parser:
             if self.rhsa_dict:
                 self.rhsa_dict.clear()
                 del self.rhsa_dict
-
-
-class AffectedRelease:
-    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None, package=None):  # noqa: PLR0913
-        self.name: str | None = name
-        self.version: str | None = version
-        self.platform: str | None = platform
-        self.rhsa_id: str | None = rhsa_id
-        self.module: str | None = module
-        self.package: str | None = package  # the raw "package" field from Hydra JSON API
 
 
 class RHELCVSS3:

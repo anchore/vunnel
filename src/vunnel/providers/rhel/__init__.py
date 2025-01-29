@@ -44,6 +44,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             max_workers=self.config.parallelism,
             full_sync_interval=self.config.full_sync_interval,
+            rhsa_provider_type=self.config.rhsa_source,
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
         )

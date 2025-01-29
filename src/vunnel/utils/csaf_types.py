@@ -1,4 +1,6 @@
 import re
+
+from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -239,32 +241,30 @@ class Branch:
             return self.product.product_id
         return None
 
-    def product_branches(self) -> list["Branch"]:
-        result = []
+    def product_branches(self) -> IterGenerator["Branch", None, None]:
         for b in self.branches:
             if b.product:
-                result.append(b)
+                yield b
             elif b.branches:
-                result.extend(b.product_branches())
-        return result
+                yield from b.product_branches()
 
-    def product_version_branches(self) -> list["Branch"]:
-        result = []
-        if self.category == "product_version":
-            result.append(self)
-        for b in self.branches:
-            result.extend(b.product_version_branches())
+    def product_version_branches(self) -> IterGenerator["Branch", None, None]:
+        stack = [self]
+        while stack:
+            current = stack.pop()
+            if current.category == "product_version":
+                yield current
+            stack.extend(current.branches)
+        # if self.category == "product_version":
+        #     yield self
+        # for b in self.branches:
+        #     yield from b.product_version_branches()
 
-        return result
-
-    def product_name_branches(self) -> list["Branch"]:
-        result = []
+    def product_name_branches(self) -> IterGenerator["Branch", None, None]:
         if self.category == "product_name":
-            result.append(self)
+            yield self
         for b in self.branches:
-            result.extend(b.product_name_branches())
-
-        return result
+            yield from b.product_name_branches()
 
 
 @dataclass
@@ -272,11 +272,19 @@ class ProductTree(DataClassDictMixin):
     relationships: list[Relationship] = field(default_factory=list)
     branches: list[Branch] = field(default_factory=list)
     product_id_to_parent: dict[str, str] = field(init=False)
+    product_id_to_purl: dict[str, str] = field(init=False)
 
     def __post_init__(self) -> None:
         self.product_id_to_parent = {}
         for r in self.relationships:
             self.product_id_to_parent[r.full_product_name.product_id] = r.relates_to_product_reference
+
+        self.product_id_to_purl = {}
+        for b in self.product_branches():
+            purl = b.purl()
+            pid = b.product_id()
+            if purl and pid:
+                self.product_id_to_purl[pid] = purl
 
     def parent(self, product_id: str) -> str | None:
         return self.product_id_to_parent.get(product_id)
@@ -318,14 +326,15 @@ class ProductTree(DataClassDictMixin):
             parent = self.parent(parent)
         return False
 
-    def product_branches(self) -> list[Branch]:
-        result = []
+    def product_branches(self) -> IterGenerator[Branch, None, None]:
         for b in self.branches:
             if b.product:
-                result.append(b)
+                yield b
             else:
-                result.extend(b.product_branches())
-        return result
+                yield from b.product_branches()
+
+    def purl_for_product_id(self, product_id: str) -> str | None:
+        return self.product_id_to_purl.get(product_id)
 
 
 @dataclass

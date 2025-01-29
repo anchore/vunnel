@@ -1,6 +1,7 @@
 import concurrent.futures
 import contextlib
 import csv
+import functools
 import logging
 import os
 from datetime import UTC, datetime
@@ -152,4 +153,9 @@ class CSAFClient:
         # TODO: don't just check that the dir exists, check that the file exists
         # if not self.latest_url:
         # self._download_and_update_archive()
-        return csaf_from_path(self.path_from_rhsa_id(RedHatAdvisoryID(rhsa)))
+        return _csaf_doc_from_path(self.path_from_rhsa_id(RedHatAdvisoryID(rhsa)))
+
+
+@functools.lru_cache(maxsize=1024)
+def _csaf_doc_from_path(doc_path: str) -> CSAFDoc:
+    return csaf_from_path(doc_path)

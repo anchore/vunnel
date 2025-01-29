@@ -9,6 +9,28 @@ from vunnel.utils.oval_parser import Config as OVALConfig
 from vunnel.workspace import Workspace
 
 
+class AffectedRelease:
+    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None, package=None):  # noqa: PLR0913
+        self.name: str | None = name
+        self.version: str | None = version
+        self.platform: str | None = platform
+        self.rhsa_id: str | None = rhsa_id
+        self.module: str | None = module
+        self.package: str | None = package  # the raw "package" field from Hydra JSON API
+        self.platform_cpe: str | None = None  # the CPE for the platform, if available
+
+    def as_dict(self):
+        return {
+            "name": self.name,
+            "version": self.version,
+            "platform": self.platform,
+            "rhsa_id": self.rhsa_id,
+            "module": self.module,
+            "package": self.package,
+            "platform_cpe": self.platform_cpe,
+        }
+
+
 class RHSAProvider(ABC):
     def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger):
         """
@@ -24,7 +46,7 @@ class RHSAProvider(ABC):
         self.urls: list[str] = []
 
     @abstractmethod
-    def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+    def get_fixed_version_and_module(self, cve_id: str, ar: AffectedRelease, override_package_name: str | None) -> tuple[str | None, str | None]:
         """
         Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
 
@@ -107,18 +129,20 @@ class OVALRHSAProvider(RHSAProvider):
         instance.rhsa_dict = rhsa_dict
         return instance
 
-    def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+    # def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+    def get_fixed_version_and_module(self, cve_id: str, ar: AffectedRelease, override_package_name: str | None) -> tuple[str | None, str | None]:
         """
         Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
 
-        :param rhsa_id: The RHSA ID (e.g., "RHSA-2025:1234").
-        :param platform: The platform, which is a RHEL major version, (e.g., "8" for RHEL 8).
         :param package_name: The name of the package (e.g., "httpd").
         :return: A tuple containing the fixed version and module.
         """
+        rhsa_id = ar.rhsa_id
+        platform = ar.platform
         if self.rhsa_dict is None:
             self.rhsa_dict = self.oval_parser.get()
         _, p = self.rhsa_dict.get((rhsa_id, platform), (None, None))
+        package_name = override_package_name or ar.name
         if p:
             fixed_ver, module_name = next(
                 ([item["Version"], item.get("Module")] for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package_name),
@@ -146,12 +170,7 @@ class CSAFRHSAProvider(RHSAProvider):
         )
         self.urls.extend(self.csaf_parser.urls)
 
-    def get_fixed_version_and_module(
-        self,
-        cve_id: str,
-        ar: dict[str, str],
-        normalized_package_name: str | None,
-    ) -> tuple[str | None, str | None]:
+    def get_fixed_version_and_module(self, cve_id: str, ar: AffectedRelease, override_package_name: str | None) -> tuple[str | None, str | None]:
         """
         Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
 
@@ -165,6 +184,7 @@ class CSAFRHSAProvider(RHSAProvider):
         # package_name = ar.get("package")
         # if not rhsa_id or not platform or not package_name:
         #     return None, None
-        return self.csaf_parser.get_fix_info_v2(cve_id, ar, normalized_package_name)
+        normalized_package_name = override_package_name or ar.name
+        return self.csaf_parser.get_fix_info_v2(cve_id, ar.as_dict(), normalized_package_name)
 
         return None, None

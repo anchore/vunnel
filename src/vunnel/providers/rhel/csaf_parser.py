@@ -132,45 +132,49 @@ class CSAFParser:
         plat = doc.product_tree.parent(plat_or_module)
         if plat:
             module = plat_or_module.removeprefix(f"{plat}:")
-            print(f"module: {module}")
+            # print(f"module: {module}")
             package = fpi.removeprefix(f"{plat}:{module}:")
-            print(f"trimming package: {package} by removeprefix {plat}:{module}: from {fpi}")
+            # print(f"trimming package: {package} by removeprefix {plat}:{module}: from {fpi}")
         else:
             plat = plat_or_module
             package = fpi.removeprefix(f"{plat}:")
-            print(f"trimming package: {package} by removeprefix {plat}: from {fpi}")
+            # print(f"trimming package: {package} by removeprefix {plat}: from {fpi}")
 
-        product_node = next(
-            (
-                p
-                for p in doc.product_tree.branches[0].product_version_branches()
-                if p.product_id() == package and p.purl() and p.purl().startswith("pkg:rpm")
-            ),
-            None,
-        )
-        if not product_node:
-            print(f"no product node for {package} for {fpi}")
-            raise Exception(f"no product node for {package} for {fpi}")
-            return None, None, None, None
+            # product_node = next(
+            #     (
+            #         p
+            #         for p in doc.product_tree.branches[0].product_version_branches()
+            #         if p.product_id() == package and p.purl() and p.purl().startswith("pkg:rpm")
+            #     ),
+            #     None,
+            # )
+            # if not product_node:
+            #     print(f"no product node for {package} for {fpi}")
+            #     raise Exception(f"no product node for {package} for {fpi}")
+            # return None, None, None, None
         version = None
         name = None
-        if product_node:
-            purl = product_node.purl()
-            if purl:
-                parsed_purl = PackageURL.from_string(purl)
-                epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
-                version = f"{epoch}:{parsed_purl.version}"
-                name = parsed_purl.name
+        # if product_node:
+        purl = doc.product_tree.purl_for_product_id(package)
+        # print(f"purl: {purl} for {package} from {fpi}")
+        if purl:
+            parsed_purl = PackageURL.from_string(purl)
+            epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
+            version = f"{epoch}:{parsed_purl.version}"
+            name = parsed_purl.name
 
         platform_product_node = next((p for p in doc.product_tree.branches[0].product_name_branches() if p.product_id() == plat), None)
         platform_cpe = platform_product_node.cpe() if platform_product_node else None
+        if not platform_cpe:
+            print(f"no platform cpe for {plat} from {fpi}")
+            return None, None, None, None
 
         if module:
             match = re.match(r".+(:\d{19}:[0-9a-f]{8})$", module)
             if match:
-                print(f"trimmed module: {module}")
+                # print(f"trimmed module: {module}")
                 module = module.removesuffix(match.group(1))
-                print(f"trimmed module: {module}")
+                # print(f"trimmed module: {module}")
             else:
                 print(f"no match for module {module}")
 
@@ -188,7 +192,7 @@ class CSAFParser:
         # print("WILL FIXED IN V2")
         # package is a string like "polkit-0:0.115-13.el8_5.2"
         # normalized_pkg_name is a string like "polkit"
-        fix_id = ar.get("advisory")
+        fix_id = ar.get("advisory") or ar.get("rhsa_id")  # TODO: WILLIAM! Clean up your room.
         if not fix_id:
             print("no advisory")
             return None, None
@@ -202,7 +206,7 @@ class CSAFParser:
             print("no remediation")
             return None, None
         candidate_full_product_ids = remediation.product_ids
-        ar_plat_cpe = ar.get("cpe")
+        ar_plat_cpe = ar.get("cpe") or ar.get("platform_cpe")
         if not ar_plat_cpe:
             print("no platform cpe")
             return None, None
@@ -211,12 +215,14 @@ class CSAFParser:
             if name == normalized_pkg_name and plat and plat.startswith(ar_plat_cpe):
                 return version, module
             if name != normalized_pkg_name:
-                print(f"no match for {fpi}, {name} aginst {normalized_pkg_name}")
+                # print(f"no match for {fpi}, {name} aginst {normalized_pkg_name}")
+                pass
             if not plat:
-                print("no match because no platform")
+                # print("no match because no platform")
                 continue
             if not plat.startswith(ar_plat_cpe):
-                print(f"no match for {fpi}, {name}, {plat} against {ar_plat_cpe}")
+                # print(f"no match for {fpi}, {name}, {plat} against {ar_plat_cpe}")
+                pass
         print("search miss")
         return None, None
 
