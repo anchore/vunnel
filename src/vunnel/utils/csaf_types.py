@@ -214,10 +214,7 @@ class Branch:
             self.product
             and self.product.product_identification_helper
             and (
-                (
-                    self.product.product_identification_helper.purl
-                    and "arch=src" in self.product.product_identification_helper.purl
-                )
+                (self.product.product_identification_helper.purl and "arch=src" in self.product.product_identification_helper.purl)
                 or re.search(r"\.el\d+.src$", self.product.product_id)
             )
         ):

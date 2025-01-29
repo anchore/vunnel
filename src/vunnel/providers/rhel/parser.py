@@ -93,10 +93,10 @@ class Parser:
         """
         worker that checks if a download is necessary and then does it
 
-        :param min_cve_api:
-        :param do_full_sync:
-        :param min_cve_dir:
-        :param full_cve_dir:
+        :param min_cve_api: api result describing a CVE, including the URLfor a full download
+        :param do_full_sync: bool: assume cache is stale and re-download everything
+        :param min_cve_dir: directory to save minimal cve API results
+        :param full_cve_dir: directory to save full cve data
         :return:
         """
         cve_id = min_cve_api.get("CVE")
@@ -382,6 +382,10 @@ class Parser:
         return name, version
 
     def _parse_affected_release(self, cve_id: str, content) -> list[FixedIn]:  # noqa: C901, PLR0912, PLR0915
+        """_parse_affected_release handles the affected_release section of the hydra API JSON CVE
+        data. If applicable it will ask the parsed OVAL data for the fixed version and module.
+        param: cve_id: str: The CVE ID.
+        param: content: dict: The JSON data for the CVE."""
         fixed_ins = []
         ars = content.get("affected_release", [])
 
@@ -457,6 +461,7 @@ class Parser:
                         )
 
                         # TODO: doc comment here. What is this line doing? Why is this a good way to get package names?
+                        # also note: based on my experimentation, this block is never entered.
                         possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
@@ -656,7 +661,9 @@ class Parser:
 
         results = []
         platform_artifacts = {}
+        # compute fixed ins from "affected_release" key in JSON + OVAL Parsing
         fins = self._parse_affected_release(cve_id, content)
+        # compute "not fixed ins" from "package_state" key in JSON (affected or out of support)
         nfins = self._parse_package_state(cve_id, content)
         platform_package_module_tuples = set()
 

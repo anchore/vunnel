@@ -146,7 +146,12 @@ class CSAFRHSAProvider(RHSAProvider):
         )
         self.urls.extend(self.csaf_parser.urls)
 
-    def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
+    def get_fixed_version_and_module(
+        self,
+        cve_id: str,
+        ar: dict[str, str],
+        normalized_package_name: str | None,
+    ) -> tuple[str | None, str | None]:
         """
         Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
 
@@ -155,8 +160,11 @@ class CSAFRHSAProvider(RHSAProvider):
         :param package_name: The name of the package (e.g., "httpd").
         :return: A tuple containing the fixed version and module.
         """
-        if not rhsa_id or not platform or not package_name:
-            return None, None
-        return self.csaf_parser.get_fix_information(rhsa_id, platform, package_name)
+        # rhsa_id = ar.get("advisory")
+        # platform = ar.get("cpe")
+        # package_name = ar.get("package")
+        # if not rhsa_id or not platform or not package_name:
+        #     return None, None
+        return self.csaf_parser.get_fix_info_v2(cve_id, ar, normalized_package_name)
 
         return None, None
