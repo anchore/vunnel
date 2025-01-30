@@ -54,6 +54,7 @@ class CSAFClient:
         self.logger = logger
         # self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
+        self._download_and_update_archive()
 
     def _changes_url(self) -> str:
         return self.latest_url.replace(self.latest_filename, "changes.csv")
@@ -149,10 +150,6 @@ class CSAFClient:
 
     def csaf_doc_for_rhsa(self, rhsa: str) -> CSAFDoc:
         """Get the CSAF document for a given RHSA ID"""
-        # TODO: pull through cache instead of big up front download?
-        # TODO: don't just check that the dir exists, check that the file exists
-        # if not self.latest_url:
-        # self._download_and_update_archive()
         return _csaf_doc_from_path(self.path_from_rhsa_id(RedHatAdvisoryID(rhsa)))
 
 
