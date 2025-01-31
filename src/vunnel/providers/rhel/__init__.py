@@ -22,7 +22,7 @@ class Config:
     )
     request_timeout: int = 125
     parallelism: int = 4
-    full_sync_interval: int = 2
+    full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
     rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
 

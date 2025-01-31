@@ -136,12 +136,17 @@ class CSAFClient:
             self.latest_archive_url = self._archive_url()
         archive_path = self._local_archive_path()
         print(f"archive_path: {archive_path}")
-        self._download_stream(self._archive_url(), archive_path)
-        self._download_stream(self._changes_url(), os.path.join(self.workspace.input_path, "changes.csv"))
-        self._download_stream(self._deletions_url(), os.path.join(self.workspace.input_path, "deletions.csv"))
         if not os.path.exists(self.advisories_path):
             os.makedirs(self.advisories_path)
-        extract(archive_path, self.advisories_path)
+        # if there's a new one, the paths won't match and we need to download it
+        if not os.path.exists(archive_path):
+            self._download_stream(self._archive_url(), archive_path)
+            extract(archive_path, self.advisories_path)
+        # always download and process changes and deletions
+        # because this is how the API tells us about updates between
+        # publicatins of the main archive.
+        self._download_stream(self._changes_url(), os.path.join(self.workspace.input_path, "changes.csv"))
+        self._download_stream(self._deletions_url(), os.path.join(self.workspace.input_path, "deletions.csv"))
         self.process_changes_and_deletions()
 
     def path_from_rhsa_id(self, rhsa_id: RedHatAdvisoryID) -> str:

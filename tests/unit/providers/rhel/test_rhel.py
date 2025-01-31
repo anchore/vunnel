@@ -494,7 +494,7 @@ class TestParser:
 
         ar_obj = AffectedRelease(rhsa_id=test_id, platform=test_p, name=test_pkg)
 
-        assert driver._fetch_rhsa_fix_version(ar_obj) == expected
+        assert driver._fetch_rhsa_fix_version("cve-123-123", ar_obj) == expected
 
     @pytest.mark.parametrize(
         "package,name,version",
