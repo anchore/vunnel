@@ -185,6 +185,6 @@ class CSAFRHSAProvider(RHSAProvider):
         # if not rhsa_id or not platform or not package_name:
         #     return None, None
         normalized_package_name = override_package_name or ar.name
-        return self.csaf_parser.get_fix_info_v2(cve_id, ar.as_dict(), normalized_package_name)
+        return self.csaf_parser.get_fix_info(cve_id, ar.as_dict(), normalized_package_name)
 
         return None, None

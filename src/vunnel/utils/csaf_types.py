@@ -1,5 +1,4 @@
 import re
-
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
 from decimal import Decimal
