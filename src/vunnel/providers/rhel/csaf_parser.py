@@ -170,7 +170,7 @@ class CSAFParser:
             return None, None, None, None
 
         if module:
-            match = re.match(r".+(:\d{19}:[0-9a-f]{8})$", module)
+            match = re.match(r".+(:\d{19}([:.])[0-9a-f]{1,8})$", module)
             if match:
                 # print(f"trimmed module: {module}")
                 module = module.removesuffix(match.group(1))
