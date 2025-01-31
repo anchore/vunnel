@@ -10,7 +10,15 @@ from vunnel.workspace import Workspace
 
 
 class AffectedRelease:
-    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None, package=None):  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913
+        self,
+        name: str | None = None,
+        version: str | None = None,
+        platform: str | None = None,
+        rhsa_id: str | None = None,
+        module: str | None = None,
+        package: str | None = None,
+    ) -> None:
         self.name: str | None = name
         self.version: str | None = version
         self.platform: str | None = platform
@@ -19,7 +27,7 @@ class AffectedRelease:
         self.package: str | None = package  # the raw "package" field from Hydra JSON API
         self.platform_cpe: str | None = None  # the CPE for the platform, if available
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, str | None]:
         return {
             "name": self.name,
             "version": self.version,
@@ -119,7 +127,7 @@ class OVALRHSAProvider(RHSAProvider):
             raise Exception("RHSA data not initialized")
 
     @classmethod
-    def from_rhsa_dict(cls, rhsa_dict) -> "OVALRHSAProvider":
+    def from_rhsa_dict(cls, rhsa_dict) -> "OVALRHSAProvider":  # type: ignore[no-untyped-def]
         """
         Create an OVALRHSAProvider instance from a vulnerability dictionary.
 
@@ -174,17 +182,10 @@ class CSAFRHSAProvider(RHSAProvider):
         """
         Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
 
-        :param rhsa_id: The RHSA ID (e.g., "RHSA-2025:1234").
-        :param platform: The platform, which is a RHEL major version, (e.g., "8" for RHEL 8).
-        :param package_name: The name of the package (e.g., "httpd").
+        :param cve_id: The CVE being parsed, (e.g., "CVE-2021-1234").
+        :param ar: an AffectedRelease object
+        :param override_package_name: an override package name (e.g., "httpd") to use instead of ar.name
         :return: A tuple containing the fixed version and module.
         """
-        # rhsa_id = ar.get("advisory")
-        # platform = ar.get("cpe")
-        # package_name = ar.get("package")
-        # if not rhsa_id or not platform or not package_name:
-        #     return None, None
         normalized_package_name = override_package_name or ar.name
         return self.csaf_parser.get_fix_info(cve_id, ar.as_dict(), normalized_package_name)
-
-        return None, None

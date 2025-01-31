@@ -12,13 +12,13 @@ from vunnel.utils.csaf_types import CSAFDoc
 from vunnel.utils.csaf_types import from_path as csaf_from_path
 from vunnel.workspace import Workspace
 
+RH_URL_PREFIX = "https://access.redhat.com/errata/"
+
 
 class RedHatAdvisoryID:
-    RH_URL_PREFIX = "https://access.redhat.com/errata/"
-
     def __init__(self, rhsa: str):
         rhsa = rhsa.upper()
-        rhsa = rhsa.removeprefix(__class__.RH_URL_PREFIX)
+        rhsa = rhsa.removeprefix(RH_URL_PREFIX)
         if "-" and ":" in rhsa:
             self.year = rhsa.split("-")[1].split(":")[0]
             self.rhsa = rhsa
@@ -26,7 +26,7 @@ class RedHatAdvisoryID:
             raise ValueError(f"Invalid RHSA ID: {rhsa}, please provide like RHSA-2021:1234")
 
     def advisory_url(self) -> str:
-        return f"{__class__.RH_URL_PREFIX}{self.rhsa}"
+        return f"{RH_URL_PREFIX}{self.rhsa}"
 
     def advisory_year(self) -> str:
         return self.year
@@ -49,8 +49,8 @@ class CSAFClient:
         self.workspace = workspace
         self.latest_url = latest_url
         self.latest_filename = "archive_latest.txt"
-        self.latest_archive_url = None
-        self.archive_date = None
+        self.latest_archive_url: str | None = None
+        self.archive_date: datetime | None = None
         self.logger = logger
         # self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
@@ -72,7 +72,7 @@ class CSAFClient:
         return self.latest_archive_url
 
     def _local_archive_path(self) -> str:
-        return os.path.join(self.workspace.input_path, self.latest_archive_url.split("/")[-1])
+        return os.path.join(self.workspace.input_path, self._archive_url().split("/")[-1])
 
     def _local_changes_path(self) -> str:
         return os.path.join(self.workspace.input_path, "changes.csv")
@@ -80,7 +80,7 @@ class CSAFClient:
     def _local_deletions_path(self) -> str:
         return os.path.join(self.workspace.input_path, "deletions.csv")
 
-    def _download_stream(self, url: str, path: str):
+    def _download_stream(self, url: str, path: str) -> None:
         with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
             for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
                 if chunk:
@@ -131,7 +131,7 @@ class CSAFClient:
                 if future.exception() is not None:
                     self.logger.warning(f"Failed to download {changed_file}: {future.exception()}")
 
-    def _download_and_update_archive(self):
+    def _download_and_update_archive(self) -> None:
         if not self.latest_archive_url:
             self.latest_archive_url = self._archive_url()
         archive_path = self._local_archive_path()
