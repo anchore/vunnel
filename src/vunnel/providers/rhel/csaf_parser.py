@@ -53,7 +53,7 @@ class CSAFParser:
             version = f"{epoch}:{parsed_purl.version}"
             name = parsed_purl.name
         else:
-            self.logger.warning(f"no purl for {package} from {fpi}")  # type: ignore[attr-defined]
+            self.logger.trace(f"no purl for {package} from {fpi}")  # type: ignore[attr-defined]
 
         platform_product_node = next((p for p in doc.product_tree.branches[0].product_name_branches() if p.product_id() == plat), None)
         platform_cpe = platform_product_node.cpe() if platform_product_node else None
@@ -71,7 +71,7 @@ class CSAFParser:
                 module = f"{parsed_mod_purl.name}:{mod_version}"
                 self.logger.trace(f"module: {module} for {fpi} by {mod_purl}")  # type: ignore[attr-defined]
             else:
-                self.logger.warning(f"no module purl for {module} from {fpi}")
+                self.logger.trace(f"no module purl for {module} from {fpi}")  # type: ignore[attr-defined]
 
         return platform_cpe, module, name, version
 
