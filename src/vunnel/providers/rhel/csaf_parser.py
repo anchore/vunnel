@@ -44,11 +44,16 @@ class CSAFParser:
         version = None
         name = None
         purl = doc.product_tree.purl_for_product_id(package)
+
         if purl:
+            if purl.startswith("pkg:rpmmod"):
+                return None, None, None, None
             parsed_purl = PackageURL.from_string(purl)
             epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
             version = f"{epoch}:{parsed_purl.version}"
             name = parsed_purl.name
+        else:
+            self.logger.warning(f"no purl for {package} from {fpi}")  # type: ignore[attr-defined]
 
         platform_product_node = next((p for p in doc.product_tree.branches[0].product_name_branches() if p.product_id() == plat), None)
         platform_cpe = platform_product_node.cpe() if platform_product_node else None

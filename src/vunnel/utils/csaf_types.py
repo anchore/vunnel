@@ -108,7 +108,7 @@ class VulnID(DataClassDictMixin):
 class Remediation(DataClassDictMixin):
     category: str
     details: str
-    product_ids: set[str]
+    product_ids: list[str]
     url: str | None = None
 
 
