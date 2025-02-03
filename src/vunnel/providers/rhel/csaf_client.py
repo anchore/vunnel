@@ -153,9 +153,13 @@ class CSAFClient:
         # https://security.access.redhat.com/data/csaf/v2/advisories/2024/rhba-2024_0599.json
         return os.path.join(self.advisories_path, rhsa_id.advisory_year(), rhsa_id.advisory_id().lower().replace(":", "_") + ".json")
 
-    def csaf_doc_for_rhsa(self, rhsa: str) -> CSAFDoc:
+    def csaf_doc_for_rhsa(self, rhsa: str) -> CSAFDoc | None:
         """Get the CSAF document for a given RHSA ID"""
-        return _csaf_doc_from_path(self.path_from_rhsa_id(RedHatAdvisoryID(rhsa)))
+        doc_path = self.path_from_rhsa_id(RedHatAdvisoryID(rhsa))
+        if os.path.exists(doc_path):
+            return _csaf_doc_from_path(doc_path)
+        self.logger.info(f"CSAF document not found for {rhsa}")
+        return None
 
 
 @functools.lru_cache(maxsize=1024)

@@ -65,10 +65,12 @@ class CSAFParser:
                     mod_version = mod_version.split(":")[0]
                 module = f"{parsed_mod_purl.name}:{mod_version}"
                 self.logger.trace(f"module: {module} for {fpi} by {mod_purl}")  # type: ignore[attr-defined]
+            else:
+                self.logger.warning(f"no module purl for {module} from {fpi}")
 
         return platform_cpe, module, name, version
 
-    def get_fix_info(self, cve_id: str, ar: dict[str, str | None], normalized_pkg_name: str | None) -> tuple[str | None, str | None]:
+    def get_fix_info(self, cve_id: str, ar: dict[str, str | None], normalized_pkg_name: str | None) -> tuple[str | None, str | None]:  # noqa: PLR0911
         """
         Get fix information for an RHSA from the CSAF data.
 
@@ -79,6 +81,8 @@ class CSAFParser:
             print("no advisory")
             return None, None
         doc = self.csaf_client.csaf_doc_for_rhsa(fix_id)
+        if not doc:
+            return None, None
         vuln = next((v for v in doc.vulnerabilities if v.cve == cve_id), None)
         if not vuln:
             self.logger.trace(f"{cve_id}: {fix_id} CSAF doc does not claim to fix this CVE")  # type: ignore[attr-defined]
