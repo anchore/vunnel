@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: fix-rpm-release-without-build-no+import-db=build/grype-db.tar.gz
+      version: main+import-db=build/grype-db.tar.gz
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: fix-rpm-release-without-build-no
+      version: main
       takes: SBOM
       label: reference
 
