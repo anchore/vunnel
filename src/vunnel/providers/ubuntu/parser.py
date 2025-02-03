@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from vunnel.workspace import Workspace
 
+# namespace should match the value found in the /etc/os-release ID field
 namespace = "ubuntu"
 
 default_max_workers = 8
@@ -151,6 +152,13 @@ class FixedIn(JsonifierMixin):
         self.VersionFormat = None
         self.Version = None
         self.VendorAdvisory = None
+        self.OS = None
+
+
+class OperatingSystem(JsonifierMixin):
+    def __init__(self, identifier=None, version=None):
+        self.ID = identifier
+        self.Version = version
 
 
 class Severity(enum.IntEnum):
@@ -557,6 +565,7 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
 
             pkg.VersionFormat = "dpkg"
             pkg.NamespaceName = namespace_name
+            pkg.OS = OperatingSystem(identifier=namespace, version=ubuntu_version_names.get(p.distro))
             r.FixedIn.append(pkg)
 
             # Check for max priority of all packages with it set

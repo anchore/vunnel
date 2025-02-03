@@ -24,6 +24,7 @@ from .oval_parser import Parser as RHELOvalParser
 if TYPE_CHECKING:
     import requests
 
+# namespace should match the value found in the /etc/os-release ID field
 namespace = "rhel"
 
 
@@ -814,6 +815,7 @@ class Parser:
                             "VersionFormat": "rpm",  # hard code version format for now
                             "NamespaceName": ns,
                             "VendorAdvisory": a,
+                            "OS": {"ID": namespace, "Version": parse_release(artifact.version, platform)},
                         },
                     )
 
@@ -894,3 +896,33 @@ class RHELCVSS3:
                 "base_severity": self.cvss3_obj.severities()[0],
             },
         }
+
+
+def parse_release(fix_version: str, platform: str) -> str:
+    # attempt to parse 0:1.0.0-8.el8_8.1 for the release info (8.8.1)
+    # otherwise fallback to the platform version
+
+    if "module+el" in fix_version:
+        # find the second + and trim the rest, then grab the last section:
+        # e.g. : 2.4.37-47.module+el8.6.0+15654+427eba2e.2
+        # should result in "-47.module+el8.6.0" being returned as the last section
+        end = len(fix_version)
+        if fix_version.count("+") > 1:
+            end = fix_version.find("+", fix_version.find("+") + 1)
+        trimmed_version = fix_version[:end]
+        last_section = trimmed_version.split("-")[-1]
+    else:
+        before_metadata = fix_version.split("+")[0]
+        last_section = before_metadata.split("-")[-1]
+
+    el_match = re.search(r"[._+]el(\d+)(?:[_.]?([0-9.]+))?", last_section)
+    if not el_match:
+        return platform
+
+    major_version = el_match.group(1)
+    minor_version = el_match.group(2)
+
+    if not minor_version:
+        return major_version
+
+    return f"{major_version}.{minor_version}"

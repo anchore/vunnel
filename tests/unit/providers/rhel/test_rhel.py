@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import os
-import shutil
 
 import pytest
 
 from vunnel import result, workspace
-from vunnel.providers.rhel import Config, Provider, parser
-from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
+from vunnel.providers.rhel import Config, Provider
+from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser, parse_release
 
 
 class TestParser:
@@ -509,6 +508,53 @@ class TestParser:
     )
     def test_get_name_version(self, package, name, version):
         assert Parser._get_name_version(package) == (name, version)
+
+
+@pytest.mark.parametrize(
+    "fix_version, platform, expected",
+    [
+        # go case
+        ("0:1.0.0-8.el8_8.1", "8.0", "8.8.1"),
+        ("0:2.3.4-10.el9_2.5", "9.0", "9.2.5"),
+        # no minor version after underscore
+        ("1:3.4.5-2.el7", "7.0", "7"),
+        # non-digit after underscore
+        ("0:1.2.3-4.el8_beta2", "8.0", "8"),
+        # multiple hyphens in version
+        ("0:1.2-3-4.el9_4.3", "9.0", "9.4.3"),
+        # with metadata after "+"
+        ("0:1.0.0-8.el8_8.1+meta123", "8.0", "8.8.1"),
+        ("0:2.3.4-10.el9_2.5+build456", "9.0", "9.2.5"),
+        ("1:3.4.5-2.el7+commit789", "7.0", "7"),
+        # platform fallback cases
+        ("invalid-format", "7.0", "7.0"),  # no hyphen
+        ("1.0.0-noel8", "8.0", "8.0"),  # no .el format
+        ("1.0.0-8el8", "9.0", "9.0"),  # missing dot before el
+        # edge cases
+        ("", "8.0", "8.0"),  # empty string
+        ("0:1.0.0-8.el", "7.0", "7.0"),  # missing version after el
+        ("0:1.0.0-8.el8_", "8.0", "8"),  # empty after underscore
+        ("0:1.0.0-8.el8a_2.1", "8.0", "8"),  # non-digit in major version
+        # complex version strings
+        ("0:1.2.3-4.el8_4_beta1", "8.0", "8.4"),  # multiple underscores
+        ("1:2.3.4-5.el9_0.1", "9.0", "9.0.1"),  # zero in minor version
+        # module cases
+        ("3:10.3.28-1.module_el8.3.0+757+d382997d", "8.3", "8.3.0"),
+        ("1:3.5.4-5.module_el8.6.0+1030+8d97e896", "8.6", "8.6.0"),
+        ("1:14.18.2-2.module_el8.7.0+1151+0d09c14c", "8.7", "8.7.0"),
+        # fallback for invalid module cases
+        ("3:10.3.28-1.module_el8+hashmeta", "8.0", "8"),  # no minor version
+        ("1:14.18.2-2.module_el8_", "8.0", "8"),  # underscore but no version
+        ("1:14.18.2-2.module_el8a_7", "8.0", "8"),  # non-digit major version
+        # older patterns
+        ("2.4.37-47.module+el8.6.0+15654+427eba2e.2", "8.6", "8.6.0"),
+        ("1:14.20.0-2.module+el8.6.0+16231+7c1b33d9", "8.6", "8.6.0"),
+        ("2.4.37-47.module+el8.6.0", "8.6", "8.6.0"),
+    ],
+)
+def test_parse_release(fix_version: str, platform: str, expected: str):
+    result = parse_release(fix_version, platform)
+    assert result == expected, f"Expected {expected} for fix_version={fix_version}, platform={platform}, but got {result}"
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):

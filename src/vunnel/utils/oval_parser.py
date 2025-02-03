@@ -181,6 +181,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
                     "Module": x[2],
                     "VersionFormat": "rpm",  # hard code version format for now
                     "NamespaceName": ns_name,
+                    "OS": _craft_os(ns_name, x[1]),
                 }
                 for x in ns_pkgs_dict[ns_name]
             ]
@@ -207,6 +208,29 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
                 pass
         else:
             vuln_dict[(name, ns_name)] = (def_version, v)
+
+
+def _craft_os(ns_name: str, fix_version: str) -> dict[str, str]:
+    # the fix version is in the form: name-version-release, for example tigervnc-server-1.13.1-8.el9_4.3.
+    # we need to get the OS version from the fix version (in this example, 9.4.3)
+    name = ns_name.split(":", maxsplit=1)[0]
+
+    version_pattern = r"\.el(\d+)(?:_([0-9.]+))?"
+    match = re.search(version_pattern, fix_version)
+    if not match:
+        raise ValueError(f"Unable to extract version from {fix_version!r}")
+
+    major_version = match.group(1)
+    minor_version = match.group(2)
+
+    version = major_version
+    if minor_version:
+        version = f"{major_version}.{minor_version}"
+
+    return {
+        "ID": name,
+        "Version": version,
+    }
 
 
 def _process_criteria(element_a, oval_ns, config: Config):

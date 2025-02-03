@@ -6,6 +6,7 @@ import defusedxml.ElementTree as ET
 import pytest
 
 from vunnel import result
+from vunnel.providers.amazon.parser import OperatingSystem
 from vunnel.providers.sles import Config, Provider
 from vunnel.providers.sles.parser import (
     PARSER_CONFIG,
@@ -21,7 +22,7 @@ from vunnel.utils.oval_v2 import (
     VersionParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability, VendorAdvisory
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability, VendorAdvisory, OperatingSystem
 
 
 class TestSLESVulnerabilityParser:
@@ -150,6 +151,7 @@ class TestSLESParser:
                         Version="0:4.12.14-150.72.1",
                         Module=None,
                         VendorAdvisory=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     )
                 ],
                 Metadata={},
@@ -179,6 +181,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5-server",
@@ -188,6 +191,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5",
@@ -197,6 +201,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5-32bit",
@@ -206,6 +211,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5-client",
@@ -215,6 +221,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5-devel",
@@ -224,6 +231,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5-plugin-preauth-otp",
@@ -233,6 +241,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                     FixedIn(
                         Name="krb5-plugin-preauth-pkinit",
@@ -242,6 +251,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        OS=OperatingSystem(ID="sles", Version="15"),
                     ),
                 ],
                 Metadata={},
@@ -273,6 +283,7 @@ class TestSLESParser:
                         Version="0:4.12.14-197.89.2",
                         Module=None,
                         VendorAdvisory=None,
+                        OS=OperatingSystem(ID="sles", Version="15.1"),
                     )
                 ],
                 Metadata={},

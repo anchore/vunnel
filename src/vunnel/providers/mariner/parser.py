@@ -9,7 +9,7 @@ from xsdata.formats.dataclass.parsers.config import ParserConfig
 
 from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoState, RpminfoTest
 from vunnel.utils import http
-from vunnel.utils.vulnerability import FixedIn, Vulnerability
+from vunnel.utils.vulnerability import FixedIn, OperatingSystem, Vulnerability
 
 if TYPE_CHECKING:
     import logging
@@ -166,6 +166,10 @@ class MarinerXmlFile:
             VulnerableRange=vulnerability_range_str,
             Module=None,
             VendorAdvisory=None,
+            OS=OperatingSystem(
+                ID=VERSION_TO_OS_ID.get(self.mariner_version, DEFAULT_VERSION_ID),
+                Version=self.mariner_version,
+            ),
         )
 
     def vulnerability_id(self, definition: Definition) -> str | None:
@@ -220,6 +224,22 @@ VERSION_TO_FILENAME = {
     "1.0": MARINER_URL_FILENAME.format("1.0"),
     "2.0": MARINER_URL_FILENAME.format("2.0"),
     "3.0": "azurelinux-3.0-oval.xml",
+}
+
+
+# All values are based off of the ID value within /etc/os-release
+# e.g.:
+#   docker run --rm -it mcr.microsoft.com/azurelinux/base/core:3.0 cat /etc/os-release | grep ID
+#   ID=azurelinux
+#   ...
+#
+#   docker run --rm -it mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-arm64@sha256:51101e635f56032d5afd3fb cat /etc/os-release | grep ID
+#   ID=mariner
+#   ...
+DEFAULT_VERSION_ID = "azurelinux"
+VERSION_TO_OS_ID = {
+    "1.0": "mariner",
+    "2.0": "mariner",
 }
 
 

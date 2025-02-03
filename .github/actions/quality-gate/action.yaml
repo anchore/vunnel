@@ -15,7 +15,6 @@ runs:
       working-directory: tests/quality
       run: poetry run make capture provider=${{ inputs.provider }}
 
-
     - name: Validate provider results
       shell: bash
       working-directory: tests/quality

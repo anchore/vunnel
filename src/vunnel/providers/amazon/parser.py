@@ -10,6 +10,7 @@ import defusedxml.ElementTree as ET
 
 from vunnel.utils import http, rpm
 
+# namespace should match the value found in the /etc/os-release ID field
 namespace = "amzn"
 
 AlasSummary = namedtuple("AlasSummary", ["id", "url", "sev", "cves"])
@@ -235,6 +236,13 @@ class FixedIn(JsonifierMixin):
         self.NamespaceName = None
         self.VersionFormat = None
         self.Version = None
+        self.OS = None
+
+
+class OperatingSystem(JsonifierMixin):
+    def __init__(self, identifier: str | None = None, version: str | None = None):
+        self.ID = identifier
+        self.Version = version
 
 
 class PackagesHTMLParser(HTMLParser):
@@ -316,6 +324,7 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         f.NamespaceName = v.NamespaceName
         f.VersionFormat = "rpm"
         f.Version = item.ver
+        f.OS = OperatingSystem(identifier=namespace, version=version)
         v.FixedIn.append(f)
 
     return v

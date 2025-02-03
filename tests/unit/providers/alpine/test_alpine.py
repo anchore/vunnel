@@ -12,45 +12,40 @@ from vunnel.providers.alpine.parser import Parser, SecdbLandingParser
 class TestAlpineProvider:
     @pytest.fixture()
     def mock_raw_data(self):
-        """
-        Returns stringified version of the following yaml
-
-        ---
-        distroversion: v0.0
-        reponame: main
-        archs:
-          - x86_64
-          - x86
-          - armhf
-        urlprefix: http://dl-cdn.alpinelinux.org/alpine
-        apkurl: "{{urlprefix}}/{{distroversion}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk"
-        packages:
-          - pkg:
-              name: apache2
-              secfixes:
-                2.4.26-r0:
-                  - CVE-2017-3167
-                  - CVE-2017-3169
-                  - CVE-2017-7659
-                  - CVE-2017-7668
-                  - CVE-2017-7679
-                2.4.27-r0:
-                  - CVE-2017-9789
-                2.4.27-r1:
-                  - CVE-2017-9798
-          - pkg:
-              name: augeas
-              secfixes:
-                1.4.0-r5:
-                - CVE-2017-7555
-          - pkg:
-              name: bash
-              secfixes:
-                4.3.42-r5:
-                  - CVE-2016-9401
-        """
-
-        return "apkurl: '{{urlprefix}}/{{distroversion}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk'\narchs:\n- x86_64\n- x86\n- armhf\ndistroversion: v0.0\npackages:\n- pkg:\n    name: apache2\n    secfixes:\n      2.4.26-r0:\n      - CVE-2017-3167\n      - CVE-2017-3169\n      - CVE-2017-7659\n      - CVE-2017-7668\n      - CVE-2017-7679\n      2.4.27-r0:\n      - CVE-2017-9789\n      2.4.27-r1:\n      - CVE-2017-9798\n- pkg:\n    name: augeas\n    secfixes:\n      1.4.0-r5:\n      - CVE-2017-7555\n- pkg:\n    name: bash\n    secfixes:\n      4.3.42-r5:\n      - CVE-2016-9401\nreponame: main\nurlprefix: http://dl-cdn.alpinelinux.org/alpine\n"  # noqa: E501
+        return """
+apkurl: '{{urlprefix}}/{{distroversion}}/{{reponame}}/{{arch}}/{{pkg.name}}-{{pkg.ver}}.apk'
+archs:
+- x86_64
+- x86
+- armhf
+distroversion: v0.0
+packages:
+- pkg:
+    name: apache2
+    secfixes:
+      2.4.26-r0:
+      - CVE-2017-3167
+      - CVE-2017-3169
+      - CVE-2017-7659
+      - CVE-2017-7668
+      - CVE-2017-7679
+      2.4.27-r0:
+      - CVE-2017-9789
+      2.4.27-r1:
+      - CVE-2017-9798
+- pkg:
+    name: augeas
+    secfixes:
+      1.4.0-r5:
+      - CVE-2017-7555
+- pkg:
+    name: bash
+    secfixes:
+      4.3.42-r5:
+      - CVE-2016-9401
+reponame: main
+urlprefix: http://dl-cdn.alpinelinux.org/alpine
+"""
 
     @pytest.fixture()
     def mock_parsed_data(self):

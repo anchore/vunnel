@@ -63,6 +63,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "bind-devel",
@@ -70,6 +71,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "bind-sdb",
@@ -77,6 +79,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "bind-libbind-devel",
@@ -84,6 +87,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "bind",
@@ -91,6 +95,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "caching-nameserver",
@@ -98,6 +103,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "bind-chroot",
@@ -105,6 +111,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                     {
                                         "Name": "bind-libs",
@@ -112,6 +119,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "5"},
                                     },
                                 ],
                             ),
@@ -155,6 +163,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "6"},
                                     },
                                     {
                                         "Name": "kernel-uek",
@@ -162,6 +171,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "6"},
                                     },
                                     {
                                         "Name": "kernel-uek-firmware",
@@ -169,6 +179,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "6"},
                                     },
                                     {
                                         "Name": "kernel-uek-debug-devel",
@@ -176,6 +187,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "6"},
                                     },
                                     {
                                         "Name": "kernel-uek-devel",
@@ -183,6 +195,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "6"},
                                     },
                                     {
                                         "Name": "kernel-uek-debug",
@@ -190,6 +203,7 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "6"},
                                     },
                                 ],
                             ),
@@ -263,6 +277,7 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.ksplice1.el8_3",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "8.3"},
                                     },
                                 ],
                             },
@@ -295,6 +310,7 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "8.3"},
                                     },
                                 ],
                             },
@@ -314,6 +330,7 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "8.3"},
                                     },
                                 ],
                             },
@@ -335,6 +352,7 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.ksplice1.el8_3",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "8.3"},
                                     },
                                     {
                                         "Name": "openssl",
@@ -342,6 +360,7 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "8.3"},
                                     },
                                 ],
                             },
@@ -361,6 +380,7 @@ class TestKspliceFilterer:
                                         "NamespaceName": "ol:8",
                                         "Version": "2:1.1.1g-15.1.el8_3",
                                         "Module": None,
+                                        "OS": {"ID": "ol", "Version": "8.3"},
                                     },
                                 ],
                             },

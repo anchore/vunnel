@@ -7,78 +7,130 @@
         {
           "Name": "kernel",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-debuginfo",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-debuginfo-common-x86_64",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-devel",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-doc",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-headers",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-tools",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-tools-debuginfo",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "kernel-tools-devel",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "perf",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "perf-debuginfo",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "python-perf",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
           "Name": "python-perf-debuginfo",
           "NamespaceName": "amzn:2",
+          "OS": {
+            "ID": "amzn",
+            "Version": "2"
+          },
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         }
@@ -99,5 +151,5 @@
       "Severity": "Critical"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.3.json"
 }
