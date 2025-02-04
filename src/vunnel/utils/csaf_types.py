@@ -73,10 +73,10 @@ class Note(DataClassDictMixin):
 
 @dataclass
 class ProductStatus(DataClassDictMixin):
-    fixed: set[str] = field(default_factory=set)
-    known_affected: set[str] = field(default_factory=set)
-    known_not_affected: set[str] = field(default_factory=set)
-    under_investigation: set[str] = field(default_factory=set)
+    fixed: list[str] = field(default_factory=list)
+    known_affected: list[str] = field(default_factory=list)
+    known_not_affected: list[str] = field(default_factory=list)
+    under_investigation: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -95,7 +95,7 @@ class CWE(DataClassDictMixin):
 @dataclass
 class Flag(DataClassDictMixin):
     label: str
-    product_ids: set[str]
+    product_ids: list[str]
 
 
 @dataclass
@@ -114,7 +114,7 @@ class Remediation(DataClassDictMixin):
 
 @dataclass
 class Score(DataClassDictMixin):
-    products: set[str]
+    products: list[str]
     cvss_v3: CVSS_V3 | None = None
     cvss_v2: CVSS_V2 | None = None
 
