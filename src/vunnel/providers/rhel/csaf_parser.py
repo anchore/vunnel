@@ -100,10 +100,22 @@ class CSAFParser:
             print("no platform cpe")
             return None, None
         self.logger.trace(f"{cve_id} searching {fix_id} based on {ar_plat_cpe} and {normalized_pkg_name}")  # type: ignore[attr-defined]
+        backup_module, backup_version = None, None
         for fpi in candidate_full_product_ids:
             plat, module, name, version = self.platform_module_name_version_from_fpi(doc, fpi)
             if name == normalized_pkg_name and plat and plat.startswith(ar_plat_cpe):
+                # verions like like "0:1.4.7-3.ael7b_1" are "alternative" and we should only return
+                # them if we can't find a better match
+                if version and "ael" in version:
+                    self.logger.trace(f"found alternative match for {fpi}, {name}, {plat} against {ar_plat_cpe}: {normalized_pkg_name}")  # type: ignore[attr-defined]
+                    backup_module, backup_version = module, version
+                    continue
                 self.logger.trace(f"found match for {fpi}, {name}, {plat} against {ar_plat_cpe}: {normalized_pkg_name}")  # type: ignore[attr-defined]
                 return version, module
-        self.logger.trace(f"{cve_id} no match for {fix_id} against {ar_plat_cpe}: {normalized_pkg_name}")  # type: ignore[attr-defined]
-        return None, None
+        if backup_version:
+            self.logger.trace(  # type: ignore[attr-defined]
+                f"returning alternative match {backup_version} (module: {backup_module}) for {fix_id} against {ar_plat_cpe}: {normalized_pkg_name}",
+            )
+        else:
+            self.logger.trace(f"{cve_id} no match for {fix_id} against {ar_plat_cpe}: {normalized_pkg_name}")  # type: ignore[attr-defined]
+        return backup_version, backup_module
