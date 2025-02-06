@@ -14,6 +14,8 @@ from vunnel.workspace import Workspace
 
 RH_URL_PREFIX = "https://access.redhat.com/errata/"
 
+ADVISORIES_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/advisories/archive_latest.txt"
+
 
 class RedHatAdvisoryID:
     def __init__(self, rhsa: str):
@@ -45,7 +47,12 @@ class RedHatAdvisoryID:
 
 
 class CSAFClient:
-    def __init__(self, workspace: Workspace, latest_url: str, logger: logging.Logger):
+    def __init__(
+        self,
+        workspace: Workspace,
+        logger: logging.Logger,
+        latest_url: str = ADVISORIES_LATEST_URL,
+    ):
         self.workspace = workspace
         self.latest_url = latest_url
         self.latest_filename = "archive_latest.txt"
@@ -137,7 +144,7 @@ class CSAFClient:
         archive_path = self._local_archive_path()
         print(f"archive_path: {archive_path}")
         if not os.path.exists(self.advisories_path):
-            os.makedirs(self.advisories_path)
+            os.makedirs(self.advisories_path, exist_ok=True)
         # if there's a new one, the paths won't match and we need to download it
         if not os.path.exists(archive_path):
             self._download_stream(self._archive_url(), archive_path)
@@ -162,6 +169,9 @@ class CSAFClient:
         return None
 
 
+# this caching is important, because the main RHEL Parser tends to repeatedly
+# ask questions about the same RHSA, and we don't want to re-parse the same
+# CSAF document over and over.
 @functools.lru_cache(maxsize=1024)
 def _csaf_doc_from_path(doc_path: str) -> CSAFDoc:
     return csaf_from_path(doc_path)

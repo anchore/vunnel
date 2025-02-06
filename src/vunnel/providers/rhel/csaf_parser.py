@@ -7,11 +7,9 @@ from vunnel.providers.rhel.csaf_client import CSAFClient
 from vunnel.utils.csaf_types import CSAFDoc
 from vunnel.workspace import Workspace
 
-ADVISORIES_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/advisories/archive_latest.txt"
-
 
 class CSAFParser:
-    def __init__(self, workspace: Workspace, logger: logging.Logger | None = None, download_timeout: int = 125):
+    def __init__(self, workspace: Workspace, client: CSAFClient, logger: logging.Logger | None = None, download_timeout: int = 125):
         self.download_timeout = download_timeout
         self.workspace = workspace
 
@@ -22,7 +20,7 @@ class CSAFParser:
         self.advisory_download_path = os.path.join(self.workspace.input_path, "advisory_archive.tar.zst")
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
         self._urls: set[str] = set()
-        self.csaf_client = CSAFClient(self.workspace, ADVISORIES_LATEST_URL, self.logger)
+        self.csaf_client: CSAFClient = client
 
     @property
     def urls(self) -> list[str]:

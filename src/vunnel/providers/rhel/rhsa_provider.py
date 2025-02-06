@@ -3,6 +3,7 @@ import os
 import re
 from abc import ABC, abstractmethod
 
+from vunnel.providers.rhel.csaf_client import CSAFClient
 from vunnel.providers.rhel.csaf_parser import CSAFParser
 from vunnel.providers.rhel.oval_parser import Parser as OVALParser
 from vunnel.utils.oval_parser import Config as OVALConfig
@@ -171,8 +172,10 @@ class CSAFRHSAProvider(RHSAProvider):
         """
         super().__init__(workspace, download_timeout_seconds, logger)
         self.logger.debug("parsing RHSA data using RHEL csaf parser")
+        client = CSAFClient(workspace, logger)
         self.csaf_parser = CSAFParser(
             workspace,
+            client,
             download_timeout=download_timeout_seconds,
             logger=logging.getLogger("rhel.csaf_parser.CSAFParser"),
         )
