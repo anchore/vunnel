@@ -1,16 +1,11 @@
 import re
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
-from decimal import Decimal
 
 import orjson
-from cvss import CVSS3
-from cvss.exceptions import CVSS3Error
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.dict import DataClassDictMixin
-
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
 
 # TODO: is this still doing anything?
@@ -117,26 +112,6 @@ class Score(DataClassDictMixin):
     products: list[str]
     cvss_v3: CVSS_V3 | None = None
     cvss_v2: CVSS_V2 | None = None
-
-    def to_vunnel_cvss(self, status: str = "draft") -> CVSS | None:
-        if self.cvss_v3:
-            try:
-                cvss3_obj = CVSS3(self.cvss_v3.vector_string)
-                return CVSS(
-                    version=self.cvss_v3.version,
-                    vector_string=self.cvss_v3.vector_string,
-                    base_metrics=CVSSBaseMetrics(
-                        base_score=self.cvss_v3.base_score,
-                        exploitability_score=float(cvss3_obj.esc.quantize(Decimal("1.0"))),
-                        impact_score=float(cvss3_obj.isc.quantize(Decimal("1.0"))),
-                        base_severity=cvss3_obj.severities()[0],
-                    ),
-                    status=status,
-                )
-            except CVSS3Error:
-                return None
-        # TODO: handle CVSS v2
-        return None
 
 
 @dataclass

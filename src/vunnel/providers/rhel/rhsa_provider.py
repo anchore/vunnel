@@ -41,6 +41,33 @@ class AffectedRelease:
 
 
 class RHSAProvider(ABC):
+    """
+    RHSAProvider is an abstract class that encapsulates the ability of the RHEL Parser to ask for
+    fixed information about a given CVE. There are two implementations of this class, OVALRHSAProvider
+    and CSAFRHSAProvider. The OVALRHSAProvider encapsulates parsing fixed data and module data out of
+    OVAL XML files, while the CSAFRHSAProvider encapsulates parsing fixed data and module data out of
+    out of the CSAF Advisory JSON files. The main RHEL parser chooses which implementation to use based
+    on a configuration setting.
+
+    The interface only allows asking for fixed information about one package as affected by one CVE at a time.
+    The reason is that the RHEL Hydra Data is used to control which CVEs and packages are reported by Vunnel.
+
+    In other words, the CSAF (and likely the OVAL) data have fix information that should not be included in the
+    Grype database, so the main parser filters the Hydra API responses to learn which CVEs and packages are
+    relevant to Vunnel, and then asks the RHSAProvider for the fixed information about those specific CVEs and
+    packages.
+
+    The primary reason is that the CSAF data as currently published indicates that every package that was rebuilt
+    as part of a given RHSA is fixed by that RHSA, even if prior versions were not vulnerable. So for example, if
+    a large module is rebuilt due to a security issue in one of its source RPMs, the CSAF data will indicate that
+    every package in that module is fixed by the RHSA, even if the security issue only affected one package. This bloats
+    the database and leads to false positives (and to indirect matches becoming direct matches incorrectly). Therefore,
+    let the Hydra API control which CVEs and packages are reported by Vunnel, and then ask the RHSAProvider for the
+    fixed information about those specific CVEs and packages.
+
+    Secondarily, this preserves the contract that already existed between the parts of the OVAL-based RHEL parser
+    """
+
     def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger):
         """
         Initialize the RHSAProvider with a workspace, configuration, and logger.
@@ -130,7 +157,9 @@ class OVALRHSAProvider(RHSAProvider):
     @classmethod
     def from_rhsa_dict(cls, rhsa_dict) -> "OVALRHSAProvider":  # type: ignore[no-untyped-def]
         """
-        Create an OVALRHSAProvider instance from a vulnerability dictionary.
+        Create an OVALRHSAProvider instance from a vulnerability dictionary. This is
+        useful for testing, so that a test author can provide the dictinoary that would
+        result from parsing the OVAL XML files, instead of authoring OVAL XML files.
 
         :return: An OVALRHSAProvider instance.
         """
@@ -138,7 +167,6 @@ class OVALRHSAProvider(RHSAProvider):
         instance.rhsa_dict = rhsa_dict
         return instance
 
-    # def get_fixed_version_and_module(self, rhsa_id: str | None, platform: str | None, package_name: str | None) -> tuple[str | None, str | None]:
     def get_fixed_version_and_module(self, cve_id: str, ar: AffectedRelease, override_package_name: str | None) -> tuple[str | None, str | None]:
         """
         Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
@@ -162,6 +190,12 @@ class OVALRHSAProvider(RHSAProvider):
 
 
 class CSAFRHSAProvider(RHSAProvider):
+    """
+    CSAFRHSAProvider is an adapter between the main RHEL Parser, and the CSAFParser, which knows how to
+    answer questions about CSAF data. It is instantiated in the RHEL parser when that parser is configured
+    to use CSAF data as its source of RHSA data.
+    """
+
     def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger):
         """
         Initialize the CSAFRHSAProvider with a workspace, configuration, and logger.
