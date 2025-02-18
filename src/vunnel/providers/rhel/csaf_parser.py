@@ -24,8 +24,6 @@ class CSAFParser:
             logger = logging.getLogger(self.__class__.__name__)
 
         self.logger = logger
-        self.advisory_download_path = os.path.join(self.workspace.input_path, "advisory_archive.tar.zst")
-        self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
         self._urls: set[str] = set()
         self.csaf_client: CSAFClient = client
 
@@ -120,7 +118,8 @@ class CSAFParser:
         return platform_cpe, module, name, version
 
     # TODO: needs unit test and decomp
-    def get_fix_info(self, cve_id: str, ar: dict[str, str | None], normalized_pkg_name: str | None) -> tuple[str | None, str | None]:  # noqa: PLR0911
+    # TODO: this is really taking an ar dict because of a circular import issue. It should be taking an AffectedRelease object.
+    def get_fix_info(self, cve_id: str, ar: dict[str, str | None], normalized_pkg_name: str) -> tuple[str | None, str | None]:  # noqa: PLR0911
         """
         Given a CVE ID, an affected release object, and the normalized name of the affected package,
         interrogate CSAF RHSA data to look for an advisory that tells us what version of the package is

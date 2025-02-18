@@ -28,6 +28,10 @@ class WorkspaceHelper:
         return self.root / self.name / "input"
 
     @property
+    def input_path(self) -> str:
+        return self.root / self.name / "input"
+
+    @property
     def results_dir(self):
         return self.root / self.name / "results"
 

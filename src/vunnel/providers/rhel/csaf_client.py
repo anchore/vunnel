@@ -59,7 +59,6 @@ class CSAFClient:
         self.latest_archive_url: str | None = None
         self.archive_date: datetime | None = None
         self.logger = logger
-        # self.csaf_path = os.path.join(self.workspace.input_path, "csaf")
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
         self._download_and_update_archive()
 
@@ -112,18 +111,22 @@ class CSAFClient:
                 with contextlib.suppress(FileNotFoundError):
                     os.remove(os.path.join(self.advisories_path, deleted_fragment))
         seen_files = set()
+        years = set()
         with open(changes_path, newline="") as fh:
             reader = csv.reader(fh)
             for row in reader:
                 # row is like "2021/cve-2021-47265.json","2024-11-08T18:28:22+00:00"
                 changed_file = row[0]
+                year = changed_file.split("/")[0]
                 date_str = row[1]
                 change_date = datetime.fromisoformat(date_str)
                 if self.archive_date and change_date < self.archive_date:
                     break
-                if changed_file in seen_files:
-                    continue
                 seen_files.add(changed_file)
+                years.add(year)
+        # defend against year represented in "changes.csv" but not in main .tar.zst file
+        for year in years:
+            os.makedirs(os.path.join(self.advisories_path, year), exist_ok=True)
         with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
             futures = {
                 executor.submit(
@@ -142,7 +145,6 @@ class CSAFClient:
         if not self.latest_archive_url:
             self.latest_archive_url = self._archive_url()
         archive_path = self._local_archive_path()
-        print(f"archive_path: {archive_path}")
         if not os.path.exists(self.advisories_path):
             os.makedirs(self.advisories_path, exist_ok=True)
         # if there's a new one, the paths won't match and we need to download it

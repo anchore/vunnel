@@ -518,7 +518,7 @@ class TestParser:
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
-        input_fixture="test-fixtures/input",
+        input_fixture="test-fixtures/oval/input",
     )
 
     c = Config()
@@ -544,11 +544,12 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
-        input_fixture="test-fixtures/input",
+        input_fixture="test-fixtures/oval/input",
     )
 
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.rhsa_source = "OVAL"
     p = Provider(root=workspace.root, config=c)
 
     def mock_sync_cves(*args, **kwargs):
