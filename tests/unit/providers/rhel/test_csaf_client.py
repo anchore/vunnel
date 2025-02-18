@@ -80,4 +80,3 @@ def test_process_changes_and_deletions(mock_workspace, mock_http_get, mock_os_re
     assert doc.document.aggregate_severity.text == "Important"
     doc_self_link = next((r.url for r in doc.document.references if r.category == "self"), None)
     assert doc_self_link.endswith("RHSA-2024:0010")
-

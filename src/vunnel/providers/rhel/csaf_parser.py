@@ -1,5 +1,4 @@
 import logging
-import os
 
 from packageurl import PackageURL
 
@@ -160,7 +159,7 @@ class CSAFParser:
             return None, None
         self.logger.trace(f"{cve_id} searching {fix_id} based on {ar_plat_cpe} and {normalized_pkg_name}")  # type: ignore[attr-defined]
 
-        # looop over all candidate product IDs, that is, all product IDs that were patched by the RHSA we're
+        # loop over all candidate product IDs, that is, all product IDs that were patched by the RHSA we're
         # interested in, and ask the CSAF document for their platform, module, name, and version.
         # If the name matches the normalized package name, and the platform matches the affected release's
         # platform CPE as a prefix, return that.

@@ -225,4 +225,7 @@ class CSAFRHSAProvider(RHSAProvider):
         :return: A tuple containing the fixed version and module.
         """
         normalized_package_name = override_package_name or ar.name
+
+        if not normalized_package_name:
+            return None, None
         return self.csaf_parser.get_fix_info(cve_id, ar.as_dict(), normalized_package_name)
