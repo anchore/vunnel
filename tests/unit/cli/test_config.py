@@ -81,6 +81,11 @@ def test_full_config(helpers):
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
+            kev=providers.kev.Config(
+                runtime=runtime_cfg,
+                url="https://anchore.com/kev/data.json",
+                request_timeout=20,
+            ),
             nvd=providers.nvd.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
