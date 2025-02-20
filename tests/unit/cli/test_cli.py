@@ -285,6 +285,7 @@ providers:
     full_sync_interval: 2
     parallelism: 4
     request_timeout: 125
+    rhsa_source: CSAF
     runtime:
       existing_input: keep
       existing_results: delete-before-write
