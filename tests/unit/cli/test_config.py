@@ -75,6 +75,12 @@ def test_full_config(helpers):
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
+            epss=providers.epss.Config(
+                runtime=runtime_cfg,
+                dataset="yesterday",
+                url_template="https://localhost/epss_scores-{}.csv.gz",
+                request_timeout=20,
+            ),
             github=providers.github.Config(
                 token="",
                 api_url="https://api.gitlab.com/graphql",

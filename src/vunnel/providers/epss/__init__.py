@@ -5,16 +5,10 @@ from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 
-from .parser import Parser
+from .manager import Manager
 
 if TYPE_CHECKING:
     import datetime
-
-# NOTE, CHANGE ME!: a unique and semantically useful name for this provider
-PROVIDER_NAME = "epss"
-
-# NOTE, CHANGE ME!: the data shape that all entries produced by this provider conform to
-SCHEMA = schema.EPSSSchema()
 
 
 @dataclass
@@ -22,31 +16,20 @@ class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
+            existing_input=provider.InputStatePolicy.DELETE,
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
+    # there is historical data available organized by "YYYY-MM-DD", but we always default to "current" for the latest
+    dataset: str = "current"
+    url_template: str = "https://epss.cyentia.com/epss_scores-{}.csv.gz"
     request_timeout: int = 125
-
-    # NOTE, CHANGE ME!: Example for fetching secrets from the environment and sanitizing output.
-    # It is important to sanitize the __str__ method so that these secrets are not accidentally
-    # written to log output.
-    #
-    # token: str = "env:VUNNEL_AWESOME_TOKEN"
-    #
-    # def __post_init__(self) -> None:
-    #     if self.token.startswith("env:"):
-    #         self.token = os.environ.get(self.token[4:], "")
-    #
-    # def __str__(self) -> str:
-    #     # sanitize secrets from any output
-    #     tok_value = self.token
-    #     str_value = super().__str__()
-    #     if not tok_value:
-    #         return str_value
-    #     return str_value.replace(tok_value, "********")
 
 
 class Provider(provider.Provider):
+    __schema__ = schema.EPSSSchema()
+    __distribution_version__ = int(__schema__.major_version)
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
@@ -55,37 +38,25 @@ class Provider(provider.Provider):
         self.config = config
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
+        self.manager = Manager(
             ws=self.workspace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
-            # NOTE, CHANGE ME!: example of passing a config secret to the parser to download the vulnerability data
-            # token=self.config.token
+            dataset=config.dataset,
+            url_template=config.url_template,
         )
-
-        # this provider requires the previous state from former runs
-        provider.disallow_existing_input_policy(config.runtime)
 
     @classmethod
     def name(cls) -> str:
-        return PROVIDER_NAME
+        return "epss"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        # NOTE: CHANGE ME! Why is last_updated passed in here? This allows you to be able to make decisions about
-        # incremental updates of the existing vulnerability data state instead of needing to download all
-        # vulnerability data from the source. For an example of this see the NVD provider implementation at
-        # https://github.com/anchore/vunnel/blob/main/src/vunnel/providers/nvd/manager.py
-
         with self.results_writer() as writer:
-            for vuln_id, record in self.parser.get():
-                if not vuln_id:
-                    continue
-                vuln_id = vuln_id.lower()
-
+            for vuln_id, record in self.manager.get():
                 writer.write(
-                    identifier=vuln_id,
-                    schema=SCHEMA,
+                    identifier=vuln_id.lower(),  # type: ignore[union-attr]
+                    schema=self.__schema__,
                     payload=record,
                 )
 
-        return self.parser.urls, len(writer)
+        return self.manager.urls, len(writer)
