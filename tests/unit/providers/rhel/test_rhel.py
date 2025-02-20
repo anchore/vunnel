@@ -7,7 +7,8 @@ import pytest
 
 from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider, parser
-from vunnel.providers.rhel.parser import Advisory, FixedIn, Parser
+from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser
+from vunnel.providers.rhel.rhsa_provider import OVALRHSAProvider
 
 
 class TestParser:
@@ -210,7 +211,7 @@ class TestParser:
 
     def test_parse_affected_releases_0(self, mock_cve, tmpdir):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_dict = dict()
+        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_affected_release(mock_cve.get("name"), mock_cve)
 
@@ -431,13 +432,14 @@ class TestParser:
                 ],
             ),
         ],
+        ids=["case1" , "case2", "case3", "case4", "case5", "case6", "case7"],
     )
     def test_parse_affected_releases(self, tmpdir, affected_releases, fixed_ins, mock_rhsa_dict_2):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_dict = mock_rhsa_dict_2
+        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict(mock_rhsa_dict_2)
 
         results = driver._parse_affected_release(affected_releases.get("name"), affected_releases)
-        assert isinstance(results, list) and len(results) == len(fixed_ins)
+        assert isinstance(results, list)
         results.sort(key=lambda x: x.platform)
         fixed_ins.sort(key=lambda x: x.platform)
         assert results == fixed_ins
@@ -455,7 +457,7 @@ class TestParser:
 
     def test_parse_cve(self, tmpdir, mock_cve):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_dict = dict()
+        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_cve(mock_cve.get("name"), mock_cve)
         assert results and isinstance(results, list) and len(results) == 2
@@ -466,7 +468,7 @@ class TestParser:
 
     def test_parse_cve_partial_fix(self, tmpdir, mock_cve_partial_fix):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_dict = dict()
+        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_cve(mock_cve_partial_fix.get("name"), mock_cve_partial_fix)
         assert results and isinstance(results, list) and len(results) == 1
@@ -488,9 +490,11 @@ class TestParser:
     )
     def test_fetch_rhsa_fix_version(self, tmpdir, mock_rhsa_dict, test_id, test_p, test_pkg, expected):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_dict = mock_rhsa_dict
+        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict(mock_rhsa_dict)
 
-        assert driver._fetch_rhsa_fix_version(test_id, test_p, test_pkg) == expected
+        ar_obj = AffectedRelease(rhsa_id=test_id, platform=test_p, name=test_pkg)
+
+        assert driver._fetch_rhsa_fix_version("cve-123-123", ar_obj) == expected
 
     @pytest.mark.parametrize(
         "package,name,version",
@@ -514,7 +518,7 @@ class TestParser:
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
-        input_fixture="test-fixtures/input",
+        input_fixture="test-fixtures/oval/input",
     )
 
     c = Config()
@@ -525,7 +529,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
         return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
     def mock_init_rhsa_data(*args, **kwargs):
-        return {}
+        p.parser.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
     monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
@@ -540,17 +544,20 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
-        input_fixture="test-fixtures/input",
+        input_fixture="test-fixtures/oval/input",
     )
 
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.rhsa_source = "OVAL"
     p = Provider(root=workspace.root, config=c)
 
     def mock_sync_cves(*args, **kwargs):
         return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
     def mock_init_rhsa_data(*args, **kwargs):
+        p.parser.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+
         return {}
 
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)

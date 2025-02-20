@@ -26,31 +26,31 @@ class Config:
     """
 
     # regexes
-    tag_pattern = None
-    ns_pattern = None
-    is_installed_pattern = None
-    pkg_version_pattern = None
-    pkg_module_pattern = None
-    signed_with_pattern = None
-    platform_version_pattern = None
+    tag_pattern: re.Pattern | None = None
+    ns_pattern: re.Pattern | None = None
+    is_installed_pattern: re.Pattern | None = None
+    pkg_version_pattern: re.Pattern | None = None
+    pkg_module_pattern: re.Pattern | None = None
+    signed_with_pattern: re.Pattern | None = None
+    platform_version_pattern: re.Pattern | None = None
 
     # xpath queries
-    title_xpath_query = None
-    severity_xpath_query = None
-    platform_xpath_query = None
-    date_issued_xpath_query = None
-    date_updated_xpath_query = None
-    description_xpath_query = None
-    sa_ref_xpath_query = None
-    cve_xpath_query = None
-    criteria_xpath_query = None
-    criterion_xpath_query = None
+    title_xpath_query: str | None = None
+    severity_xpath_query: str | None = None
+    platform_xpath_query: str | None = None
+    date_issued_xpath_query: str | None = None
+    date_updated_xpath_query: str | None = None
+    description_xpath_query: str | None = None
+    sa_ref_xpath_query: str | None = None
+    cve_xpath_query: str | None = None
+    criteria_xpath_query: str | None = None
+    criterion_xpath_query: str | None = None
 
     # maps
-    severity_dict = None
+    severity_dict: dict[str, str] | None = None
 
     # string formats
-    ns_format = None
+    ns_format: str | None = None
 
 
 def get_opener(filename: str) -> Callable:

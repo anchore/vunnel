@@ -1,0 +1,1823 @@
+{
+  "document": {
+    "aggregate_severity": {
+      "namespace": "https://access.redhat.com/security/updates/classification/",
+      "text": "Important"
+    },
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "text": "Copyright © Red Hat, Inc. All rights reserved.",
+      "tlp": {
+        "label": "WHITE",
+        "url": "https://www.first.org/tlp/"
+      }
+    },
+    "lang": "en",
+    "notes": [
+      {
+        "category": "summary",
+        "text": "An update for tigervnc is now available for Red Hat Enterprise Linux 9.\n\nRed Hat Product Security has rated this update as having a security impact of Important. A Common Vulnerability Scoring System (CVSS) base score, which gives a detailed severity rating, is available for each vulnerability from the CVE link(s) in the References section.",
+        "title": "Topic"
+      },
+      {
+        "category": "general",
+        "text": "Virtual Network Computing (VNC) is a remote display system which allows users to view a computing desktop environment not only on the machine where it is running, but from anywhere on the Internet and from a wide variety of machine architectures. TigerVNC is a suite of VNC servers and clients.\n\nSecurity Fix(es):\n\n* xorg-x11-server: Out-of-bounds write in XIChangeDeviceProperty/RRChangeOutputProperty (CVE-2023-5367)\n\n* xorg-x11-server: out-of-bounds memory reads/writes in XKB button actions (CVE-2023-6377)\n\n* xorg-x11-server: out-of-bounds memory read in RRChangeOutputProperty and RRChangeProviderProperty (CVE-2023-6478)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+        "title": "Details"
+      },
+      {
+        "category": "legal_disclaimer",
+        "text": "This content is licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). If you distribute this content, or a modified version of it, you must provide attribution to Red Hat Inc. and provide a link to the original.",
+        "title": "Terms of Use"
+      }
+    ],
+    "publisher": {
+      "category": "vendor",
+      "contact_details": "https://access.redhat.com/security/team/contact/",
+      "issuing_authority": "Red Hat Product Security is responsible for vulnerability handling across all Red Hat products and services.",
+      "name": "Red Hat Product Security",
+      "namespace": "https://www.redhat.com"
+    },
+    "references": [
+      {
+        "category": "self",
+        "summary": "https://access.redhat.com/errata/RHSA-2024:0010",
+        "url": "https://access.redhat.com/errata/RHSA-2024:0010"
+      },
+      {
+        "category": "external",
+        "summary": "https://access.redhat.com/security/updates/classification/#important",
+        "url": "https://access.redhat.com/security/updates/classification/#important"
+      },
+      {
+        "category": "external",
+        "summary": "2243091",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2243091"
+      },
+      {
+        "category": "external",
+        "summary": "2253291",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2253291"
+      },
+      {
+        "category": "external",
+        "summary": "2253298",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2253298"
+      },
+      {
+        "category": "self",
+        "summary": "Canonical URL",
+        "url": "https://security.access.redhat.com/data/csaf/v2/advisories/2024/rhsa-2024_0010.json"
+      }
+    ],
+    "title": "Red Hat Security Advisory: tigervnc security update",
+    "tracking": {
+      "current_release_date": "2024-11-23T02:54:26+00:00",
+      "generator": {
+        "date": "2024-11-23T02:54:26+00:00",
+        "engine": {
+          "name": "Red Hat SDEngine",
+          "version": "4.2.1"
+        }
+      },
+      "id": "RHSA-2024:0010",
+      "initial_release_date": "2024-01-02T08:58:34+00:00",
+      "revision_history": [
+        {
+          "date": "2024-01-02T08:58:34+00:00",
+          "number": "1",
+          "summary": "Initial version"
+        },
+        {
+          "date": "2024-01-02T08:58:34+00:00",
+          "number": "2",
+          "summary": "Last updated version"
+        },
+        {
+          "date": "2024-11-23T02:54:26+00:00",
+          "number": "3",
+          "summary": "Last generated version"
+        }
+      ],
+      "status": "final",
+      "version": "3"
+    }
+  },
+  "product_tree": {
+    "branches": [
+      {
+        "branches": [
+          {
+            "branches": [
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux AppStream (v. 9)",
+                "product": {
+                  "name": "Red Hat Enterprise Linux AppStream (v. 9)",
+                  "product_id": "AppStream-9.3.0.Z.MAIN",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/a:redhat:enterprise_linux:9::appstream"
+                  }
+                }
+              }
+            ],
+            "category": "product_family",
+            "name": "Red Hat Enterprise Linux"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "tigervnc-0:1.13.1-3.el9_3.3.src",
+                "product": {
+                  "name": "tigervnc-0:1.13.1-3.el9_3.3.src",
+                  "product_id": "tigervnc-0:1.13.1-3.el9_3.3.src",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc@1.13.1-3.el9_3.3?arch=src"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "src"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debugsource@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debuginfo@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-debuginfo@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal-debuginfo@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                "product": {
+                  "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_id": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module-debuginfo@1.13.1-3.el9_3.3?arch=aarch64"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "aarch64"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debugsource@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debuginfo@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-debuginfo@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal-debuginfo@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                "product": {
+                  "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_id": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module-debuginfo@1.13.1-3.el9_3.3?arch=ppc64le"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "ppc64le"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debugsource@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debuginfo@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-debuginfo@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal-debuginfo@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                "product": {
+                  "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_id": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module-debuginfo@1.13.1-3.el9_3.3?arch=x86_64"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "x86_64"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "tigervnc-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debugsource@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-debuginfo@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-debuginfo@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-minimal-debuginfo@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                "product": {
+                  "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_id": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-server-module-debuginfo@1.13.1-3.el9_3.3?arch=s390x"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "s390x"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+                "product": {
+                  "name": "tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+                  "product_id": "tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-icons@1.13.1-3.el9_3.3?arch=noarch"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+                "product": {
+                  "name": "tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+                  "product_id": "tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-license@1.13.1-3.el9_3.3?arch=noarch"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+                "product": {
+                  "name": "tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+                  "product_id": "tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/tigervnc-selinux@1.13.1-3.el9_3.3?arch=noarch"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "noarch"
+          }
+        ],
+        "category": "vendor",
+        "name": "Red Hat"
+      }
+    ],
+    "relationships": [
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-0:1.13.1-3.el9_3.3.src as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src"
+        },
+        "product_reference": "tigervnc-0:1.13.1-3.el9_3.3.src",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-icons-0:1.13.1-3.el9_3.3.noarch as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch"
+        },
+        "product_reference": "tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-license-0:1.13.1-3.el9_3.3.noarch as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch"
+        },
+        "product_reference": "tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch"
+        },
+        "product_reference": "tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64"
+        },
+        "product_reference": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le"
+        },
+        "product_reference": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x"
+        },
+        "product_reference": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64 as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        },
+        "product_reference": "tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2023-5367",
+      "cwe": {
+        "id": "CWE-787",
+        "name": "Out-of-bounds Write"
+      },
+      "discovery_date": "2023-10-03T00:00:00+00:00",
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2243091"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A out-of-bounds write flaw was found in the xorg-x11-server. This issue occurs due to an incorrect calculation of a buffer offset when copying data stored in the heap in the XIChangeDeviceProperty function in Xi/xiproperty.c and in RRChangeOutputProperty function in randr/rrproperty.c, allowing for possible escalation of privileges or denial of service.",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "xorg-x11-server: Out-of-bounds write in XIChangeDeviceProperty/RRChangeOutputProperty",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "Xorg server does not run with root privileges in Red Hat Enterprise Linux 8 and 9, therefore, Red Hat Enterprise Linux 8 and 9 have been rated with a moderate severity.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        ]
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-5367"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2243091",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2243091"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-5367",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-5367"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-5367",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-5367"
+        },
+        {
+          "category": "external",
+          "summary": "https://lists.x.org/archives/xorg-announce/2023-October/003430.html",
+          "url": "https://lists.x.org/archives/xorg-announce/2023-October/003430.html"
+        }
+      ],
+      "release_date": "2023-10-25T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "date": "2024-01-02T08:58:34+00:00",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ],
+          "restart_required": {
+            "category": "none"
+          },
+          "url": "https://access.redhat.com/errata/RHSA-2024:0010"
+        },
+        {
+          "category": "workaround",
+          "details": "Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+          "product_ids": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "LOCAL",
+            "availabilityImpact": "HIGH",
+            "baseScore": 7.8,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "LOW",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          },
+          "products": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ]
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Important"
+        }
+      ],
+      "title": "xorg-x11-server: Out-of-bounds write in XIChangeDeviceProperty/RRChangeOutputProperty"
+    },
+    {
+      "acknowledgments": [
+        {
+          "names": [
+            "Peter Hutterer"
+          ],
+          "organization": "Red Hat",
+          "summary": "This issue was discovered by Red Hat."
+        }
+      ],
+      "cve": "CVE-2023-6377",
+      "cwe": {
+        "id": "CWE-125",
+        "name": "Out-of-bounds Read"
+      },
+      "discovery_date": "2023-11-30T00:00:00+00:00",
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2253291"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A flaw was found in xorg-server. Querying or changing XKB button actions such as moving from a touchpad to a mouse can result in out-of-bounds memory reads and writes. This may allow local privilege escalation or possible remote code execution in cases where X11 forwarding is involved.",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "xorg-x11-server: out-of-bounds memory reads/writes in XKB button actions",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "Xorg server does not run with root privileges in Red Hat Enterprise Linux 8 and 9, therefore, Red Hat Enterprise Linux 8 and 9 have been rated with a moderate severity.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        ]
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-6377"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2253291",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2253291"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-6377",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-6377"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-6377",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6377"
+        },
+        {
+          "category": "external",
+          "summary": "https://gitlab.freedesktop.org/xorg/xserver/-/commit/0c1a93d319558fe3ab2d94f51d174b4f93810afd",
+          "url": "https://gitlab.freedesktop.org/xorg/xserver/-/commit/0c1a93d319558fe3ab2d94f51d174b4f93810afd"
+        },
+        {
+          "category": "external",
+          "summary": "https://lists.x.org/archives/xorg-announce/2023-December/003435.html",
+          "url": "https://lists.x.org/archives/xorg-announce/2023-December/003435.html"
+        }
+      ],
+      "release_date": "2023-12-13T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "date": "2024-01-02T08:58:34+00:00",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ],
+          "restart_required": {
+            "category": "none"
+          },
+          "url": "https://access.redhat.com/errata/RHSA-2024:0010"
+        },
+        {
+          "category": "workaround",
+          "details": "Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+          "product_ids": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "LOCAL",
+            "availabilityImpact": "HIGH",
+            "baseScore": 7.8,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "LOW",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          },
+          "products": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ]
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Important"
+        }
+      ],
+      "title": "xorg-x11-server: out-of-bounds memory reads/writes in XKB button actions"
+    },
+    {
+      "acknowledgments": [
+        {
+          "names": [
+            "Peter Hutterer"
+          ],
+          "organization": "Red Hat",
+          "summary": "This issue was discovered by Red Hat."
+        }
+      ],
+      "cve": "CVE-2023-6478",
+      "cwe": {
+        "id": "CWE-190",
+        "name": "Integer Overflow or Wraparound"
+      },
+      "discovery_date": "2023-11-30T00:00:00+00:00",
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2253298"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A flaw was found in xorg-server. A specially crafted request to RRChangeProviderProperty or RRChangeOutputProperty can trigger an integer overflow which may lead to a disclosure of sensitive information.",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "xorg-x11-server: out-of-bounds memory read in RRChangeOutputProperty and RRChangeProviderProperty",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "Xorg server does not run with root privileges in Red Hat Enterprise Linux 8 and 9, therefore, Red Hat Enterprise Linux 8 and 9 have been rated with a moderate severity.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+          "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+        ]
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-6478"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2253298",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2253298"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-6478",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-6478"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-6478",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-6478"
+        },
+        {
+          "category": "external",
+          "summary": "https://gitlab.freedesktop.org/xorg/xserver/-/commit/14f480010a93ff962fef66a16412fafff81ad632",
+          "url": "https://gitlab.freedesktop.org/xorg/xserver/-/commit/14f480010a93ff962fef66a16412fafff81ad632"
+        },
+        {
+          "category": "external",
+          "summary": "https://lists.x.org/archives/xorg-announce/2023-December/003435.html",
+          "url": "https://lists.x.org/archives/xorg-announce/2023-December/003435.html"
+        }
+      ],
+      "release_date": "2023-12-13T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "date": "2024-01-02T08:58:34+00:00",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ],
+          "restart_required": {
+            "category": "none"
+          },
+          "url": "https://access.redhat.com/errata/RHSA-2024:0010"
+        },
+        {
+          "category": "workaround",
+          "details": "Mitigation for this issue is either not available or the currently available options don't meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+          "product_ids": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "LOW",
+            "baseScore": 7.6,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "LOW",
+            "privilegesRequired": "LOW",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:L",
+            "version": "3.1"
+          },
+          "products": [
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.src",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-debugsource-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-icons-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-license-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-selinux-0:1.13.1-3.el9_3.3.noarch",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-minimal-debuginfo-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-0:1.13.1-3.el9_3.3.x86_64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.aarch64",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.ppc64le",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.s390x",
+            "AppStream-9.3.0.Z.MAIN:tigervnc-server-module-debuginfo-0:1.13.1-3.el9_3.3.x86_64"
+          ]
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Important"
+        }
+      ],
+      "title": "xorg-x11-server: out-of-bounds memory read in RRChangeOutputProperty and RRChangeProviderProperty"
+    }
+  ]
+}

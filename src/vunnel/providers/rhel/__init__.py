@@ -22,8 +22,9 @@ class Config:
     )
     request_timeout: int = 125
     parallelism: int = 4
-    full_sync_interval: int = 2
+    full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
+    rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
 
 
 class Provider(provider.Provider):
@@ -43,6 +44,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             max_workers=self.config.parallelism,
             full_sync_interval=self.config.full_sync_interval,
+            rhsa_provider_type=self.config.rhsa_source,
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
         )
