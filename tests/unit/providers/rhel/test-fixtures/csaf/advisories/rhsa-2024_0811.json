@@ -1,0 +1,502 @@
+{
+  "document": {
+    "aggregate_severity": {
+      "namespace": "https://access.redhat.com/security/updates/classification/",
+      "text": "Moderate"
+    },
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "text": "Copyright © Red Hat, Inc. All rights reserved.",
+      "tlp": {
+        "label": "WHITE",
+        "url": "https://www.first.org/tlp/"
+      }
+    },
+    "lang": "en",
+    "notes": [
+      {
+        "category": "summary",
+        "text": "A security update for sudo is now available for Red Hat Enterprise Linux 8 and 9.\n\nRed Hat Product Security has rated this update as having a security impact of Moderate. A Common Vulnerability Scoring System (CVSS) base score, which gives a detailed severity rating, is available for each vulnerability from the CVE link(s) in the References section.",
+        "title": "Topic"
+      },
+      {
+        "category": "general",
+        "text": "The sudo packages contain the sudo utility which allows system\nadministrators to provide certain users with the permission to execute\nprivileged commands, which are used for system management purposes, without\nhaving to log in as root.\n\nBug Fix(es) and Enhancement(s):\n\n* CVE-2023-28487 sudo: Sudo does not escape control characters in sudoreplay output\n* CVE-2023-28486 sudo: Sudo does not escape control characters in log messages\n* CVE-2023-42465 sudo: Targeted Corruption of Register and Stack Variables",
+        "title": "Details"
+      },
+      {
+        "category": "legal_disclaimer",
+        "text": "This content is licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). If you distribute this content, or a modified version of it, you must provide attribution to Red Hat Inc. and provide a link to the original.",
+        "title": "Terms of Use"
+      }
+    ],
+    "publisher": {
+      "category": "vendor",
+      "contact_details": "https://access.redhat.com/security/team/contact/",
+      "issuing_authority": "Red Hat Product Security is responsible for vulnerability handling across all Red Hat products and services.",
+      "name": "Red Hat Product Security",
+      "namespace": "https://www.redhat.com"
+    },
+    "references": [
+      {
+        "category": "self",
+        "summary": "https://access.redhat.com/errata/RHSA-2024:0811",
+        "url": "https://access.redhat.com/errata/RHSA-2024:0811"
+      },
+      {
+        "category": "external",
+        "summary": "https://access.redhat.com/security/updates/classification/#moderate",
+        "url": "https://access.redhat.com/security/updates/classification/#moderate"
+      },
+      {
+        "category": "external",
+        "summary": "2179272",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2179272"
+      },
+      {
+        "category": "external",
+        "summary": "2179273",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2179273"
+      },
+      {
+        "category": "external",
+        "summary": "2255568",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2255568"
+      },
+      {
+        "category": "self",
+        "summary": "Canonical URL",
+        "url": "https://security.access.redhat.com/data/csaf/v2/advisories/2024/rhsa-2024_0811.json"
+      }
+    ],
+    "title": "Red Hat Security Advisory: sudo security update",
+    "tracking": {
+      "current_release_date": "2024-11-23T00:11:44+00:00",
+      "generator": {
+        "date": "2024-11-23T00:11:44+00:00",
+        "engine": {
+          "name": "Red Hat SDEngine",
+          "version": "4.2.1"
+        }
+      },
+      "id": "RHSA-2024:0811",
+      "initial_release_date": "2024-02-14T00:54:45+00:00",
+      "revision_history": [
+        {
+          "date": "2024-02-14T00:54:45+00:00",
+          "number": "1",
+          "summary": "Initial version"
+        },
+        {
+          "date": "2024-02-14T00:54:45+00:00",
+          "number": "2",
+          "summary": "Last updated version"
+        },
+        {
+          "date": "2024-11-23T00:11:44+00:00",
+          "number": "3",
+          "summary": "Last generated version"
+        }
+      ],
+      "status": "final",
+      "version": "3"
+    }
+  },
+  "product_tree": {
+    "relationships": [
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "sudo-0:1.9.5p2-7.el9_0.4.src as a component of Red Hat Enterprise Linux AppStream EUS (v.9.0)",
+          "product_id": "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src"
+        },
+        "product_reference": "sudo-0:1.9.5p2-7.el9_0.4.src",
+        "relates_to_product_reference": "AppStream-9.0.0.Z.EUS"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "sudo-0:1.9.5p2-10.el9_3.src as a component of Red Hat Enterprise Linux AppStream (v. 9)",
+          "product_id": "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src"
+        },
+        "product_reference": "sudo-0:1.9.5p2-10.el9_3.src",
+        "relates_to_product_reference": "AppStream-9.3.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "sudo-0:1.9.5p2-1.el8_6.src as a component of Red Hat Enterprise Linux BaseOS EUS (v.8.6)",
+          "product_id": "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+        },
+        "product_reference": "sudo-0:1.9.5p2-1.el8_6.src",
+        "relates_to_product_reference": "BaseOS-8.6.0.Z.EUS"
+      }
+    ],
+    "branches": [
+      {
+        "category": "vendor",
+        "name": "Red Hat",
+        "branches": [
+          {
+            "category": "product_family",
+            "name": "Red Hat Enterprise Linux",
+            "branches": [
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux BaseOS EUS (v.8.6)",
+                "branches": [],
+                "product": {
+                  "name": "Red Hat Enterprise Linux BaseOS EUS (v.8.6)",
+                  "product_id": "BaseOS-8.6.0.Z.EUS",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/o:redhat:rhel_eus:8.6::baseos"
+                  }
+                }
+              },
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux AppStream EUS (v.9.0)",
+                "branches": [],
+                "product": {
+                  "name": "Red Hat Enterprise Linux AppStream EUS (v.9.0)",
+                  "product_id": "AppStream-9.0.0.Z.EUS",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/a:redhat:rhel_eus:9.0::appstream"
+                  }
+                }
+              },
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux AppStream (v. 9)",
+                "branches": [],
+                "product": {
+                  "name": "Red Hat Enterprise Linux AppStream (v. 9)",
+                  "product_id": "AppStream-9.3.0.Z.MAIN",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/a:redhat:enterprise_linux:9::appstream"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "category": "architecture",
+            "name": "src",
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "sudo-0:1.9.5p2-1.el8_6.src",
+                "branches": [],
+                "product": {
+                  "name": "sudo-0:1.9.5p2-1.el8_6.src",
+                  "product_id": "sudo-0:1.9.5p2-1.el8_6.src",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/sudo@1.9.5p2-1.el8_6?arch=src"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "sudo-0:1.9.5p2-7.el9_0.4.src",
+                "branches": [],
+                "product": {
+                  "name": "sudo-0:1.9.5p2-7.el9_0.4.src",
+                  "product_id": "sudo-0:1.9.5p2-7.el9_0.4.src",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/sudo@1.9.5p2-7.el9_0.4?arch=src"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "sudo-0:1.9.5p2-10.el9_3.src",
+                "branches": [],
+                "product": {
+                  "name": "sudo-0:1.9.5p2-10.el9_3.src",
+                  "product_id": "sudo-0:1.9.5p2-10.el9_3.src",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/sudo@1.9.5p2-10.el9_3?arch=src"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "title": "sudo: Sudo does not escape control characters in log messages",
+      "cve": "CVE-2023-28486",
+      "cwe": "{'id': 'CWE-117', 'name': 'Improper Output Neutralization for Logs'}",
+      "discovery_date": "2023-03-17T00:00:00+00:00",
+      "flags": [],
+      "ids": [],
+      "notes": [],
+      "product_status": {
+        "fixed": [
+          "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+          "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+          "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-28486"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2179272",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2179272"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-28486",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-28486"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-28486",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28486"
+        }
+      ],
+      "release_date": "2023-03-16T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "Before applying this update, make sure all previously released errata\nrelevant to your system have been applied.\n\nFor details on how to apply this update, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:0811"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "NONE",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "LOW",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "sudo: Sudo does not escape control characters in sudoreplay output",
+      "cve": "CVE-2023-28487",
+      "cwe": "{'id': 'CWE-117', 'name': 'Improper Output Neutralization for Logs'}",
+      "discovery_date": "2023-03-17T00:00:00+00:00",
+      "flags": [],
+      "ids": [],
+      "notes": [],
+      "product_status": {
+        "fixed": [
+          "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+          "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+          "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-28487"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2179273",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2179273"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-28487",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-28487"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-28487",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28487"
+        }
+      ],
+      "release_date": "2023-03-16T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "Before applying this update, make sure all previously released errata\nrelevant to your system have been applied.\n\nFor details on how to apply this update, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:0811"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "NONE",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "LOW",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "sudo: Targeted Corruption of Register and Stack Variables",
+      "cve": "CVE-2023-42465",
+      "cwe": "{'id': 'CWE-1319', 'name': 'Improper Protection against Electromagnetic Fault Injection (EM-FI)'}",
+      "discovery_date": "2023-12-21T00:00:00+00:00",
+      "flags": [],
+      "ids": [],
+      "notes": [],
+      "product_status": {
+        "fixed": [
+          "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+          "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+          "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-42465"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2255568",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2255568"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-42465",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-42465"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-42465",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-42465"
+        },
+        {
+          "category": "external",
+          "summary": "https://arxiv.org/pdf/2309.02545.pdf",
+          "url": "https://arxiv.org/pdf/2309.02545.pdf"
+        },
+        {
+          "category": "external",
+          "summary": "https://github.com/sudo-project/sudo/commit/7873f8334c8d31031f8cfa83bd97ac6029309e4f",
+          "url": "https://github.com/sudo-project/sudo/commit/7873f8334c8d31031f8cfa83bd97ac6029309e4f"
+        }
+      ],
+      "release_date": "2023-09-05T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "Before applying this update, make sure all previously released errata\nrelevant to your system have been applied.\n\nFor details on how to apply this update, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:0811"
+        },
+        {
+          "category": "workaround",
+          "details": "In general to address this issue, it's crucial to implement robust logic that prevents unintended execution from a single-bit flip. \n\nBut mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+          "product_ids": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+            "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+            "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "HIGH",
+            "attackVector": "LOCAL",
+            "availabilityImpact": "HIGH",
+            "baseScore": 7.0,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "LOW",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    }
+  ]
+}

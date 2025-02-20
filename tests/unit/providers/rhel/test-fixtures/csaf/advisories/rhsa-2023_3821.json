@@ -1,0 +1,471 @@
+{
+  "document": {
+    "aggregate_severity": {
+      "namespace": "https://access.redhat.com/security/updates/classification/",
+      "text": "Moderate"
+    },
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "text": "Copyright © Red Hat, Inc. All rights reserved.",
+      "tlp": {
+        "label": "WHITE",
+        "url": "https://www.first.org/tlp/"
+      }
+    },
+    "lang": "en",
+    "notes": [
+      {
+        "category": "summary",
+        "text": "An update for the ruby:2.7 module is now available for Red Hat Enterprise Linux 8.\n\nRed Hat Product Security has rated this update as having a security impact of Moderate. A Common Vulnerability Scoring System (CVSS) base score, which gives a detailed severity rating, is available for each vulnerability from the CVE link(s) in the References section.",
+        "title": "Topic"
+      },
+      {
+        "category": "general",
+        "text": "Ruby is an extensible, interpreted, object-oriented, scripting language. It has features to process text files and to perform system management tasks.\n\nThe following packages have been upgraded to a later upstream version: ruby (2.7). (BZ#2189465)\n\nSecurity Fix(es):\n\n* ruby/cgi-gem: HTTP response splitting in CGI (CVE-2021-33621)\n\n* ruby: ReDoS vulnerability in URI (CVE-2023-28755)\n\n* ruby: ReDoS vulnerability in Time (CVE-2023-28756)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+        "title": "Details"
+      },
+      {
+        "category": "legal_disclaimer",
+        "text": "This content is licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). If you distribute this content, or a modified version of it, you must provide attribution to Red Hat Inc. and provide a link to the original.",
+        "title": "Terms of Use"
+      }
+    ],
+    "publisher": {
+      "category": "vendor",
+      "contact_details": "https://access.redhat.com/security/team/contact/",
+      "issuing_authority": "Red Hat Product Security is responsible for vulnerability handling across all Red Hat products and services.",
+      "name": "Red Hat Product Security",
+      "namespace": "https://www.redhat.com"
+    },
+    "references": [
+      {
+        "category": "self",
+        "summary": "https://access.redhat.com/errata/RHSA-2023:3821",
+        "url": "https://access.redhat.com/errata/RHSA-2023:3821"
+      },
+      {
+        "category": "external",
+        "summary": "https://access.redhat.com/security/updates/classification/#moderate",
+        "url": "https://access.redhat.com/security/updates/classification/#moderate"
+      },
+      {
+        "category": "external",
+        "summary": "2149706",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2149706"
+      },
+      {
+        "category": "external",
+        "summary": "2184059",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184059"
+      },
+      {
+        "category": "external",
+        "summary": "2184061",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184061"
+      },
+      {
+        "category": "external",
+        "summary": "2189465",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2189465"
+      },
+      {
+        "category": "self",
+        "summary": "Canonical URL",
+        "url": "https://security.access.redhat.com/data/csaf/v2/advisories/2023/rhsa-2023_3821.json"
+      }
+    ],
+    "title": "Red Hat Security Advisory: ruby:2.7 security, bug fix, and enhancement update",
+    "tracking": {
+      "current_release_date": "2024-11-15T17:19:32+00:00",
+      "generator": {
+        "date": "2024-11-15T17:19:32+00:00",
+        "engine": {
+          "name": "Red Hat SDEngine",
+          "version": "4.2.1"
+        }
+      },
+      "id": "RHSA-2023:3821",
+      "initial_release_date": "2023-06-27T15:16:35+00:00",
+      "revision_history": [
+        {
+          "date": "2023-06-27T15:16:35+00:00",
+          "number": "1",
+          "summary": "Initial version"
+        },
+        {
+          "date": "2023-06-27T15:16:35+00:00",
+          "number": "2",
+          "summary": "Last updated version"
+        },
+        {
+          "date": "2024-11-15T17:19:32+00:00",
+          "number": "3",
+          "summary": "Last generated version"
+        }
+      ],
+      "status": "final",
+      "version": "3"
+    }
+  },
+  "product_tree": {
+    "relationships": [
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "ruby:2.7:8080020230427102918:63b34585 as a component of Red Hat Enterprise Linux AppStream (v. 8)",
+          "product_id": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585"
+        },
+        "product_reference": "ruby:2.7:8080020230427102918:63b34585",
+        "relates_to_product_reference": "AppStream-8.8.0.Z.MAIN.EUS"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src as a component of ruby:2.7:8080020230427102918:63b34585 as a component of Red Hat Enterprise Linux AppStream (v. 8)",
+          "product_id": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src"
+        },
+        "product_reference": "ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+        "relates_to_product_reference": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch as a component of ruby:2.7:8080020230427102918:63b34585 as a component of Red Hat Enterprise Linux AppStream (v. 8)",
+          "product_id": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+        },
+        "product_reference": "rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch",
+        "relates_to_product_reference": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585"
+      }
+    ],
+    "branches": [
+      {
+        "category": "vendor",
+        "name": "Red Hat",
+        "branches": [
+          {
+            "category": "product_family",
+            "name": "Red Hat Enterprise Linux",
+            "branches": [
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux AppStream (v. 8)",
+                "branches": [],
+                "product": {
+                  "name": "Red Hat Enterprise Linux AppStream (v. 8)",
+                  "product_id": "AppStream-8.8.0.Z.MAIN.EUS",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/a:redhat:enterprise_linux:8::appstream"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "category": "architecture",
+            "name": "noarch",
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "ruby:2.7:8080020230427102918:63b34585",
+                "branches": [],
+                "product": {
+                  "name": "ruby:2.7:8080020230427102918:63b34585",
+                  "product_id": "ruby:2.7:8080020230427102918:63b34585",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpmmod/redhat/ruby@2.7:8080020230427102918:63b34585"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch",
+                "branches": [],
+                "product": {
+                  "name": "rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch",
+                  "product_id": "rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/rubygem-irb@1.2.6-139.module%2Bel8.8.0%2B18745%2Bf1bef313?arch=noarch"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "category": "architecture",
+            "name": "src",
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+                "branches": [],
+                "product": {
+                  "name": "ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+                  "product_id": "ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/ruby@2.7.8-139.module%2Bel8.8.0%2B18745%2Bf1bef313?arch=src"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "title": "ruby/cgi-gem: HTTP response splitting in CGI",
+      "cve": "CVE-2021-33621",
+      "cwe": "{'id': 'CWE-113', 'name': \"Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Request/Response Splitting')\"}",
+      "discovery_date": "2022-11-18T00:00:00+00:00",
+      "flags": [],
+      "ids": [],
+      "notes": [],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+          "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2021-33621"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2149706",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2149706"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2021-33621",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2021-33621"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2021-33621",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-33621"
+        }
+      ],
+      "release_date": "2022-11-18T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2023:3821"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "HIGH",
+            "baseScore": 8.8,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "LOW",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "ruby: ReDoS vulnerability in URI",
+      "cve": "CVE-2023-28755",
+      "cwe": "{'id': 'CWE-20', 'name': 'Improper Input Validation'}",
+      "discovery_date": "2023-04-03T00:00:00+00:00",
+      "flags": [],
+      "ids": [],
+      "notes": [],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+          "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-28755"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2184059",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184059"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-28755",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-28755"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-28755",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28755"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.ruby-lang.org/en/news/2023/03/28/redos-in-uri-cve-2023-28755/",
+          "url": "https://www.ruby-lang.org/en/news/2023/03/28/redos-in-uri-cve-2023-28755/"
+        }
+      ],
+      "release_date": "2023-03-21T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2023:3821"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "LOW",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "ruby: ReDoS vulnerability in Time",
+      "cve": "CVE-2023-28756",
+      "cwe": "{'id': 'CWE-20', 'name': 'Improper Input Validation'}",
+      "discovery_date": "2023-04-03T00:00:00+00:00",
+      "flags": [],
+      "ids": [],
+      "notes": [],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+          "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-28756"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2184061",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184061"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-28756",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-28756"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-28756",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28756"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.ruby-lang.org/en/news/2023/03/30/redos-in-time-cve-2023-28756/",
+          "url": "https://www.ruby-lang.org/en/news/2023/03/30/redos-in-time-cve-2023-28756/"
+        }
+      ],
+      "release_date": "2023-03-21T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2023:3821"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+            "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "LOW",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    }
+  ]
+}
