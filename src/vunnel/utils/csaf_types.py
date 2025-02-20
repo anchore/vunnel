@@ -2,14 +2,15 @@ import re
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
 
-import orjson
 from mashumaro import field_options
 from mashumaro.config import BaseConfig, TO_DICT_ADD_OMIT_NONE_FLAG
 from mashumaro.mixins.orjson import DataClassORJSONMixin
 
+
 class OmitNoneORJSONModel(DataClassORJSONMixin):
     class Config(BaseConfig):
         omit_none = True
+
 
 @dataclass
 class CVSS_V3(DataClassORJSONMixin):
@@ -124,20 +125,6 @@ class Vulnerability(OmitNoneORJSONModel):
     scores: list[Score] = field(default_factory=list)
     threats: list[Threat] = field(default_factory=list)
 
-    def all_advisory_urls(self) -> set[str]:
-        result = set()
-        for r in self.remediations:
-            if r.category == "vendor_fix" and r.url:
-                result.add(r.url)
-
-        return result
-
-    def advisory_url_for_product(self, product_id: str) -> str | None:
-        for r in self.remediations:
-            if r.category == "vendor_fix" and product_id in r.product_ids:
-                return r.url
-        return None
-
 
 @dataclass
 class FullProductName(OmitNoneORJSONModel):
@@ -173,27 +160,6 @@ class Branch(OmitNoneORJSONModel):
     branches: list["Branch"] = field(default_factory=list)
     product: Product | None = None
 
-    def acculumulate_categories_recursively(self, accumulator: set[str]) -> None:
-        accumulator.add(self.category)
-        for b in self.branches:
-            b.acculumulate_categories_recursively(accumulator)
-
-    def source_rpm_product_ids(self) -> set[str]:
-        result = set()
-        if (
-            self.product
-            and self.product.product_identification_helper
-            and (
-                (self.product.product_identification_helper.purl and "arch=src" in self.product.product_identification_helper.purl)
-                or re.search(r"\.el\d+.src$", self.product.product_id)
-            )
-        ):
-            result.add(self.product.product_id)
-
-        for b in self.branches:
-            result = result | b.source_rpm_product_ids()
-        return result
-
     def purl(self) -> str | None:
         if self.product and self.product.product_identification_helper:
             return self.product.product_identification_helper.purl
@@ -210,29 +176,19 @@ class Branch(OmitNoneORJSONModel):
         return None
 
     def product_branches(self) -> IterGenerator["Branch", None, None]:
+        yield self
         for b in self.branches:
-            if b.product:
-                yield b
-            elif b.branches:
-                yield from b.product_branches()
+            yield from b.product_branches()
 
     def product_version_branches(self) -> IterGenerator["Branch", None, None]:
-        stack = [self]
-        while stack:
-            current = stack.pop()
-            if current.category == "product_version":
-                yield current
-            stack.extend(current.branches)
-        # if self.category == "product_version":
-        #     yield self
-        # for b in self.branches:
-        #     yield from b.product_version_branches()
+        for b in self.product_branches():
+            if b.category == "product_version":
+                yield b
 
     def product_name_branches(self) -> IterGenerator["Branch", None, None]:
-        if self.category == "product_name":
-            yield self
-        for b in self.branches:
-            yield from b.product_name_branches()
+        for b in self.product_branches():
+            if b.category == "product_name":
+                yield b
 
 
 @dataclass
@@ -260,52 +216,12 @@ class ProductTree(OmitNoneORJSONModel):
             if purl and pid:
                 self.product_id_to_purl[pid] = purl
 
-    def parent(self, product_id: str) -> str | None:
-        return self.product_id_to_parent.get(product_id)
-
-    def first_parent(self, product_id: str) -> str:
-        here: str | None = product_id
-        last_product_id = product_id
-        while here:
-            last_product_id = here
-            here = self.parent(here)
-        return last_product_id
-
-    def second_parent(self, product_id: str) -> str | None:
-        root = self.first_parent(product_id)  # Find the root using first_parent
-        here: str | None = product_id
-        previous = None
-
-        # Traverse up the tree until we reach the root
-        while here and here != root:
-            previous = here  # Track the child of the root
-            here = self.parent(here)  # Move up one level
-
-        if previous != product_id:
-            return previous
-        return None
-
-    def distinct_branch_categories(self) -> set[str]:
-        result: set[str] = set()
-        for b in self.branches:
-            b.acculumulate_categories_recursively(result)
-
-        return result
-
-    def has_ancestor(self, product_id: str, maybe_ancestor_id: str) -> bool:
-        parent = self.parent(product_id)
-        while parent:
-            if parent == maybe_ancestor_id:
-                return True
-            parent = self.parent(parent)
-        return False
-
     def product_branches(self) -> IterGenerator[Branch, None, None]:
         for b in self.branches:
-            if b.product:
-                yield b
-            else:
-                yield from b.product_branches()
+            yield from b.product_branches()
+
+    def parent(self, product_id: str) -> str | None:
+        return self.product_id_to_parent.get(product_id)
 
     def purl_for_product_id(self, product_id: str) -> str | None:
         return self.product_id_to_purl.get(product_id)
