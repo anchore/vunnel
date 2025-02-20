@@ -1,9 +1,8 @@
-import re
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
 
 from mashumaro import field_options
-from mashumaro.config import BaseConfig, TO_DICT_ADD_OMIT_NONE_FLAG
+from mashumaro.config import BaseConfig
 from mashumaro.mixins.orjson import DataClassORJSONMixin
 
 
@@ -303,9 +302,6 @@ class CSAFDoc(OmitNoneORJSONModel):
     document: Document
     product_tree: ProductTree
     vulnerabilities: list[Vulnerability]
-
-    class Config(BaseConfig):
-        code_generation_options = [TO_DICT_ADD_OMIT_NONE_FLAG]
 
 
 def from_path(path: str) -> CSAFDoc:

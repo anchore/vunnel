@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -9,9 +11,12 @@ def fixture_dir():
 
 @pytest.fixture()
 def mock_workspace(helpers, fixture_dir):
+    input_path = fixture_dir / "csaf" / "input"
+    os.makedirs(input_path, exist_ok=True)
+
     return helpers.provider_workspace_helper(
             name="rhel",
-            input_fixture= fixture_dir / "csaf/input",
+            input_fixture=input_path,
         )
 
 @pytest.fixture
@@ -58,7 +63,6 @@ def test_process_changes_and_deletions(mock_workspace, mock_http_get, mock_os_re
     deleted_rhsa_path = mock_workspace.input_path / "advisories" / "2024/rhsa-2024_2106.json"
 
     client = CSAFClient(workspace=mock_workspace, logger=MagicMock(), latest_url=latest_url)
-
     # Extract only the first argument (URL) from all calls
     called_urls = [args[0] for args, _ in mock_http_get.call_args_list]
 
@@ -70,6 +74,16 @@ def test_process_changes_and_deletions(mock_workspace, mock_http_get, mock_os_re
     # assert both changed files get re-downloaded
     assert changed_rhsa_url in called_urls
     assert other_changed_rhsa_url in called_urls
+
+    # assert that it stops processing rows of changes.csv after encountering a data
+    # before the archive latest date
+    too_old_entries = [
+        "2024/rhsa-2024_4444.json",
+        "2024/rhsa-2024_5555.json",
+        "2024/rhsa-2024_6666.json",
+    ]
+    too_old_changes_urls = [latest_url.replace("archive_latest.txt", entry) for entry in too_old_entries]
+    assert not any(url in called_urls for url in too_old_changes_urls)
 
     # Check that os.remove was called for the deleted advisory
     called_paths = [args[0] for args, _ in mock_os_remove.call_args_list]
