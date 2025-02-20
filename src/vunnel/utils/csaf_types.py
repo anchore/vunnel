@@ -4,21 +4,15 @@ from dataclasses import dataclass, field
 
 import orjson
 from mashumaro import field_options
-from mashumaro.config import BaseConfig
-from mashumaro.mixins.dict import DataClassDictMixin
+from mashumaro.config import BaseConfig, TO_DICT_ADD_OMIT_NONE_FLAG
+from mashumaro.mixins.orjson import DataClassORJSONMixin
 
-
-# TODO: is this still doing anything?
-# Custom Config to handle camel case for mashumaro
-class CamelCaseConfig(BaseConfig):
-    @staticmethod
-    def decode_field(name: str) -> str:
-        # Convert camelCase to snake_case
-        return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-
+class OmitNoneORJSONModel(DataClassORJSONMixin):
+    class Config(BaseConfig):
+        omit_none = True
 
 @dataclass
-class CVSS_V3(DataClassDictMixin):
+class CVSS_V3(DataClassORJSONMixin):
     attack_complexity: str = field(metadata=field_options(alias="attackComplexity"))
     attack_vector: str = field(metadata=field_options(alias="attackVector"))
     availability_impact: str = field(metadata=field_options(alias="availabilityImpact"))
@@ -32,12 +26,12 @@ class CVSS_V3(DataClassDictMixin):
     vector_string: str = field(metadata=field_options(alias="vectorString"))
     version: str = field(metadata=field_options(alias="version"))
 
-    class Config(CamelCaseConfig):
-        pass
+    class Config(BaseConfig):
+        serialize_by_alias = True  # normal CSAF is snake_case, but embeds camelCase CVSS objects
 
 
 @dataclass
-class CVSS_V2(DataClassDictMixin):
+class CVSS_V2(DataClassORJSONMixin):
     access_complexity: str = field(metadata=field_options(alias="accessComplexity"))
     access_vector: str = field(metadata=field_options(alias="accessVector"))
     authentication: str = field(metadata=field_options(alias="authentication"))
@@ -48,26 +42,26 @@ class CVSS_V2(DataClassDictMixin):
     vector_string: str = field(metadata=field_options(alias="vectorString"))
     version: str = field(metadata=field_options(alias="version"))
 
-    class Config(CamelCaseConfig):
-        pass
+    class Config(BaseConfig):
+        serialize_by_alias = True  # normal CSAF is snake_case, but embeds camelCase CVSS objects
 
 
 @dataclass
-class Reference(DataClassDictMixin):
+class Reference(OmitNoneORJSONModel):
     category: str
     summary: str
     url: str
 
 
 @dataclass
-class Note(DataClassDictMixin):
+class Note(OmitNoneORJSONModel):
     category: str
     text: str
     title: str
 
 
 @dataclass
-class ProductStatus(DataClassDictMixin):
+class ProductStatus(OmitNoneORJSONModel):
     fixed: list[str] = field(default_factory=list)
     known_affected: list[str] = field(default_factory=list)
     known_not_affected: list[str] = field(default_factory=list)
@@ -75,32 +69,32 @@ class ProductStatus(DataClassDictMixin):
 
 
 @dataclass
-class Threat(DataClassDictMixin):
+class Threat(OmitNoneORJSONModel):
     category: str
     details: str
     product_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
-class CWE(DataClassDictMixin):
+class CWE(OmitNoneORJSONModel):
     id: str
     name: str
 
 
 @dataclass
-class Flag(DataClassDictMixin):
+class Flag(OmitNoneORJSONModel):
     label: str
     product_ids: list[str]
 
 
 @dataclass
-class VulnID(DataClassDictMixin):
+class VulnID(OmitNoneORJSONModel):
     system_name: str
     text: str
 
 
 @dataclass
-class Remediation(DataClassDictMixin):
+class Remediation(OmitNoneORJSONModel):
     category: str
     details: str
     product_ids: list[str]
@@ -108,14 +102,14 @@ class Remediation(DataClassDictMixin):
 
 
 @dataclass
-class Score(DataClassDictMixin):
+class Score(OmitNoneORJSONModel):
     products: list[str]
     cvss_v3: CVSS_V3 | None = None
     cvss_v2: CVSS_V2 | None = None
 
 
 @dataclass
-class Vulnerability(DataClassDictMixin):
+class Vulnerability(OmitNoneORJSONModel):
     title: str
     cve: str
     cwe: str | None = None
@@ -146,13 +140,13 @@ class Vulnerability(DataClassDictMixin):
 
 
 @dataclass
-class FullProductName(DataClassDictMixin):
+class FullProductName(OmitNoneORJSONModel):
     name: str
     product_id: str
 
 
 @dataclass
-class Relationship(DataClassDictMixin):
+class Relationship(OmitNoneORJSONModel):
     category: str
     full_product_name: FullProductName
     product_reference: str
@@ -160,20 +154,20 @@ class Relationship(DataClassDictMixin):
 
 
 @dataclass
-class ProductIdentificationHelper(DataClassDictMixin):
+class ProductIdentificationHelper(OmitNoneORJSONModel):
     cpe: str | None = None
     purl: str | None = None
 
 
 @dataclass
-class Product(DataClassDictMixin):
+class Product(OmitNoneORJSONModel):
     name: str
     product_id: str
     product_identification_helper: ProductIdentificationHelper | None = None
 
 
 @dataclass
-class Branch:
+class Branch(OmitNoneORJSONModel):
     category: str
     name: str
     branches: list["Branch"] = field(default_factory=list)
@@ -242,11 +236,17 @@ class Branch:
 
 
 @dataclass
-class ProductTree(DataClassDictMixin):
+class ProductTree(OmitNoneORJSONModel):
     relationships: list[Relationship] = field(default_factory=list)
     branches: list[Branch] = field(default_factory=list)
-    product_id_to_parent: dict[str, str] = field(init=False)
-    product_id_to_purl: dict[str, str] = field(init=False)
+    product_id_to_parent: dict[str, str] = field(
+        init=False,
+        metadata={"serialize": "omit"},  # field is a cache for runtime efficiency, but not part of spec
+    )
+    product_id_to_purl: dict[str, str] = field(
+        init=False,
+        metadata={"serialize": "omit"},  # field is a cache for runtime efficiency, but not part of spec
+    )
 
     def __post_init__(self) -> None:
         self.product_id_to_parent = {}
@@ -312,25 +312,25 @@ class ProductTree(DataClassDictMixin):
 
 
 @dataclass
-class AggregateSeverity(DataClassDictMixin):
+class AggregateSeverity(OmitNoneORJSONModel):
     namespace: str
     text: str
 
 
 @dataclass
-class TLP(DataClassDictMixin):
+class TLP(OmitNoneORJSONModel):
     label: str
     url: str
 
 
 @dataclass
-class Distribution(DataClassDictMixin):
+class Distribution(OmitNoneORJSONModel):
     text: str
     tlp: TLP
 
 
 @dataclass
-class Publisher(DataClassDictMixin):
+class Publisher(OmitNoneORJSONModel):
     category: str
     contact_details: str
     issuing_authority: str
@@ -339,26 +339,26 @@ class Publisher(DataClassDictMixin):
 
 
 @dataclass
-class GeneratorEngine(DataClassDictMixin):
+class GeneratorEngine(OmitNoneORJSONModel):
     name: str
     version: str
 
 
 @dataclass
-class Generator(DataClassDictMixin):
+class Generator(OmitNoneORJSONModel):
     date: str
     engine: GeneratorEngine
 
 
 @dataclass
-class RevisionEntry(DataClassDictMixin):
+class RevisionEntry(OmitNoneORJSONModel):
     date: str
     number: str  # yes, really
     summary: str
 
 
 @dataclass
-class Tracking(DataClassDictMixin):
+class Tracking(OmitNoneORJSONModel):
     current_release_date: str
     generator: Generator
     id: str
@@ -369,7 +369,7 @@ class Tracking(DataClassDictMixin):
 
 
 @dataclass
-class Document(DataClassDictMixin):
+class Document(OmitNoneORJSONModel):
     aggregate_severity: AggregateSeverity
     category: str
     csaf_version: str
@@ -383,13 +383,15 @@ class Document(DataClassDictMixin):
 
 
 @dataclass
-class CSAFDoc(DataClassDictMixin):
+class CSAFDoc(OmitNoneORJSONModel):
     document: Document
     product_tree: ProductTree
     vulnerabilities: list[Vulnerability]
 
+    class Config(BaseConfig):
+        code_generation_options = [TO_DICT_ADD_OMIT_NONE_FLAG]
+
 
 def from_path(path: str) -> CSAFDoc:
     with open(path) as fh:
-        data = orjson.loads(fh.read())
-        return CSAFDoc.from_dict(data)
+        return CSAFDoc.from_json(fh.read())
