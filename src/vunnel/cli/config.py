@@ -47,6 +47,7 @@ class Providers:
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
+    kev: providers.kev.Config = field(default_factory=providers.kev.Config)
     mariner: providers.mariner.Config = field(default_factory=providers.mariner.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
