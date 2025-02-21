@@ -77,7 +77,7 @@ def test_full_config(helpers):
             ),
             epss=providers.epss.Config(
                 runtime=runtime_cfg,
-                dataset="yesterday",
+                dataset="2025-03-04",
                 url_template="https://localhost/epss_scores-{}.csv.gz",
                 request_timeout=20,
             ),
