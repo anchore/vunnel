@@ -30,6 +30,11 @@ providers:
     request_timeout: 20
     releases:
       jinx: 87
+  epss:
+    runtime: *runtime
+    request_timeout: 20
+    dataset: 2025-03-04
+    url_template: "https://localhost/epss_scores-{}.csv.gz"
   github:
     runtime: *runtime
     request_timeout: 20
