@@ -35,6 +35,10 @@ providers:
     request_timeout: 20
     api_url: https://api.gitlab.com/graphql
     token: env:SOMETHING_MADE_UP
+  kev:
+    runtime: *runtime
+    url: https://anchore.com/kev/data.json
+    request_timeout: 20
   nvd:
     runtime: *runtime
     request_timeout: 20

@@ -10,6 +10,7 @@ from vunnel.providers import (
     chainguard,
     debian,
     github,
+    kev,
     mariner,
     nvd,
     oracle,
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from vunnel import provider
 
 _providers: dict[str, type[provider.Provider]] = {
+    # vulnerability providers
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
     debian.Provider.name(): debian.Provider,
@@ -35,6 +37,8 @@ _providers: dict[str, type[provider.Provider]] = {
     ubuntu.Provider.name(): ubuntu.Provider,
     wolfi.Provider.name(): wolfi.Provider,
     chainguard.Provider.name(): chainguard.Provider,
+    # auxiliary vulnerability data (decorates vulnerability entries from providers)
+    kev.Provider.name(): kev.Provider,
 }
 
 

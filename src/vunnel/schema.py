@@ -13,6 +13,7 @@ MSRC_SCHEMA_VERSION = "1.0.0"
 OS_SCHEMA_VERSION = "1.0.2"
 NVD_SCHEMA_VERSION = "1.0.0"
 OSV_SCHEMA_VERSION = "1.6.1"
+KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -83,4 +84,11 @@ def OSVSchema(version: str = OSV_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-{version}.json",
+    )
+
+
+def KnownExploitedVulnerabilitySchema(version: str = KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/known-exploited/schema-{version}.json",
     )
