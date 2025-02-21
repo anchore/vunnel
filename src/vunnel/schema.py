@@ -14,6 +14,7 @@ OS_SCHEMA_VERSION = "1.0.2"
 NVD_SCHEMA_VERSION = "1.0.0"
 OSV_SCHEMA_VERSION = "1.6.1"
 KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION = "1.0.0"
+EPSS_SCHEMA_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,13 @@ def ProviderListingSchema(version: str = PROVIDER_ARCHIVE_LISTING_SCHEMA_VERSION
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-archive-listing/schema-{version}.json",
+    )
+
+
+def EPSSSchema(version: str = EPSS_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/epss/schema-{version}.json",
     )
 
 

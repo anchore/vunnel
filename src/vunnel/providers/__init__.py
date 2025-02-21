@@ -9,6 +9,7 @@ from vunnel.providers import (
     amazon,
     chainguard,
     debian,
+    epss,
     github,
     kev,
     mariner,
@@ -39,6 +40,7 @@ _providers: dict[str, type[provider.Provider]] = {
     chainguard.Provider.name(): chainguard.Provider,
     # auxiliary vulnerability data (decorates vulnerability entries from providers)
     kev.Provider.name(): kev.Provider,
+    epss.Provider.name(): epss.Provider,
 }
 
 
