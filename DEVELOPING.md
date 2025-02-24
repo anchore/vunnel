@@ -300,6 +300,7 @@ Possible vulnerability schemas supported within the vunnel repo are:
 - [Generic OS Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/os)
 - [GitHub Security Advisories](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/github-security-advisory)
 - [NVD Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/nvd)
+- [Open Source Vulnerability (OSV)](https://ossf.github.io/osv-schema)
 
 If at any point a breaking change needs to be made to a provider (and say the schema remains the same), then you
 can set the `__version__` attribute on the provider class to a new integer value (incrementing from `1` onwards). This
@@ -373,6 +374,7 @@ All results must conform to a [particular schema](https://github.com/anchore/vun
 - `os`: a generic operating system vulnerability (e.g redhat, debian, ubuntu, alpine, wolfi, etc.)
 - `nvd`: tailored to describe vulnerabilities from the NVD
 - `github-security-advisory`: tailored to describe vulnerabilities from GitHub
+- `osv`: tailored to describe vulnerabilities from the [aggregated OSV vulnerability database](https://osv.dev/list)
 
 Once the provider is implemented, you will need to wire it up into the application in a couple places:
 - add a new entry under the dispatch table in `src/vunnel/providers/__init__.py` mapping your provider name to the class
