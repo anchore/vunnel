@@ -1,5 +1,6 @@
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
+from typing import Any
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -13,18 +14,20 @@ class OmitNoneORJSONModel(DataClassORJSONMixin):
 
 @dataclass
 class CVSS_V3(DataClassORJSONMixin):
-    attack_complexity: str = field(metadata=field_options(alias="attackComplexity"))
-    attack_vector: str = field(metadata=field_options(alias="attackVector"))
-    availability_impact: str = field(metadata=field_options(alias="availabilityImpact"))
+    # according to https://www.first.org/cvss/cvss-v3.0.json
+    # only version, vectorString, baseScore, and baseSeverity are required
+    version: str = field(metadata=field_options(alias="version"))
+    vector_string: str = field(metadata=field_options(alias="vectorString"))
     base_score: float = field(metadata=field_options(alias="baseScore"))
     base_severity: str = field(metadata=field_options(alias="baseSeverity"))
-    confidentiality_impact: str = field(metadata=field_options(alias="confidentialityImpact"))
-    integrity_impact: str = field(metadata=field_options(alias="integrityImpact"))
-    privileges_required: str = field(metadata=field_options(alias="privilegesRequired"))
-    scope: str = field(metadata=field_options(alias="scope"))
-    user_interaction: str = field(metadata=field_options(alias="userInteraction"))
-    vector_string: str = field(metadata=field_options(alias="vectorString"))
-    version: str = field(metadata=field_options(alias="version"))
+    attack_complexity: str | None = field(default=None, metadata=field_options(alias="attackComplexity"))
+    attack_vector: str | None = field(default=None, metadata=field_options(alias="attackVector"))
+    availability_impact: str | None = field(default=None, metadata=field_options(alias="availabilityImpact"))
+    confidentiality_impact: str | None = field(default=None, metadata=field_options(alias="confidentialityImpact"))
+    integrity_impact: str | None = field(default=None, metadata=field_options(alias="integrityImpact"))
+    privileges_required: str | None = field(default=None, metadata=field_options(alias="privilegesRequired"))
+    scope: str | None = field(default=None, metadata=field_options(alias="scope"))
+    user_interaction: str | None = field(default=None, metadata=field_options(alias="userInteraction"))
 
     class Config(BaseConfig):
         serialize_by_alias = True  # normal CSAF is snake_case, but embeds camelCase CVSS objects
@@ -65,7 +68,24 @@ class ProductStatus(OmitNoneORJSONModel):
     fixed: list[str] = field(default_factory=list)
     known_affected: list[str] = field(default_factory=list)
     known_not_affected: list[str] = field(default_factory=list)
+    recommended: list[str] = field(default_factory=list)
     under_investigation: list[str] = field(default_factory=list)
+
+    @classmethod
+    def __pre_deserialize__(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Clean up weird data from SLES"""
+        # Merge "known affected" and "known_affected" lists if both exist
+        if "known affected" in data or "known_affected" in data:
+            data["known_affected"] = data.get("known_affected", []) + data.get("known affected", [])
+            # Remove the old key to avoid duplicate processing
+            data.pop("known affected", None)
+        # Merge "fixed" and "first fixed" lists if both exist"
+        if "fixed" in data or "first fixed" in data:
+            data["fixed"] = data.get("fixed", []) + data.get("first fixed", [])
+            # Remove the old key to avoid duplicate processing
+            data.pop("first fixed", None)
+
+        return data
 
 
 @dataclass
@@ -247,10 +267,10 @@ class Distribution(OmitNoneORJSONModel):
 @dataclass
 class Publisher(OmitNoneORJSONModel):
     category: str
-    contact_details: str
-    issuing_authority: str
     name: str
     namespace: str
+    contact_details: str | None = None
+    issuing_authority: str | None = None
 
 
 @dataclass
@@ -300,8 +320,8 @@ class Document(OmitNoneORJSONModel):
 @dataclass
 class CSAFDoc(OmitNoneORJSONModel):
     document: Document
-    product_tree: ProductTree
-    vulnerabilities: list[Vulnerability]
+    product_tree: ProductTree | None = None
+    vulnerabilities: list[Vulnerability] = field(default_factory=list)
 
 
 def from_path(path: str) -> CSAFDoc:

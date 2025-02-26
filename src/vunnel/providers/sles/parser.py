@@ -63,6 +63,7 @@ class Parser:
         allow_versions: list[str],
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
+        parser_type: str = "",
     ):
         self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
@@ -352,6 +353,8 @@ class Parser:
 
         for major_version in self.allow_versions:
             try:
+                # TODO: CSAF: this is the contract
+                # we need to alternatively download CSAF and make the dict.
                 # download oval
                 oval_file_path = self._download(major_version)
 

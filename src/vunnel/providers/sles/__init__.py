@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
+from vunnel.providers.sles.csaf_parser import CSAFParser
 
 from .parser import Parser
 
@@ -22,6 +23,7 @@ class Config:
     )
     request_timeout: int = 125
     allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15])  # corresponds to major versions
+    data_source: str = "CSAF"  # CSAF or OVAL
 
     def __post_init__(self) -> None:
         self.allow_versions = [str(v).lower() for v in self.allow_versions]
@@ -40,12 +42,20 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
-            workspace=self.workspace,
-            allow_versions=self.config.allow_versions,
-            download_timeout=self.config.request_timeout,
-            logger=self.logger,
-        )
+        if config.data_source == "OVAL":
+            self.parser = Parser(
+                workspace=self.workspace,
+                allow_versions=self.config.allow_versions,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
+        elif config.data_source == "CSAF":
+            self.parser = CSAFParser(
+                workspace=self.workspace,
+                allow_versions=self.config.allow_versions,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
 
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)
