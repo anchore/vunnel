@@ -246,7 +246,7 @@ class CSAFParser:
         return [(ns, cve_id, v) for ns, v in ns_to_package_vulns.items()]
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
-        # self.download()
+        self.download()
         csaf_vex_dir = Path(self.csaf_dir) / "csaf-vex"
         for csaf_file in csaf_vex_dir.glob("*.json"):
             try:
