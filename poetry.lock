@@ -2435,13 +2435,15 @@ files = [
 
 [[package]]
 name = "yardstick"
-version = "0.12.1.post1+dd04102"
+version = "0.12.1"
 description = "Tool for comparing the results from vulnerability scanners"
 optional = false
-python-versions = "<3.14,>=3.11"
+python-versions = "<=3.13,>=3.11"
 groups = ["dev"]
-files = []
-develop = false
+files = [
+    {file = "yardstick-0.12.1-py3-none-any.whl", hash = "sha256:481ddf04cd535f8e2dc8dea4526c9dbfb007f1d18ad4a38cbc9d55f4762a15d0"},
+    {file = "yardstick-0.12.1.tar.gz", hash = "sha256:eecf2885b9fae42bffa06d12031639bd11495b74079cff1a938d586a7e853969"},
+]
 
 [package.dependencies]
 click = ">=8,<9"
@@ -2459,12 +2461,6 @@ rfc3339 = ">=6.2,<7.0"
 tabulate = ">=0.9.0,<1.0.0"
 xxhash = ">=3.5.0,<4.0.0"
 zstandard = ">=0.23.0,<1.0.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/anchore/yardstick"
-reference = "dd0410273860e765386bc29046cb26dd9d5fda8c"
-resolved_reference = "dd0410273860e765386bc29046cb26dd9d5fda8c"
 
 [[package]]
 name = "zipp"
@@ -2601,5 +2597,5 @@ cffi = ["cffi (>=1.11)"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.14"
-content-hash = "e3e70cd30afa88a05d8e4b728b718f68a9dc2049ff01fbaecc970421e5fd28d6"
+python-versions = ">=3.11,<=3.13"
+content-hash = "21e3fc53132a0c370b974b7c93c79daead20b54a1bc01c9618efafc38305b315"

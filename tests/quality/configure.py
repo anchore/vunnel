@@ -595,7 +595,7 @@ def build_db(cfg: Config):
     cache_file = "grype-db-cache.tar.gz"
     data_dir = "data"
     build_dir = "build"
-    db_archive = f"{build_dir}/grype-db.tar.gz"
+    db_archive = f"{build_dir}/grype-db.tar.zst"
 
     # clear data directory
     logging.info("clearing existing data")
@@ -615,10 +615,10 @@ def build_db(cfg: Config):
         subprocess.run(["vunnel", "-v", "run", provider], check=True)
 
     logging.info("building DB")
-    subprocess.run([GRYPE_DB, "build", "-v", "-c", ".grype-db.yaml"], check=True)
+    subprocess.run([GRYPE_DB, "build", "-s", "6", "-v", "-c", ".grype-db.yaml"], check=True)
     subprocess.run([GRYPE_DB, "package", "-v", "-c", ".grype-db.yaml"], check=True)
 
-    archives = glob.glob(f"{build_dir}/*.tar.gz")
+    archives = glob.glob(f"{build_dir}/*.tar.zst")
     if not archives:
         logging.error("no DB archive found")
         return

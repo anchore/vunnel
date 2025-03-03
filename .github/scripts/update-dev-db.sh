@@ -31,8 +31,8 @@ ${GRYPE_DB} build -vvv
 
 step "Packaging grype-db"
 ${GRYPE_DB} package
-GRYPE_DB_TAR=build/grype-db.tar.gz
-mv build/vulnerability-db_*.tar.gz ${GRYPE_DB_TAR}
+GRYPE_DB_TAR=build/grype-db.tar.zst
+mv build/vulnerability-db_*.tar.zst ${GRYPE_DB_TAR}
 
 step "Importing DB into grype"
 ${GRYPE} db import ${GRYPE_DB_TAR}
