@@ -1,4 +1,6 @@
 from collections.abc import Generator, Iterable
+import concurrent.futures
+import datetime
 import logging
 import os
 from pathlib import Path
@@ -7,6 +9,7 @@ from typing import Any
 
 from cpe import CPE
 import mashumaro
+import mashumaro.exceptions
 
 from vunnel.utils import http
 from vunnel.utils.archive import extract
@@ -18,6 +21,7 @@ from vunnel.workspace import Workspace
 class CSAFParser:
     __csaf_url_template__ = "https://ftp.suse.com/pub/projects/security/csaf-vex/{}"
     __tar_url__ = "https://ftp.suse.com/pub/projects/security/csaf-vex.tar.bz2"
+    __tar_modtime_url__ = "https://ftp.suse.com/pub/projects/security/"
     __csaf_dir_path__ = "csaf"
     __source_dir_path__ = "source"
 
@@ -33,6 +37,7 @@ class CSAFParser:
         self.download_timeout = download_timeout
         self.urls = []
         self.logger = logger or logging.getLogger("sles-csaf-parser")
+        self.archive_time: datetime.datetime | None = None
         # $ fd -g "cve-*.json" data/sles/input/source/csaf/csaf-vex -X jq -r '.document.aggregate_severity.text' | sort | uniq -c
         # 4759 critical
         # 12547 important
@@ -46,6 +51,14 @@ class CSAFParser:
             "low": "Low",
             "not set": "Unknown",
         }
+
+    def download_csaf_file(self, cve_id: str):
+        json_id = f"{cve_id.lower()}.json"
+        url = self.__csaf_url_template__.format(json_id)
+        download_path = os.path.join(self.csaf_dir, json_id)
+        with http.get(url, self.logger, stream=True, timeout=self.download_timeout) as r, open(download_path, "wb") as fh:
+            for chunk in r.iter_content(chunk_size=65536):
+                fh.write(chunk)
 
     def download(self):
         if not os.path.exists(self.csaf_dir):
@@ -64,18 +77,56 @@ class CSAFParser:
 
         # scrape the main URL for the mod time on the tarball (yes, really)
         # and persist it in the workspace
+        mod_time_resp = http.get(self.__tar_modtime_url__, self.logger, timeout=self.download_timeout)
+        mod_time_lines = mod_time_resp.text.split("\n")
+        for line in mod_time_lines:
+            # line is like
+            # <a href="csaf-vex.tar.bz2">csaf-vex.tar.bz2</a>                                   03-Mar-2025 02:30    184M
+            if 'href="csaf-vex.tar.bz2"' in line:
+                parts = line.split()
+                if len(parts) < 3:
+                    continue
+                mod_date_str = parts[-3] + " " + parts[-2]
+                self.archive_time = datetime.datetime.strptime(mod_date_str, "%d-%b-%Y %H:%M").replace(tzinfo=datetime.UTC)
 
         # download the changes
-        # with (
-        #     http.get(self.__csaf_url_template__.format("changes.csv"), self.logger, timeout=self.download_timeout) as r,
-        #     open(csaf_changes_path, "wb") as fh,
-        # ):
-        #     for chunk in r.iter_content(chunk_size=8192):
-        #         fh.write(chunk)
+        with (
+            http.get(self.__csaf_url_template__.format("changes.csv"), self.logger, timeout=self.download_timeout) as r,
+            open(csaf_changes_path, "wb") as fh,
+        ):
+            for chunk in r.iter_content(chunk_size=8192):
+                fh.write(chunk)
 
-        # sort the changes descending by date (second column, newest first)
+        to_download = set()
+        if not self.archive_time:
+            return
+        with open(csaf_changes_path) as fh:
+            for line in fh:
+                # line is like "cve-1999-0067.json","2024-08-06T04:49:58Z"
+                parts = line.strip().split(",")
+                if len(parts) < 2:
+                    continue
+                id_str = parts[0].strip('"')
+                date_str = parts[1].strip('"')
+                date = datetime.datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+                if date < self.archive_time:
+                    continue  # csv is not in order, so do not exit early
+                    # just use the timestamp to check each row
+                to_download.add(id_str)
 
         # re-download JSONs from the CSV until we hit a date before the mod time on the tarball
+        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+            futures = {
+                executor.submit(
+                    self.download_csaf_file,
+                    cve_id=cve_id,
+                ): cve_id
+                for cve_id in to_download
+            }
+            concurrent.futures.wait(futures.keys())
+            for future, changed_file in futures.items():
+                if future.exception() is not None:
+                    self.logger.warning(f"Failed to download {changed_file}: {future.exception()}")
 
     def not_fixed_from_product_id(self, doc: CSAFDoc, pid: str, ns: str) -> FixedIn | None:
         parent = doc.product_tree.parent(pid)
