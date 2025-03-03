@@ -33,6 +33,19 @@ class CSAFParser:
         self.download_timeout = download_timeout
         self.urls = []
         self.logger = logger or logging.getLogger("sles-csaf-parser")
+        # $ fd -g "cve-*.json" data/sles/input/source/csaf/csaf-vex -X jq -r '.document.aggregate_severity.text' | sort | uniq -c
+        # 4759 critical
+        # 12547 important
+        # 4101 low
+        # 22340 moderate
+        #   23 not set
+        self.aggregate_severity_map = {
+            "critical": "Critical",
+            "important": "High",
+            "moderate": "Medium",
+            "low": "Low",
+            "not set": "Unknown",
+        }
 
     def download(self):
         if not os.path.exists(self.csaf_dir):
@@ -188,7 +201,7 @@ class CSAFParser:
             self.logger.debug(f"Skipping {cve_id} because no relevant platforms based on allowed versions {self.allow_versions}")
             return []
         description = next((n.text for n in vuln.notes if n.title == "CVE Description"), "")
-        sles_severity = doc.document.aggregate_severity.text
+        sles_severity = self.aggregate_severity_map.get(doc.document.aggregate_severity.text.lower(), "Unknown")
         link = next((r.url for r in doc.document.references if r.summary == cve_id), "")
         ns_to_package_vulns = {}
         for affected in vuln.product_status.known_affected:
