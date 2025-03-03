@@ -3,7 +3,7 @@ GRYPE_DB_BUILD_DIR = build
 BIN_DIR = bin
 YARDSTICK_RESULT_DIR = .yardstick/result
 YARDSTICK_LABELS_DIR = .yardstick/labels
-TEST_DB_ARCHIVE = $(GRYPE_DB_BUILD_DIR)/grype-db.tar.gz
+TEST_DB_ARCHIVE = $(GRYPE_DB_BUILD_DIR)/grype-db.tar.zst
 
 SBOM_STORE_TAG = md5-$(shell md5sum .yardstick.yaml | cut -d' ' -f1)
 SBOM_STORE_IMAGE = ghcr.io/anchore/grype/quality-test-sbom-store:$(SBOM_STORE_TAG)

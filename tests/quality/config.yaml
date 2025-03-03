@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/grype-db.tar.gz
+      version: main+import-db=build/grype-db.tar.zst
       takes: SBOM
 
     - name: grype
