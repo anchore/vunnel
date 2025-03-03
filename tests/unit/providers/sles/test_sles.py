@@ -376,7 +376,7 @@ class TestSLESParser:
 def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    c = Config(allow_versions=["15"])
+    c = Config(allow_versions=["15"], data_source="OVAL")
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
@@ -397,7 +397,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    c = Config()
+    c = Config(data_source="OVAL")
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(
