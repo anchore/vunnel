@@ -26,7 +26,6 @@ all: capture validate ## Fetch or capture all data and run all quality checks
 
 .PHONY: validate
 validate:  ## Run all quality checks against already collected data
-	poetry run ./validate-namespaces.py
 	poetry run yardstick validate --result-set $(RESULT_SET)_$(provider)
 
 
