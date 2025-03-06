@@ -28,7 +28,7 @@ jobs:
         id: determine-providers
         run: |
           # select all providers as test subjects (this populates the matrix downstream)
-          content=`cd tests/quality && poetry run make all-providers`
+          content=`cd tests/quality && make all-providers`
           echo $content
           echo "providers=$content" >> $GITHUB_OUTPUT
 
