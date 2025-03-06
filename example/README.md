@@ -10,7 +10,7 @@ If you wanted to run the provider locally to try it out independent of the vunne
 ```bash
 # run from the example/ directory
 
-poetry run python run.py
+uv run python run.py
 ```
 
 Then checkout the `./data` directory to see what was created.

@@ -26,7 +26,7 @@ all: capture validate ## Fetch or capture all data and run all quality checks
 
 .PHONY: validate
 validate:  ## Run all quality checks against already collected data
-	poetry run yardstick validate --result-set $(RESULT_SET)_$(provider)
+	uv run yardstick validate --result-set $(RESULT_SET)_$(provider)
 
 
 ## Data management targets #################################
@@ -36,36 +36,36 @@ capture: clear-data clear-results configure sboms build-db vulns ## Collect and 
 
 .PHONY: show-changes
 show-changes: ## Show the current file changeset
-	poetry run python ./configure.py -v show-changes
-	poetry run python ./configure.py select-providers
+	uv run python ./configure.py -v show-changes
+	uv run python ./configure.py select-providers
 
 .PHONY: all-providers
 all-providers: ## Select all providers for testing
-	@poetry run python ./configure.py all-providers --json 2>/dev/null
+	@uv run python ./configure.py all-providers --json 2>/dev/null
 
 .PHONY: select-providers
 select-providers: ## Determine the provider(s) to use for testing based on the file changeset
-	@poetry run python ./configure.py select-providers --json 2>/dev/null
+	@uv run python ./configure.py select-providers --json 2>/dev/null
 
 .PHONY: validate-test-tool-versions
 validate-test-tool-versions: ## Pass/Fail to determine if we're using the production versions of grype and grype-db
-	@poetry run python ./configure.py validate-test-tool-versions
+	@uv run python ./configure.py validate-test-tool-versions
 
 .PHONY: configure
 configure: ## write yardstick and grype configuration files relative to the given provider
-	poetry run python ./configure.py configure $(provider)
+	uv run python ./configure.py configure $(provider)
 
 .PHONY: build-db
 build-db:  ## Build a grype database for the given provider
-	poetry run python ./configure.py build-db
+	uv run python ./configure.py build-db
 
 .PHONY: vulns
 vulns: ## Collect and store all grype results
-	poetry run yardstick -v result capture -r $(RESULT_SET)_$(provider)
+	uv run yardstick -v result capture -r $(RESULT_SET)_$(provider)
 
 .PHONY: sboms
 sboms: $(YARDSTICK_RESULT_DIR) clear-results ## Collect and store all syft results (deletes all existing results)
-	bash -c "make download-sboms || (yardstick -v result capture -r $(RESULT_SET)_$(provider) --only-producers)"
+	bash -c "make download-sboms || (uv run yardstick -v result capture -r $(RESULT_SET)_$(provider) --only-producers)"
 
 .PHONY: download-sboms
 download-sboms:
@@ -88,7 +88,7 @@ clean: clear-bin clear-results clear-db clear-data ## Clear all local data
 
 .PHONY: clear-results
 clear-results: ## Clear all existing yardstick results
-	yardstick result clear
+	uv run yardstick result clear
 
 .PHONY: clear-data
 clear-data: ## Delete existing vunnel data cache

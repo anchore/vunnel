@@ -26,11 +26,11 @@ jobs:
         uses: ./.github/actions/bootstrap
 
       - name: Run static analysis
-        run: poetry run make static-analysis
+        run: make static-analysis
 
-      # - name: Ensure quality gate tools are properly configured
-      #   run: |
-      #     cd tests/quality && make validate-test-tool-versions
+      - name: Ensure quality gate tools are properly configured
+        run: |
+          cd tests/quality && make validate-test-tool-versions
 
   Test:
     runs-on: ubuntu-22.04
@@ -57,10 +57,10 @@ jobs:
           python-version: ${{ matrix.python.version }}
 
       - name: Run unit tests
-        run: poetry run tox -e ${{ matrix.python.toxEnv }}
+        run: uv run tox -e ${{ matrix.python.toxEnv }}
 
       - name: Build assets
-        run: poetry run make build
+        run: make build
 
   # this is to help facilitate ensuring all checks have run with the checks API for release
   # see https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
@@ -69,7 +69,7 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-22.04
     name: Test Gate
-    needs: [test]
+    needs: [Test]
     steps:
       - run: |
           result="${{ needs.Test.result }}"
@@ -101,13 +101,7 @@ jobs:
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
 
       - name: Build assets
-        run: poetry run make build
+        run: make build
 
       - name: Publish commit image
         run: make ci-publish-commit
-
-      - name: Publish to test PyPI
-        run: make ci-publish-testpypi
-        env:
-          # note: "..._TESTPYPI" suffix should match the name of the testpypi repository (see the Makefile target)
-          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.TEST_PYPI_TOKEN }}
