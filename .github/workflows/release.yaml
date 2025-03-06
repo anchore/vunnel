@@ -99,8 +99,11 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-22.04
+    environment: release
     permissions:
       contents: read
+      # required to authenticate with PyPI via OIDC token
+      id-token: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
         with:
@@ -110,10 +113,9 @@ jobs:
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
 
+      # note: authentication is via the OIDC token
       - name: Publish to PyPI
         run: make ci-publish-pypi
-        env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.VUNNEL_PYPI_TOKEN }}
 
   release-docker:
     needs:
