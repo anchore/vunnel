@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime  # noqa: TC003
 import logging
 import os
 import shutil

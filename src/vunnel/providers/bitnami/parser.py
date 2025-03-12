@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import orjson
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from vunnel.workspace import Workspace
 
 from .git import GitWrapper
@@ -34,7 +36,7 @@ class Parser:
             logger=self.logger,
         )
 
-    def _load(self):
+    def _load(self) -> Generator[dict[str, Any], None, None]:
         self.logger.info("loading data from git repository")
 
         vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "data")
@@ -45,8 +47,8 @@ class Parser:
                 with open(full_path, encoding="utf-8") as f:
                     yield orjson.loads(f.read())
 
-    def _normalize(self, vuln_entry):
-        self.logger.info("normalizing vulnerability data")
+    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
 
         # We want to return the OSV record as it is (using OSV schema)
         # We'll transform it into the Grype-specific vulnerability schema
@@ -54,7 +56,7 @@ class Parser:
         vuln_id = vuln_entry["id"]
         return vuln_id, vuln_entry
 
-    def get(self):
+    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
