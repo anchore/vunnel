@@ -105,6 +105,8 @@ ignore_missing_imports = true
 exclude = '''(?x)(
     ^src/vunnel/providers/alpine/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/amazon/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/bitnami/git\.py$      # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/bitnami/parser\.py$   # ported from enterprise, never had type hints
     | ^src/vunnel/providers/debian/parser\.py$    # ported from enterprise, never had type hints
     | ^src/vunnel/providers/github/parser\.py$    # ported from enterprise, never had type hints
     | ^src/vunnel/providers/mariner/model/        # generated code
