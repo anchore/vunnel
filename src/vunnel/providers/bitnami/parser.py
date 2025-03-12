@@ -48,47 +48,11 @@ class Parser:
     def _normalize(self, vuln_entry):
         self.logger.info("normalizing vulnerability data")
 
+        # We want to return the OSV record as it is (using OSV schema)
+        # We'll transform it into the Grype-specific vulnerability schema
+        # on grype-db
         vuln_id = vuln_entry["id"]
-        if "aliases" in vuln_entry and len(vuln_entry["aliases"]) > 0:
-            vuln_id = vuln_entry["aliases"][0]
-        fixed_in = []
-        if "affected" in vuln_entry:
-            for affected in vuln_entry["affected"]:
-                version = "None"
-                if "ranges" in affected:
-                    for r in affected["ranges"]:
-                        if "events" in r:
-                            for event in r["events"]:
-                                # TODO: manage last_affected
-                                # if events["last_affected"]:
-                                #     version = events["last_affected"]
-                                #     break
-                                if "fixed" in event:
-                                    version = event["fixed"]
-                                    break
-
-                fixed_in.append(
-                    {
-                        "Name": affected["package"]["name"],
-                        "VersionFormat": "semver",
-                        "NamespaceName": namespace,
-                        "Version": version,
-                    },
-                )
-        link = "None"
-        if "references" in vuln_entry and len(vuln_entry["references"]) > 0:
-            link = vuln_entry["references"][0]
-
-        return vuln_id, {
-            "Vulnerability": {
-                "Name": vuln_id,
-                "NamespaceName": namespace,
-                "Link": link,
-                "Severity": vuln_entry["database_specific"]["severity"],
-                "Description": vuln_entry["details"],
-                "FixedIn": fixed_in,
-            },
-        }
+        return vuln_id, vuln_entry
 
     def get(self):
         # Initialize the git repository
