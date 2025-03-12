@@ -966,6 +966,7 @@ def test_provider_versions(tmpdir):
     expected = {
         "alpine": 1,
         "amazon": 1,
+        "bitnami": 1,
         "chainguard": 1,
         "debian": 1,
         "epss": 1,
@@ -996,6 +997,7 @@ def test_provider_distribution_versions(tmpdir):
     expected = {
         "alpine": 1,
         "amazon": 1,
+        "bitnami": 1,
         "chainguard": 1,
         "debian": 1,
         "epss": 1,
