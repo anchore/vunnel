@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.provider import ResultStatePolicy
 
 from .parser import Parser
 
@@ -17,7 +16,7 @@ class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
-            existing_results=ResultStatePolicy.DELETE_BEFORE_WRITE,
+            existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
     request_timeout: int = 125
