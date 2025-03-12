@@ -24,11 +24,13 @@ class NVDOverrides:
         workspace: Workspace,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
+        retries: int = 5,
     ):
         self.enabled = enabled
         self.__url__ = url
         self.workspace = workspace
         self.download_timeout = download_timeout
+        self.retries = retries
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
@@ -43,7 +45,7 @@ class NVDOverrides:
             self.logger.debug("overrides are not enabled, skipping download...")
             return
 
-        req = http.get(self.__url__, self.logger, stream=True, timeout=self.download_timeout)
+        req = http.get(self.__url__, self.logger, stream=True, timeout=self.download_timeout, retries=self.retries)
 
         file_path = os.path.join(self.workspace.input_path, self.__file_name__)
         with open(file_path, "wb") as fp:

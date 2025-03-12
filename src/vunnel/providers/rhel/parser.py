@@ -15,14 +15,14 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
+from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
 from vunnel.utils import http, rpm
-from vunnel.utils.oval_parser import Config
 from vunnel.utils.vulnerability import vulnerability_element
-
-from .oval_parser import Parser as RHELOvalParser
 
 if TYPE_CHECKING:
     import requests
+
+    from .rhsa_provider import RHSAProvider
 
 namespace = "rhel"
 
@@ -56,6 +56,7 @@ class Parser:
         max_workers=None,
         full_sync_interval=None,
         skip_namespaces=None,
+        rhsa_provider_type=None,
         logger=None,
     ):
         self.workspace = workspace
@@ -66,6 +67,8 @@ class Parser:
         self.full_sync_interval = full_sync_interval if isinstance(full_sync_interval, int) else 2
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
+        self.rhsa_provider: RHSAProvider | None = None
+        self.rhsa_provider_type: str | None = rhsa_provider_type
 
         self.urls = [self.__summary_url__]
 
@@ -92,10 +95,10 @@ class Parser:
         """
         worker that checks if a download is necessary and then does it
 
-        :param min_cve_api:
-        :param do_full_sync:
-        :param min_cve_dir:
-        :param full_cve_dir:
+        :param min_cve_api: api result describing a CVE, including the URLfor a full download
+        :param do_full_sync: bool: assume cache is stale and re-download everything
+        :param min_cve_dir: directory to save minimal cve API results
+        :param full_cve_dir: directory to save full cve data
         :return:
         """
         cve_id = min_cve_api.get("CVE")
@@ -316,22 +319,13 @@ class Parser:
         elif r.status_code == 404:
             self.logger.warning(f"GET {url} returned 404 not found error")
 
-    def _fetch_rhsa_fix_version(self, rhsa_id, platform, package):
-        fixed_ver = None
-        module_name = None
-        try:
-            p = self._fetch_rhsa(rhsa_id, platform)
-            if p:
-                fixed_ver, module_name = next(
-                    ([item["Version"], item.get("Module")] for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package),
-                    [None, None],
-                )
-            else:
-                self.logger.debug(f"{rhsa_id} not found for platform {platform}")
-        except Exception:
-            self.logger.exception(f"error looking up {package} in {rhsa_id} for {platform}")
+    def _fetch_rhsa_fix_version(self, cve_id: str, ar_obj: AffectedRelease, override_package_name: str | None = None):
+        """Fetch RHSA information, either from OVAL parsing or CSAF parsing depending
+        on configuration."""
+        # TODO: this needs to call one of the two RHSA providers, but they want slighly different things
+        # get_fixed_version_and_module shuold just take an AffectedRelease object and a package name
 
-        return fixed_ver, module_name
+        return self.rhsa_provider.get_fixed_version_and_module(cve_id, ar_obj, override_package_name)
 
     def _fetch_rhsa(self, rhsa_id, platform):
         if self.rhsa_dict is not None:  # explicit check to allow for easy testing without actually initializing it
@@ -341,65 +335,11 @@ class Parser:
         return p
 
     def _init_rhsa_data(self, skip_if_exists=False):
-        # setup workspace directory
-        if not os.path.exists(self.rhsa_dir_path):
-            self.logger.debug(f"creating workspace for rhsa source data at {self.rhsa_dir_path}")
-            os.makedirs(self.rhsa_dir_path)
-
-        # initialize config
-        cc = Config()
-
-        # regexes
-        cc.tag_pattern = re.compile(r"\{http://oval.mitre.org/XMLSchema/.*\}(\w*)")
-        cc.ns_pattern = re.compile(r"(\{http://oval.mitre.org/XMLSchema/.*\})\w*")
-        cc.is_installed_pattern = re.compile(r"Red Hat Enterprise Linux (\d+).*is installed")
-        cc.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
-        cc.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
-        cc.signed_with_pattern = re.compile(r"(.*) is signed with (.*) key")
-        cc.platform_version_pattern = re.compile(r"Red Hat Enterprise Linux (\d+)")
-
-        # xpath queries
-        cc.title_xpath_query = "{0}metadata/{0}title"
-        cc.severity_xpath_query = "{0}metadata/{0}advisory/{0}severity"
-        cc.platform_xpath_query = "{0}metadata/{0}affected/{0}platform"
-        cc.date_issued_xpath_query = "{0}metadata/{0}advisory/{0}issued"
-        cc.date_updated_xpath_query = "{0}metadata/{0}advisory/{0}updated"
-        cc.description_xpath_query = "{0}metadata/{0}description"
-        cc.sa_ref_xpath_query = '{0}metadata/{0}reference[@source="RHSA"]'
-        cc.cve_xpath_query = "{0}metadata/{0}advisory/{0}cve"
-        cc.criteria_xpath_query = "{0}criteria"
-        cc.criterion_xpath_query = ".//{0}criterion"
-
-        # maps
-        cc.severity_dict = {
-            "low": "Low",
-            "moderate": "Medium",
-            "important": "High",
-            "critical": "Critical",
-        }
-
-        # string formats
-        cc.ns_format = "{}"
-
-        # initialize provider
-        rhsa_provider = RHELOvalParser(
-            # workspace=os.path.join(self.rhsa_dir_path),
-            workspace=self.workspace,
-            config=cc,
-            download_timeout=self.download_timeout,
-            logger=logging.getLogger("rhel.oval_parser.Parser"),
-        )
-
-        # get all data
-        self.logger.debug("parsing RHSA data using RHEL oval parser")
-        self.rhsa_dict = rhsa_provider.get()
-
-        self.urls.extend(rhsa_provider.urls)
-
-        if not self.rhsa_dict:
-            raise Exception("RHSA data not initialized")
-
-        return self.rhsa_dict
+        self.logger.info(f"instantiating RHSA provider of type {self.rhsa_provider_type}")
+        if self.rhsa_provider_type.lower() == "oval":
+            self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
+        elif self.rhsa_provider_type.lower() == "csaf":
+            self.rhsa_provider = CSAFRHSAProvider(self.workspace, self.download_timeout, self.logger)
 
     @staticmethod
     def _get_name_version(package):
@@ -438,7 +378,7 @@ class Parser:
                     name = colon_comps[0]  # best guess for name, fall back to rhsa for version lookup
 
         else:  # no epoch foo-bar-2.3.4-5.el6_7.8 or something else totally different  # noqa: PLR5501
-            if package.count("-") >= 2:  #
+            if package.count("-") >= 2:
                 name_other_comps = package.rsplit("-", 2)  # split name-version-release.arch.rpm into max 3 chunks
                 name = name_other_comps[0]  # only the name matters
                 version = "-".join(name_other_comps[1:])  # join the rest
@@ -448,6 +388,10 @@ class Parser:
         return name, version
 
     def _parse_affected_release(self, cve_id: str, content) -> list[FixedIn]:  # noqa: C901, PLR0912, PLR0915
+        """_parse_affected_release handles the affected_release section of the hydra API JSON CVE
+        data. If applicable it will ask the parsed OVAL data for the fixed version and module.
+        param: cve_id: str: The CVE ID.
+        param: content: dict: The JSON data for the CVE."""
         fixed_ins = []
         ars = content.get("affected_release", [])
 
@@ -475,9 +419,10 @@ class Parser:
                     ar_obj = AffectedRelease(platform=platform)
                     if ar_obj.platform not in platform_packages:
                         platform_packages[ar_obj.platform] = set()
-
+                    ar_obj.platform_cpe = item.get("cpe", None)
                     package = item.get("package", None)
                     if package:
+                        ar_obj.package = package
                         ar_obj.name, ar_obj.version = self._get_name_version(package)
                         platform_packages[ar_obj.platform].add(ar_obj.name)
                     else:
@@ -499,7 +444,7 @@ class Parser:
 
                     if ar_obj.name:
                         if ar_obj.rhsa_id:  # rhsa lookup for version information tends to make version consistent
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, ar_obj.name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj)
                             if rhsa_version:
                                 final_v = rhsa_version
                                 final_m = rhsa_module
@@ -521,12 +466,12 @@ class Parser:
                             f"{cve_id}, platform={ar_obj.platform} : missing package, trying to find a match using {ar_obj.rhsa_id} and other affected releases",  # noqa: E501
                         )
 
-                        possible_packages = (
-                            set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
-                        )
+                        # TODO: doc comment here. What is this line doing? Why is this a good way to get package names?
+                        # also note: based on my experimentation, this block is never entered.
+                        possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, pkg_name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj, override_package_name=pkg_name)
 
                             if rhsa_version:
                                 self.logger.debug(
@@ -575,7 +520,7 @@ class Parser:
                         final_ar_objs[(ar_obj.name, ar_obj.platform, ar_obj.module)] = ar_obj
 
                 except Exception:
-                    self.logger.exception(f"error processing {cve_id} affected release object: { ar_obj.__dict__}")
+                    self.logger.exception(f"error processing {cve_id} affected release object: {ar_obj.__dict__}")
 
             # construct the final fixed in objects
             fixed_ins = [
@@ -722,7 +667,9 @@ class Parser:
 
         results = []
         platform_artifacts = {}
+        # compute fixed ins from "affected_release" key in JSON + OVAL Parsing
         fins = self._parse_affected_release(cve_id, content)
+        # compute "not fixed ins" from "package_state" key in JSON (affected or out of support)
         nfins = self._parse_package_state(cve_id, content)
         platform_package_module_tuples = set()
 
@@ -863,15 +810,6 @@ class Parser:
             if self.rhsa_dict:
                 self.rhsa_dict.clear()
                 del self.rhsa_dict
-
-
-class AffectedRelease:
-    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None):  # noqa: PLR0913
-        self.name = name
-        self.version = version
-        self.platform = platform
-        self.rhsa_id = rhsa_id
-        self.module = module
 
 
 class RHELCVSS3:

@@ -67,6 +67,12 @@ class DummyProvider(provider.Provider):
         return ["http://localhost:8000/dummy-input-1.json"], 1
 
 
+class DummyProviderWithZeroCountOnUpdate(DummyProvider):
+    def _fetch_or_use_results_archive(self):
+        urls, _ = self.update()
+        return urls, 0, datetime.datetime(2021, 1, 1, 0, 0, 0)
+
+
 def get_random_string(length=10):
     characters = string.ascii_letters + string.digits
     return "".join(random.choice(characters) for _ in range(length))
@@ -79,6 +85,30 @@ def dummy_provider(tmpdir):
             use_dir = tmpdir + get_random_string()
         # create a dummy provider
         subject = DummyProvider(root=use_dir, **kwargs)
+
+        if populate:
+            # update the provider
+            subject.run()
+
+            # check that the input and results are populated
+            assert os.path.exists(subject.input_file)
+            existing_results = os.listdir(subject.workspace.results_path)
+            assert len(existing_results) > 0
+        else:
+            subject.workspace.create()
+
+        return subject
+
+    return apply
+
+
+@pytest.fixture()
+def dummy_provider_with_zero_count_on_update(tmpdir):
+    def apply(populate=True, use_dir=None, **kwargs) -> provider.Provider:
+        if not use_dir:
+            use_dir = tmpdir + get_random_string()
+        # create a dummy provider
+        subject = DummyProviderWithZeroCountOnUpdate(root=use_dir, **kwargs)
 
         if populate:
             # update the provider
@@ -813,6 +843,30 @@ def test_has_newer_archive_false(dummy_provider):
     assert not subject._has_newer_archive(entry)
 
 
+def test_timestamp_updated_on_fetch_or_use_results_archive(tmpdir, dummy_provider):
+    subject = dummy_provider(populate=True)
+    subject.runtime_cfg.import_results_enabled = True
+    subject.runtime_cfg.import_results_host = "http://localhost"
+    subject.runtime_cfg.import_results_path = "{provider_name}/listing.json"
+    current_state = subject.workspace.state()
+    # fetch the results archive
+    urls, count, timestamp = subject._fetch_or_use_results_archive()
+    assert current_state.timestamp != timestamp
+    assert timestamp == datetime.datetime(2021, 1, 1, 0, 0, 0)
+
+
+def test_state_update_on_stale(tmpdir, dummy_provider_with_zero_count_on_update):
+    subject = dummy_provider_with_zero_count_on_update(populate=True)
+    current_state = subject.workspace.state()
+    subject.runtime_cfg.import_results_enabled = True
+    subject.runtime_cfg.import_results_host = "http://localhost"
+    subject.runtime_cfg.import_results_path = "{provider_name}/listing.json"
+    subject._update()
+    new_state = subject.workspace.state()
+    assert new_state.timestamp is not None
+    assert new_state.timestamp == datetime.datetime(2021, 1, 1, 0, 0, 0)
+
+
 @pytest.mark.parametrize(
     "host,path,want",
     [
@@ -845,7 +899,7 @@ def assert_dummy_workspace_state(ws):
         store=result.StoreStrategy.FLAT_FILE.value,
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
-        listing=workspace.File(digest="1e119ae45b38b28f", algorithm="xxh64", path="checksums"),
+        listing=workspace.File(digest="b23db1a0e34dad13", algorithm="xxh64", path="checksums"),
         timestamp=None,
         schema=schema.ProviderStateSchema(),
     )
@@ -914,13 +968,15 @@ def test_provider_versions(tmpdir):
         "amazon": 1,
         "chainguard": 1,
         "debian": 1,
+        "epss": 1,
         "github": 1,
+        "kev": 1,
         "mariner": 1,
         "nvd": 2,
         "oracle": 1,
         "rhel": 1,
         "sles": 1,
-        "ubuntu": 2,
+        "ubuntu": 3,
         "wolfi": 1,
     }
 
@@ -942,7 +998,9 @@ def test_provider_distribution_versions(tmpdir):
         "amazon": 1,
         "chainguard": 1,
         "debian": 1,
+        "epss": 1,
         "github": 1,
+        "kev": 1,
         "mariner": 1,
         "nvd": 1,
         "oracle": 1,

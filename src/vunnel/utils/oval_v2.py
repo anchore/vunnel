@@ -6,6 +6,7 @@ OVAL content, it's up to the driver to transform it into normalized feed data
 
 from __future__ import annotations
 
+import bz2
 import enum
 import gzip
 import logging
@@ -15,8 +16,12 @@ import xml.etree.ElementTree as ET  # nosec (this is only used to get the defini
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from defusedxml.ElementTree import iterparse
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class OVALElementEnum(enum.Enum):
@@ -399,6 +404,14 @@ class OVALParserFactory:
         return result
 
 
+def get_opener(filename: str) -> Callable:
+    if filename.endswith(".gz"):
+        return gzip.open
+    if filename.endswith(".bz2"):
+        return bz2.open
+    return open
+
+
 def iter_parse_vulnerability_file(
     oval_file_path: str,
     parser_config: OVALParserConfig,
@@ -417,10 +430,7 @@ def iter_parse_vulnerability_file(
 
     if os.path.exists(oval_file_path):
         ingress = False
-        opener = open
-
-        if oval_file_path.endswith(".gz"):
-            opener = gzip.open
+        opener = get_opener(oval_file_path)
 
         with opener(oval_file_path, "rb") as f:
             for event, xml_element in iterparse(f, events=("start", "end")):

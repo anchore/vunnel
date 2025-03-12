@@ -75,15 +75,27 @@ def test_full_config(helpers):
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
+            epss=providers.epss.Config(
+                runtime=runtime_cfg,
+                dataset="2025-03-04",
+                url_template="https://localhost/epss_scores-{}.csv.gz",
+                request_timeout=20,
+            ),
             github=providers.github.Config(
                 token="",
                 api_url="https://api.gitlab.com/graphql",
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
+            kev=providers.kev.Config(
+                runtime=runtime_cfg,
+                url="https://anchore.com/kev/data.json",
+                request_timeout=20,
+            ),
             nvd=providers.nvd.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
+                request_retry_count=50,
                 overrides_enabled=True,
                 overrides_url="https://github.com/anchore/nvd-data-overrides/SOMEWHEREELSE/main.tar.gz",
             ),

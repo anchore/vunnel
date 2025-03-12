@@ -49,7 +49,7 @@ GITHUB_RATE_LIMIT_RESET_HEADER = "x-ratelimit-reset"
 
 
 class Parser:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         workspace,
         token,
@@ -173,7 +173,7 @@ class Parser:
         if self.timestamp:
             self.timestamp = self.timestamp.rstrip("Z")
 
-        current_timestamp = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        current_timestamp = datetime.datetime.now(tz=datetime.UTC).isoformat()
         has_cursor = True
 
         # Process everything that was persisted first
@@ -445,9 +445,7 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
 
     if vuln_cursor:
         vuln_after = f'after: "{vuln_cursor}", '
-    vulnerabilities = (
-        f"{vuln_after}classifications: [GENERAL, MALWARE], first: 100, orderBy: {{field: UPDATED_AT, direction: ASC}}"
-    )
+    vulnerabilities = f"{vuln_after}classifications: [GENERAL, MALWARE], first: 100, orderBy: {{field: UPDATED_AT, direction: ASC}}"
 
     return f"""
     {{

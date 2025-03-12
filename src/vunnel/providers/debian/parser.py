@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import glob
 import logging
 import os
 import re
@@ -9,6 +10,7 @@ from typing import Any
 
 import orjson
 
+from vunnel.result import SQLiteReader
 from vunnel.utils import http, vulnerability
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver"])
@@ -344,20 +346,8 @@ class Parser:
                             else:
                                 sev = "Unknown"
 
-                            if (
-                                sev
-                                and vulnerability.severity_order[sev]
-                                > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]
-                            ):
+                            if sev and vulnerability.severity_order[sev] > vulnerability.severity_order[vuln_record["Vulnerability"]["Severity"]]:
                                 vuln_record["Vulnerability"]["Severity"] = sev
-
-                            # HACK: when we can represent per-package severity or have a good mechanism
-                            # for overriding upstream data, we should take this out.
-                            if vid == "CVE-2023-44487":
-                                self.logger.info(
-                                    "clearing severity on CVE-2023-44487, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
-                                )
-                                vuln_record["Vulnerability"]["Severity"] = "Unknown"
 
                             # add fixedIn
                             skip_fixedin = False
@@ -410,22 +400,16 @@ class Parser:
                                         "AdvisorySummary": [{"ID": x.dsa, "Link": x.link} for x in matched_dsas],
                                     }
                                     # all_matched_dsas |= set([x.dsa for x in matched_dsas])
-                                    adv_mets[met_ns][met_sev]["dsa"][
-                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
-                                    ] += 1
+                                    adv_mets[met_ns][met_sev]["dsa"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
                                 elif "nodsa" in distro_record:
                                     fixed_el["VendorAdvisory"] = {"NoAdvisory": True}
-                                    adv_mets[met_ns][met_sev]["nodsa"][
-                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
-                                    ] += 1
+                                    adv_mets[met_ns][met_sev]["nodsa"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
                                 else:
                                     fixed_el["VendorAdvisory"] = {
                                         "NoAdvisory": False,
                                         "AdvisorySummary": [],
                                     }
-                                    adv_mets[met_ns][met_sev]["neither"][
-                                        "notfixed" if fixed_el["Version"] == "None" else "fixed"
-                                    ] += 1
+                                    adv_mets[met_ns][met_sev]["neither"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
@@ -449,7 +433,52 @@ class Parser:
 
         return vuln_records
 
-    def _get_legacy_records(self):
+    def _get_legacy_records(self) -> dict[str, dict[str, Any]]:
+        legacy_records = self._get_legacy_records_from_results_db()
+
+        fs_legacy_records = self._get_legacy_records_from_feed_service_datadrop()
+        for relno, vuln_dict in fs_legacy_records.items():
+            if relno not in legacy_records:
+                legacy_records[relno] = {}
+            legacy_records[relno].update(vuln_dict)
+
+        if legacy_records:
+            self.logger.info(f"found existing legacy data for the following releases: {list(legacy_records.keys())}")
+        else:
+            self.logger.info("no existing legacy data found")
+
+        return legacy_records
+
+    def _get_legacy_records_from_results_db(self) -> dict[str, dict[str, Any]]:
+        legacy_records = {}
+
+        def process_result(file_path: str) -> None:
+            self.logger.info(f"found existing legacy dataset: {file_path}")
+
+            releases = set()
+            records = 0
+            with SQLiteReader(file_path) as db:
+                envelopes = db.read_all()
+                for envelope in envelopes:
+                    relno = envelope.item["Vulnerability"]["NamespaceName"].split(":")[-1]
+                    releases.add(relno)
+                    vid = envelope.item["Vulnerability"]["Name"]
+                    if relno not in legacy_records:
+                        legacy_records[relno] = {}
+
+                    records += 1
+                    legacy_records[relno][vid] = envelope.item
+
+            self.logger.debug(f"legacy dataset {file_path} contains {len(releases)} releases with {records} records")
+
+        result_files = glob.glob(os.path.join(self.legacy_records_path, "**", "results.db"), recursive=True)
+
+        for file_path in result_files:
+            process_result(file_path)
+
+        return legacy_records
+
+    def _get_legacy_records_from_feed_service_datadrop(self) -> dict[str, dict[str, Any]]:
         legacy_records = {}
 
         def process_file(contents: list[dict[str, Any]]) -> None:
@@ -477,9 +506,7 @@ class Parser:
                         process_file(orjson.loads(f.read()))
 
         if legacy_records:
-            self.logger.info(f"found existing legacy data for the following releases: {list(legacy_records.keys())}")
-        else:
-            self.logger.info("no existing legacy data found")
+            self.logger.info(f"found feed service legacy data for the following releases: {list(legacy_records.keys())}")
 
         return legacy_records
 
@@ -496,11 +523,22 @@ class Parser:
 
         # fetch records from legacy (if they exist)
         legacy_records = self._get_legacy_records()
-        vuln_records.update(legacy_records)
+        for relno, vuln_dict in legacy_records.items():
+            if relno not in vuln_records:
+                vuln_records[relno] = {}
+            vuln_records[relno].update(vuln_dict)
 
         if vuln_records:
             for relno, vuln_dict in vuln_records.items():
                 for vid, vuln_record in vuln_dict.items():
+                    # HACK: when we can represent per-package severity or have a good mechanism
+                    # for overriding upstream data, we should take this out.
+                    severity_override = {"CVE-2020-35525", "CVE-2020-35527", "CVE-2023-4863", "CVE-2023-44487"}
+                    if vid in severity_override:
+                        self.logger.info(
+                            f"clearing severity on {vid}, see https://github.com/anchore/grype-db/issues/108#issuecomment-1796301073",
+                        )
+                        vuln_record["Vulnerability"]["Severity"] = "Unknown"
                     yield relno, vid, vuln_record
         else:
             yield from ()

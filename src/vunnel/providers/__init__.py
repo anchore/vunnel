@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import sys
+from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
 from vunnel.providers import (
@@ -10,7 +10,9 @@ from vunnel.providers import (
     bitnami,
     chainguard,
     debian,
+    epss,
     github,
+    kev,
     mariner,
     nvd,
     oracle,
@@ -20,15 +22,11 @@ from vunnel.providers import (
     wolfi,
 )
 
-if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points
-else:
-    from importlib.metadata import entry_points
-
 if TYPE_CHECKING:
     from vunnel import provider
 
 _providers: dict[str, type[provider.Provider]] = {
+    # vulnerability providers
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
     bitnami.Provider.name(): bitnami.Provider,
@@ -42,6 +40,9 @@ _providers: dict[str, type[provider.Provider]] = {
     ubuntu.Provider.name(): ubuntu.Provider,
     wolfi.Provider.name(): wolfi.Provider,
     chainguard.Provider.name(): chainguard.Provider,
+    # auxiliary vulnerability data (decorates vulnerability entries from providers)
+    kev.Provider.name(): kev.Provider,
+    epss.Provider.name(): epss.Provider,
 }
 
 

@@ -26,6 +26,7 @@ class Manager:
         overrides_url: str,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
+        download_retry_count: int = 10,
         api_key: str | None = None,
         overrides_enabled: bool = False,
     ) -> None:
@@ -35,7 +36,7 @@ class Manager:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-        self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout)
+        self.api = NvdAPI(api_key=api_key, logger=logger, timeout=download_timeout, retries=download_retry_count)
 
         self.overrides = NVDOverrides(
             enabled=overrides_enabled,
@@ -43,9 +44,10 @@ class Manager:
             workspace=workspace,
             logger=logger,
             download_timeout=download_timeout,
+            retries=download_retry_count,
         )
 
-        self.urls = [self.api._cve_api_url_]  # noqa: SLF001
+        self.urls = [self.api._cve_api_url_]
         self.schema = schema
 
     def get(
@@ -119,7 +121,7 @@ class Manager:
         if not last_updated:
             return False
 
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = datetime.datetime.now(tz=datetime.UTC)
         days_since_last_sync = (now - last_updated).days
 
         if days_since_last_sync >= NvdAPI.max_date_range_days:
@@ -146,7 +148,7 @@ class Manager:
         self.logger.debug(f"downloading CVEs changed since {last_updated.isoformat()}")
 
         # get the list of CVEs that have been updated since the last sync
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = datetime.datetime.now(tz=datetime.UTC)
         for idx, response in enumerate(self.api.cve(last_mod_start_date=last_updated, last_mod_end_date=now)):
             if idx == 0:
                 total_results = response.get("totalResults", None)

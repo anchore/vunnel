@@ -1,12 +1,17 @@
 # vunnel
 
-A tool for fetching, transforming, and storing vulnerability data from a variety of sources.
+**A tool for fetching, transforming, and storing vulnerability data from a variety of sources.**
+
+[![GitHub release](https://img.shields.io/github/release/anchore/vunnel.svg)](https://github.com/anchore/vunnel/releases/latest)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/anchore/vunnel/blob/main/LICENSE)
+[![Join our Discourse](https://img.shields.io/badge/Discourse-Join-blue?logo=discourse)](https://anchore.com/discourse)
 
 ![vunnel-demo](https://user-images.githubusercontent.com/590471/226942827-e19742ef-e66e-4e11-8f9b-fb74c40f1dee.gif)
 
 Supported data sources:
 - Alpine (https://secdb.alpinelinux.org)
 - Amazon (https://alas.aws.amazon.com/AL2/alas.rss & https://alas.aws.amazon.com/AL2022/alas.rss)
+- Azure (https://github.com/microsoft/AzureLinuxVulnerabilityData)
 - Debian (https://security-tracker.debian.org/tracker/data/json & https://salsa.debian.org/security-tracker-team/security-tracker/raw/master/data/DSA/list)
 - GitHub Security Advisories (https://api.github.com/graphql)
 - NVD (https://services.nvd.nist.gov/rest/json/cves/2.0)

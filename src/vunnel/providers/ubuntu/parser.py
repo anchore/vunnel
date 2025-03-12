@@ -38,7 +38,7 @@ _cve_filename_regex = re.compile("CVE-[0-9]+-[0-9]+")
 # Maps the state name to whether it indicates a package is vulnerable
 patch_states = {
     "DNE": False,  # Does Not Exist, the package is does not exist in a particular ubuntu release
-    "needs-triage": False,  # Not yet determined if CVE affects package, ignore in anchore until determination made
+    "needs-triage": True,  # Not yet determined if CVE affects package, consider all versions vulnerable until determination is made
     "ignored": False,  # CVE does not affect the package or no updates (e.g. end-of-life) (NOTE: should still report?)
     "not-affected": False,  # The package is related to the issue, but not affected by it.
     "needed": True,  # Package is vuln and needs a fix. No version yet.
@@ -85,6 +85,7 @@ ubuntu_version_names = {
     "lunar": "23.04",
     "mantic": "23.10",
     "noble": "24.04",
+    "oracular": "24.10",
 }
 
 # driver workspace
@@ -561,8 +562,7 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
             # Check for max priority of all packages with it set
             if p.priority:
                 pkg_sev = getattr(Severity, p.priority.capitalize())
-                if pkg_sev > r.Severity:
-                    r.Severity = pkg_sev
+                r.Severity = max(pkg_sev, r.Severity)
 
     return set(vulns.values())
 
@@ -741,7 +741,7 @@ class Parser:
             self._delete_merged_cve(cve_id)
         self.logger.info("finish processing deletes")
 
-    def _process_cve(  # noqa: PLR0913
+    def _process_cve(
         self,
         cve_id: str,
         cve_rel_path: str,
@@ -981,7 +981,7 @@ class Parser:
 
         return parsed_cve
 
-    def _resolve_patches_using_history(  # noqa: C901, PLR0912, PLR0915, PLR0913
+    def _resolve_patches_using_history(  # noqa: C901, PLR0912, PLR0915
         self,
         cve_id: str,
         cve_rel_path: str,
@@ -1007,9 +1007,7 @@ class Parser:
         pending_dpt_list: list[DistroPkg] = copy.deepcopy(to_be_merged_dpt_list)
 
         # last processed commit
-        saved_cve_last_processed_rev = (
-            saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
-        )
+        saved_cve_last_processed_rev = saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
 
         # fetch log of revision history for this file, its in the most recent - least recent order
         since_revs = self.git_wrapper.get_revision_history(cve_id, cve_rel_path, saved_cve_last_processed_rev)

@@ -19,7 +19,7 @@ runs:
     - name: Validate provider results
       shell: bash
       working-directory: tests/quality
-      run: poetry run make validate
+      run: poetry run make validate provider=${{ inputs.provider }}
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -28,7 +28,7 @@ runs:
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: qg-capture-state-${{ inputs.provider }}
         path: qg-capture-state-${{ inputs.provider }}.tar.gz

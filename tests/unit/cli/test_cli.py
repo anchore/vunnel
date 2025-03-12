@@ -207,6 +207,24 @@ providers:
         retry_delay: 5
       result_store: sqlite
       skip_newer_archive_check: false
+  epss:
+    dataset: current
+    request_timeout: 125
+    runtime:
+      existing_input: delete
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_newer_archive_check: false
+    url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
   github:
     api_url: https://api.github.com/graphql
     request_timeout: 125
@@ -225,10 +243,28 @@ providers:
       result_store: sqlite
       skip_newer_archive_check: false
     token: secret
+  kev:
+    request_timeout: 125
+    runtime:
+      existing_input: delete
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_newer_archive_check: false
+    url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
   mariner:
     allow_versions:
       - '1.0'
       - '2.0'
+      - '3.0'
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -248,6 +284,7 @@ providers:
     api_key: secret
     overrides_enabled: false
     overrides_url: https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz
+    request_retry_count: 10
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -283,6 +320,7 @@ providers:
     full_sync_interval: 2
     parallelism: 4
     request_timeout: 125
+    rhsa_source: CSAF
     runtime:
       existing_input: keep
       existing_results: delete-before-write

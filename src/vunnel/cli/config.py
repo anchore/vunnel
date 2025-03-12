@@ -47,7 +47,9 @@ class Providers:
     bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
+    epss: providers.epss.Config = field(default_factory=providers.epss.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
+    kev: providers.kev.Config = field(default_factory=providers.kev.Config)
     mariner: providers.mariner.Config = field(default_factory=providers.mariner.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
@@ -90,7 +92,7 @@ class Providers:
 @dataclass
 class Log:
     slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
-    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")  # noqa: RUF009
+    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
     show_timestamp: bool = os.environ.get("VUNNEL_LOG_SHOW_TIMESTAMP", default="false") == "true"
     show_level: bool = os.environ.get("VUNNEL_LOG_SHOW_LEVEL", default="true") == "true"
 

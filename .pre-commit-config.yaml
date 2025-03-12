@@ -1,6 +1,6 @@
 # the default is to run these on commit + push
 default_stages:
-  - push
+  - pre-push
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -10,55 +10,59 @@ repos:
     # Prevent giant files from being committed.
     - id: check-added-large-files
       stages:
-        - push
+        - pre-push
 
     # Checks for a common error of placing code before the docstring.
     - id: check-docstring-first
       stages:
-        - push
+        - pre-push
 
     # Attempts to load all yaml files to verify syntax.
     - id: check-yaml
       stages:
-        - push
+        - pre-push
 
     # Attempts to load all json files to verify syntax.
     - id: check-json
       stages:
-        - push
+        - pre-push
 
     # Makes sure files end in a newline and only a newline.
     - id: end-of-file-fixer
+      # this fixture should not end in a newline
+      # because https://security.access.redhat.com/data/csaf/v2/advisories/archive_latest.txt
+      # does not end in a newline
+      exclude: "tests/unit/providers/rhel/test-fixtures/csaf/server/archive_latest.txt"
       stages:
-        - push
+        - pre-push
 
     # Trims trailing whitespace.
     - id: trailing-whitespace
       stages:
-        - push
+        - pre-push
 
     # Check for files that contain merge conflict strings.
     - id: check-merge-conflict
       stages:
-        - push
+        - pre-push
 
     # Simply check whether files parse as valid python.
     - id: check-ast
       stages:
-        - push
+        - pre-push
 
     # Check for files with names that would conflict on a case-insensitive filesystem like MacOS HFS+ or Windows FAT.
     - id: check-case-conflict
       stages:
-        - push
+        - pre-push
 
   # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
   - repo: local
     hooks:
 
       # note: this is used in lieu of autopep8 and yapf
-      - id: black
-        name: black
+      - id: format
+        name: format
         # note: why not use the official black pre-commit hook? so we can use poetry to control which version of black is used.
         entry: make format
         pass_filenames: false

@@ -44,7 +44,7 @@ class OnErrorConfig:
     # the number of seconds to wait between retries
     retry_delay: int = 5
     # what to do with the input directory when an error occurs
-    input: InputStatePolicy = InputStatePolicy.KEEP  # noqa: A003
+    input: InputStatePolicy = InputStatePolicy.KEEP
     # what to do with the result directory when an error occurs
     results: ResultStatePolicy = ResultStatePolicy.KEEP
 
@@ -162,7 +162,7 @@ class Provider(abc.ABC):
             return None
 
     def _update(self) -> None:
-        start = datetime.datetime.now(tz=datetime.timezone.utc)
+        start = datetime.datetime.now(tz=datetime.UTC)
 
         last_updated = None
         current_state = self.read_state()
@@ -176,7 +176,7 @@ class Provider(abc.ABC):
         else:
             urls, count = self.update(last_updated=last_updated)
 
-        if count > 0:
+        if count > 0 or stale:
             self.workspace.record_state(
                 stale=stale,
                 version=self.version(),
@@ -193,17 +193,19 @@ class Provider(abc.ABC):
         latest_entry = listing_doc.latest_entry(schema_version=self.distribution_version())
         if not latest_entry:
             raise RuntimeError("no listing entry found")
-
+        timestamp = None
         if self.runtime_cfg.skip_newer_archive_check or self._has_newer_archive(latest_entry=latest_entry):
             self.logger.info("fetching latest listing")
             self._prep_workspace_from_listing_entry(entry=latest_entry)
         else:
             # Update the timestamp of the state to the latest entry's built time
             self.logger.info("using existing listing and updating timestamp")
-            self.workspace.state().timestamp = datetime.datetime.fromisoformat(latest_entry.built)
+            timestamp = datetime.datetime.fromisoformat(latest_entry.built)
 
         state = self.workspace.state()
-        return state.urls, state.result_count(self.workspace.path), state.timestamp
+        if not timestamp:
+            timestamp = state.timestamp
+        return state.urls, state.result_count(self.workspace.path), timestamp
 
     def _fetch_listing_document(self) -> distribution.ListingDocument:
         url = self.runtime_cfg.import_url(provider_name=self.name())

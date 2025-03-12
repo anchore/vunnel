@@ -67,7 +67,7 @@ class Parser:
                         extracted.write(uncchunk)
 
                 self.logger.info(f"finish downloading OVAL file from {oval_url}")
-            else:  # noqa: RET505
+            else:
                 raise Exception(f"GET {oval_url} failed with HTTP error {r.status_code}")
         except Exception:
             self.logger.exception("error downloading OVAL file")

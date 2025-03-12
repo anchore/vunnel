@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime  # noqa: TCH003
+import datetime  # noqa: TC003
 import logging
 import os
 import shutil
@@ -17,6 +17,7 @@ from vunnel import utils
 from vunnel.utils import hasher
 
 if TYPE_CHECKING:
+    import types
     from collections.abc import Generator
 
 METADATA_FILENAME = "metadata.json"
@@ -38,9 +39,30 @@ class State(DataClassDictMixin):
     timestamp: datetime.datetime
     version: int = 1
     distribution_version: int = 1
+    processor: str | None = None
     listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
     schema: schema_def.Schema = field(default_factory=schema_def.ProviderStateSchema)
     stale: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.processor:
+            metadata: types.ModuleType
+            package_name = "vunnel"
+            version = "dev"
+            try:
+                from importlib import metadata
+            except ImportError:
+                # Python < 3.8
+                import importlib_metadata as metadata
+
+            try:
+                if not metadata:
+                    raise metadata.PackageNotFoundError
+                version = metadata.version(package_name)
+            except metadata.PackageNotFoundError:
+                version = "unknown"
+
+            self.processor = f"{package_name}@{version}"
 
     @staticmethod
     def read(root: str) -> State:
