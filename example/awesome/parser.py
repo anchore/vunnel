@@ -5,7 +5,6 @@ import os
 
 import orjson
 import requests
-
 from vunnel import utils, workspace
 
 # NOTE, CHANGE ME!: this namespace should be unique to your provider and match expectations from

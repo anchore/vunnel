@@ -35,6 +35,10 @@ class InputStatePolicy(str, enum.Enum):
         return self.value
 
 
+# Explicitly export ResultStatePolicy
+__all__ = ["ResultStatePolicy"]
+
+
 @dataclass
 class OnErrorConfig:
     # the action to take when an error occurs

@@ -5,7 +5,6 @@ from unittest import mock
 
 import awesome
 import orjson
-
 from vunnel import provider, result
 
 fakedata = [

@@ -10,10 +10,12 @@ from dataclasses import dataclass
 
 from vunnel import utils
 
+
 @dataclass
 class GitRevision:
     sha: str
     file: str
+
 
 class GitWrapper:
     _check_cmd_ = "git --version"
