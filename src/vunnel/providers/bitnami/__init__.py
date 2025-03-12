@@ -23,7 +23,7 @@ class Config:
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSVSchema()
+    __schema__ = schema.OSVSchema(version="1.5.0")
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
@@ -47,14 +47,28 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "bitnami"
 
+    @classmethod
+    def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
+        candidate = schema.OSVSchema(schema_version)
+        if candidate.major_version == cls.__schema__.major_version:
+            return candidate
+        return None
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         # TODO: use of last_updated as NVD provider does to avoid downloading all
         # vulnerability data from the source and make incremental updates instead
         with self.results_writer() as writer:
-            for vuln_id, record in self.parser.get():
+            for vuln_id, vuln_schema_version, record in self.parser.get():
+                vuln_schema = self.compatible_schema(vuln_schema_version)
+                if not vuln_schema:
+                    self.logger.warning(
+                        f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
+                        f"as is incompatible with provider schema version {self.schema.version}",
+                    )
+                    continue
                 writer.write(
                     identifier=vuln_id.lower(),
-                    schema=self.schema,
+                    schema=vuln_schema,
                     payload=record,
                 )
 
