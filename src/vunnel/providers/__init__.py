@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from vunnel.providers import (
     alpine,
     amazon,
+    bitnami,
     chainguard,
     debian,
     epss,
@@ -28,6 +29,7 @@ _providers: dict[str, type[provider.Provider]] = {
     # vulnerability providers
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
+    bitnami.Provider.name(): bitnami.Provider,
     debian.Provider.name(): debian.Provider,
     github.Provider.name(): github.Provider,
     mariner.Provider.name(): mariner.Provider,

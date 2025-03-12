@@ -850,7 +850,7 @@ class Parser:
                     merged_patches.extend(resolved_patches)
                     if pending_dpt_list:
                         self.logger.debug(
-                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: UP032, G001
+                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: G001, UP032
                                 cve_rel_path,
                                 [to_be_merged_map[x] for x in pending_dpt_list],
                             ),

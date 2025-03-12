@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
+    # S105 is disabled for this line because the hard coded value is the name of an env var, not the value of the token
     token: str = "env:GITHUB_TOKEN"  # noqa: S105
     api_url: str = "https://api.github.com/graphql"
     runtime: provider.RuntimeConfig = field(
