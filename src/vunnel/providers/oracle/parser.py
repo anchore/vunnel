@@ -5,7 +5,8 @@ import logging
 import os
 import re
 
-from vunnel.utils import http, rpm
+from vunnel.utils import http_wrapper as http
+from vunnel.utils import rpm
 from vunnel.utils.oval_parser import Config, parse
 
 # One time initialization of driver specific configuration

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
 if TYPE_CHECKING:

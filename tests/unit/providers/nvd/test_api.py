@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pytest
 from vunnel.providers.nvd import api
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 
 
 @pytest.fixture()

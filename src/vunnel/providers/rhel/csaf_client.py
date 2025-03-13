@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import UTC, datetime
 
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 from vunnel.utils.archive import extract
 from vunnel.utils.csaf_types import CSAFDoc
 from vunnel.utils.csaf_types import from_path as csaf_from_path
