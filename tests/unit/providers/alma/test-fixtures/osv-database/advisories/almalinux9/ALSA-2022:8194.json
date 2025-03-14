@@ -1,0 +1,168 @@
+{
+  "id": "ALSA-2022:8194",
+  "summary": "Moderate: libtiff security update",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "AlmaLinux:9",
+        "name": "libtiff"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "4.4.0-2.el9"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "AlmaLinux:9",
+        "name": "libtiff-devel"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "4.4.0-2.el9"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "AlmaLinux:9",
+        "name": "libtiff-tools"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "4.4.0-2.el9"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "related": [
+    "CVE-2022-0561",
+    "CVE-2022-0562",
+    "CVE-2022-0865",
+    "CVE-2022-0924",
+    "CVE-2022-1355",
+    "CVE-2022-22844",
+    "CVE-2022-0891",
+    "CVE-2022-0908",
+    "CVE-2022-0909",
+    "CVE-2022-1354"
+  ],
+  "published": "2022-11-15T00:00:00Z",
+  "modified": "2022-11-18T13:09:36Z",
+  "details": "The libtiff packages contain a library of functions for manipulating Tagged Image File Format (TIFF) files.\n\nSecurity Fix(es):\n\n* libtiff: Denial of Service via crafted TIFF file (CVE-2022-0561)\n* libtiff: Null source pointer lead to Denial of Service via crafted TIFF file (CVE-2022-0562)\n* libtiff: reachable assertion (CVE-2022-0865)\n* libtiff: Out-of-bounds Read error in tiffcp (CVE-2022-0924)\n* libtiff: stack-buffer-overflow in tiffcp.c in main() (CVE-2022-1355)\n* libtiff: out-of-bounds read in _TIFFmemcpy() in tif_unix.c (CVE-2022-22844)\n* libtiff: heap buffer overflow in extractImageSection (CVE-2022-0891)\n* tiff: Null source pointer passed as an argument to memcpy in TIFFFetchNormalTag() in tif_dirread.c (CVE-2022-0908)\n* tiff: Divide By Zero error in tiffcrop (CVE-2022-0909)\n* libtiff: heap-buffer-overflow in TIFFReadRawDataStriped() in tiffinfo.c (CVE-2022-1354)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.\n\nAdditional Changes:\n\nFor detailed information on changes in this release, see the AlmaLinux Release Notes linked from the References section.",
+  "references": [
+    {
+      "url": "https://access.redhat.com/errata/RHSA-2022:8194",
+      "type": "ADVISORY"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0561",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0562",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0865",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0891",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0908",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0909",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-0924",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-1354",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-1355",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2022-22844",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2042603",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2054494",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2054495",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2064145",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2064146",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2064148",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2064406",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2064411",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2074404",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2074415",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://errata.almalinux.org/9/ALSA-2022-8194.html",
+      "type": "ADVISORY"
+    }
+  ]
+}

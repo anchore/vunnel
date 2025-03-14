@@ -5,6 +5,7 @@ from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
 from vunnel.providers import (
+    alma,
     alpine,
     amazon,
     bitnami,
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 
 _providers: dict[str, type[provider.Provider]] = {
     # vulnerability providers
+    alma.Provider.name(): alma.Provider,
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
     bitnami.Provider.name(): bitnami.Provider,
