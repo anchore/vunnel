@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.3.1",
+  "id": "RLSA-2023:3220",
+  "modified": "2023-05-18T19:53:57.454316Z",
+  "published": "2023-05-18T19:52:18.288616Z",
+  "related": [
+    "CVE-2023-32205",
+    "CVE-2023-32206",
+    "CVE-2023-32207",
+    "CVE-2023-32211",
+    "CVE-2023-32212",
+    "CVE-2023-32213",
+    "CVE-2023-32215"
+  ],
+  "summary": "Important: firefox security update",
+  "details": "Mozilla Firefox is an open-source web browser, designed for standards compliance, performance, and portability.\n\nThis update upgrades Firefox to version 102.11.0 ESR.\n\nSecurity Fix(es):\n\n* Mozilla: Browser prompts could have been obscured by popups (CVE-2023-32205)\n\n* Mozilla: Crash in RLBox Expat driver (CVE-2023-32206)\n\n* Mozilla: Potential permissions request bypass via clickjacking (CVE-2023-32207)\n\n* Mozilla: Memory safety bugs fixed in Firefox 113 and Firefox ESR 102.11 (CVE-2023-32215)\n\n* Mozilla: Content process crash due to invalid wasm code (CVE-2023-32211)\n\n* Mozilla: Potential spoof due to obscured address bar (CVE-2023-32212)\n\n* Mozilla: Potential memory corruption in FileReader::DoReadData() (CVE-2023-32213)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Rocky Linux:8",
+        "name": "firefox",
+        "purl": "pkg:rpm/rocky-linux/firefox?distro=rocky-linux-8&epoch=0"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "0:102.11.0-2.el8_7"
+            }
+          ],
+          "database_specific": {
+            "yum_repository": "AppStream"
+          }
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "type": "ADVISORY",
+      "url": "https://errata.rockylinux.org/RLSA-2023:3220"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196736"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196737"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196738"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196740"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196741"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196742"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2196753"
+    }
+  ],
+  "credits": [
+    {
+      "name": "Rocky Enterprise Software Foundation"
+    },
+    {
+      "name": "Red Hat"
+    }
+  ]
+}
