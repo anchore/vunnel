@@ -12,7 +12,7 @@ import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     Impact,

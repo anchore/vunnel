@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 
 import orjson
 
-from vunnel.utils import http, vulnerability
+from vunnel.utils import http_wrapper as http
+from vunnel.utils import vulnerability
 
 
 class Parser:

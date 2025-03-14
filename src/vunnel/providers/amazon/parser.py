@@ -8,7 +8,8 @@ from html.parser import HTMLParser
 
 import defusedxml.ElementTree as ET
 
-from vunnel.utils import http, rpm
+from vunnel.utils import http_wrapper as http
+from vunnel.utils import rpm
 
 namespace = "amzn"
 

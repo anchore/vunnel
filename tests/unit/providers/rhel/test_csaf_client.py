@@ -21,7 +21,7 @@ def mock_workspace(helpers, fixture_dir):
 
 @pytest.fixture
 def mock_http_get(mocker, fixture_dir):
-    mock = mocker.patch('vunnel.utils.http.get')
+    mock = mocker.patch('vunnel.utils.http_wrapper.get')
 
     fs = fixture_dir / "csaf/server"
 

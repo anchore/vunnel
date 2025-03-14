@@ -16,7 +16,8 @@ from dateutil import parser as dt_parser
 
 from vunnel import utils
 from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
-from vunnel.utils import http, rpm
+from vunnel.utils import http_wrapper as http
+from vunnel.utils import rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
