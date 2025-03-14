@@ -964,6 +964,7 @@ def test_provider_versions(tmpdir):
     # WARNING: changing the values of these versions has operational impact! Do not change them without
     # understanding the implications!
     expected = {
+        "alma": 1,
         "alpine": 1,
         "amazon": 1,
         "bitnami": 1,
@@ -995,6 +996,7 @@ def test_provider_distribution_versions(tmpdir):
     # WARNING: changing the values of these distributions has operational impact! Do not change them without
     # understanding the implications!
     expected = {
+        "alma": 1,
         "alpine": 1,
         "amazon": 1,
         "bitnami": 1,

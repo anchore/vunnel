@@ -1,0 +1,49 @@
+{
+  "id": "ALSA-2023:4520",
+  "summary": "Moderate: python-requests security update",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "AlmaLinux:8",
+        "name": "python3-requests"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "2.20.0-3.el8_8"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "related": [
+    "CVE-2023-32681"
+  ],
+  "published": "2023-08-08T00:00:00Z",
+  "modified": "2023-08-09T11:03:48Z",
+  "details": "The python-requests package contains a library designed to make HTTP requests easy for developers.\n\nSecurity Fix(es):\n\n* python-requests: Unintended leak of Proxy-Authorization header (CVE-2023-32681)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+  "references": [
+    {
+      "url": "https://access.redhat.com/errata/RHSA-2023:4520",
+      "type": "ADVISORY"
+    },
+    {
+      "url": "https://access.redhat.com/security/cve/CVE-2023-32681",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://bugzilla.redhat.com/2209469",
+      "type": "REPORT"
+    },
+    {
+      "url": "https://errata.almalinux.org/8/ALSA-2023-4520.html",
+      "type": "ADVISORY"
+    }
+  ]
+}

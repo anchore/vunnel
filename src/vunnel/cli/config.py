@@ -42,6 +42,7 @@ class CommonProviderConfig:
 
 @dataclass
 class Providers:
+    alma: providers.alma.Config = field(default_factory=providers.alma.Config)
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
     bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
