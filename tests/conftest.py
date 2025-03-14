@@ -240,7 +240,7 @@ def disable_get_requests(monkeypatch):
 
     from vunnel import utils
 
-    return monkeypatch.setattr(utils.http, "get", disabled)
+    return monkeypatch.setattr(utils.http_wrapper, "get", disabled)
 
 
 def _validate_json_schema(instance: dict, schema: dict):

@@ -59,7 +59,7 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries, disa
     mock_response_obj.text = json.dumps(mock_response)
     mock_response_obj.json.return_value = mock_response
 
-    mocker.patch('vunnel.utils.http.get', return_value=mock_response_obj)
+    mocker.patch('vunnel.utils.http_wrapper.get', return_value=mock_response_obj)
 
     p.update(None)
 
@@ -97,7 +97,7 @@ def test_provider_via_snapshot(helpers, mock_data_path, disable_get_requests, mo
     mock_response_obj.text = json.dumps(mock_response)
     mock_response_obj.json.return_value = mock_response
 
-    mocker.patch('vunnel.utils.http.get', return_value=mock_response_obj)
+    mocker.patch('vunnel.utils.http_wrapper.get', return_value=mock_response_obj)
 
     p.update(None)
 

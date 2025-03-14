@@ -8,7 +8,7 @@ from xsdata.formats.dataclass.parsers import XmlParser
 from xsdata.formats.dataclass.parsers.config import ParserConfig
 
 from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoState, RpminfoTest
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 if TYPE_CHECKING:

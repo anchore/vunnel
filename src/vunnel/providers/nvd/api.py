@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
     from collections.abc import Generator

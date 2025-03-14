@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 from vunnel import result, workspace
-from vunnel.utils.http import requests
+from vunnel.utils.http_wrapper import requests
 from vunnel.providers.amazon import Config, Provider, parser
 
 

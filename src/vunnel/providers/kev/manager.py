@@ -4,7 +4,7 @@ from collections.abc import Generator
 from typing import Any
 
 from vunnel import workspace
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 
 
 class Manager:

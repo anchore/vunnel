@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from orjson import loads
 
-from vunnel.utils import archive, http
+from vunnel.utils import archive
+from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
     from vunnel.workspace import Workspace

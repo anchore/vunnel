@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-from vunnel.utils import archive, hasher, http
+from vunnel.utils import archive, hasher
+from vunnel.utils import http_wrapper as http
 
 from . import distribution, result, workspace
 from . import schema as schema_def

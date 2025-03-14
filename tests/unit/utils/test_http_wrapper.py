@@ -4,7 +4,7 @@ import logging
 import pytest
 import requests
 from unittest.mock import patch, MagicMock, call
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 
 
 class TestGetRequests:
