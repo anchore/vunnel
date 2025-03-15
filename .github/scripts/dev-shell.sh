@@ -3,7 +3,7 @@ set -euo pipefail
 DEV_VUNNEL_PROVIDERS=$@
 GRYPE_CONFIG=$(pwd)/.grype.yaml
 GRYPE_DB_CONFIG=$(pwd)/.grype-db.yaml
-DEV_POETRY_ENV_PATH=$(poetry env info --path)
+DEV_PYTHON_ENV_PATH=$(pwd)/.venv
 
 BOLD="\033[1m"
 UNDERLINE="\033[4m"
@@ -85,8 +85,8 @@ for provider in $DEV_VUNNEL_PROVIDERS; do
 done
 export GRYPE_DB_CONFIG
 
-step "Activating poetry virtual env: $DEV_POETRY_ENV_PATH"
-source "$DEV_POETRY_ENV_PATH/bin/activate"
+step "Activating virtual env: $DEV_PYTHON_ENV_PATH"
+source "$DEV_PYTHON_ENV_PATH/bin/activate"
 
 pids=""
 

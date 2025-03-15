@@ -1,5 +1,8 @@
+# tools
 .mise.toml
+.tool/
 
+# development config and assets
 .vunnel.yaml
 .grype-db.yaml
 .grype.yaml
@@ -8,14 +11,17 @@
 *.tar.gz
 *.zip
 
+# common data directories
 /bin
 /data/
 /backup/
 .pytype/
 .wily/
 .cache/
-
 /.tmp/
+data/
+
+# release related
 CHANGELOG.md
 VERSION
 
@@ -23,8 +29,6 @@ VERSION
 __pycache__/
 *.py[cod]
 *$py.class
-
-data/
 
 # C extensions
 *.so
