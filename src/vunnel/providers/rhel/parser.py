@@ -37,6 +37,8 @@ NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
 class Parser:
     __cve_rhel_product_name_base__ = "Red Hat Enterprise Linux"
     __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
+    # "Red Hat Enterprise Linux 9.2 Extended Update Support"
+    __rhel_eus_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+\.\d+) Extended Update Support")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
     __rhsa_url__ = "https://access.redhat.com/hydra/rest/securitydata/oval/{}.json"
     __last_synced_filename__ = "last_synced"
@@ -410,16 +412,26 @@ class Parser:
             # first pass to just parse affected releases and construct a list of objects
             for item in ars:
                 try:
+                    is_eus = False
                     match = re.match(
                         self.__rhel_release_pattern__,
                         item.get("product_name", None),
                     )
                     if not match:
-                        continue
+                        match = re.match(
+                            self.__rhel_eus_pattern__,
+                            item.get("product_name", None),
+                        )
+                        if not match:
+                            continue
+                        is_eus = True
 
                     platform = match.group(1)
                     if not platform:  # track even deny-listed platforms here, filter them out later
                         continue
+
+                    if is_eus:
+                        platform = f"{platform}-eus"
 
                     ar_obj = AffectedRelease(platform=platform)
                     if ar_obj.platform not in platform_packages:
@@ -579,14 +591,23 @@ class Parser:
 
         for item in pss:
             try:
+                is_eus = False
                 match = re.match(
                     Parser.__rhel_release_pattern__,
                     item.get("product_name", None),
                 )
                 if not match:
-                    continue
+                    match = re.match(
+                        Parser.__rhel_eus_pattern__,
+                        item.get("product_name", None),
+                    )
+                    if not match:
+                        continue
+                    is_eus = True
 
                 platform = match.group(1)
+                if platform and is_eus:
+                    platform = f"{platform}-eus"
                 if not platform or f"{namespace}:{platform}" in self.skip_namespaces:
                     continue
 
