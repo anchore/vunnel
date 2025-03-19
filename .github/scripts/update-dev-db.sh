@@ -1,6 +1,7 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
-BIN_DIR=./bin
+BIN_DIR=./.tool
 GRYPE=${BIN_DIR}/grype
 GRYPE_DB=${BIN_DIR}/grype-db
 
@@ -10,15 +11,15 @@ MAGENTA="\033[35m"
 RESET="\033[0m"
 
 function step() {
-  echo "${MAGENTA}• $*${RESET} ..."
+  echo -e "${MAGENTA}• $*${RESET} ..."
 }
 
 function title() {
-  echo "${BOLD}$*${RESET}"
+  echo -e "${BOLD}$*${RESET}"
 }
 
 function error() {
-  echo "${RED}$*${RESET}"
+  echo -e "${RED}$*${RESET}"
 }
 
 step "Updating vunnel providers"

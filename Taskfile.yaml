@@ -102,7 +102,7 @@ tasks:
     env:
       DEV_VUNNEL_BIN_DIR: "{{.ABS_TOOL_DIR}}"
     cmds:
-      - "sh -c '.github/scripts/dev-shell.sh {{.provider | default \"\" }} {{.providers | default \"\" }}'"
+      - ".github/scripts/dev-shell.sh {{.provider | default \"\" }} {{.providers | default \"\" }}"
 
   build-grype:
     desc: Build grype for local development
