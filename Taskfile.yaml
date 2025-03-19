@@ -24,6 +24,14 @@ vars:
   GLOW: "{{ .TOOL_DIR }}/glow"
   BINNY: "{{ .TOOL_DIR }}/binny"
 
+  # development paths
+  GRYPE_PATH:
+    sh: echo ${GRYPE_PATH:-../grype}
+  GRYPE_DB_PATH:
+    sh: echo ${GRYPE_DB_PATH:-../grype-db}
+  ABS_TOOL_DIR:
+    sh: "realpath {{ .TOOL_DIR }}"
+
 env:
   GNUMAKEFLAGS: '--no-print-directory'
 
@@ -87,6 +95,44 @@ tasks:
       - "{{ .TEMP_DIR }}"
     cmd: "mkdir -p {{ .TEMP_DIR }}"
 
+  ## Development targets #################################
+
+  dev:
+    desc: Get a development shell with locally editable grype, grype-db, and vunnel repos
+    env:
+      DEV_VUNNEL_BIN_DIR: "{{.ABS_TOOL_DIR}}"
+    cmds:
+      - "sh -c '.github/scripts/dev-shell.sh {{.provider | default \"\" }} {{.providers | default \"\" }}'"
+
+  build-grype:
+    desc: Build grype for local development
+    generates:
+      - "{{.BIN_DIR}}/grype"
+    cmds:
+      - "cd {{.GRYPE_PATH}} && go build -o {{.ABS_TOOL_DIR}}/grype ./cmd/grype"
+
+  build-grype-db:
+    desc: Build grype-db for local development
+    generates:
+      - "{{.BIN_DIR}}/grype-db"
+    cmds:
+      - "cd {{.GRYPE_DB_PATH}} && go build -o {{.ABS_TOOL_DIR}}/grype-db ./cmd/grype-db"
+
+  update-db:
+    desc: Build and import a grype database based off of the current configuration
+    deps: [check-dev-shell]
+    cmds:
+      - ".github/scripts/update-dev-db.sh"
+
+  check-dev-shell:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if [ -z "$DEV_VUNNEL_SHELL" ]; then
+          echo "DEV_VUNNEL_SHELL is not set. Run 'make dev -- provider=\"...\"' first" && exit 1
+        fi
+
   ## Static analysis tasks #################################
 
   lint:
@@ -142,9 +188,11 @@ tasks:
 
   ci-check:
     desc: "[CI only] Check if running in CI"
-    cmds:
-      - cmd: ".github/scripts/ci-check.sh"
-        silent: true
+    internal: true
+    silent: true
+    preconditions:
+      - sh: test -n "$CI"
+        msg: "This script should ONLY be run in CI. Exiting..."
 
   ci-publish-commit:
     desc: "[CI only] Publish Docker image"

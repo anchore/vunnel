@@ -1525,7 +1525,7 @@ wheels = [
 
 [[package]]
 name = "vunnel"
-version = "0.31.0.post10+9727ef7"
+version = "0.31.0.post11+da495c1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
