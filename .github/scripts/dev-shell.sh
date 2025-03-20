@@ -87,6 +87,7 @@ done
 export GRYPE_DB_CONFIG
 
 step "Activating virtual env: $DEV_PYTHON_ENV_PATH"
+test -d "$DEV_PYTHON_ENV_PATH" || uv run vunnel --version
 source "$DEV_PYTHON_ENV_PATH/bin/activate"
 
 pids=""
