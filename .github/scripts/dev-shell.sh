@@ -1,9 +1,10 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 DEV_VUNNEL_PROVIDERS=$@
 GRYPE_CONFIG=$(pwd)/.grype.yaml
 GRYPE_DB_CONFIG=$(pwd)/.grype-db.yaml
-DEV_POETRY_ENV_PATH=$(poetry env info --path)
+DEV_PYTHON_ENV_PATH=$(pwd)/.venv
 
 BOLD="\033[1m"
 UNDERLINE="\033[4m"
@@ -12,15 +13,15 @@ MAGENTA="\033[35m"
 RESET="\033[0m"
 
 function step() {
-  echo "${MAGENTA}• $*${RESET} ..."
+  echo -e "${MAGENTA}• $*${RESET} ..."
 }
 
 function title() {
-  echo "${BOLD}$*${RESET}"
+  echo -e "${BOLD}$*${RESET}"
 }
 
 function error() {
-  echo "${RED}$*${RESET}"
+  echo -e "${RED}$*${RESET}"
 }
 
 if [ -z  "$*" ]
@@ -85,8 +86,9 @@ for provider in $DEV_VUNNEL_PROVIDERS; do
 done
 export GRYPE_DB_CONFIG
 
-step "Activating poetry virtual env: $DEV_POETRY_ENV_PATH"
-source "$DEV_POETRY_ENV_PATH/bin/activate"
+step "Activating virtual env: $DEV_PYTHON_ENV_PATH"
+test -d "$DEV_PYTHON_ENV_PATH" || uv run vunnel --version
+source "$DEV_PYTHON_ENV_PATH/bin/activate"
 
 pids=""
 
@@ -108,10 +110,10 @@ export PATH=${DEV_VUNNEL_BIN_DIR}:$PATH
 export DEV_VUNNEL_SHELL=true
 
 echo
-echo "Note: development builds ${UNDERLINE}grype${RESET} and ${UNDERLINE}grype-db${RESET} are now available in your path."
-echo "To update these builds run '${UNDERLINE}make build-grype${RESET}' and '${UNDERLINE}make build-grype-db${RESET}' respectively."
-echo "To run your provider and update the grype database run '${UNDERLINE}make update-db${RESET}'."
-echo "Type '${UNDERLINE}exit${RESET}' to exit the development shell."
+echo -e "Note: development builds ${UNDERLINE}grype${RESET} and ${UNDERLINE}grype-db${RESET} are now available in your path."
+echo -e "To update these builds run '${UNDERLINE}make build-grype${RESET}' and '${UNDERLINE}make build-grype-db${RESET}' respectively."
+echo -e "To run your provider and update the grype database run '${UNDERLINE}make update-db${RESET}'."
+echo -e "Type '${UNDERLINE}exit${RESET}' to exit the development shell."
 
 # we were able to setup everything, no need to detect failures from this point on...
 trap - EXIT
