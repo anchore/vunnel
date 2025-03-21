@@ -52,12 +52,6 @@ style = "semver"
 [tool.uv]
 trusted-publishing = "always"
 
-[[tool.uv.index]]
-explicit = true
-name = "testpypi"
-url = "https://test.pypi.org/simple/"
-publish-url = "https://test.pypi.org/legacy/"
-
 [tool.pytest.ini_options]
 cache_dir = ".cache/pytest"
 
