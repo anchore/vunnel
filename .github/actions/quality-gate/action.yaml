@@ -8,18 +8,17 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # assume we have python and poetry installed
+    # assume we have python and uv installed
 
     - name: Capture vulnerability results
       shell: bash
       working-directory: tests/quality
-      run: poetry run make capture provider=${{ inputs.provider }}
-
+      run: make capture provider=${{ inputs.provider }}
 
     - name: Validate provider results
       shell: bash
       working-directory: tests/quality
-      run: poetry run make validate provider=${{ inputs.provider }}
+      run: make validate provider=${{ inputs.provider }}
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -28,7 +27,7 @@ runs:
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: qg-capture-state-${{ inputs.provider }}
         path: qg-capture-state-${{ inputs.provider }}.tar.gz
@@ -54,8 +53,7 @@ runs:
 
         Now you can debug the provider with yardstick:
         \`\`\`bash
-        poetry shell
-        yardstick result list
-        yardstick label explore
+        uv run yardstick result list
+        uv run yardstick label explore
         \`\`\`
         EOF

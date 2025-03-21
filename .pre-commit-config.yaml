@@ -56,14 +56,13 @@ repos:
       stages:
         - pre-push
 
-  # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
+  # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through uv
   - repo: local
     hooks:
 
       # note: this is used in lieu of autopep8 and yapf
       - id: format
         name: format
-        # note: why not use the official black pre-commit hook? so we can use poetry to control which version of black is used.
         entry: make format
         pass_filenames: false
         language: system
