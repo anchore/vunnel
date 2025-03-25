@@ -15,7 +15,7 @@ from .client import Client
 
 
 class Parser:
-    def __init__(self, ws: Workspace, logger: logging.Logger | None = None):
+    def __init__(self, ws: Workspace, logger: logging.Logger | None = None, skip_download: bool = False):
         self.workspace = ws
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -23,6 +23,7 @@ class Parser:
         self.client = Client(
             download_path=os.path.join(self.workspace.input_path, "osv"),
             logger=self.logger,
+            skip_download=skip_download,
         )
         self.urls = self.client.urls
 

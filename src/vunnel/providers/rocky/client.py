@@ -17,6 +17,7 @@ class Client:
         logger: logging.Logger | None = None,
         rocky_versions: list[str] | None = None,
         api_host: str = "https://apollo.build.resf.org",
+        skip_download: bool = False,
     ):
         if rocky_versions is None:
             rocky_versions = ["8", "9"]
@@ -27,6 +28,7 @@ class Client:
             logger = logging.getLogger("rocky-linux-apollo-client")
         self.logger = logger
         self.download_path = download_path
+        self._skip_download = skip_download
 
     def _download(self) -> None:
         next_page = self._default_api_path_
@@ -44,6 +46,9 @@ class Client:
 
     def get(self) -> Generator[Path, None, None]:
         os.makedirs(self.download_path, exist_ok=True)
-        self._download()
+        if not self._skip_download:
+            self._download()
+        else:
+            self.logger.info("Skipping download of Rocky Linux advisories")
         downloads = Path(self.download_path)
         yield from sorted(downloads.rglob("*.json"))
