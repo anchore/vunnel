@@ -1,4 +1,5 @@
 import shutil
+import pytest
 from unittest.mock import MagicMock, call, patch
 from unittest import mock
 
@@ -21,6 +22,37 @@ def test_provider_schema(mock_download, helpers):
 
     assert 3 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
+
+@patch("vunnel.providers.rocky.client.Client._download")
+def test_provider_skip_download(mock_download, helpers):
+    assert Provider.supports_skip_download()
+
+    mock_download.side_effect = RuntimeError("should not be called")
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
+    p = Provider(root=workspace.root, config=c)
+    mock_data_path = helpers.local_dir("test-fixtures")
+    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
+    p.update(None)
+
+    assert mock_download.call_count == 0
+    assert 3 == workspace.num_result_entries()
+    assert workspace.result_schemas_valid(require_entries=True)
+
+def test_provider_skip_download_error_on_empty():
+    assert Provider.supports_skip_download()
+
+    workspace = MagicMock()
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
+    p = Provider(root=workspace, config=c)
+
+    with pytest.raises(RuntimeError):
+        p.update(None)
+
 
 @patch("vunnel.providers.rocky.client.Client._download")
 def test_parser(mock_download, helpers):

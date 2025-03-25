@@ -138,6 +138,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   alpine:
     request_timeout: 125
@@ -154,6 +155,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   amazon:
     max_allowed_alas_http_403: 25
@@ -171,6 +173,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
     security_advisories:
       '2': https://alas.aws.amazon.com/AL2/alas.rss
@@ -191,6 +194,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   chainguard:
     request_timeout: 125
@@ -207,6 +211,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   common:
     import_results:
@@ -238,6 +243,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   epss:
     dataset: current
@@ -255,6 +261,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
     url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
   github:
@@ -273,6 +280,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
     token: secret
   kev:
@@ -290,6 +298,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
     url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
   mariner:
@@ -311,6 +320,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   nvd:
     api_key: secret
@@ -331,6 +341,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   oracle:
     request_timeout: 125
@@ -347,6 +358,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   rhel:
     full_sync_interval: 2
@@ -366,6 +378,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
     skip_namespaces:
       - rhel:3
@@ -385,6 +398,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   sles:
     allow_versions:
@@ -405,6 +419,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   ubuntu:
     additional_versions: {}
@@ -426,6 +441,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
   wolfi:
     request_timeout: 125
@@ -442,6 +458,7 @@ providers:
         retry_count: 3
         retry_delay: 5
       result_store: sqlite
+      skip_download: false
       skip_newer_archive_check: false
 root: ./data
 """
