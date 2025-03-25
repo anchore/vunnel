@@ -70,6 +70,8 @@ class RuntimeConfig:
     result_store: result.StoreStrategy = result.StoreStrategy.FLAT_FILE
     # skip checks for newer archive if true (always download latest)
     skip_newer_archive_check: bool = False
+    # skip downloading any data; useful for working on a provider with a slow download step
+    skip_download: bool = False
 
     import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
     import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
@@ -128,10 +130,16 @@ class Provider(abc.ABC):
                 raise RuntimeError("enabling import results requires path")
 
         self.runtime_cfg = runtime_cfg
+        if runtime_cfg.skip_download and not self.__class__.supports_skip_download():
+            self.logger.warning(f"skip_download is not supported by {self.name()}")
 
     @classmethod
     def version(cls) -> int:
         return cls.__version__ + (cls.distribution_version() - 1)
+
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return False
 
     @classmethod
     def distribution_version(cls) -> int:

@@ -145,11 +145,16 @@ def show_config(cfg: config.Application) -> None:
 
 @cli.command(name="run", help="run a vulnerability provider")
 @click.argument("provider_name", metavar="PROVIDER")
+@click.option("--skip-download", is_flag=True, help="skip downloading data", default=False)
 @click.pass_obj
-def run_provider(cfg: config.Application, provider_name: str) -> None:
+def run_provider(cfg: config.Application, provider_name: str, skip_download: bool) -> None:
     logging.info(f"running {provider_name} provider")
+    config = cfg.providers.get(provider_name)
+    # technically config has type Any | None, so double check to appease mypy
+    if config and config.runtime and hasattr(config.runtime, "skip_download"):
+        config.runtime.skip_download = skip_download
 
-    provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
+    provider = providers.create(provider_name, cfg.root, config=config)
     provider.run()
 
 

@@ -38,6 +38,7 @@ class Provider(provider.Provider):
         self.parser = Parser(
             ws=self.workspace,
             logger=self.logger,
+            skip_download=config.runtime.skip_download,
         )
 
         # this provider requires the previous state from former runs
@@ -46,6 +47,10 @@ class Provider(provider.Provider):
     @classmethod
     def name(cls) -> str:
         return "rocky"
+
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
 
     @classmethod
     def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
@@ -69,5 +74,6 @@ class Provider(provider.Provider):
                     schema=vuln_schema,
                     payload=record,
                 )
-
+        if len(writer) == 0 and self.config.runtime.skip_download:
+            raise RuntimeError("download skipped on empty workspace")
         return self.parser.urls, len(writer)
