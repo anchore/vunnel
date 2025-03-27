@@ -47,11 +47,16 @@ class Provider(provider.Provider):
             rhsa_provider_type=self.config.rhsa_source,
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
+            skip_download=self.config.runtime.skip_download,
         )
 
     @classmethod
     def name(cls) -> str:
         return "rhel"
+
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
@@ -63,5 +68,6 @@ class Provider(provider.Provider):
                     schema=self.__schema__,
                     payload=record,
                 )
-
+        if len(writer) == 0 and self.config.runtime.skip_download:
+            raise RuntimeError("skip download used on empty workspace")
         return self.parser.urls, len(writer)

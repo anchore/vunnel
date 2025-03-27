@@ -52,6 +52,7 @@ class CSAFClient:
         workspace: Workspace,
         logger: logging.Logger,
         latest_url: str = ADVISORIES_LATEST_URL,
+        skip_download: bool = False,
     ):
         self.workspace = workspace
         self.latest_url = latest_url
@@ -60,7 +61,10 @@ class CSAFClient:
         self.archive_date: datetime | None = None
         self.logger = logger
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
-        self._download_and_update_archive()
+        if not skip_download:
+            self._download_and_update_archive()
+        else:
+            self.logger.info("Skipping downloads in RHEL CSAF Client")
 
     def _changes_url(self) -> str:
         return self.latest_url.replace(self.latest_filename, "changes.csv")

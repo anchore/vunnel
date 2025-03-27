@@ -59,6 +59,7 @@ class Parser:
         skip_namespaces=None,
         rhsa_provider_type=None,
         logger=None,
+        skip_download: bool = False,
     ):
         self.workspace = workspace
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
@@ -70,6 +71,7 @@ class Parser:
         self.rhsa_dict = None
         self.rhsa_provider: RHSAProvider | None = None
         self.rhsa_provider_type: str | None = rhsa_provider_type
+        self.skip_download = skip_download
 
         self.urls = [self.__summary_url__]
 
@@ -338,9 +340,11 @@ class Parser:
     def _init_rhsa_data(self, skip_if_exists=False):
         self.logger.info(f"instantiating RHSA provider of type {self.rhsa_provider_type}")
         if self.rhsa_provider_type.lower() == "oval":
+            if self.skip_download:
+                self.logger.warning("skip download requested, but OVAL RHSA provider does not support skipping download")
             self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
         elif self.rhsa_provider_type.lower() == "csaf":
-            self.rhsa_provider = CSAFRHSAProvider(self.workspace, self.download_timeout, self.logger)
+            self.rhsa_provider = CSAFRHSAProvider(self.workspace, self.download_timeout, self.logger, self.skip_download)
 
     @staticmethod
     def _get_name_version(package):
@@ -782,8 +786,10 @@ class Parser:
             # initialize rhsa data
             self._init_rhsa_data(skip_if_exists=skip_if_exists)
 
-            # download cves
-            full_dir = self._sync_cves(skip_if_exists)
+            full_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)
+            if not self.skip_download:
+                # download cves
+                self._sync_cves(skip_if_exists)
 
             # normalize cve files
             self.logger.debug(f"normalizing CVEs from {full_dir}")
