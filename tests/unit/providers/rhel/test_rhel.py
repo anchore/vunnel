@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from unittest.mock import patch
 
 import pytest
 
@@ -566,3 +567,26 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     p.update(None)
 
     workspace.assert_result_snapshots()
+
+
+@patch("vunnel.providers.rhel.Parser._sync_cves")
+def test_rhel_provider_supports_skip_download(mock_sync_cves, helpers):
+    assert Provider.supports_skip_download()
+
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/csaf/input",
+    )
+
+    mock_sync_cves.side_effect = RuntimeError("should not be called")
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
+    c.rhsa_source = "CSAF"
+    p = Provider(root=workspace.root, config=c)
+
+    with pytest.raises(RuntimeError) as e:
+        p.update(None)
+        assert e.match("skip download used on empty workspace")
+    assert mock_sync_cves.call_count == 0
