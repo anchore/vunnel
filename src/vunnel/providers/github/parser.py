@@ -31,6 +31,7 @@ from vunnel import utils
 from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
+# this is the ecosystem in GHSA to a syft package type
 ecosystem_map = {
     "COMPOSER": "composer",
     "GO": "go",
@@ -42,6 +43,7 @@ ecosystem_map = {
     "RUBYGEMS": "gem",
     "RUST": "rust",
     "SWIFT": "swift",
+    "ACTIONS": "github-action",
 }
 
 GITHUB_RATE_LIMIT_REMAINING_HEADER = "x-ratelimit-remaining"
