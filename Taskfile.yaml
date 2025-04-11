@@ -203,8 +203,11 @@ tasks:
   ci-promote-release:
     desc: "[CI only] Promote release"
     deps: [ci-check]
+    vars:
+      PACKAGE_VERSION:
+        sh: uv run dunamai from git --style semver --dirty --no-metadata
     cmds:
-      - "{{ .CRANE }} tag {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }} {{ .PACKAGE_VERSION }}"
+      - "{{ .CRANE }} tag {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }} v{{ .PACKAGE_VERSION }}"
       - "{{ .CRANE }} tag {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }} latest"
 
   ci-publish-pypi:
