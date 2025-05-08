@@ -48,6 +48,7 @@ class Providers:
     bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
+    echo: providers.echo.Config = field(default_factory=providers.echo.Config)
     epss: providers.epss.Config = field(default_factory=providers.epss.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
     kev: providers.kev.Config = field(default_factory=providers.kev.Config)
