@@ -19,8 +19,8 @@ Supported data sources:
 - RedHat (https://www.redhat.com/security/data/oval)
 - SLES (https://ftp.suse.com/pub/projects/security/oval)
 - Ubuntu (https://launchpad.net/ubuntu-cve-tracker)
-- Echo (https://advisory.echohq.com/data.json)
 - Wolfi (https://packages.wolfi.dev)
+- Echo (https://advisory.echohq.com/data.json)
 
 
 ## Installation

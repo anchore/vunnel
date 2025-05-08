@@ -12,7 +12,7 @@ from vunnel.utils import vulnerability
 
 
 class Parser:
-    _release_ = "1"
+    _release_ = "rolling"
     _advisories_dir = "echo-advisories"
     _advisories_filename = "data.json"
 

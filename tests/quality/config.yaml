@@ -91,7 +91,7 @@ tests:
     images:
       - ghcr.io/buildecho/scanner-test:latest@sha256:60557350ad6976dad3b88d891de8f090b20b3271c660272d30d44b5d07b23edc
     expected_namespaces:
-      - echo:distro:echo:1
+      - echo:distro:echo:rolling
     validations:
       - *default-validations
 

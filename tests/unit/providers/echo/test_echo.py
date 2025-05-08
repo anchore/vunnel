@@ -59,7 +59,7 @@ class TestParser:
 
         :return:
         """
-        release = "1"
+        release = "rolling"
         data = {
             "nginx": {
                 "CVE-2021-3618": { "fixed_version": "1.21.0" },
