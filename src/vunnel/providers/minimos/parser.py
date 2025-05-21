@@ -3,12 +3,18 @@ from __future__ import annotations
 import copy
 import logging
 import os
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import orjson
 
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from vunnel import workspace
 
 
 class Parser:
@@ -17,7 +23,7 @@ class Parser:
 
     def __init__(
         self,
-        workspace,
+        workspace: workspace.Workspace,
         url: str,
         namespace: str,
         download_timeout: int = 125,
@@ -25,7 +31,7 @@ class Parser:
     ):
         self.download_timeout = download_timeout
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
-        self.metadata_url = url.strip("/") if url else Parser._url_
+        self.metadata_url = url.strip("/")
         self.url = url
         self.namespace = namespace
         self._db_filename = self._extract_filename_from_url(url)
@@ -35,10 +41,10 @@ class Parser:
         self.logger = logger
 
     @staticmethod
-    def _extract_filename_from_url(url):
+    def _extract_filename_from_url(url: str) -> str:
         return os.path.basename(urlparse(url).path)
 
-    def _download(self):
+    def _download(self) -> None:
         """
         Downloads minimos sec db files
         :return:
@@ -56,7 +62,7 @@ class Parser:
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
-    def _load(self):
+    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """
         Loads all db json and yields it
         :return:
@@ -73,7 +79,7 @@ class Parser:
             self.logger.exception(f"failed to load {self.namespace} sec db data")
             raise
 
-    def _normalize(self, release, data):
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -125,11 +131,11 @@ class Parser:
                         "NamespaceName": self.namespace + ":" + str(release),
                     }
 
-                    vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
+                    vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)  # type: ignore[union-attr]
 
         return vuln_dict
 
-    def get(self):
+    def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]], None, None]:
         """
         Download, load and normalize minimos sec db and return a dict of release - list of vulnerability records
         :return:

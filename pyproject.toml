@@ -80,7 +80,6 @@ exclude = '''(?x)(
     | ^src/vunnel/providers/ubuntu/git\.py$       # ported from enterprise, never had type hints
     | ^src/vunnel/providers/ubuntu/parser\.py$    # ported from enterprise, never had type hints
     | ^src/vunnel/providers/wolfi/parser\.py$     # ported from enterprise, never had type hints
-    | ^src/vunnel/providers/minimos/parser\.py$     # ported from enterprise, never had type hints
     | ^src/vunnel/utils/oval_v2.py$               # ported from enterprise, never had type hints
     | ^src/vunnel/utils/oval_parser.py$           # ported from enterprise, never had type hints
     | ^src/vunnel/utils/fdb.py$                   # ported from enterprise, never had type hints
