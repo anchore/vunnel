@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import iso8601
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel.schema import ProviderListingSchema, Schema
+from vunnel.schemas import ProviderListingSchema, Schema
 
 DB_SUFFIXES = {".tar.gz", ".tar.zst"}
 
