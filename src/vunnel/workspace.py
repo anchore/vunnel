@@ -13,7 +13,7 @@ import xxhash
 from mashumaro.mixins.dict import DataClassDictMixin
 
 from vunnel import utils
-from vunnel.schema import ProviderStateSchema, Schema
+from vunnel.schemas import ProviderStateSchema, Schema
 from vunnel.utils import hasher
 
 if TYPE_CHECKING:
