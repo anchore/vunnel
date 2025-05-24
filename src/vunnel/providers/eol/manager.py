@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 
     from vunnel.workspace import Workspace
 
-from urllib.parse import urljoin
 
 import requests
 
