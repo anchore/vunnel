@@ -1,4 +1,4 @@
-from vunnel import schema as schema_def
+from vunnel.schema import ProviderStateSchema, ProviderListingSchema, Schema
 
 
 def test_provider_workspace_schema_v1():

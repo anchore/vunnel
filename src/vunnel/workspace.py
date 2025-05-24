@@ -12,8 +12,8 @@ import orjson
 import xxhash
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel import schema as schema_def
 from vunnel import utils
+from vunnel.schema import ProviderStateSchema, Schema
 from vunnel.utils import hasher
 
 if TYPE_CHECKING:
@@ -41,7 +41,7 @@ class State(DataClassDictMixin):
     distribution_version: int = 1
     processor: str | None = None
     listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
-    schema: schema_def.Schema = field(default_factory=schema_def.ProviderStateSchema)
+    schema: Schema = field(default_factory=ProviderStateSchema)
     stale: bool = False
 
     def __post_init__(self) -> None:
