@@ -64,6 +64,7 @@ class Manager:
                     "is_eol": release.get("isEol", False),
                     "eol_from": release.get("eolFrom"),
                     "is_maintained": release.get("isMaintained", False),
+                    "identifiers": product.get("identifiers", []),
                 }
 
                 # Convert date strings to datetime objects
