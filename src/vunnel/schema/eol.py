@@ -31,11 +31,8 @@ class EOLSchema(Schema):
         url = f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-{version}.json"
         super().__init__(version, url)
 
-    def validate(self, data: dict[str, Any]) -> None:
-        """Validate the data against the schema."""
-        if not isinstance(data, dict):
-            raise ValueError("data must be a dictionary")
-
+    def _validate_required_fields(self, data: dict[str, Any]) -> None:
+        """Validate required fields."""
         required_fields = ["product", "cycle"]
         for field in required_fields:
             if field not in data:
@@ -47,7 +44,8 @@ class EOLSchema(Schema):
         if not isinstance(data["cycle"], str):
             raise ValueError("cycle must be a string")
 
-        # Optional fields validation
+    def _validate_optional_fields(self, data: dict[str, Any]) -> None:
+        """Validate optional fields."""
         optional_fields = {
             "eol": datetime,
             "latest": str,
@@ -64,15 +62,26 @@ class EOLSchema(Schema):
             if field in data and not isinstance(data[field], field_type):
                 raise ValueError(f"{field} must be of type {field_type.__name__}")
 
-        # Validate identifiers if present
+    def _validate_identifiers(self, identifiers: list[dict[str, str]]) -> None:
+        """Validate identifiers structure."""
+        for identifier in identifiers:
+            if not isinstance(identifier, dict):
+                raise ValueError("identifier must be a dictionary")
+            if "type" not in identifier or "id" not in identifier:
+                raise ValueError("identifier must have 'type' and 'id' fields")
+            if not isinstance(identifier["type"], str) or not isinstance(identifier["id"], str):
+                raise ValueError("identifier type and id must be strings")
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate the data against the schema."""
+        if not isinstance(data, dict):
+            raise ValueError("data must be a dictionary")
+
+        self._validate_required_fields(data)
+        self._validate_optional_fields(data)
+
         if "identifiers" in data and data["identifiers"] is not None:
-            for identifier in data["identifiers"]:
-                if not isinstance(identifier, dict):
-                    raise ValueError("identifier must be a dictionary")
-                if "type" not in identifier or "id" not in identifier:
-                    raise ValueError("identifier must have 'type' and 'id' fields")
-                if not isinstance(identifier["type"], str) or not isinstance(identifier["id"], str):
-                    raise ValueError("identifier type and id must be strings")
+            self._validate_identifiers(data["identifiers"])
 
     def normalize(self, data: dict[str, Any]) -> dict[str, Any]:
         """Normalize the data to ensure consistent format."""
