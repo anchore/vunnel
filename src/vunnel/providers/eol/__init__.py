@@ -21,7 +21,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    url: str = "https://endoflife.date/api/v1/products.json"
+    url: str = "https://endoflife.date/api/v1/products/full"
 
 
 class Provider(provider.Provider):
