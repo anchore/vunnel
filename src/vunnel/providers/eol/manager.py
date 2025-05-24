@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import logging
     from collections.abc import Generator
+
     from vunnel.workspace import Workspace
 
-import requests
 from urllib.parse import urljoin
+
+import requests
 
 
 class Manager:

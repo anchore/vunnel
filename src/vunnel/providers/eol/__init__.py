@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result
-
 from vunnel.schema.eol import EOLSchema
+
 from .manager import Manager
 
 if TYPE_CHECKING:
