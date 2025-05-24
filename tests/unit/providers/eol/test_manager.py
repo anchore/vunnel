@@ -13,6 +13,16 @@ def mock_products_response():
     return [
         {
             "name": "python",
+            "identifiers": [
+                {
+                    "type": "cpe",
+                    "id": "cpe:/:a:python:python"
+                },
+                {
+                    "type": "cpe",
+                    "id": "cpe:2.3:a:python:python"
+                }
+            ],
             "releases": [
                 {
                     "name": "3.12",
@@ -36,6 +46,16 @@ def mock_products_response():
         },
         {
             "name": "nodejs",
+            "identifiers": [
+                {
+                    "type": "cpe",
+                    "id": "cpe:/:a:nodejs:nodejs"
+                },
+                {
+                    "type": "cpe",
+                    "id": "cpe:2.3:a:nodejs:nodejs"
+                }
+            ],
             "releases": [
                 {
                     "name": "20",
@@ -77,6 +97,10 @@ def test_manager_get(mock_products_response):
         assert data["codename"] == "Some Codename"
         assert data["is_lts"] is False
         assert data["is_maintained"] is True
+        assert data["identifiers"] == [
+            {"type": "cpe", "id": "cpe:/:a:python:python"},
+            {"type": "cpe", "id": "cpe:2.3:a:python:python"}
+        ]
         # Check second record (python 3.11)
         product, cycle, data = records[1]
         assert product == "python"
@@ -84,6 +108,10 @@ def test_manager_get(mock_products_response):
         assert data["codename"] == "Other Codename"
         assert data["is_lts"] is True
         assert data["is_maintained"] is False
+        assert data["identifiers"] == [
+            {"type": "cpe", "id": "cpe:/:a:python:python"},
+            {"type": "cpe", "id": "cpe:2.3:a:python:python"}
+        ]
         # Check third record (nodejs 20)
         product, cycle, data = records[2]
         assert product == "nodejs"
@@ -91,6 +119,10 @@ def test_manager_get(mock_products_response):
         assert data["codename"] == "Node LTS"
         assert data["is_lts"] is True
         assert data["is_maintained"] is True
+        assert data["identifiers"] == [
+            {"type": "cpe", "id": "cpe:/:a:nodejs:nodejs"},
+            {"type": "cpe", "id": "cpe:2.3:a:nodejs:nodejs"}
+        ]
 
 
 def test_manager_get_request_error():

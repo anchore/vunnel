@@ -21,6 +21,7 @@ class EOLRecord:
     support: datetime | None
     discontinued: datetime | None
     extended_support: datetime | None
+    identifiers: list[dict[str, str]] | None = None
 
 
 class EOLSchema(Schema):
@@ -56,11 +57,22 @@ class EOLSchema(Schema):
             "support": datetime,
             "discontinued": datetime,
             "extended_support": datetime,
+            "identifiers": list,
         }
 
         for field, field_type in optional_fields.items():
             if field in data and not isinstance(data[field], field_type):
                 raise ValueError(f"{field} must be of type {field_type.__name__}")
+
+        # Validate identifiers if present
+        if "identifiers" in data and data["identifiers"] is not None:
+            for identifier in data["identifiers"]:
+                if not isinstance(identifier, dict):
+                    raise ValueError("identifier must be a dictionary")
+                if "type" not in identifier or "id" not in identifier:
+                    raise ValueError("identifier must have 'type' and 'id' fields")
+                if not isinstance(identifier["type"], str) or not isinstance(identifier["id"], str):
+                    raise ValueError("identifier type and id must be strings")
 
     def normalize(self, data: dict[str, Any]) -> dict[str, Any]:
         """Normalize the data to ensure consistent format."""
