@@ -11,6 +11,7 @@ from vunnel.providers import (
     bitnami,
     chainguard,
     debian,
+    eol,
     epss,
     github,
     kev,
@@ -47,6 +48,7 @@ _providers: dict[str, type[provider.Provider]] = {
     # auxiliary vulnerability data (decorates vulnerability entries from providers)
     kev.Provider.name(): kev.Provider,
     epss.Provider.name(): epss.Provider,
+    eol.Provider.name(): eol.Provider,
 }
 
 
