@@ -544,7 +544,7 @@ def _install_grype_db(input: str):
 
 
 def _install_from_clone(bin_dir: str, checkout: str, clone_dir: str, repo_url: str, repo_user_and_name: str):
-    logging.info(f"creating grype-db repo at {clone_dir!r}")
+    logging.info(f"creating grype-db repo at {clone_dir!r} from {repo_url}")
 
     if os.path.exists(clone_dir):
         remote_url = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=clone_dir).decode().strip()
