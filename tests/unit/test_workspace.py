@@ -88,9 +88,26 @@ def test_record_state(tmpdir, dummy_file):
         listing=workspace.File(digest="63b7adef165e430a", algorithm="xxh64", path="checksums"),
         timestamp=None,
         schema=schema.ProviderStateSchema(),
+        processor=current_state.processor,
+        version=current_state.version,
+        distribution_version=current_state.distribution_version,
+        stale=current_state.stale,
     )
 
-    assert current_state == expected_state
+    # Compare primitive and nested fields individually
+    assert current_state.store == expected_state.store
+    assert current_state.provider == expected_state.provider
+    assert current_state.urls == expected_state.urls
+    assert current_state.timestamp == expected_state.timestamp
+    assert current_state.processor == expected_state.processor
+    assert current_state.version == expected_state.version
+    assert current_state.distribution_version == expected_state.distribution_version
+    assert current_state.stale == expected_state.stale
+    assert current_state.listing.digest == expected_state.listing.digest
+    assert current_state.listing.algorithm == expected_state.listing.algorithm
+    assert current_state.listing.path == expected_state.listing.path
+    assert current_state.schema.version == expected_state.schema.version
+    assert current_state.schema.url == expected_state.schema.url
 
 
 def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
@@ -114,15 +131,32 @@ def test_record_state_urls_persisted_across_runs(tmpdir, dummy_file):
     current_state.timestamp = None
 
     expected_state = workspace.State(
-        store=store,
+        store=store.value,
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="63b7adef165e430a", algorithm="xxh64", path="checksums"),
         timestamp=None,
         schema=schema.ProviderStateSchema(),
+        processor=current_state.processor,
+        version=current_state.version,
+        distribution_version=current_state.distribution_version,
+        stale=current_state.stale,
     )
 
-    assert current_state == expected_state
+    # Compare primitive and nested fields individually
+    assert current_state.store == expected_state.store
+    assert current_state.provider == expected_state.provider
+    assert current_state.urls == expected_state.urls
+    assert current_state.timestamp == expected_state.timestamp
+    assert current_state.processor == expected_state.processor
+    assert current_state.version == expected_state.version
+    assert current_state.distribution_version == expected_state.distribution_version
+    assert current_state.stale == expected_state.stale
+    assert current_state.listing.digest == expected_state.listing.digest
+    assert current_state.listing.algorithm == expected_state.listing.algorithm
+    assert current_state.listing.path == expected_state.listing.path
+    assert current_state.schema.version == expected_state.schema.version
+    assert current_state.schema.url == expected_state.schema.url
 
 
 def test_state_schema(tmpdir, dummy_file, helpers):
