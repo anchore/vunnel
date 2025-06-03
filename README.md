@@ -20,6 +20,7 @@ Supported data sources:
 - SLES (https://ftp.suse.com/pub/projects/security/oval)
 - Ubuntu (https://launchpad.net/ubuntu-cve-tracker)
 - Wolfi (https://packages.wolfi.dev)
+- Echo (https://advisory.echohq.com/data.json)
 
 
 ## Installation
@@ -59,6 +60,7 @@ alpine
 amazon
 chainguard
 debian
+echo
 github
 mariner
 nvd

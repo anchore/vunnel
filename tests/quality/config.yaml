@@ -84,6 +84,17 @@ tests:
     validations:
       - *default-validations
 
+  - provider: echo
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - ghcr.io/buildecho/scanner-test:latest@sha256:60557350ad6976dad3b88d891de8f090b20b3271c660272d30d44b5d07b23edc
+    expected_namespaces:
+      - echo:distro:echo:rolling
+    validations:
+      - *default-validations
+
   - provider: amazon
     validations:
       - <<: *default-validations

@@ -70,6 +70,7 @@ exclude = '''(?x)(
     ^src/vunnel/providers/alpine/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/amazon/parser\.py$    # ported from enterprise, never had type hints
     | ^src/vunnel/providers/debian/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/echo/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/github/parser\.py$    # ported from enterprise, never had type hints
     | ^src/vunnel/providers/mariner/model/        # generated code
     | ^src/vunnel/providers/nvd/parser\.py$       # ported from enterprise, never had type hints
