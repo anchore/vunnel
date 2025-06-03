@@ -298,6 +298,44 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
               </criteria>
           </criteria>
       </definition>
+      <definition id="oval:org.opensuse.security:def:20102322" version="1" class="vulnerability">
+          <metadata>
+              <title>CVE-2010-2322</title>
+              <affected family="unix">
+                  <platform>SUSE Linux Enterprise Server 15 SP1-LTSS</platform>
+                  <platform>SUSE Linux Enterprise Server for SAP Applications 15 SP1</platform>
+              </affected>
+              <reference source="CVE" ref_id="Mitre CVE-2010-2322" ref_url="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-2322"></reference>
+              <reference source="SUSE CVE" ref_id="SUSE CVE-2010-2322" ref_url="https://www.suse.com/security/cve/CVE-2010-2322"></reference>
+              <reference source="SUSE-SU" ref_id="SUSE-SU-2021:2635-1" ref_url="https://lists.suse.com/pipermail/sle-security-updates/2021-August/009264.html"></reference>
+              <reference source="SUSE-SU" ref_id="openSUSE-SU-2021:1107-1" ref_url="https://lists.opensuse.org/archives/list/security-announce@lists.opensuse.org/thread/AJWN7K3ZWIZYG5QW25KKFIGISFYT
+G2R3/"></reference>
+              <reference source="SUSE-SU" ref_id="openSUSE-SU-2021:2565-1" ref_url="https://lists.opensuse.org/archives/list/security-announce@lists.opensuse.org/thread/OHWHBBR2CBRHE7HR6PAPJLGHP3QC
+HYHS/"></reference>
+              <description>&#xA;    Absolute path traversal vulnerability in the extract_jar function in jartool.c in FastJar 0.98 allows remote attackers to create or overwrite arbitrary files via
+                  a full pathname for a file within a .jar archive, a related issue to CVE-2010-0831.  NOTE: this vulnerability exists because of an incomplete fix for CVE-2006-3619.&#xA;    </description>
+              <advisory>
+                  <severity>Low</severity>
+                  <cve cvss3="3.7/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" cwe="" impact="low" href="https://www.suse.com/security/cve/CVE-2010-2322/" public="">CVE-2010-2322 at SUSE</cve>
+                  <cve cwe="" impact="" href="https://nvd.nist.gov/vuln/detail/CVE-2010-2322" public="">CVE-2010-2322 at NVD</cve>
+                  <bugzilla id="" href="https://bugzilla.suse.com/1188517">SUSE bug 1188517</bugzilla>
+                  <affected_cpe_list>
+                      <cpe>cpe:/o:suse:sles-ltss:15:sp1</cpe>
+                      <cpe>cpe:/o:suse:sles_sap:15:sp1</cpe>
+                  </affected_cpe_list>
+                  <issued date="2022-05-20"></issued>
+                  <updated date="2024-04-26"></updated>
+                  <affected></affected>
+              </advisory>
+          </metadata>
+          <criteria operator="AND">
+              <criteria operator="OR">
+                  <criterion test_ref="oval:org.opensuse.security:tst:2009341508" comment="SUSE Linux Enterprise Server 15 SP1-LTSS is installed"></criterion>
+                  <criterion test_ref="oval:org.opensuse.security:tst:2009341764" comment="SUSE Linux Enterprise Server for SAP Applications 15 SP1 is installed"></criterion>
+              </criteria>
+                  <criterion test_ref="oval:org.opensuse.security:tst:2009694232" comment="fastjar is affected"></criterion>
+          </criteria>
+      </definition>
   </definitions>
   <tests>
     <rpminfo_test id="oval:org.opensuse.security:tst:2009302033" version="1" comment="sles-ltss-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -380,6 +418,14 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
           <object object_ref="oval:org.opensuse.security:obj:2009031042"></object>
           <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
       </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009341764" comment="SLES_SAP-release is ==15.1" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009047546"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009068342"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009694232" comment="fastjar is &gt;0" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009037419"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009079459"></state>
+      </rpminfo_test>
   </tests>
   <objects>
     <rpminfo_object id="oval:org.opensuse.security:obj:2009049560" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -433,6 +479,15 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
       <rpminfo_object id="oval:org.opensuse.security:obj:2009031042" version="1">
           <name>krb5-server</name>
       </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009047546" version="1">
+          <name>SLES_SAP-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009049560" version="1">
+          <name>sles-ltss-release</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009037419" version="1">
+          <name>fastjar</name>
+      </rpminfo_object>
   </objects>
   <state>
     <rpminfo_state id="oval:org.opensuse.security:ste:2009061809" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -449,8 +504,11 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
       <arch datatype="string" operation="pattern match">(aarch64|ppc64le|s390x|x86_64)</arch>
       <evr datatype="evr_string" operation="less than">0:4.12.14-197.89.2</evr>
     </rpminfo_state>
-      <rpminfo_state id="oval:org.opensuse.security:ste:2009111500" version="1">
-          <evr operation="6">0:1.15.2-4.25</evr>
+      <rpminfo_state id="oval:org.opensuse.security:ste:2009111500" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
+          <evr datatype="evr_string" operation="less than">0:1.15.2-4.25</evr>
+      </rpminfo_state>
+      <rpminfo_state id="oval:org.opensuse.security:ste:2009079459" version="1">
+          <evr operation="greater than">0:0-0</evr>
       </rpminfo_state>
   </state>
 </oval_definitions>
