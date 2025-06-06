@@ -92,6 +92,10 @@ def test_full_config(helpers):
                 url="https://anchore.com/kev/data.json",
                 request_timeout=20,
             ),
+            minimos=providers.minimos.Config(
+                runtime=runtime_cfg,
+                request_timeout=20,
+            ),
             nvd=providers.nvd.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
