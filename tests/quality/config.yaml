@@ -25,8 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      #  TODO: FIX: revert back to main grype repo before merge
-      version: github.com/Daniel-Wachter/grype@minimos_support+import-db=build/grype-db.tar.zst
+      version: main+import-db=build/grype-db.tar.zst
       takes: SBOM
 
     - name: grype
@@ -37,8 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      #  TODO: FIX: revert back to main grype repo before merge
-      version: github.com/Daniel-Wachter/grype@minimos_support
+      version: main
       takes: SBOM
       label: reference
 
@@ -49,8 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  #  TODO: FIX: revert back to main grype-db repo before merge
-  version: Daniel-Wachter/grype-db.git@minimos_support
+  version: main
 
 tests:
 

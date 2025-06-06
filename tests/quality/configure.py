@@ -434,8 +434,8 @@ def validate_test_tool_versions(cfg: Config):
     reasons = []
 
     logging.info(f"grype-db version: {cfg.grype_db.version!r}")
-    if cfg.grype_db.version != "latest":
-        reasons.append("grype-db version is not latest")
+    if cfg.grype_db.version != "main":
+        reasons.append("grype-db version is not main")
 
     for idx, tool in enumerate(cfg.yardstick.tools):
         if tool.name != "grype":
@@ -447,8 +447,8 @@ def validate_test_tool_versions(cfg: Config):
 
         logging.info(f"grype version (index={idx+1} label={label}): {tool.version!r}")
 
-        if tool.version != "latest" and not tool.version.startswith("latest+"):
-            reasons.append(f"grype version is not latest (index {idx+1})")
+        if tool.version != "main" and not tool.version.startswith("main+"):
+            reasons.append(f"grype version is not main (index {idx+1})")
 
     for reason in reasons:
         logging.error(reason)
