@@ -99,7 +99,6 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-22.04
-    environment: release
     permissions:
       contents: read
       # required to authenticate with PyPI via OIDC token
