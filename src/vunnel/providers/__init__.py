@@ -16,6 +16,7 @@ from vunnel.providers import (
     github,
     kev,
     mariner,
+    minimos,
     nvd,
     oracle,
     rhel,
@@ -46,6 +47,7 @@ _providers: dict[str, type[provider.Provider]] = {
     ubuntu.Provider.name(): ubuntu.Provider,
     wolfi.Provider.name(): wolfi.Provider,
     chainguard.Provider.name(): chainguard.Provider,
+    minimos.Provider.name(): minimos.Provider,
     # auxiliary vulnerability data (decorates vulnerability entries from providers)
     kev.Provider.name(): kev.Provider,
     epss.Provider.name(): epss.Provider,

@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: latest+import-db=build/grype-db.tar.zst
+      version: main+import-db=build/grype-db.tar.zst
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: latest
+      version: main
       takes: SBOM
       label: reference
 
@@ -47,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: latest
+  version: main
 
 tests:
 
@@ -189,6 +189,23 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2022 # important - Azure Linux 3 doesn't have much to match on going back to 2021
+        candidate_tool_label: custom-db
+
+  - provider: minimos
+    additional_providers:
+      - name: nvd
+        use_cache: true
+      - name: github
+        use_cache: true
+    images:
+      - docker.io/dimastopelmini/forgrype@sha256:ebe0c6ca122deef072c29be2f915130e5c8b4c277ad5ef551385f6496dae4dfa
+      - docker.io/dimastopelmini/forgrype@sha256:653c8980c63a9ac403a3b9f56a08f43f929432ece69894423c165b4d61d3dcdb
+    expected_namespaces:
+      - nvd:cpe
+      - minimos:distro:minimos:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2024 # important - minimOS is a new distro and older years don't find enough
         candidate_tool_label: custom-db
 
   - provider: nvd

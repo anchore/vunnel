@@ -63,6 +63,7 @@ debian
 echo
 github
 mariner
+minimos
 nvd
 oracle
 rhel
