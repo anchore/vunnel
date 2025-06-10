@@ -13,6 +13,7 @@ Supported data sources:
 - Amazon (https://alas.aws.amazon.com/AL2/alas.rss & https://alas.aws.amazon.com/AL2022/alas.rss)
 - Azure (https://github.com/microsoft/AzureLinuxVulnerabilityData)
 - Debian (https://security-tracker.debian.org/tracker/data/json & https://salsa.debian.org/security-tracker-team/security-tracker/raw/master/data/DSA/list)
+- Echo (https://advisory.echohq.com/data.json)
 - GitHub Security Advisories (https://api.github.com/graphql)
 - NVD (https://services.nvd.nist.gov/rest/json/cves/2.0)
 - Oracle (https://linux.oracle.com/security/oval)
@@ -59,6 +60,7 @@ alpine
 amazon
 chainguard
 debian
+echo
 github
 mariner
 minimos
