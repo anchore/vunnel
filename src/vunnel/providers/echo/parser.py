@@ -4,11 +4,17 @@ import copy
 import logging
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import orjson
 
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from vunnel import workspace
 
 
 class Parser:
@@ -18,7 +24,7 @@ class Parser:
 
     def __init__(
         self,
-        workspace,
+        workspace: workspace.Workspace,
         url: str,
         namespace: str,
         download_timeout: int = 125,
@@ -33,7 +39,7 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def _download(self):
+    def _download(self) -> None:
         """
         Downloads echo advisories files
         :return:
@@ -52,7 +58,7 @@ class Parser:
             self.logger.exception(f"Error downloading Echo advisories from {self.url}")
             raise
 
-    def _normalize(self, release, data):
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """
         Normalize all the advisories entries into vulnerability payload records
         :param release:
@@ -75,7 +81,7 @@ class Parser:
                     record["Vulnerability"]["FixedIn"] = []
                     vuln_dict[cve_id] = record
                 cve_record = vuln_dict[cve_id]
-                cve_record["Vulnerability"]["FixedIn"].append(
+                cve_record["Vulnerability"]["FixedIn"].append(  # type: ignore[union-attr]
                     {
                         "Name": package,
                         "Version": cve_info.get("fixed_version", ""),
@@ -85,7 +91,7 @@ class Parser:
                 )
         return vuln_dict
 
-    def get(self):
+    def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]], None, None]:
         """
         Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
         :return:
