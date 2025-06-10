@@ -99,6 +99,8 @@ jobs:
     needs:
       - tag
     runs-on: ubuntu-22.04
+    # important! PyPI OIDC auth will fail without environment: release
+    environment: release
     permissions:
       contents: read
       # required to authenticate with PyPI via OIDC token
