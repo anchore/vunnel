@@ -771,7 +771,6 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 70
     # < test results directory >
     # ├── rhel:5
     # │   ├── cve-2017-3509.json
@@ -850,7 +849,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     #     ├── cve-2023-4863.json
     #     ├── cve-2023-5129.json
     #     └── cve-2023-5217.json
-
+    assert workspace.num_result_entries() == 92
     assert workspace.result_schemas_valid(require_entries=True)
 
 
@@ -863,6 +862,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     c.rhsa_source = "OVAL"
+    c.include_alma_fixes = False
     p = Provider(root=workspace.root, config=c)
 
     def mock_sync_cves(*args, **kwargs):
