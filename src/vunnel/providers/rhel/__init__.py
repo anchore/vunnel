@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
 
@@ -63,7 +63,7 @@ class Provider(provider.Provider):
     def supports_skip_download(cls) -> bool:
         return True
 
-    def create_alma_vulnerability_copy(self, namespace: str, record: dict) -> dict | None:
+    def create_alma_vulnerability_copy(self, namespace: str, record: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]] | None:
         """
         Create an Alma Linux copy of a RHEL vulnerability record if applicable.
 
@@ -129,7 +129,9 @@ class Provider(provider.Provider):
                         # Convert RHSA to ALSA in advisory
                         alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
                         advisory["ID"] = alma_advisory_id
-                        advisory["Link"] = f"https://errata.almalinux.org/{alma_advisory_id}.html"
+                        # Convert colon to hyphen for URL format (ALSA-2024:10953 -> ALSA-2024-10953)
+                        alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                        advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
                         alma_fix_found = True
                         break
