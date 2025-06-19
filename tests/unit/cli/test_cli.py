@@ -433,6 +433,7 @@ providers:
   rhel:
     full_sync_interval: 2
     ignore_hydra_errors: false
+    include_alma_fixes: true
     parallelism: 4
     request_timeout: 125
     rhsa_source: CSAF
