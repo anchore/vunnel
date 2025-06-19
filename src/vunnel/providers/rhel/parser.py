@@ -21,6 +21,8 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils import rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
+from .alma_parser import AlmaParser
+
 if TYPE_CHECKING:
     import requests
 
@@ -62,6 +64,7 @@ class Parser:
         ignore_hydra_errors: bool = False,
         logger=None,
         skip_download: bool = False,
+        include_alma_fixes: bool = False,
     ):
         self.workspace = workspace
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
@@ -75,12 +78,23 @@ class Parser:
         self.rhsa_provider_type: str | None = rhsa_provider_type
         self.ignore_hydra_errors = ignore_hydra_errors
         self.skip_download = skip_download
+        self.include_alma_fixes = include_alma_fixes
 
         self.urls = [self.__summary_url__]
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+        # Initialize Alma parser if needed
+        self.alma_parser: AlmaParser | None = None
+        if self.include_alma_fixes:
+            self.alma_parser = AlmaParser(workspace=workspace, logger=logger)
+
+    def download_alma_data(self) -> None:
+        """Download Alma Linux data if include_alma_fixes is enabled"""
+        if self.include_alma_fixes and self.alma_parser:
+            self.alma_parser.download_alma_data()
 
     def _download_minimal_cves(self, page, limit=1000):
         path_params = {"per_page": str(limit), "page": page, "product": self.__cve_rhel_product_name_base__}
