@@ -537,7 +537,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 64
+    assert workspace.num_result_entries() == 86
 
     assert workspace.result_schemas_valid(require_entries=True)
 
@@ -551,6 +551,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     c.rhsa_source = "OVAL"
+    c.include_alma_fixes = False
     p = Provider(root=workspace.root, config=c)
 
     def mock_sync_cves(*args, **kwargs):
