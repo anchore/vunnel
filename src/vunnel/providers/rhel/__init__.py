@@ -78,34 +78,30 @@ class Provider(provider.Provider):
             return None
 
         # Only process RHEL 8, 9, and 10
+        # TODO: relace with a list computed from what directories alma has
         if namespace not in ["rhel:8", "rhel:9", "rhel:10"]:
             return None
 
-        # Extract version from namespace
         rhel_version = namespace.split(":")[1]
         alma_namespace = f"almalinux:{rhel_version}"
 
         # Create a deep copy of the record (expects {"Vulnerability": {...}})
         alma_record = copy.deepcopy(record)
 
-        # Update the namespace in the record
         alma_record["Vulnerability"]["NamespaceName"] = alma_namespace
 
-        # Process each FixedIn entry
         fixed_in_entries = alma_record["Vulnerability"]["FixedIn"]
         for fixed_in in fixed_in_entries:
-            # Update namespace
             fixed_in["NamespaceName"] = alma_namespace
 
-            # Try to get Alma fix information
             package_name = fixed_in["Name"]
             vendor_advisory = fixed_in.get("VendorAdvisory", {})
+            rhel_has_no_advisory = vendor_advisory.get("NoAdvisory", False)
 
             if vendor_advisory.get("NoAdvisory", True):
-                # No RHEL advisory, so no Alma equivalent - package remains unfixed
+                # RHEL has wont-fix, Alma has no fix either
                 continue
 
-            # Look for RHSA advisory
             advisory_summaries = vendor_advisory.get("AdvisorySummary", [])
             alma_fix_found = False
 
@@ -114,7 +110,6 @@ class Provider(provider.Provider):
                 if not rhsa_id.startswith(("RHSA-", "RHBA-", "RHEA-")):
                     continue
 
-                # Try to get Alma fix version
                 if self.parser.alma_parser:
                     alma_fix_version = self.parser.alma_parser.get_alma_fix_version(
                         rhsa_id,
@@ -123,13 +118,10 @@ class Provider(provider.Provider):
                     )
 
                     if alma_fix_version:
-                        # Update version and advisory info
                         fixed_in["Version"] = alma_fix_version
 
-                        # Convert RHSA to ALSA in advisory
                         alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
                         advisory["ID"] = alma_advisory_id
-                        # Convert colon to hyphen for URL format (ALSA-2024:10953 -> ALSA-2024-10953)
                         alma_advisory_url_id = alma_advisory_id.replace(":", "-")
                         advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
@@ -137,9 +129,8 @@ class Provider(provider.Provider):
                         break
 
             if not alma_fix_found:
-                # No Alma fix found - mark as not fixed
                 fixed_in["Version"] = "None"
-                fixed_in["VendorAdvisory"] = {"NoAdvisory": True}
+                fixed_in["VendorAdvisory"] = {"NoAdvisory": rhel_has_no_advisory}
 
         return alma_record
 

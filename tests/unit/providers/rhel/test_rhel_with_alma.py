@@ -1,5 +1,6 @@
 import os
 import tempfile
+from unittest.mock import patch
 
 import pytest
 
@@ -68,39 +69,64 @@ class TestRHELWithAlmaIntegration:
     @pytest.fixture
     def mock_alma_workspace(self, mock_alma_advisory_data):
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Create the directory structure that the RHEL provider expects
-            # Provider creates workspace at root/rhel, so alma files should be at root/rhel/input/alma-osv-database
+            # Create the directory structure for HTTP-based errata files
             rhel_input_dir = os.path.join(tmpdir, "rhel", "input")
-            alma_dir = os.path.join(rhel_input_dir, "alma-osv-database", "advisories", "almalinux8")
+            alma_dir = os.path.join(rhel_input_dir, "alma-errata-data")
             os.makedirs(alma_dir, exist_ok=True)
 
             import orjson
-            advisory_file = os.path.join(alma_dir, "ALSA-2022:6158.json")
-            with open(advisory_file, "wb") as f:
-                f.write(orjson.dumps(mock_alma_advisory_data))
 
-            # Add another mock advisory for testing URL formatting
-            mock_alma_advisory_2024 = {
-                "id": "ALSA-2024:10953",
-                "summary": "Test advisory",
-                "affected": [
-                    {
-                        "package": {"ecosystem": "AlmaLinux:8", "name": "php"},
-                        "ranges": [
+            # Create mock errata-8.json file with AlmaLinux advisory format
+            mock_errata_8 = [
+                {
+                    "updateinfo_id": "ALSA-2022:6158",
+                    "type": "security",
+                    "severity": "Moderate",
+                    "title": "Moderate: php:7.4 security update",
+                    "pkglist": {
+                        "packages": [
                             {
-                                "type": "ECOSYSTEM",
-                                "events": [
-                                    {"introduced": "0"},
-                                    {"fixed": "8.0.0-1.el8"}
-                                ]
+                                "name": "php",
+                                "epoch": "0",
+                                "version": "7.4.19",
+                                "release": "4.module_el8.6.0+3238+624bf8b8"
                             }
                         ]
-                    }
-                ]
-            }
-            advisory_file_2024 = os.path.join(alma_dir, "ALSA-2024:10953.json")
-            with open(advisory_file_2024, "wb") as f:
-                f.write(orjson.dumps(mock_alma_advisory_2024))
+                    },
+                    "references": [
+                        {
+                            "type": "rhsa",
+                            "id": "RHSA-2022:6158"
+                        }
+                    ]
+                },
+                {
+                    "updateinfo_id": "ALSA-2024:10953",
+                    "type": "security",
+                    "severity": "Important",
+                    "title": "Test advisory",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "php",
+                                "epoch": "0",
+                                "version": "8.0.0",
+                                "release": "1.el8"
+                            }
+                        ]
+                    },
+                    "references": [
+                        {
+                            "type": "rhsa",
+                            "id": "RHSA-2024:10953"
+                        }
+                    ]
+                }
+            ]
+
+            errata_file = os.path.join(alma_dir, "errata-8.json")
+            with open(errata_file, "wb") as f:
+                f.write(orjson.dumps(mock_errata_8))
 
             # Return a mock workspace that just has the _root attribute
             class MockWorkspace:
@@ -150,8 +176,11 @@ class TestRHELWithAlmaIntegration:
         assert alma_record['Vulnerability']['FixedIn'][0]['NamespaceName'] == 'almalinux:8'
 
     def test_alma_copy_with_found_alma_advisory(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
-        provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
+            # Manually trigger the index building since we skipped download
+            provider.parser.alma_parser.errata_client._build_index()
+            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
 
         assert alma_record is not None
         fixed_in = alma_record['Vulnerability']['FixedIn'][0]
@@ -164,15 +193,17 @@ class TestRHELWithAlmaIntegration:
     def test_alma_copy_with_missing_alma_advisory(self, rhel_config_with_alma, rhel_vulnerability_record):
         with tempfile.TemporaryDirectory() as tmpdir:
             workspace = Workspace(tmpdir, "test")
-            provider = Provider(workspace._root, rhel_config_with_alma)
-
-            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+            with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+                provider = Provider(workspace._root, rhel_config_with_alma)
+                # Manually trigger the index building since we skipped download (but with empty data)
+                provider.parser.alma_parser.errata_client._build_index()
+                alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
 
             assert alma_record is not None
             fixed_in = alma_record['Vulnerability']['FixedIn'][0]
 
             assert fixed_in['Version'] == 'None'
-            assert fixed_in['VendorAdvisory']['NoAdvisory'] is True
+            assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
 
     def test_alma_copy_preserves_vulnerability_metadata(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
         provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
@@ -241,78 +272,82 @@ class TestRHELWithAlmaIntegration:
         assert alma_parser._normalize_rpm_version(None) == None
 
     def test_alma_advisory_url_format(self, mock_alma_workspace, rhel_config_with_alma):
-        provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
+            # Manually trigger the index building since we skipped download
+            provider.parser.alma_parser.errata_client._build_index()
 
-        rhel_record_with_different_id = {
+            rhel_record_with_different_id = {
+                'Vulnerability': {
+                    'NamespaceName': 'rhel:8',
+                    'FixedIn': [{
+                        'Name': 'php',
+                        'Version': '1.0.0-1.el8',
+                        'NamespaceName': 'rhel:8',
+                        'VendorAdvisory': {
+                            'NoAdvisory': False,
+                            'AdvisorySummary': [{'ID': 'RHSA-2024:10953', 'Link': 'https://access.redhat.com/errata/RHSA-2024:10953'}]
+                        }
+                    }]
+                }
+            }
+
+            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record_with_different_id)
+
+            assert alma_record is not None
+            fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+
+            assert fixed_in['Version'] == '0:8.0.0-1.el8'
+            assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['ID'] == 'ALSA-2024:10953'
+            assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['Link'] == 'https://errata.almalinux.org/8/ALSA-2024-10953.html'
+
+
+def test_rhel_to_alma_conversion(helpers, disable_get_requests):
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/oval/input",
+    )
+
+    config = Config(include_alma_fixes=True)
+    provider = Provider(root=workspace.root, config=config)
+
+    # Mock the HTTP download since we're using test fixtures
+    with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+        # Manually trigger the index building since we skipped download
+        provider.parser.alma_parser.errata_client._build_index()
+
+        rhel_record = {
             'Vulnerability': {
+                'Severity': 'Medium',
                 'NamespaceName': 'rhel:8',
                 'FixedIn': [{
                     'Name': 'php',
-                    'Version': '1.0.0-1.el8',
+                    'Version': '0:7.4.19-4.module+el8.6.0+16316+906f6c6d',
+                    'Module': 'php:7.4',
+                    'VersionFormat': 'rpm',
                     'NamespaceName': 'rhel:8',
                     'VendorAdvisory': {
                         'NoAdvisory': False,
-                        'AdvisorySummary': [{'ID': 'RHSA-2024:10953', 'Link': 'https://access.redhat.com/errata/RHSA-2024:10953'}]
+                        'AdvisorySummary': [{'ID': 'RHSA-2022:6158', 'Link': 'https://access.redhat.com/errata/RHSA-2022:6158'}]
                     }
-                }]
+                }],
+                'Link': 'https://access.redhat.com/security/cve/CVE-2022-31625',
+                'Description': 'A vulnerability was found in PHP...',
+                'Metadata': {},
+                'Name': 'CVE-2022-31625',
+                'CVSS': []
             }
         }
 
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record_with_different_id)
+        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
 
         assert alma_record is not None
+        assert alma_record['Vulnerability']['NamespaceName'] == 'almalinux:8'
+
         fixed_in = alma_record['Vulnerability']['FixedIn'][0]
 
-        assert fixed_in['Version'] == '0:8.0.0-1.el8'
-        assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['ID'] == 'ALSA-2024:10953'
-        assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['Link'] == 'https://errata.almalinux.org/8/ALSA-2024-10953.html'
-
-
-def test_real_rhel_to_alma_conversion():
-    real_workspace_path = '/Users/willmurphy/work/vunnel/data/rhel'
-
-    if not os.path.exists(real_workspace_path):
-        pytest.skip("Real RHEL workspace not available")
-
-    config = Config(include_alma_fixes=True)
-    provider = Provider(real_workspace_path, config)
-
-    rhel_record = {
-        'Vulnerability': {
-            'Severity': 'Medium',
-            'NamespaceName': 'rhel:8',
-            'FixedIn': [{
-                'Name': 'php',
-                'Version': '0:7.4.19-4.module+el8.6.0+16316+906f6c6d',
-                'Module': 'php:7.4',
-                'VersionFormat': 'rpm',
-                'NamespaceName': 'rhel:8',
-                'VendorAdvisory': {
-                    'NoAdvisory': False,
-                    'AdvisorySummary': [{'ID': 'RHSA-2022:6158', 'Link': 'https://access.redhat.com/errata/RHSA-2022:6158'}]
-                }
-            }],
-            'Link': 'https://access.redhat.com/security/cve/CVE-2022-31625',
-            'Description': 'A vulnerability was found in PHP...',
-            'Metadata': {},
-            'Name': 'CVE-2022-31625',
-            'CVSS': []
-        }
-    }
-
-    alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
-
-    assert alma_record is not None
-    assert alma_record['Vulnerability']['NamespaceName'] == 'almalinux:8'
-
-    fixed_in = alma_record['Vulnerability']['FixedIn'][0]
-
-    # Should find the actual alma fix or mark as not fixed
-    assert fixed_in['Version'] in ['0:7.4.19-4.module_el8.6.0+3238+624bf8b8', 'None']
-
-    if fixed_in['Version'] != 'None':
+        # Should find the actual alma fix from test fixtures
+        assert fixed_in['Version'] == '0:7.4.19-4.module_el8.6.0+3238+624bf8b8'
         assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
         assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['ID'] == 'ALSA-2022:6158'
-        assert 'errata.almalinux.org' in fixed_in['VendorAdvisory']['AdvisorySummary'][0]['Link']
-    else:
-        assert fixed_in['VendorAdvisory']['NoAdvisory'] is True
+        assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['Link'] == 'https://errata.almalinux.org/8/ALSA-2022-6158.html'
