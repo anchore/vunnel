@@ -766,8 +766,38 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     def mock_init_rhsa_data(*args, **kwargs):
         p.parser.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 
+    def mock_download_errata_file(version):
+        """Mock Alma errata download - creates minimal test data"""
+        output_path = os.path.join(p.parser.alma_parser.errata_client._data_dir, f"errata-{version}.json")
+
+        # Create a minimal test errata file directly
+        test_data = [{
+            "updateinfo_id": f"ALSA-2023:000{version}",
+            "type": "security",
+            "severity": "Moderate",
+            "title": f"Test AlmaLinux {version} advisory",
+            "pkglist": {
+                "packages": [{
+                    "name": "test-package",
+                    "epoch": "0",
+                    "version": "1.0.0",
+                    "release": f"1.el{version}"
+                }]
+            },
+            "references": [{
+                "type": "rhsa",
+                "id": f"RHSA-2023:000{version}"
+            }]
+        }]
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, 'w') as f:
+            import json
+            json.dump(test_data, f)
+
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
     monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
+    monkeypatch.setattr(p.parser.alma_parser.errata_client, "_download_errata_file", mock_download_errata_file)
 
     p.update(None)
 
