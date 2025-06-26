@@ -1,0 +1,24 @@
+[
+  {
+    "updateinfo_id": "ALSA-2023:0002",
+    "type": "security",
+    "severity": "Critical",
+    "title": "Test AlmaLinux 10 advisory",
+    "pkglist": {
+      "packages": [
+        {
+          "name": "test-package-10",
+          "epoch": "1",
+          "version": "2.0.0",
+          "release": "1.el10"
+        }
+      ]
+    },
+    "references": [
+      {
+        "type": "rhsa",
+        "id": "RHSA-2023:0002"
+      }
+    ]
+  }
+]
