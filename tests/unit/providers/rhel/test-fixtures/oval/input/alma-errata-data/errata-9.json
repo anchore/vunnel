@@ -1,0 +1,28 @@
+[
+  {
+    "updateinfo_id": "ALSA-2023:2260",
+    "type": "security",
+    "severity": "Moderate", 
+    "title": "Moderate: gstreamer1-plugins-good security update",
+    "pkglist": {
+      "packages": [
+        {
+          "name": "gstreamer1-plugins-good",
+          "epoch": "0",
+          "version": "1.18.4",
+          "release": "6.el9"
+        }
+      ]
+    },
+    "references": [
+      {
+        "type": "rhsa",
+        "id": "RHSA-2023:2260"
+      },
+      {
+        "type": "cve",
+        "id": "CVE-2022-1921"
+      }
+    ]
+  }
+]
