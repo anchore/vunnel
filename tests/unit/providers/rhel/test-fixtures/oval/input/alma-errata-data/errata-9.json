@@ -2,7 +2,7 @@
   {
     "updateinfo_id": "ALSA-2023:2260",
     "type": "security",
-    "severity": "Moderate", 
+    "severity": "Moderate",
     "title": "Moderate: gstreamer1-plugins-good security update",
     "pkglist": {
       "packages": [
