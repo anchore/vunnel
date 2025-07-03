@@ -118,19 +118,21 @@ class Provider(provider.Provider):
                     )
 
                     if alma_fix_version:
+                        # Use AlmaLinux version if available
                         fixed_in["Version"] = alma_fix_version
+                    # If no AlmaLinux version found, inherit RHEL version (keep existing value)
 
-                        alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
-                        advisory["ID"] = alma_advisory_id
-                        alma_advisory_url_id = alma_advisory_id.replace(":", "-")
-                        advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+                    # Convert advisory links regardless of whether AlmaLinux version was found
+                    alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
+                    advisory["ID"] = alma_advisory_id
+                    alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                    advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
-                        alma_fix_found = True
-                        break
+                    alma_fix_found = True
+                    break
 
-            if not alma_fix_found:
-                fixed_in["Version"] = "None"
-                fixed_in["VendorAdvisory"] = {"NoAdvisory": rhel_has_no_advisory}
+            # Note: Removed the logic that sets Version="None" for missing AlmaLinux data
+            # Now we inherit RHEL version constraints and only convert advisory metadata
 
         return alma_record
 
