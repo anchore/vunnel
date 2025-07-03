@@ -88,10 +88,10 @@ class WorkspaceHelper:
                 dest_dir = self.input_dir
             else:
                 dest_dir = os.path.join(self.input_dir, rel_path)
-            
+
             # Create destination directory if it doesn't exist
             os.makedirs(dest_dir, exist_ok=True)
-            
+
             # Copy all files in this directory
             for file in files:
                 src_file = os.path.join(root, file)

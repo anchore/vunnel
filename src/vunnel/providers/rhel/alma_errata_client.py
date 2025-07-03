@@ -139,4 +139,3 @@ class AlmaErrataClient:
         if not advisory_data:
             return None
         return advisory_data.get(package_name)
-

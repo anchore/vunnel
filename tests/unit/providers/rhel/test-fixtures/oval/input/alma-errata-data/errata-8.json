@@ -16,7 +16,7 @@
     },
     "references": [
       {
-        "type": "rhsa", 
+        "type": "rhsa",
         "id": "RHSA-2023:0001"
       }
     ]

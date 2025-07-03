@@ -77,4 +77,3 @@ class AlmaParser:
 
         self.logger.debug(f"no fix found for package {package_name} in Alma advisory {alma_advisory_id}")
         return None
-
