@@ -37,7 +37,6 @@ NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
 class Parser:
     __cve_rhel_product_name_base__ = "Red Hat Enterprise Linux"
     __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
-    # "Red Hat Enterprise Linux 9.2 Extended Update Support"
     __rhel_eus_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+\.\d+) Extended Update Support")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
     __rhsa_url__ = "https://access.redhat.com/hydra/rest/securitydata/oval/{}.json"
@@ -412,26 +411,10 @@ class Parser:
             # first pass to just parse affected releases and construct a list of objects
             for item in ars:
                 try:
-                    is_eus = False
-                    match = re.match(
-                        self.__rhel_release_pattern__,
-                        item.get("product_name", None),
-                    )
-                    if not match:
-                        match = re.match(
-                            self.__rhel_eus_pattern__,
-                            item.get("product_name", None),
-                        )
-                        if not match:
-                            continue
-                        is_eus = True
-
-                    platform = match.group(1)
-                    if not platform:  # track even deny-listed platforms here, filter them out later
+                    platform = self._parse_platform(item.get("product_name", None))
+                    if not platform:
+                        # track even deny-listed platforms here, filter them out later
                         continue
-
-                    if is_eus:
-                        platform = f"{platform}-eus"
 
                     ar_obj = AffectedRelease(platform=platform)
                     if ar_obj.platform not in platform_packages:
@@ -584,30 +567,14 @@ class Parser:
 
         return package_name, module
 
-    def _parse_package_state(self, cve_id: str, content) -> list[FixedIn]:  # noqa: C901
+    def _parse_package_state(self, cve_id: str, content) -> list[FixedIn]:
         affected: list[FixedIn] = []
         out_of_support: list[FixedIn] = []  # Track items out of support to be able to add them if others are affected
         pss = content.get("package_state", [])
 
         for item in pss:
             try:
-                is_eus = False
-                match = re.match(
-                    Parser.__rhel_release_pattern__,
-                    item.get("product_name", None),
-                )
-                if not match:
-                    match = re.match(
-                        Parser.__rhel_eus_pattern__,
-                        item.get("product_name", None),
-                    )
-                    if not match:
-                        continue
-                    is_eus = True
-
-                platform = match.group(1)
-                if platform and is_eus:
-                    platform = f"{platform}-eus"
+                platform = self._parse_platform(item.get("product_name", None))
                 if not platform or f"{namespace}:{platform}" in self.skip_namespaces:
                     continue
 
@@ -665,6 +632,26 @@ class Parser:
                 self.logger.exception(f"error parsing {cve_id} package state entity: {item}")
 
         return affected + out_of_support
+
+    def _parse_platform(self, product_name: str | None) -> str | None:
+        is_eus = False
+        match = re.match(
+            self.__rhel_release_pattern__,
+            product_name,
+        )
+        if not match:
+            match = re.match(
+                self.__rhel_eus_pattern__,
+                product_name,
+            )
+            if not match:
+                return None
+            is_eus = True
+
+        platform = match.group(1)
+        if platform and is_eus:
+            platform = f"{platform}+eus"
+        return platform
 
     def _parse_cvss3(self, cvss3: dict | None) -> RHELCVSS3 | None:
         if not cvss3:
