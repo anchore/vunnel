@@ -368,7 +368,7 @@ To add a new provider, you will need to create a new provider class  under `/src
 - `update()`: downloads and processes the raw data, writing all results with `self.results_writer()`
 
 All results must conform to a [particular schema](https://github.com/anchore/vunnel/tree/main/schema), today there are a few kinds:
-- `os`: a generic operating system vulnerability (e.g redhat, debian, ubuntu, alpine, wolfi, etc.)
+- `os`: a generic operating system vulnerability (e.g redhat, debian, ubuntu, alpine, wolfi, minimos, etc.)
 - `nvd`: tailored to describe vulnerabilities from the NVD
 - `github-security-advisory`: tailored to describe vulnerabilities from GitHub
 - `osv`: tailored to describe vulnerabilities from the [aggregated OSV vulnerability database](https://osv.dev/list)
