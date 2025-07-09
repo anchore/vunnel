@@ -44,6 +44,9 @@ providers:
     runtime: *runtime
     url: https://anchore.com/kev/data.json
     request_timeout: 20
+  minimos:
+    runtime: *runtime
+    request_timeout: 20
   nvd:
     runtime: *runtime
     request_timeout: 20

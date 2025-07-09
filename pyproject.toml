@@ -1,7 +1,7 @@
 [project]
 name = "vunnel"
 dynamic = ["version"]
-requires-python = "<=3.13,>=3.11"
+requires-python = "<3.14,>=3.11"
 authors = [
     {name = "Alex Goodman", email = "alex.goodman@anchore.com"},
 ]
@@ -66,6 +66,8 @@ check_untyped_defs = true
 no_implicit_reexport = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
+# Note: new files are expected to have type hints. Please do not add files to this
+# ignore list unless they are generated.
 exclude = '''(?x)(
     ^src/vunnel/providers/alpine/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/amazon/parser\.py$    # ported from enterprise, never had type hints
