@@ -396,6 +396,7 @@ providers:
       skip_newer_archive_check: false
   rhel:
     full_sync_interval: 2
+    include_alma_fixes: true
     parallelism: 4
     request_timeout: 125
     rhsa_source: CSAF
