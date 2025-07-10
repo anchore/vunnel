@@ -1,0 +1,406 @@
+"""
+Test cases for the 4 AlmaLinux inheritance scenarios described:
+
+1. AlmaLinux has a fix that RHEL doesn't (Alma-specific advisory with A prefix)
+2. AlmaLinux has corresponding advisory but no package entry (use RHEL version)
+3. AlmaLinux has corresponding advisory with specific package version (use Alma version)
+4. AlmaLinux has no corresponding advisory (version = "None", NoAdvisory = True)
+"""
+
+import os
+import tempfile
+from unittest.mock import patch
+
+import pytest
+
+from vunnel.providers.rhel import Config, Provider
+from vunnel.workspace import Workspace
+
+
+class TestAlmaInheritanceCases:
+    
+    @pytest.fixture
+    def rhel_config_with_alma(self):
+        return Config(include_alma_fixes=True)
+
+    @pytest.fixture
+    def mock_alma_workspace_with_scenarios(self):
+        """Create mock AlmaLinux errata data covering all 4 test scenarios"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create the directory structure for HTTP-based errata files
+            rhel_input_dir = os.path.join(tmpdir, "rhel", "input")
+            alma_dir = os.path.join(rhel_input_dir, "alma-errata-data")
+            os.makedirs(alma_dir, exist_ok=True)
+
+            import orjson
+
+            # Create mock errata-8.json file with all test scenarios
+            mock_errata_8 = [
+                # Scenario 3: AlmaLinux has corresponding advisory with specific package version
+                {
+                    "updateinfo_id": "ALSA-2022:6158",
+                    "type": "security",
+                    "severity": "Moderate",
+                    "title": "Moderate: php:7.4 security update",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "php",
+                                "epoch": "0",
+                                "version": "7.4.19",
+                                "release": "4.module_el8.6.0+3238+624bf8b8"
+                            }
+                        ]
+                    },
+                    "references": [
+                        {
+                            "type": "rhsa",
+                            "id": "RHSA-2022:6158"
+                        }
+                    ]
+                },
+                # Scenario 2: AlmaLinux has corresponding advisory but no package entry for our test package
+                {
+                    "updateinfo_id": "ALSA-2021:1809",
+                    "type": "security", 
+                    "severity": "Important",
+                    "title": "Important: httpd security update",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "other-package",  # Different package, not httpd
+                                "epoch": "0",
+                                "version": "1.0.0",
+                                "release": "1.el8"
+                            }
+                        ]
+                    },
+                    "references": [
+                        {
+                            "type": "rhsa", 
+                            "id": "RHSA-2021:1809"
+                        }
+                    ]
+                },
+                # Scenario 1: AlmaLinux-specific advisory with A prefix
+                {
+                    "updateinfo_id": "ALSA-2025:A004",
+                    "type": "security",
+                    "severity": "Critical",
+                    "title": "Critical: vulnerable-pkg security update",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "vulnerable-pkg",
+                                "epoch": "0",
+                                "version": "2.1.0",
+                                "release": "1.el8.alma"
+                            }
+                        ]
+                    },
+                    "references": []  # Alma-specific, no RHSA reference
+                }
+                # Scenario 4: No corresponding advisory - handled by absence in data
+            ]
+
+            errata_file = os.path.join(alma_dir, "errata-8.json")
+            with open(errata_file, "wb") as f:
+                f.write(orjson.dumps(mock_errata_8))
+
+            # Return a mock workspace that just has the _root attribute
+            class MockWorkspace:
+                def __init__(self, root):
+                    self._root = root
+
+            yield MockWorkspace(tmpdir)
+
+    def test_case_1_alma_specific_fix_for_rhel_no_fix(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Case 1: AlmaLinux has a fix for a vulnerability that RHEL marked as no fix.
+        - RHEL record has VendorAdvisory.NoAdvisory = True or Version = "None"
+        - AlmaLinux has an A-prefixed advisory with a fix
+        - Should use AlmaLinux version and convert advisory ID
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+        
+        # Mock RHEL record with no fix (NoAdvisory = True)
+        rhel_record_no_fix = {
+            'Vulnerability': {
+                'Name': 'CVE-2025-1234',
+                'NamespaceName': 'rhel:8',
+                'FixedIn': [{
+                    'Name': 'vulnerable-pkg',
+                    'Version': 'None',  # RHEL has no fix
+                    'VersionFormat': 'rpm',
+                    'NamespaceName': 'rhel:8',
+                    'VendorAdvisory': {
+                        'NoAdvisory': True  # RHEL won't fix
+                    }
+                }]
+            }
+        }
+
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            # Manually trigger the index building since we skipped download
+            provider.parser.alma_parser.errata_client._build_index()
+            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record_no_fix)
+
+        assert alma_record is not None
+        fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+        
+        # Should find the AlmaLinux A-prefixed advisory and use its version
+        assert fixed_in['Version'] == '0:2.1.0-1.el8.alma'
+        assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
+        
+        # Advisory should be converted to Alma format
+        advisory = fixed_in['VendorAdvisory']['AdvisorySummary'][0]
+        assert advisory['ID'] == 'ALSA-2025:A004'
+        assert advisory['Link'] == 'https://errata.almalinux.org/8/ALSA-2025-A004.html'
+
+    def test_case_2_alma_advisory_exists_no_package_entry(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Case 2: AlmaLinux has corresponding advisory but no entry for this specific package.
+        - RHEL has RHSA-2021:1809 with httpd package
+        - AlmaLinux has ALSA-2021:1809 but only for other-package, not httpd
+        - Should inherit RHEL version
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+        
+        rhel_record = {
+            'Vulnerability': {
+                'Name': 'CVE-2020-11984',
+                'NamespaceName': 'rhel:8',
+                'FixedIn': [{
+                    'Name': 'httpd',
+                    'Version': '0:2.4.37-21.module+el8.2.0+5059+3eb3af25',
+                    'VersionFormat': 'rpm',
+                    'NamespaceName': 'rhel:8',
+                    'VendorAdvisory': {
+                        'NoAdvisory': False,
+                        'AdvisorySummary': [{
+                            'ID': 'RHSA-2021:1809',
+                            'Link': 'https://access.redhat.com/errata/RHSA-2021:1809'
+                        }]
+                    }
+                }]
+            }
+        }
+
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider.parser.alma_parser.errata_client._build_index()
+            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
+
+        assert alma_record is not None
+        fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+        
+        # Should inherit RHEL version since AlmaLinux advisory doesn't have this package
+        assert fixed_in['Version'] == '0:2.4.37-21.module+el8.2.0+5059+3eb3af25'
+        assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
+        
+        # Advisory metadata should be converted to Alma format
+        advisory = fixed_in['VendorAdvisory']['AdvisorySummary'][0]
+        assert advisory['ID'] == 'ALSA-2021:1809'
+        assert advisory['Link'] == 'https://errata.almalinux.org/8/ALSA-2021-1809.html'
+
+    def test_case_3_alma_advisory_with_specific_package_version(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Case 3: AlmaLinux has corresponding advisory with specific fix version for the package.
+        - RHEL has RHSA-2022:6158 with php package
+        - AlmaLinux has ALSA-2022:6158 with php package and specific version
+        - Should use AlmaLinux version
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+        
+        rhel_record = {
+            'Vulnerability': {
+                'Name': 'CVE-2022-31625',
+                'NamespaceName': 'rhel:8',
+                'FixedIn': [{
+                    'Name': 'php',
+                    'Version': '0:7.4.19-4.module+el8.6.0+16316+906f6c6d',  # RHEL version
+                    'VersionFormat': 'rpm',
+                    'NamespaceName': 'rhel:8',
+                    'VendorAdvisory': {
+                        'NoAdvisory': False,
+                        'AdvisorySummary': [{
+                            'ID': 'RHSA-2022:6158',
+                            'Link': 'https://access.redhat.com/errata/RHSA-2022:6158'
+                        }]
+                    }
+                }]
+            }
+        }
+
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider.parser.alma_parser.errata_client._build_index()
+            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
+
+        assert alma_record is not None
+        fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+        
+        # Should use AlmaLinux version, not RHEL version  
+        assert fixed_in['Version'] == '0:7.4.19-4.module_el8.6.0+3238+624bf8b8'
+        assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
+        
+        # Advisory metadata should be converted
+        advisory = fixed_in['VendorAdvisory']['AdvisorySummary'][0]
+        assert advisory['ID'] == 'ALSA-2022:6158'
+        assert advisory['Link'] == 'https://errata.almalinux.org/8/ALSA-2022-6158.html'
+
+    def test_case_4_alma_no_corresponding_advisory(self, rhel_config_with_alma):
+        """
+        Case 4: AlmaLinux has no corresponding advisory.
+        - RHEL has RHSA-2023:9999 with some-package
+        - AlmaLinux has no ALSA-2023:9999
+        - Should set Version = "None" but keep NoAdvisory = False (AlmaLinux doesn't commit to not fixing)
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Workspace(tmpdir, "test")
+            provider = Provider(workspace._root, rhel_config_with_alma)
+            
+            rhel_record = {
+                'Vulnerability': {
+                    'Name': 'CVE-2023-5678',
+                    'NamespaceName': 'rhel:8',
+                    'FixedIn': [{
+                        'Name': 'missing-package',
+                        'Version': '0:1.0.0-1.el8',
+                        'VersionFormat': 'rpm',
+                        'NamespaceName': 'rhel:8',
+                        'VendorAdvisory': {
+                            'NoAdvisory': False,
+                            'AdvisorySummary': [{
+                                'ID': 'RHSA-2023:9999',
+                                'Link': 'https://access.redhat.com/errata/RHSA-2023:9999'
+                            }]
+                        }
+                    }]
+                }
+            }
+
+            with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+                provider.parser.alma_parser.errata_client._build_index()
+                alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
+
+            assert alma_record is not None
+            fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+            
+            # Should set Version = "None" since no AlmaLinux advisory exists
+            assert fixed_in['Version'] == 'None'
+            
+            # Should keep NoAdvisory = False since AlmaLinux doesn't commit to not fixing
+            assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
+            
+            # Should not have any AdvisorySummary entries since no advisory exists
+            assert 'AdvisorySummary' not in fixed_in['VendorAdvisory'] or len(fixed_in['VendorAdvisory'].get('AdvisorySummary', [])) == 0
+
+    def test_alma_specific_advisory_lookup(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Test that AlmaLinux-specific advisories (with A prefix) can be found
+        even when RHEL has no advisory for the vulnerability.
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+
+        # This should be able to find ALSA-2025:A004 for vulnerable-pkg
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider.parser.alma_parser.errata_client._build_index()
+            
+            # Test the lookup functionality directly
+            alma_version = provider.parser.alma_parser.get_alma_fix_version(
+                "ALSA-2025:A004",  # Using Alma-specific advisory directly
+                "8",
+                "vulnerable-pkg"
+            )
+            
+            assert alma_version == "0:2.1.0-1.el8.alma"
+
+    def test_updated_logic_covers_all_cases(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Integration test to verify the updated logic handles all cases correctly.
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+        
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider.parser.alma_parser.errata_client._build_index()
+            
+            # Test each case with different RHEL inputs
+            test_cases = [
+                # Case 1: RHEL no fix, Alma has A-prefixed fix
+                {
+                    'rhel': {
+                        'Vulnerability': {
+                            'FixedIn': [{
+                                'Name': 'vulnerable-pkg',
+                                'Version': 'None',
+                                'VendorAdvisory': {'NoAdvisory': True}
+                            }]
+                        }
+                    },
+                    'expected_version': '0:2.1.0-1.el8.alma',
+                    'expected_advisory': 'ALSA-2025:A004',
+                    'expected_no_advisory': False
+                },
+                # Case 2: Alma advisory exists, no package entry
+                {
+                    'rhel': {
+                        'Vulnerability': {
+                            'FixedIn': [{
+                                'Name': 'httpd',
+                                'Version': '0:2.4.37-21.el8',
+                                'VendorAdvisory': {
+                                    'NoAdvisory': False,
+                                    'AdvisorySummary': [{'ID': 'RHSA-2021:1809'}]
+                                }
+                            }]
+                        }
+                    },
+                    'expected_version': '0:2.4.37-21.el8',  # Inherit RHEL
+                    'expected_advisory': 'ALSA-2021:1809',
+                    'expected_no_advisory': False
+                },
+                # Case 3: Alma advisory with package entry
+                {
+                    'rhel': {
+                        'Vulnerability': {
+                            'FixedIn': [{
+                                'Name': 'php',
+                                'Version': '0:7.4.19-4.rhel',
+                                'VendorAdvisory': {
+                                    'NoAdvisory': False,
+                                    'AdvisorySummary': [{'ID': 'RHSA-2022:6158'}]
+                                }
+                            }]
+                        }
+                    },
+                    'expected_version': '0:7.4.19-4.module_el8.6.0+3238+624bf8b8',  # Use Alma
+                    'expected_advisory': 'ALSA-2022:6158',
+                    'expected_no_advisory': False
+                }
+            ]
+            
+            for i, case in enumerate(test_cases):
+                # Fill in required fields
+                case['rhel']['Vulnerability'].update({
+                    'Name': f'CVE-2025-{i}',
+                    'NamespaceName': 'rhel:8'
+                })
+                case['rhel']['Vulnerability']['FixedIn'][0].update({
+                    'VersionFormat': 'rpm',
+                    'NamespaceName': 'rhel:8'
+                })
+                
+                alma_record = provider.create_alma_vulnerability_copy('rhel:8', case['rhel'])
+                
+                assert alma_record is not None, f"Case {i+1} failed: no alma record created"
+                fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+                
+                assert fixed_in['Version'] == case['expected_version'], \
+                    f"Case {i+1} failed: expected {case['expected_version']}, got {fixed_in['Version']}"
+                
+                assert fixed_in['VendorAdvisory']['NoAdvisory'] == case['expected_no_advisory'], \
+                    f"Case {i+1} failed: expected NoAdvisory={case['expected_no_advisory']}, got {fixed_in['VendorAdvisory']['NoAdvisory']}"
+                
+                if not case['expected_no_advisory'] and 'AdvisorySummary' in fixed_in.get('VendorAdvisory', {}):
+                    advisory = fixed_in['VendorAdvisory']['AdvisorySummary'][0]
+                    assert advisory['ID'] == case['expected_advisory'], \
+                        f"Case {i+1} failed: expected {case['expected_advisory']}, got {advisory['ID']}"
