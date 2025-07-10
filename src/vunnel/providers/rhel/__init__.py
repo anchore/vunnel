@@ -67,6 +67,12 @@ class Provider(provider.Provider):
         """
         Create an Alma Linux copy of a RHEL vulnerability record if applicable.
 
+        Handles 4 cases:
+        1. AlmaLinux has fix when RHEL doesn't (A-prefixed advisory) - use Alma version
+        2. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
+        3. AlmaLinux has corresponding advisory with package entry - use Alma version
+        4. AlmaLinux has no corresponding advisory - set Version="None", NoAdvisory=True
+
         Args:
             namespace: The vulnerability namespace (e.g., "rhel:8")
             record: The vulnerability record dict
@@ -78,7 +84,7 @@ class Provider(provider.Provider):
             return None
 
         # Only process RHEL 8, 9, and 10
-        # TODO: relace with a list computed from what directories alma has
+        # TODO: replace with a list computed from what directories alma has
         if namespace not in ["rhel:8", "rhel:9", "rhel:10"]:
             return None
 
@@ -98,43 +104,104 @@ class Provider(provider.Provider):
             vendor_advisory = fixed_in.get("VendorAdvisory", {})
             rhel_has_no_advisory = vendor_advisory.get("NoAdvisory", False)
 
-            if vendor_advisory.get("NoAdvisory", True):
-                # RHEL has wont-fix, Alma has no fix either
+            # Case 1: RHEL has no fix, check if AlmaLinux has A-prefixed advisory
+            if rhel_has_no_advisory and self.parser.alma_parser:
+                alma_a_fix_found = self._check_alma_specific_advisories(package_name, rhel_version, fixed_in)
+                if alma_a_fix_found:
+                    continue  # Successfully found Alma-specific fix
+                # If no Alma-specific fix found, keep NoAdvisory = True (RHEL behavior)
                 continue
 
+            # Cases 2, 3, 4: RHEL has advisory, check AlmaLinux corresponding advisory
             advisory_summaries = vendor_advisory.get("AdvisorySummary", [])
-            alma_fix_found = False
+            if not advisory_summaries:
+                # No RHEL advisory info, can't map to Alma advisory
+                fixed_in["Version"] = "None"
+                # Keep NoAdvisory = False since AlmaLinux doesn't make "won't-fix" commitments
+                if "AdvisorySummary" in fixed_in["VendorAdvisory"]:
+                    del fixed_in["VendorAdvisory"]["AdvisorySummary"]
+                continue
 
+            alma_advisory_found = False
             for advisory in advisory_summaries:
                 rhsa_id = advisory.get("ID", "")
                 if not rhsa_id.startswith(("RHSA-", "RHBA-", "RHEA-")):
                     continue
 
                 if self.parser.alma_parser:
-                    alma_fix_version = self.parser.alma_parser.get_alma_fix_version(
-                        rhsa_id,
-                        rhel_version,
-                        package_name,
-                    )
-
-                    if alma_fix_version:
-                        # Use AlmaLinux version if available
-                        fixed_in["Version"] = alma_fix_version
-                    # If no AlmaLinux version found, inherit RHEL version (keep existing value)
-
-                    # Convert advisory links regardless of whether AlmaLinux version was found
+                    # Convert RHSA to ALSA ID
                     alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
-                    advisory["ID"] = alma_advisory_id
-                    alma_advisory_url_id = alma_advisory_id.replace(":", "-")
-                    advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
-                    alma_fix_found = True
-                    break
+                    # Check if the AlmaLinux advisory exists at all
+                    alma_advisory_data = self.parser.alma_parser.errata_client.get_advisory_data(alma_advisory_id, rhel_version)
 
-            # Note: Removed the logic that sets Version="None" for missing AlmaLinux data
-            # Now we inherit RHEL version constraints and only convert advisory metadata
+                    if alma_advisory_data is not None:
+                        # Advisory exists - now check if package is in it
+                        alma_fix_version = alma_advisory_data.get(package_name)
+
+                        if alma_fix_version:
+                            # Case 3: AlmaLinux has corresponding advisory with package entry
+                            normalized_version = self.parser.alma_parser._normalize_rpm_version(alma_fix_version)
+                            fixed_in["Version"] = normalized_version
+                        # else: Case 2: Advisory exists but no package entry - keep RHEL version
+
+                        alma_advisory_found = True
+
+                        # Update advisory metadata
+                        advisory["ID"] = alma_advisory_id
+                        alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                        advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+                        break
+                    # else: Advisory doesn't exist - continue to Case 4 logic
+
+            # Case 4: No corresponding AlmaLinux advisory found
+            if not alma_advisory_found:
+                fixed_in["Version"] = "None"
+                # Keep NoAdvisory = False since AlmaLinux doesn't make "won't-fix" commitments
+                # Remove advisory summaries since no AlmaLinux advisory exists
+                if "AdvisorySummary" in fixed_in["VendorAdvisory"]:
+                    del fixed_in["VendorAdvisory"]["AdvisorySummary"]
 
         return alma_record
+
+    def _check_alma_specific_advisories(self, package_name: str, rhel_version: str, fixed_in: dict[str, Any]) -> bool:
+        """
+        Check for AlmaLinux-specific advisories (A-prefixed) when RHEL has no fix.
+
+        Returns:
+            True if Alma-specific fix found and applied, False otherwise
+        """
+        if not self.parser.alma_parser:
+            return False
+
+        # In a real implementation, we would search through all Alma advisories
+        # for A-prefixed ones that contain the package. For now, we'll check
+        # if there's a direct lookup by trying common A-prefixed patterns.
+
+        # This is a simplified approach - in practice you'd need to iterate through
+        # all Alma advisories looking for A-prefixed ones with the package
+        alma_advisories = self.parser.alma_parser.errata_client._alma_index.get(rhel_version, {})
+
+        for alsa_id, package_map in alma_advisories.items():
+            if ":A" in alsa_id and package_name in package_map:
+                # Found Alma-specific advisory with this package
+                alma_version = package_map[package_name]
+                if alma_version:
+                    # Normalize version
+                    normalized_version = self.parser.alma_parser._normalize_rpm_version(alma_version)
+                    fixed_in["Version"] = normalized_version
+                    fixed_in["VendorAdvisory"] = {
+                        "NoAdvisory": False,
+                        "AdvisorySummary": [
+                            {
+                                "ID": alsa_id,
+                                "Link": f"https://errata.almalinux.org/{rhel_version}/{alsa_id.replace(':', '-')}.html",
+                            }
+                        ],
+                    }
+                    return True
+
+        return False
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         # Download Alma data if needed
