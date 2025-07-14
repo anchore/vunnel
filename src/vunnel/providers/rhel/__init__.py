@@ -67,11 +67,12 @@ class Provider(provider.Provider):
         """
         Create an Alma Linux copy of a RHEL vulnerability record if applicable.
 
-        Handles 4 cases:
-        1. AlmaLinux has fix when RHEL doesn't (A-prefixed advisory) - use Alma version
-        2. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
-        3. AlmaLinux has corresponding advisory with package entry - use Alma version
-        4. AlmaLinux has no corresponding advisory - set Version="None", NoAdvisory=True
+        Handles cases in priority order:
+        1. AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version
+        2. AlmaLinux has corresponding advisory with package entry - use Alma version
+        3. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
+        4. AlmaLinux has no corresponding advisory - set Version="None", NoAdvisory=False
+        5. RHEL has no fix and no AlmaLinux-specific fix - keep NoAdvisory=True
 
         Args:
             namespace: The vulnerability namespace (e.g., "rhel:8")
@@ -104,12 +105,16 @@ class Provider(provider.Provider):
             vendor_advisory = fixed_in.get("VendorAdvisory", {})
             rhel_has_no_advisory = vendor_advisory.get("NoAdvisory", False)
 
-            # Case 1: RHEL has no fix, check if AlmaLinux has A-prefixed advisory
-            if rhel_has_no_advisory and self.parser.alma_parser:
+            # Always check for AlmaLinux-specific advisories (A-prefixed) first
+            # These should take precedence over both RHEL fixes and corresponding advisories
+            if self.parser.alma_parser:
                 alma_a_fix_found = self._check_alma_specific_advisories(package_name, rhel_version, fixed_in)
                 if alma_a_fix_found:
-                    continue  # Successfully found Alma-specific fix
-                # If no Alma-specific fix found, keep NoAdvisory = True (RHEL behavior)
+                    continue  # Successfully found Alma-specific fix, skip other logic
+
+            # Case 1: RHEL has no fix and no Alma-specific fix was found
+            if rhel_has_no_advisory:
+                # Keep NoAdvisory = True (RHEL behavior) since no Alma-specific fix exists
                 continue
 
             # Cases 2, 3, 4: RHEL has advisory, check AlmaLinux corresponding advisory

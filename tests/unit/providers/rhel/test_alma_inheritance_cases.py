@@ -99,6 +99,47 @@ class TestAlmaInheritanceCases:
                         ]
                     },
                     "references": []  # Alma-specific, no RHSA reference
+                },
+                # Scenario 5: AlmaLinux-specific fix with lower version than RHEL
+                {
+                    "updateinfo_id": "ALSA-2025:A005",
+                    "type": "security",
+                    "severity": "Critical",
+                    "title": "Critical: libblockdev security update",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "libblockdev",
+                                "epoch": "0",
+                                "version": "2.28",
+                                "release": "6.el8.alma.1"
+                            }
+                        ]
+                    },
+                    "references": []  # Alma-specific, no RHSA reference
+                },
+                # Scenario 6: Regular RHEL advisory with higher version number
+                {
+                    "updateinfo_id": "ALSA-2025:9878",
+                    "type": "security",
+                    "severity": "Critical",
+                    "title": "Critical: libblockdev security update",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "libblockdev",
+                                "epoch": "0",
+                                "version": "2.28",
+                                "release": "7.el8_10"
+                            }
+                        ]
+                    },
+                    "references": [
+                        {
+                            "type": "rhsa",
+                            "id": "RHSA-2025:9878"
+                        }
+                    ]
                 }
                 # Scenario 4: No corresponding advisory - handled by absence in data
             ]
@@ -404,3 +445,52 @@ class TestAlmaInheritanceCases:
                     advisory = fixed_in['VendorAdvisory']['AdvisorySummary'][0]
                     assert advisory['ID'] == case['expected_advisory'], \
                         f"Case {i+1} failed: expected {case['expected_advisory']}, got {advisory['ID']}"
+
+    def test_alma_specific_fix_with_lower_version_than_rhel(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Test case for the issue where AlmaLinux has a specific advisory with a lower version number 
+        than the RHEL advisory, but the alma-specific fix should still be preferred.
+        
+        This addresses the scenario where:
+        - CVE-2025-6019 has RHSA-2025:9878 with libblockdev-2.28-7.el8_10
+        - CVE-2025-6019 has ALSA-2025:A004 with libblockdev-2.28-6.el8.alma.1
+        - The alma-specific fix should be used even though it has a "lower" version number
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+        
+        # Mock RHEL record that has a fix but would normally be overridden by alma
+        rhel_record = {
+            'Vulnerability': {
+                'Name': 'CVE-2025-6019',
+                'NamespaceName': 'rhel:8',
+                'FixedIn': [{
+                    'Name': 'libblockdev',
+                    'Version': '0:2.28-7.el8_10',  # Higher version from RHEL
+                    'VersionFormat': 'rpm',
+                    'NamespaceName': 'rhel:8',
+                    'VendorAdvisory': {
+                        'NoAdvisory': False,
+                        'AdvisorySummary': [{
+                            'ID': 'RHSA-2025:9878',
+                            'Link': 'https://access.redhat.com/errata/RHSA-2025:9878'
+                        }]
+                    }
+                }]
+            }
+        }
+
+        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
+            provider.parser.alma_parser.errata_client._build_index()
+            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
+
+        assert alma_record is not None
+        fixed_in = alma_record['Vulnerability']['FixedIn'][0]
+        
+        # Should use the alma-specific fix version even though it appears "lower"
+        assert fixed_in['Version'] == '0:2.28-6.el8.alma.1'
+        assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
+        
+        # Should use the alma-specific advisory, not the RHEL one
+        advisory = fixed_in['VendorAdvisory']['AdvisorySummary'][0]
+        assert advisory['ID'] == 'ALSA-2025:A005'
+        assert advisory['Link'] == 'https://errata.almalinux.org/8/ALSA-2025-A005.html'
