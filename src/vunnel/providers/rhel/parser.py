@@ -413,7 +413,6 @@ class Parser:
                 try:
                     platform = self._parse_platform(item.get("product_name", None))
                     if not platform:
-                        # track even deny-listed platforms here, filter them out later
                         continue
 
                     ar_obj = AffectedRelease(platform=platform)
