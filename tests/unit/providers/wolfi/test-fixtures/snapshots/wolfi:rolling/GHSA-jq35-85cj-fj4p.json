@@ -12,7 +12,7 @@
           "VersionFormat": "apk"
         }
       ],
-      "Link": "https://github.com/advisories/GHSA-jq35-85cj-fj4p",
+      "Link": "https://images.chainguard.dev/security/GHSA-jq35-85cj-fj4p",
       "Metadata": {},
       "Name": "GHSA-jq35-85cj-fj4p",
       "NamespaceName": "wolfi:rolling",
