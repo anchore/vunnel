@@ -263,6 +263,9 @@ tests:
       - redhat:distro:redhat:8
       - redhat:distro:redhat:9
       - redhat:distro:redhat:10
+      - almalinux:distro:almalinux:8
+      - almalinux:distro:almalinux:9
+      - almalinux:distro:almalinux:10
 
   - provider: sles
     additional_trigger_globs:
