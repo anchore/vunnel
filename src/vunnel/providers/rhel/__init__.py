@@ -161,7 +161,16 @@ class Provider(provider.Provider):
 
             # Case 4: No corresponding AlmaLinux advisory found
             if not alma_advisory_found:
-                fixed_in["Version"] = "None"
+                # Inherit the RHEL version constraint if it exists and is not "None"
+                rhel_version_constraint = fixed_in.get("Version")
+                if rhel_version_constraint and rhel_version_constraint != "None":
+                    # Keep the RHEL version constraint - AlmaLinux likely uses the same fix
+                    self.logger.debug(f"Inheriting RHEL version constraint for {package_name}: {rhel_version_constraint}")
+                    # Keep the existing Version field (inherit from RHEL)
+                else:
+                    # No RHEL fix available
+                    fixed_in["Version"] = "None"
+
                 # Keep NoAdvisory = False since AlmaLinux doesn't make "won't-fix" commitments
                 # Remove advisory summaries since no AlmaLinux advisory exists
                 if "AdvisorySummary" in fixed_in["VendorAdvisory"]:
