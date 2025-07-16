@@ -25,6 +25,7 @@ class Config:
     full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
     rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
+    ignore_hydra_errors: bool = False
 
 
 class Provider(provider.Provider):
@@ -45,6 +46,7 @@ class Provider(provider.Provider):
             max_workers=self.config.parallelism,
             full_sync_interval=self.config.full_sync_interval,
             rhsa_provider_type=self.config.rhsa_source,
+            ignore_hydra_errors=self.config.ignore_hydra_errors,
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
             skip_download=self.config.runtime.skip_download,
