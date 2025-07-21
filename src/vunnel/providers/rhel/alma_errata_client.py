@@ -139,3 +139,26 @@ class AlmaErrataClient:
         if not advisory_data:
             return None
         return advisory_data.get(package_name)
+
+    def get_alma_specific_advisories(self, version: str) -> dict[str, dict[str, str]]:
+        """
+        Get all AlmaLinux-specific (A-prefixed) advisories for a given version.
+
+        Returns:
+            Dict mapping ALSA IDs to package maps: {alsa_id: {package_name: version}}
+        """
+        if version not in self._alma_index:
+            return {}
+
+        alma_specific = {}
+        version_data = self._alma_index[version]
+
+        for alsa_id, package_map in version_data.items():
+            # Check if this is an AlmaLinux-specific advisory (A-prefixed)
+            # Match patterns like ALSA-YYYY:AXXXXX, ALBA-YYYY:AXXXXX, ALEA-YYYY:AXXXXX
+            if ":" in alsa_id:
+                advisory_number = alsa_id.split(":", 1)[1]
+                if advisory_number.startswith("A"):
+                    alma_specific[alsa_id] = package_map
+
+        return alma_specific

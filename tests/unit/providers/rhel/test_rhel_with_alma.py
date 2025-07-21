@@ -156,20 +156,22 @@ class TestRHELWithAlmaIntegration:
     def test_alma_copy_creation_disabled_when_config_false(self, mock_alma_workspace, rhel_config_without_alma, rhel_vulnerability_record):
         provider = Provider(mock_alma_workspace._root, rhel_config_without_alma)
 
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+        alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy(
+            'rhel:8', rhel_vulnerability_record, rhel_config_without_alma.include_alma_fixes
+        )
         assert alma_record is None
 
     def test_alma_copy_creation_skips_non_target_versions(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
         provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
 
-        assert provider.create_alma_vulnerability_copy('rhel:7', rhel_vulnerability_record) is None
-        assert provider.create_alma_vulnerability_copy('rhel:5', rhel_vulnerability_record) is None
-        assert provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record) is not None
+        assert provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:7', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes) is None
+        assert provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:5', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes) is None
+        assert provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes) is not None
 
     def test_alma_copy_transforms_namespace_and_identifier(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
         provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
 
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+        alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         assert alma_record['Vulnerability']['NamespaceName'] == 'almalinux:8'
@@ -180,7 +182,7 @@ class TestRHELWithAlmaIntegration:
             provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
             # Manually trigger the index building since we skipped download
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record['Vulnerability']['FixedIn'][0]
@@ -197,18 +199,22 @@ class TestRHELWithAlmaIntegration:
                 provider = Provider(workspace._root, rhel_config_with_alma)
                 # Manually trigger the index building since we skipped download (but with empty data)
                 provider.parser.alma_parser.errata_client._build_index()
-                alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+                alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy(
+                    'rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes
+                )
 
             assert alma_record is not None
             fixed_in = alma_record['Vulnerability']['FixedIn'][0]
 
-            assert fixed_in['Version'] == 'None'
+            # When no AlmaLinux advisory is found, we now inherit the RHEL version constraint
+            # instead of setting it to 'None' (this is the inheritance fix)
+            assert fixed_in['Version'] == '0:7.4.19-4.module+el8.6.0+16316+906f6c6d'
             assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
 
     def test_alma_copy_preserves_vulnerability_metadata(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
         provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
 
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record)
+        alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         alma_vuln = alma_record['Vulnerability']
@@ -237,7 +243,7 @@ class TestRHELWithAlmaIntegration:
             }
         }
 
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record_no_advisory)
+        alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_record_no_advisory, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record['Vulnerability']['FixedIn'][0]
@@ -292,7 +298,7 @@ class TestRHELWithAlmaIntegration:
                 }
             }
 
-            alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record_with_different_id)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_record_with_different_id, rhel_config_with_alma.include_alma_fixes)
 
             assert alma_record is not None
             fixed_in = alma_record['Vulnerability']['FixedIn'][0]
@@ -339,7 +345,7 @@ def test_rhel_to_alma_conversion(helpers, disable_get_requests):
             }
         }
 
-        alma_record = provider.create_alma_vulnerability_copy('rhel:8', rhel_record)
+        alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_record, config.include_alma_fixes)
 
         assert alma_record is not None
         assert alma_record['Vulnerability']['NamespaceName'] == 'almalinux:8'
