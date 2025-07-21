@@ -7,6 +7,7 @@ Test cases for the 4 AlmaLinux inheritance scenarios described:
 4. AlmaLinux has no corresponding advisory (version = "None", NoAdvisory = True)
 """
 
+import copy
 import os
 import tempfile
 from unittest.mock import patch
@@ -134,7 +135,7 @@ class TestAlmaInheritanceCases:
         with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
             # Manually trigger the index building since we skipped download
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record_no_fix)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record_no_fix, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -178,7 +179,7 @@ class TestAlmaInheritanceCases:
 
         with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -222,7 +223,7 @@ class TestAlmaInheritanceCases:
 
         with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -268,7 +269,7 @@ class TestAlmaInheritanceCases:
 
             with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
                 provider.parser.alma_parser.errata_client._build_index()
-                alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record)
+                alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
 
             assert alma_record is not None
             fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -361,7 +362,7 @@ class TestAlmaInheritanceCases:
                 case["rhel"]["Vulnerability"].update({"Name": f"CVE-2025-{i}", "NamespaceName": "rhel:8"})
                 case["rhel"]["Vulnerability"]["FixedIn"][0].update({"VersionFormat": "rpm", "NamespaceName": "rhel:8"})
 
-                alma_record = provider.create_alma_vulnerability_copy("rhel:8", case["rhel"])
+                alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", case["rhel"], rhel_config_with_alma.include_alma_fixes)
 
                 assert alma_record is not None, f"Case {i + 1} failed: no alma record created"
                 fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -414,7 +415,7 @@ class TestAlmaInheritanceCases:
 
         with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -459,7 +460,7 @@ class TestAlmaInheritanceCases:
 
         with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
@@ -497,7 +498,7 @@ class TestAlmaInheritanceCases:
 
         with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
             provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.create_alma_vulnerability_copy("rhel:8", rhel_record)
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
 
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
