@@ -74,6 +74,219 @@ class TestParser:
             "name": "CVE-2019-9755",
         }
 
+    # flake8: noqa: E501
+    @pytest.fixture
+    def mock_eus_cve(self):
+        return {
+            "threat_severity" : "Moderate",
+            "public_date" : "2024-01-18T00:00:00Z",
+            "bugzilla" : {
+                "description" : "kernel: ext4: kernel bug in ext4_write_inline_data_end()",
+                "id" : "2261976",
+                "url" : "https://bugzilla.redhat.com/show_bug.cgi?id=2261976"
+            },
+            "cvss3" : {
+                "cvss3_base_score" : "6.7",
+                "cvss3_scoring_vector" : "CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:H/I:H/A:H",
+                "status" : "verified"
+            },
+            "cwe" : "CWE-190",
+            "details" : [ "Integer Overflow or Wraparound vulnerability in openEuler kernel on Linux (filesystem modules) allows Forced Integer Overflow.This issue affects openEuler kernel: from 4.19.90 before 4.19.90-2401.3, from 5.10.0-60.18.0 before 5.10.0-183.0.0.", "A flaw was found in the openEuler kernel in Linux filesystem modules that allows an integer overflow via mounting a corrupted filesystem. This issue affects the openEuler kernel in versions from 4.19.90 through 4.19.90-2401.3 and 5.10.0-60.18.0 through 5.10.0-183.0.0." ],
+            "statement" : "Red Hat has protection mechanisms in place against buffer overflows, such as FORTIFY_SOURCE, Position Independent Executables or Stack Smashing Protection.",
+            "affected_release" : [ {
+                "product_name" : "Red Hat Enterprise Linux 8",
+                "release_date" : "2024-04-02T00:00:00Z",
+                "advisory" : "RHSA-2024:1614",
+                "cpe" : "cpe:/a:redhat:enterprise_linux:8::nfv",
+                "package" : "kernel-rt-0:4.18.0-513.24.1.rt7.326.el8_9"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 8",
+                "release_date" : "2024-04-02T00:00:00Z",
+                "advisory" : "RHSA-2024:1607",
+                "cpe" : "cpe:/o:redhat:enterprise_linux:8",
+                "package" : "kernel-0:4.18.0-513.24.1.el8_9"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 8.6 Extended Update Support",
+                "release_date" : "2024-04-03T00:00:00Z",
+                "advisory" : "RHSA-2024:1653",
+                "cpe" : "cpe:/o:redhat:rhel_eus:8.6",
+                "package" : "kernel-0:4.18.0-372.98.1.el8_6"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 8.8 Extended Update Support",
+                "release_date" : "2024-04-30T00:00:00Z",
+                "advisory" : "RHSA-2024:2621",
+                "cpe" : "cpe:/o:redhat:rhel_eus:8.8",
+                "package" : "kernel-0:4.18.0-477.55.1.el8_8"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 9",
+                "release_date" : "2023-05-09T00:00:00Z",
+                "advisory" : "RHSA-2023:2458",
+                "cpe" : "cpe:/a:redhat:enterprise_linux:9",
+                "package" : "kernel-0:5.14.0-284.11.1.el9_2"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 9",
+                "release_date" : "2023-05-09T00:00:00Z",
+                "advisory" : "RHSA-2023:2148",
+                "cpe" : "cpe:/a:redhat:enterprise_linux:9::nfv",
+                "package" : "kernel-rt-0:5.14.0-284.11.1.rt14.296.el9_2"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 9",
+                "release_date" : "2023-05-09T00:00:00Z",
+                "advisory" : "RHSA-2023:2458",
+                "cpe" : "cpe:/o:redhat:enterprise_linux:9",
+                "package" : "kernel-0:5.14.0-284.11.1.el9_2"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 9.0 Extended Update Support",
+                "release_date" : "2024-04-16T00:00:00Z",
+                "advisory" : "RHSA-2024:1836",
+                "cpe" : "cpe:/a:redhat:rhel_eus:9.0",
+                "package" : "kernel-0:5.14.0-70.97.1.el9_0"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 9.0 Extended Update Support",
+                "release_date" : "2024-04-16T00:00:00Z",
+                "advisory" : "RHSA-2024:1840",
+                "cpe" : "cpe:/a:redhat:rhel_eus:9.0::nfv",
+                "package" : "kernel-rt-0:5.14.0-70.97.1.rt21.169.el9_0"
+            }, {
+                "product_name" : "Red Hat Virtualization 4 for Red Hat Enterprise Linux 8",
+                "release_date" : "2024-04-03T00:00:00Z",
+                "advisory" : "RHSA-2024:1653",
+                "cpe" : "cpe:/o:redhat:rhev_hypervisor:4.4::el8",
+                "package" : "kernel-0:4.18.0-372.98.1.el8_6"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/cluster-logging-operator-bundle:v5.7.13-16"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/cluster-logging-rhel8-operator:v5.7.13-7"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/elasticsearch6-rhel8:v6.8.1-408"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/elasticsearch-operator-bundle:v5.7.13-19"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/elasticsearch-proxy-rhel8:v1.0.0-480"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/elasticsearch-rhel8-operator:v5.7.13-9"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/eventrouter-rhel8:v0.4.0-248"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/fluentd-rhel8:v1.14.6-215"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/kibana6-rhel8:v6.8.1-431"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/log-file-metric-exporter-rhel8:v1.1.0-228"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/logging-curator5-rhel8:v5.8.1-471"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/logging-loki-rhel8:v2.9.6-15"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/logging-view-plugin-rhel8:v5.7.13-3"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/loki-operator-bundle:v5.7.13-27"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/loki-rhel8-operator:v5.7.13-12"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/lokistack-gateway-rhel8:v0.1.0-527"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/opa-openshift-rhel8:v0.1.0-225"
+            }, {
+                "product_name" : "RHOL-5.7-RHEL-8",
+                "release_date" : "2024-05-01T00:00:00Z",
+                "advisory" : "RHSA-2024:2093",
+                "cpe" : "cpe:/a:redhat:logging:5.7::el8",
+                "package" : "openshift-logging/vector-rhel8:v0.28.1-57"
+            } ],
+            "package_state" : [ {
+                "product_name" : "Red Hat Enterprise Linux 6",
+                "fix_state" : "Out of support scope",
+                "package_name" : "kernel",
+                "cpe" : "cpe:/o:redhat:enterprise_linux:6"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 7",
+                "fix_state" : "Out of support scope",
+                "package_name" : "kernel",
+                "cpe" : "cpe:/o:redhat:enterprise_linux:7"
+            }, {
+                "product_name" : "Red Hat Enterprise Linux 7",
+                "fix_state" : "Out of support scope",
+                "package_name" : "kernel-rt",
+                "cpe" : "cpe:/o:redhat:enterprise_linux:7"
+            } ],
+            "references" : [ "https://www.cve.org/CVERecord?id=CVE-2021-33631\nhttps://nvd.nist.gov/vuln/detail/CVE-2021-33631\nhttps://seclists.org/oss-sec/2024/q1/65" ],
+            "name" : "CVE-2021-33631",
+            "mitigation" : {
+                "value" : "Mitigation for this issue is either not available or the currently available options do not meet the Red Hat Product Security criteria comprising ease of use and deployment, applicability to widespread installation base or stability.",
+                "lang" : "en:us"
+            },
+            "csaw" : False
+        }
+
     # noqa: E501
     @pytest.fixture
     def mock_rhsa_dict(self):
@@ -209,6 +422,28 @@ class TestParser:
             ],
             "name": "CVE-2017-16939",
         }
+
+    def test_parse_affected_releases_eus(self, mock_eus_cve, tmpdir):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+
+        results = driver._parse_affected_release(mock_eus_cve.get("name"), mock_eus_cve)
+
+        assert results and isinstance(results, list) and len(results) == 8
+
+        # see https://access.redhat.com/security/cve/cve-2021-33631
+        expected = [
+            FixedIn(package='kernel-rt', platform='8', version='0:4.18.0-513.24.1.rt7.326.el8_9', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1614', link='https://access.redhat.com/errata/RHSA-2024:1614', severity=None)),
+            FixedIn(package='kernel', platform='8', version='0:4.18.0-513.24.1.el8_9', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1607', link='https://access.redhat.com/errata/RHSA-2024:1607', severity=None)),
+            FixedIn(package='kernel', platform='8.6+eus', version='0:4.18.0-372.98.1.el8_6', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1653', link='https://access.redhat.com/errata/RHSA-2024:1653', severity=None)),
+            FixedIn(package='kernel', platform='8.8+eus', version='0:4.18.0-477.55.1.el8_8', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:2621', link='https://access.redhat.com/errata/RHSA-2024:2621', severity=None)),
+            FixedIn(package='kernel', platform='9', version='0:5.14.0-284.11.1.el9_2', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2023:2458', link='https://access.redhat.com/errata/RHSA-2023:2458', severity=None)),
+            FixedIn(package='kernel-rt', platform='9', version='0:5.14.0-284.11.1.rt14.296.el9_2', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2023:2148', link='https://access.redhat.com/errata/RHSA-2023:2148', severity=None)),
+            FixedIn(package='kernel', platform='9.0+eus', version='0:5.14.0-70.97.1.el9_0', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1836', link='https://access.redhat.com/errata/RHSA-2024:1836', severity=None)),
+            FixedIn(package='kernel-rt', platform='9.0+eus', version='0:5.14.0-70.97.1.rt21.169.el9_0', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1840', link='https://access.redhat.com/errata/RHSA-2024:1840', severity=None)),
+        ]
+
+        assert expected == results
 
     def test_parse_affected_releases_0(self, mock_cve, tmpdir):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
@@ -537,7 +772,85 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 64
+    assert workspace.num_result_entries() == 70
+    # < test results directory >
+    # ├── rhel:5
+    # │   ├── cve-2017-3509.json
+    # │   ├── cve-2017-3511.json
+    # │   ├── cve-2017-3526.json
+    # │   ├── cve-2017-3533.json
+    # │   ├── cve-2017-3539.json
+    # │   └── cve-2017-3544.json
+    # ├── rhel:6
+    # │   ├── cve-2017-3509.json
+    # │   ├── cve-2017-3511.json
+    # │   ├── cve-2017-3526.json
+    # │   ├── cve-2017-3533.json
+    # │   ├── cve-2017-3539.json
+    # │   ├── cve-2017-3544.json
+    # │   ├── cve-2020-16587.json
+    # │   ├── cve-2020-16588.json
+    # │   ├── cve-2021-20298.json
+    # │   ├── cve-2021-20299.json
+    # │   ├── cve-2022-1921.json
+    # │   ├── cve-2022-1922.json
+    # │   ├── cve-2022-1923.json
+    # │   ├── cve-2022-1924.json
+    # │   ├── cve-2022-1925.json
+    # │   ├── cve-2023-4863.json
+    # │   ├── cve-2023-5129.json
+    # │   └── cve-2023-5217.json
+    # ├── rhel:7
+    # │   ├── cve-2017-3509.json
+    # │   ├── cve-2017-3511.json
+    # │   ├── cve-2017-3526.json
+    # │   ├── cve-2017-3533.json
+    # │   ├── cve-2017-3539.json
+    # │   ├── cve-2017-3544.json
+    # │   ├── cve-2020-16587.json
+    # │   ├── cve-2020-16588.json
+    # │   ├── cve-2021-20298.json
+    # │   ├── cve-2021-20299.json
+    # │   ├── cve-2022-1921.json
+    # │   ├── cve-2022-1922.json
+    # │   ├── cve-2022-1923.json
+    # │   ├── cve-2022-1924.json
+    # │   ├── cve-2022-1925.json
+    # │   ├── cve-2023-4863.json
+    # │   ├── cve-2023-5129.json
+    # │   └── cve-2023-5217.json
+    # ├── rhel:8
+    # │   ├── cve-2019-25059.json
+    # │   ├── cve-2020-16587.json
+    # │   ├── cve-2021-20298.json
+    # │   ├── cve-2021-20299.json
+    # │   ├── cve-2022-1921.json
+    # │   ├── cve-2022-1922.json
+    # │   ├── cve-2022-1923.json
+    # │   ├── cve-2022-1924.json
+    # │   ├── cve-2022-1925.json
+    # │   ├── cve-2023-4863.json
+    # │   ├── cve-2023-5129.json
+    # │   └── cve-2023-5217.json
+    # ├── rhel:8.6+eus
+    # │   ├── cve-2023-4863.json
+    # │   ├── cve-2023-5129.json
+    # │   └── cve-2023-5217.json
+    # ├── rhel:9
+    # │   ├── cve-2019-25059.json
+    # │   ├── cve-2022-1921.json
+    # │   ├── cve-2022-1922.json
+    # │   ├── cve-2022-1923.json
+    # │   ├── cve-2022-1924.json
+    # │   ├── cve-2022-1925.json
+    # │   ├── cve-2022-2309.json
+    # │   ├── cve-2023-4863.json
+    # │   ├── cve-2023-5129.json
+    # │   └── cve-2023-5217.json
+    # └── rhel:9.0+eus
+    #     ├── cve-2023-4863.json
+    #     ├── cve-2023-5129.json
+    #     └── cve-2023-5217.json
 
     assert workspace.result_schemas_valid(require_entries=True)
 
