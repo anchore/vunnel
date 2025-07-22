@@ -16,7 +16,7 @@ class Parser:
     _secdb_dir_ = "secdb"
     _security_reference_url_ = "https://images.chainguard.dev/security"
 
-    def __init__( # noqa: PLR0913
+    def __init__(  # noqa: PLR0913
         self,
         workspace,
         url: str,
