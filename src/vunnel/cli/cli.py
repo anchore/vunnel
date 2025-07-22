@@ -209,12 +209,12 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
 {fill}      results: {self.count}
 {fill}      from:    {self.date}"""
 
-        def to_dict(self) -> dict:
+        def to_dict(self) -> dict[str, Any]:
             return {
-                'count': self.count,
-                'date': self.date,
-                'error': self.error,
-                'enabled': self.enabled
+                "count": self.count,
+                "date": self.date,
+                "error": self.error,
+                "enabled": self.enabled,
             }
 
     # first pass: find the results that exist (which may be fewer than what is selected)
@@ -244,9 +244,9 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
             "providers": [
                 {"name": name, **result.to_dict()}  # unpack to a dict
                 for name, result in sorted(results.items())
-            ]
+            ],
         }
-        print(json.dumps(json_output, indent=2))
+        print(json.dumps(json_output, indent=2))  # noqa: TID251 # TID251: json.dumps() isn't needed for this use case
     # otherwise, output as a tree structure
     else:
         # existing tree output
