@@ -186,7 +186,6 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
 @click.option("--json", "output_json", default=False, is_flag=True, help="output as JSON")
 @click.pass_obj
 def status_provider(cfg: config.Application, provider_names: str, show_empty: bool, output_json: bool) -> None:  # noqa: C901
-    print(cfg.root)
     selected_names = provider_names if provider_names else providers.names()
 
     @dataclass
