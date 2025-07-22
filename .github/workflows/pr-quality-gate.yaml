@@ -9,6 +9,9 @@ on:
       # custom types...
       - labeled
 
+permissions:
+  contents: read
+
 jobs:
 
   select-providers:
@@ -20,6 +23,7 @@ jobs:
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -59,6 +63,7 @@ jobs:
           fetch-depth: 0
           # we need submodules for the quality gate to work (requires vulnerability-match-labels repo)
           submodules: true
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -80,15 +85,18 @@ jobs:
      - select-providers
     if: ${{ always() }}
     steps:
-      - run: |
-          echo "Validations Status: ${{ needs.validate-provider.result }}"
-          echo "Providers that require testing: ${{ needs.select-providers.outputs.providers }}"
+      - env:
+          VALIDATION_STATUS: ${{ needs.validate-provider.result }}
+          PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.providers }}
+        run: |
+          echo "Validations Status: $VALIDATION_STATUS"
+          echo "Providers that require testing: $PROVIDERS_TO_TEST"
           echo
-          if [ '${{ needs.select-providers.outputs.providers }}' == '[]' ]; then
+          if [ "$PROVIDERS_TO_TEST" == '[]' ]; then
             echo "🟢 Quality gate passed! (no providers changed)"
             exit 0
           fi
-          if [ "${{ needs.validate-provider.result }}" != "success" ]; then
+          if [ "$VALIDATION_STATUS" != "success" ]; then
             echo "🔴 Quality gate FAILED! 😭"
             echo
             echo "This could happen for a couple of reasons:"
