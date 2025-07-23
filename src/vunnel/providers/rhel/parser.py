@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import copy
 import logging
 import os
@@ -39,7 +40,6 @@ class Parser:
     __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
     __rhel_eus_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+\.\d+) Extended Update Support")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
-    __rhsa_url__ = "https://access.redhat.com/hydra/rest/securitydata/oval/{}.json"
     __last_synced_filename__ = "last_synced"
     __cve_download_error_filename__ = "failed_cves"
     __cve_filename_regex__ = re.compile("CVE-[0-9]+-[0-9]+")
@@ -59,6 +59,7 @@ class Parser:
         full_sync_interval=None,
         skip_namespaces=None,
         rhsa_provider_type=None,
+        ignore_hydra_errors: bool = False,
         logger=None,
         skip_download: bool = False,
     ):
@@ -72,6 +73,7 @@ class Parser:
         self.rhsa_dict = None
         self.rhsa_provider: RHSAProvider | None = None
         self.rhsa_provider_type: str | None = rhsa_provider_type
+        self.ignore_hydra_errors = ignore_hydra_errors
         self.skip_download = skip_download
 
         self.urls = [self.__summary_url__]
@@ -145,28 +147,27 @@ class Parser:
 
     def _download_minimal_cve_pages(self) -> int:
         dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__)
+        backup_dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__ + "_backup")
 
-        # clear all existing records
-        utils.silent_remove(dir_path, tree=True)
-        os.makedirs(dir_path)
+        # use context manager to enforce cleanup of backup dir and # restore it if necessary
+        with handle_hydra_data(self.ignore_hydra_errors, dir_path, backup_dir_path, self.logger):
+            page = 0
+            count = 0
+            while True:
+                page += 1
+                results = self._download_minimal_cves(page)
 
-        page = 0
-        count = 0
-        while True:
-            page += 1
-            results = self._download_minimal_cves(page)
+                if not isinstance(results, list) or not results:
+                    break
 
-            if not isinstance(results, list) or not results:
-                break
+                min_cve_file = os.path.join(dir_path, f"{page}.json")
 
-            min_cve_file = os.path.join(dir_path, f"{page}.json")
+                count += len(results)
 
-            count += len(results)
+                with open(min_cve_file, "wb") as fp:
+                    fp.write(orjson.dumps(results))
 
-            with open(min_cve_file, "wb") as fp:
-                fp.write(orjson.dumps(results))
-
-        return count
+            return count
 
     def enumerate_minimal_cve_pages(self):
         dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__)
@@ -848,3 +849,32 @@ class RHELCVSS3:
                 "base_severity": self.cvss3_obj.severities()[0],
             },
         }
+
+
+# return a context manager function that uses ignore_hydra_errors to handle restoring the backup dir
+@contextlib.contextmanager
+def handle_hydra_data(ignore_hydra_errors: bool, dir_path: str, backup_dir_path: str, logger):
+    if ignore_hydra_errors:
+        # move existing min pages dir to temp dir in case we need to restore it
+        utils.silent_remove(backup_dir_path, tree=True)
+        if os.path.exists(dir_path):
+            logger.debug(f"moving existing {dir_path} to {backup_dir_path}")
+            utils.move_dir(dir_path, backup_dir_path)
+        else:
+            logger.debug(f"no existing {dir_path} to move, starting fresh")
+    else:
+        # clear all existing records
+        utils.silent_remove(dir_path, tree=True)
+
+    os.makedirs(dir_path)
+
+    try:
+        yield
+    except Exception as e:
+        logger.error(f"error processing minimal CVE pages: {e}")
+        if ignore_hydra_errors:
+            logger.debug("restoring backup directory")
+            utils.silent_remove(dir_path, tree=True)
+            utils.move_dir(backup_dir_path, dir_path)
+        else:
+            raise
