@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import os
-import shutil
 from unittest.mock import patch
 
 import pytest
 
 from vunnel import result, workspace
-from vunnel.providers.rhel import Config, Provider, parser
+from vunnel.providers.rhel import Config, Provider
 from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser
 from vunnel.providers.rhel.rhsa_provider import OVALRHSAProvider
 
@@ -903,3 +902,32 @@ def test_rhel_provider_supports_skip_download(mock_sync_cves, helpers):
         p.update(None)
         assert e.match("skip download used on empty workspace")
     assert mock_sync_cves.call_count == 0
+
+@patch("vunnel.providers.rhel.parser.http.get")
+def test_rhel_provider_supports_ignore_hydra_errors(mock_http_get, helpers):
+
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/csaf/input",
+    )
+
+    mock_http_get.side_effect = RuntimeError("simulate HTTP error")
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.ignore_hydra_errors = True
+    c.rhsa_source = "CSAF"
+    p = Provider(root=workspace.root, config=c)
+
+    # don't do unnecessary work in the sync
+    p.parser.enumerate_minimal_cve_pages = lambda: []
+
+    # succeed with results from the cache
+    p.parser._sync_cves()
+
+    c.ignore_hydra_errors = False
+    p = Provider(root=workspace.root, config=c)
+
+    # API failures result in sync failure
+    with pytest.raises(RuntimeError) as e:
+        p.parser._sync_cves()
