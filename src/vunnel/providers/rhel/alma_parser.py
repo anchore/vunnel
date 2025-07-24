@@ -90,8 +90,11 @@ class AlmaVulnerabilityCreator:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def create_alma_vulnerability_copy(
-        self, namespace: str, record: dict[str, dict[str, Any]], include_alma_fixes: bool = True
+    def create_alma_vulnerability_copy(  # noqa: C901, PLR0912
+        self,
+        namespace: str,
+        record: dict[str, dict[str, Any]],
+        include_alma_fixes: bool = True,
     ) -> dict[str, dict[str, Any]] | None:
         """
         Create an Alma Linux copy of a RHEL vulnerability record if applicable.
@@ -173,7 +176,7 @@ class AlmaVulnerabilityCreator:
 
                         if alma_fix_version:
                             # Case 3: AlmaLinux has corresponding advisory with package entry
-                            normalized_version = self.alma_parser._normalize_rpm_version(alma_fix_version)
+                            normalized_version = self.alma_parser._normalize_rpm_version(alma_fix_version)  # noqa: SLF001
                             fixed_in["Version"] = normalized_version
                         # else: Case 2: Advisory exists but no package entry - keep RHEL version
 
@@ -224,7 +227,7 @@ class AlmaVulnerabilityCreator:
                 alma_version = package_map[package_name]
                 if alma_version:
                     # Normalize version
-                    normalized_version = self.alma_parser._normalize_rpm_version(alma_version)
+                    normalized_version = self.alma_parser._normalize_rpm_version(alma_version)  # noqa: SLF001
                     fixed_in["Version"] = normalized_version
                     fixed_in["VendorAdvisory"] = {
                         "NoAdvisory": False,
