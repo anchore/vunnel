@@ -29,7 +29,7 @@ class AlmaErrataClient:
 
         self._data_dir = os.path.join(self.workspace.input_path, "alma-errata-data")
         # In-memory index for O(1) ALSA lookups: {version: {alsa_id: {package_name: full_version}}}
-        self._alma_index = {}
+        self._alma_index: dict[str, dict[str, dict[str, str]]] = {}
 
     def delete_errata_files(self) -> None:
         """Remove existing errata data directory"""
