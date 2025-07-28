@@ -80,23 +80,7 @@ class WorkspaceHelper:
         return True
 
     def copy_input_fixtures(self, mock_data_path: str):
-        # Use a more robust copy that handles existing directories better
-        for root, dirs, files in os.walk(mock_data_path):
-            # Calculate relative path from mock_data_path
-            rel_path = os.path.relpath(root, mock_data_path)
-            if rel_path == ".":
-                dest_dir = self.input_dir
-            else:
-                dest_dir = os.path.join(self.input_dir, rel_path)
-
-            # Create destination directory if it doesn't exist
-            os.makedirs(dest_dir, exist_ok=True)
-
-            # Copy all files in this directory
-            for file in files:
-                src_file = os.path.join(root, file)
-                dest_file = os.path.join(dest_dir, file)
-                shutil.copy2(src_file, dest_file)
+        shutil.copytree(mock_data_path, self.input_dir, dirs_exist_ok=True)
 
     def assert_result_snapshots(self):
         expected_files_to_test = set(self._snapshot_files())
