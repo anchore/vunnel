@@ -55,7 +55,6 @@ class Provider(provider.Provider):
             include_alma_fixes=self.config.include_alma_fixes,
         )
 
-        # Initialize AlmaLinux vulnerability creator
         self.alma_vulnerability_creator = AlmaVulnerabilityCreator(alma_parser=self.parser.alma_parser, logger=self.logger)
 
     @classmethod
@@ -67,7 +66,6 @@ class Provider(provider.Provider):
         return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        # Download Alma data if needed
         self.parser.download_alma_data()
 
         with self.results_writer() as writer:
@@ -75,14 +73,12 @@ class Provider(provider.Provider):
                 namespace = namespace.lower()
                 vuln_id = vuln_id.lower()
 
-                # Write the original RHEL record
                 writer.write(
                     identifier=os.path.join(namespace, vuln_id),
                     schema=self.__schema__,
                     payload=record,
                 )
 
-                # If applicable, create and write Alma copy
                 alma_record = self.alma_vulnerability_creator.create_alma_vulnerability_copy(namespace, record, self.config.include_alma_fixes)
                 if alma_record:
                     alma_namespace = alma_record["Vulnerability"]["NamespaceName"]
