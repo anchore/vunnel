@@ -1,0 +1,324 @@
+from __future__ import annotations
+
+import copy
+import logging
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from vunnel.workspace import Workspace
+
+from .alma_errata_client import AlmaErrataClient
+
+
+class AlmaParser:
+    def __init__(self, workspace: Workspace, logger: logging.Logger | None = None, alma_linux_versions: list[str] | None = None):
+        if alma_linux_versions is None:
+            alma_linux_versions = ["8", "9", "10"]
+        self.alma_linux_versions = alma_linux_versions
+        self.workspace = workspace
+
+        if not logger:
+            logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logger
+
+        self.errata_client = AlmaErrataClient(
+            workspace=workspace,
+            logger=logger,
+            alma_linux_versions=alma_linux_versions,
+        )
+
+        self.urls = self.errata_client.urls
+
+    def download_alma_data(self) -> None:
+        self.logger.info("downloading AlmaLinux errata data for RHEL provider")
+        self.errata_client.delete_errata_files()
+        self.errata_client.download()
+
+    def _rhsa_to_alsa(self, rhsa_id: str) -> str:
+        if rhsa_id.startswith("RHSA-"):
+            return rhsa_id.replace("RHSA-", "ALSA-")
+        if rhsa_id.startswith("RHBA-"):
+            return rhsa_id.replace("RHBA-", "ALBA-")
+        if rhsa_id.startswith("RHEA-"):
+            return rhsa_id.replace("RHEA-", "ALEA-")
+        return rhsa_id.replace("RH", "AL")
+
+    def _normalize_rpm_version(self, version: str) -> str:
+        if version and ":" not in version:
+            return f"0:{version}"
+        return version
+
+    def get_alma_fix_version(self, rhsa_id: str, version: str, package_name: str) -> str | None:
+        """
+        Get AlmaLinux fix version for a package using fast in-memory lookup.
+
+        Args:
+            rhsa_id: Red Hat advisory ID (e.g., "RHSA-2022:6158")
+            version: RHEL/AlmaLinux version ("8", "9", "10")
+            package_name: Package name (e.g., "php")
+
+        Returns:
+            Normalized version string with explicit epoch, or None if not found
+        """
+        alma_advisory_id = self._rhsa_to_alsa(rhsa_id)
+
+        package_version = self.errata_client.get_package_version(alsa_id=alma_advisory_id, version=version, package_name=package_name)
+
+        if package_version:
+            normalized_version = self._normalize_rpm_version(package_version)
+            self.logger.debug(f"found Alma fix for {package_name} in {alma_advisory_id}: {normalized_version}")
+            return normalized_version
+
+        self.logger.debug(f"no fix found for package {package_name} in Alma advisory {alma_advisory_id}")
+        return None
+
+
+class AlmaVulnerabilityCreator:
+    """Handles creation of AlmaLinux vulnerability records from RHEL records."""
+
+    def __init__(self, alma_parser: AlmaParser | None = None, logger: logging.Logger | None = None):
+        self.alma_parser = alma_parser
+
+        if not logger:
+            logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logger
+
+    def create_alma_vulnerability_copy(
+        self,
+        namespace: str,
+        record: dict[str, dict[str, Any]],
+        include_alma_fixes: bool = True,
+    ) -> dict[str, dict[str, Any]] | None:
+        """
+        Create an Alma Linux copy of a RHEL vulnerability record if applicable.
+
+        Applies transformations in priority order:
+        1. AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version
+        2. AlmaLinux has corresponding advisory with package entry - use Alma version
+        3. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
+        4. AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value
+
+        Args:
+            namespace: The vulnerability namespace (e.g., "rhel:8")
+            record: The vulnerability record dict
+            include_alma_fixes: Whether to include AlmaLinux fixes
+
+        Returns:
+            Modified copy for Alma Linux if applicable, None otherwise
+        """
+        if not self._should_process_record(namespace, include_alma_fixes):
+            return None
+
+        alma_record = self._create_base_alma_record(record, namespace)
+        rhel_version = namespace.split(":")[1]
+
+        for i, fixed_in in enumerate(alma_record["Vulnerability"]["FixedIn"]):
+            fixed_in["NamespaceName"] = f"almalinux:{rhel_version}"
+            package_name = fixed_in["Name"]
+
+            # Try each transformation in priority order matching docstring
+            transformers = [
+                self._try_alma_specific_advisory,
+                self._try_corresponding_alma_advisory_with_package,
+                self._try_corresponding_alma_advisory_without_package,
+                self._try_inherit_rhel_version,  # Always succeeds
+            ]
+
+            for transformer in transformers:
+                transformed_fixed_in = transformer(fixed_in, rhel_version, package_name)
+                if transformed_fixed_in is not None:
+                    # Replace the fixed_in entry with the transformation result
+                    alma_record["Vulnerability"]["FixedIn"][i] = transformed_fixed_in
+                    break
+
+        return alma_record
+
+    def _should_process_record(self, namespace: str, include_alma_fixes: bool) -> bool:
+        """Check if this record should be processed for AlmaLinux transformation."""
+        if not include_alma_fixes:
+            return False
+        # Only process RHEL 8, 9, and 10
+        return namespace in ["rhel:8", "rhel:9", "rhel:10"]
+
+    def _create_base_alma_record(self, record: dict[str, dict[str, Any]], namespace: str) -> dict[str, dict[str, Any]]:
+        """Create the base AlmaLinux record with updated namespace."""
+        rhel_version = namespace.split(":")[1]
+        alma_namespace = f"almalinux:{rhel_version}"
+
+        # Create a deep copy of the record (expects {"Vulnerability": {...}})
+        alma_record = copy.deepcopy(record)
+        alma_record["Vulnerability"]["NamespaceName"] = alma_namespace
+        return alma_record
+
+    def _try_alma_specific_advisory(self, fixed_in: dict[str, Any], rhel_version: str, package_name: str) -> dict[str, Any] | None:
+        """Case 1: AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version"""
+        if not self.alma_parser:
+            return None
+
+        # Get all A-prefixed advisories for this version
+        alma_specific_advisories = self.alma_parser.errata_client.get_alma_specific_advisories(rhel_version)
+
+        # Check each A-prefixed advisory for this package
+        for alsa_id, package_map in alma_specific_advisories.items():
+            if package_name in package_map:
+                alma_version = package_map[package_name]
+                if alma_version:
+                    # Normalize version
+                    normalized_version = self.alma_parser._normalize_rpm_version(alma_version)  # noqa: SLF001
+
+                    # Create complete new FixedIn record
+                    new_fixed_in = copy.deepcopy(fixed_in)
+                    new_fixed_in["Version"] = normalized_version
+                    new_fixed_in["VendorAdvisory"] = {
+                        "NoAdvisory": False,
+                        "AdvisorySummary": [
+                            {
+                                "ID": alsa_id,
+                                "Link": f"https://errata.almalinux.org/{rhel_version}/{alsa_id.replace(':', '-')}.html",
+                            },
+                        ],
+                    }
+                    return new_fixed_in
+        return None
+
+    def _try_corresponding_alma_advisory_with_package(self, fixed_in: dict[str, Any], rhel_version: str, package_name: str) -> dict[str, Any] | None:
+        """Case 2: AlmaLinux has corresponding advisory with package entry - use Alma version"""
+        if not self.alma_parser:
+            return None
+
+        vendor_advisory = fixed_in.get("VendorAdvisory", {})
+
+        # Only proceed if RHEL has an advisory (not NoAdvisory=True)
+        if vendor_advisory.get("NoAdvisory", False):
+            return None
+
+        advisory_summaries = vendor_advisory.get("AdvisorySummary", [])
+        if not advisory_summaries:
+            return None
+
+        # Try to map each RHEL advisory to AlmaLinux
+        for advisory in advisory_summaries:
+            rhsa_id = advisory.get("ID", "")
+            if not rhsa_id.startswith(("RHSA-", "RHBA-", "RHEA-")):
+                continue
+
+            # Convert RHSA to ALSA ID
+            alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
+
+            # Check if the AlmaLinux advisory exists at all
+            alma_advisory_data = self.alma_parser.errata_client.get_advisory_data(alma_advisory_id, rhel_version)
+
+            if alma_advisory_data is not None:
+                # Advisory exists - now check if package is in it
+                alma_fix_version = alma_advisory_data.get(package_name)
+
+                if alma_fix_version:
+                    # Case 2: AlmaLinux has corresponding advisory with package entry
+                    normalized_version = self.alma_parser._normalize_rpm_version(alma_fix_version)  # noqa: SLF001
+
+                    # Create complete new FixedIn record
+                    new_fixed_in = copy.deepcopy(fixed_in)
+                    new_fixed_in["Version"] = normalized_version
+
+                    # Create updated advisory summary
+                    updated_advisory = copy.deepcopy(advisory)
+                    updated_advisory["ID"] = alma_advisory_id
+                    alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                    updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+
+                    new_fixed_in["VendorAdvisory"] = {
+                        **vendor_advisory,
+                        "AdvisorySummary": [updated_advisory],
+                    }
+                    return new_fixed_in
+
+        return None
+
+    def _try_corresponding_alma_advisory_without_package(
+        self,
+        fixed_in: dict[str, Any],
+        rhel_version: str,
+        package_name: str,
+    ) -> dict[str, Any] | None:
+        """Case 3: AlmaLinux has corresponding advisory but no package entry - inherit RHEL version"""
+        if not self.alma_parser:
+            return None
+
+        vendor_advisory = fixed_in.get("VendorAdvisory", {})
+
+        # Only proceed if RHEL has an advisory (not NoAdvisory=True)
+        if vendor_advisory.get("NoAdvisory", False):
+            return None
+
+        advisory_summaries = vendor_advisory.get("AdvisorySummary", [])
+        if not advisory_summaries:
+            return None
+
+        # Try to map each RHEL advisory to AlmaLinux
+        for advisory in advisory_summaries:
+            rhsa_id = advisory.get("ID", "")
+            if not rhsa_id.startswith(("RHSA-", "RHBA-", "RHEA-")):
+                continue
+
+            # Convert RHSA to ALSA ID
+            alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
+
+            # Check if the AlmaLinux advisory exists at all
+            alma_advisory_data = self.alma_parser.errata_client.get_advisory_data(alma_advisory_id, rhel_version)
+
+            if alma_advisory_data is not None:
+                # Advisory exists - check if package is NOT in it (case 3)
+                alma_fix_version = alma_advisory_data.get(package_name)
+
+                if not alma_fix_version:
+                    # Case 3: Advisory exists but no package entry - inherit RHEL version
+                    new_fixed_in = copy.deepcopy(fixed_in)
+
+                    # Create updated advisory summary
+                    updated_advisory = copy.deepcopy(advisory)
+                    updated_advisory["ID"] = alma_advisory_id
+                    alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                    updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+
+                    new_fixed_in["VendorAdvisory"] = {
+                        **vendor_advisory,
+                        "AdvisorySummary": [updated_advisory],
+                    }
+                    # Keep RHEL version (already in fixed_in)
+                    return new_fixed_in
+
+        return None
+
+    def _try_inherit_rhel_version(self, fixed_in: dict[str, Any], rhel_version: str, package_name: str) -> dict[str, Any]:
+        """Case 4: AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value"""
+        vendor_advisory = fixed_in.get("VendorAdvisory", {})
+        rhel_has_no_advisory = vendor_advisory.get("NoAdvisory", False)
+
+        new_fixed_in = copy.deepcopy(fixed_in)
+
+        if rhel_has_no_advisory:
+            # Inherit RHEL's NoAdvisory=True decision
+            # Keep the existing VendorAdvisory structure
+            pass
+        else:
+            # RHEL has an advisory but no AlmaLinux advisory found
+            rhel_version_constraint = fixed_in.get("Version")
+
+            new_fixed_in["VendorAdvisory"] = {
+                **vendor_advisory,
+                "NoAdvisory": False,  # AlmaLinux doesn't make "won't-fix" commitments
+            }
+
+            # Remove advisory summaries since no AlmaLinux advisory exists
+            if "AdvisorySummary" in new_fixed_in["VendorAdvisory"]:
+                del new_fixed_in["VendorAdvisory"]["AdvisorySummary"]
+
+            if rhel_version_constraint and rhel_version_constraint != "None":
+                # Keep the RHEL version constraint - AlmaLinux likely uses the same fix
+                self.logger.debug(f"Inheriting RHEL version constraint for {package_name}: {rhel_version_constraint}")
+                # Version already copied from fixed_in
+            else:
+                # No RHEL fix available
+                new_fixed_in["Version"] = "None"
+
+        return new_fixed_in
