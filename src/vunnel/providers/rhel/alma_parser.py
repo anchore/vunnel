@@ -11,8 +11,6 @@ from .alma_errata_client import AlmaErrataClient
 
 
 class AlmaParser:
-    """AlmaLinux parser using HTTP-based errata.json files"""
-
     def __init__(self, workspace: Workspace, logger: logging.Logger | None = None, alma_linux_versions: list[str] | None = None):
         if alma_linux_versions is None:
             alma_linux_versions = ["8", "9", "10"]
@@ -29,17 +27,14 @@ class AlmaParser:
             alma_linux_versions=alma_linux_versions,
         )
 
-        # Expose URLs for compatibility
         self.urls = self.errata_client.urls
 
     def download_alma_data(self) -> None:
-        """Download and index AlmaLinux errata data"""
         self.logger.info("downloading AlmaLinux errata data for RHEL provider")
         self.errata_client.delete_errata_files()
         self.errata_client.download()
 
     def _rhsa_to_alsa(self, rhsa_id: str) -> str:
-        """Convert RHSA ID to ALSA ID"""
         if rhsa_id.startswith("RHSA-"):
             return rhsa_id.replace("RHSA-", "ALSA-")
         if rhsa_id.startswith("RHBA-"):
@@ -49,7 +44,6 @@ class AlmaParser:
         return rhsa_id.replace("RH", "AL")
 
     def _normalize_rpm_version(self, version: str) -> str:
-        """Add explicit epoch of '0:' if version doesn't already have one."""
         if version and ":" not in version:
             return f"0:{version}"
         return version
@@ -68,7 +62,6 @@ class AlmaParser:
         """
         alma_advisory_id = self._rhsa_to_alsa(rhsa_id)
 
-        # Fast O(1) lookup using in-memory index
         package_version = self.errata_client.get_package_version(alsa_id=alma_advisory_id, version=version, package_name=package_name)
 
         if package_version:

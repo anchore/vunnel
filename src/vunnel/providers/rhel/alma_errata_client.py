@@ -28,18 +28,15 @@ class AlmaErrataClient:
         self.logger = logger
 
         self._data_dir = os.path.join(self.workspace.input_path, "alma-errata-data")
-        # In-memory index for O(1) ALSA lookups: {version: {alsa_id: {package_name: full_version}}}
         self._alma_index: dict[str, dict[str, dict[str, str]]] = {}
 
     def delete_errata_files(self) -> None:
-        """Remove existing errata data directory"""
         if os.path.exists(self._data_dir):
             import shutil
 
             shutil.rmtree(self._data_dir)
 
     def download(self) -> None:
-        """Download errata.json files and build index"""
         os.makedirs(self._data_dir, exist_ok=True)
 
         for version in self.alma_linux_versions:
@@ -48,7 +45,6 @@ class AlmaErrataClient:
         self._build_index()
 
     def _download_errata_file(self, version: str) -> None:
-        """Download a single errata.json file for the specified version"""
         url = f"{self.base_url}/{version}/errata.json"
         output_path = os.path.join(self._data_dir, f"errata-{version}.json")
 
@@ -63,7 +59,6 @@ class AlmaErrataClient:
         self.logger.debug(f"downloaded {len(response.content)} bytes to {output_path}")
 
     def _build_index(self) -> None:
-        """Build in-memory index for fast ALSA lookups"""
         self.logger.info("building AlmaLinux errata index for fast lookups")
 
         for version in self.alma_linux_versions:
@@ -97,7 +92,6 @@ class AlmaErrataClient:
                         if not pkg_name:
                             continue
 
-                        # Build full version string: epoch:version-release
                         epoch = package.get("epoch", "0")
                         pkg_version = package.get("version", "")
                         release = package.get("release", "")
@@ -134,7 +128,6 @@ class AlmaErrataClient:
         return self._alma_index[version].get(alsa_id)
 
     def get_package_version(self, alsa_id: str, version: str, package_name: str) -> str | None:
-        """Get specific package version from advisory in O(1) time"""
         advisory_data = self.get_advisory_data(alsa_id, version)
         if not advisory_data:
             return None
