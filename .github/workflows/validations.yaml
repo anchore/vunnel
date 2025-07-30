@@ -8,6 +8,9 @@ on:
   # needed when running from forks
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
@@ -21,6 +24,7 @@ jobs:
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -50,6 +54,7 @@ jobs:
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -71,9 +76,10 @@ jobs:
     name: Test Gate
     needs: [Test]
     steps:
-      - run: |
-          result="${{ needs.Test.result }}"
-          if [[ $result == "success" || $result == "skipped" ]]; then
+      - env:
+          TEST_RESULT: ${{ needs.Test.result }}
+        run: |
+          if [[ $TEST_RESULT == "success" || $TEST_RESULT == "skipped" ]]; then
             exit 0
           else
             exit 1
@@ -92,13 +98,17 @@ jobs:
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
 
       - name: Login to ghcr.io
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
+          echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
       - name: Build assets
         run: make build
