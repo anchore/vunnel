@@ -13,17 +13,23 @@ runs:
     - name: Capture vulnerability results
       shell: bash
       working-directory: tests/quality
-      run: make capture provider=${{ inputs.provider }}
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: make capture provider="$PROVIDER"
 
     - name: Validate provider results
       shell: bash
       working-directory: tests/quality
-      run: make validate provider=${{ inputs.provider }}
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: make validate provider="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
       shell: bash
-      run: tar -czvf qg-capture-state-${{ inputs.provider }}.tar.gz -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -32,15 +38,17 @@ runs:
         name: qg-capture-state-${{ inputs.provider }}
         path: qg-capture-state-${{ inputs.provider }}.tar.gz
 
-    - name: Show instructions to debug
+    - name: Show instructions to debug (${{ inputs.provider }})
       if: ${{ failure() }}
       shell: bash
+      env:
+        PROVIDER: ${{ inputs.provider }}
       run: |
-        ARCHIVE_BASENAME=qg-capture-state-${{ inputs.provider }}
-        ARCHIVE_NAME=$ARCHIVE_BASENAME.zip
+        ARCHIVE_BASENAME="qg-capture-state-$PROVIDER"
+        ARCHIVE_NAME="$ARCHIVE_BASENAME.zip"
 
         cat << EOF >> $GITHUB_STEP_SUMMARY
-        ## Troubleshooting '${{ inputs.provider }}' failed run
+        ## Troubleshooting '$PROVIDER' failed run
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
@@ -48,7 +56,7 @@ runs:
         \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality
-        unzip $ARCHIVE_NAME && tar -xzf $ARCHIVE_BASENAME.tar.gz
+        unzip "$ARCHIVE_NAME" && tar -xzf "$ARCHIVE_BASENAME.tar.gz"
         \`\`\`
 
         Now you can debug the provider with yardstick:
