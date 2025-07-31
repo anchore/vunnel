@@ -53,10 +53,3 @@ def silent_remove(path: str, tree: bool = False) -> None:
         # note: errno.ENOENT = no such file or directory
         if e.errno != errno.ENOENT:
             raise
-
-
-def move_dir(src: str, dst: str) -> None:
-    """Move a directory from src to dst, ensuring the destination directory is empty."""
-    if os.path.exists(dst):
-        silent_remove(dst, tree=True)
-    shutil.move(src, dst)
