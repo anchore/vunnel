@@ -301,7 +301,7 @@ class Document(OmitNoneORJSONModel):
 class CSAFDoc(OmitNoneORJSONModel):
     document: Document
     product_tree: ProductTree
-    vulnerabilities: list[Vulnerability] = field(default_factory=list)
+    vulnerabilities: list[Vulnerability]
 
 
 def from_path(path: str) -> CSAFDoc:
