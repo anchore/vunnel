@@ -7,6 +7,32 @@ from vunnel.utils.csaf_types import CSAFDoc
 from vunnel.workspace import Workspace
 
 
+def is_rpm_module_purl(purl: PackageURL) -> bool:
+    # Previously RedHat denoted modules with a custom purl type of rpmmod, but now they use an rpmmod
+    # qualifier on an rpm purl type, so we need to be able to handle either variation
+    if purl.type == "rpmmod":
+        return True
+
+    return bool(isinstance(purl.qualifiers, dict) and purl.qualifiers.get("rpmmod"))
+
+
+def resolve_module_name_from_purl(purl: PackageURL) -> str:
+    if purl.type == "rpmmod":
+        # The prior redhat module purl looked like pkg:rpmmod/redhat/ruby@2.5:8090020230627084142:b46abd14
+        # and we want ruby:2.5 back from that
+        mod_version = purl.version or ""
+        if mod_version and ":" in mod_version:
+            # module versions often look like "2.7:8080020230427102918:63b34585",
+            # but we want something like "2.7", so that "modularity: ruby:2.7" can be
+            # written into the grype DB.
+            mod_version = mod_version.split(":")[0]
+        return f"{purl.name}:{mod_version}"
+
+    # The newer format with an rpmmod qualifier on an rpm purl looks like pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14,
+    # so we can just take the purl components directly
+    return f"{purl.name}:{purl.version}"
+
+
 class CSAFParser:
     """
     CSAFParser is a class that encapsulates transforming CSAF advisory JSON, which is in a broad format
@@ -76,10 +102,10 @@ class CSAFParser:
         purl = doc.product_tree.purl_for_product_id(package)
 
         if purl:
-            if purl.startswith("pkg:rpmmod"):
+            parsed_purl = PackageURL.from_string(purl)
+            if is_rpm_module_purl(parsed_purl):
                 # fpi is a module, not a member of a module; return None; the next pass will find a member of the module if one matches
                 return None, None, None, None
-            parsed_purl = PackageURL.from_string(purl)
             # vunnel fixed versions start with an epoch, which is not part of the PURL version, but instead
             # stored in the PURL qualifiers. If the PURL has an epoch, prepend it to the version.
             epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
@@ -103,13 +129,7 @@ class CSAFParser:
             mod_purl = doc.product_tree.purl_for_product_id(module)
             if mod_purl:
                 parsed_mod_purl = PackageURL.from_string(mod_purl)
-                mod_version = parsed_mod_purl.version or ""
-                if mod_version and ":" in mod_version:
-                    # module versions often look like "2.7:8080020230427102918:63b34585",
-                    # but we want something like "2.7", so that "modularity: ruby:2.7" can be
-                    # written into the grype DB.
-                    mod_version = mod_version.split(":")[0]
-                module = f"{parsed_mod_purl.name}:{mod_version}"
+                module = resolve_module_name_from_purl(parsed_mod_purl)
                 self.logger.trace(f"module: {module} for {fpi} by {mod_purl}")  # type: ignore[attr-defined]
             else:
                 self.logger.trace(f"no module purl for {module} from {fpi}")  # type: ignore[attr-defined]
