@@ -94,9 +94,52 @@ class AlmaVulnerabilityCreator:
 
         Applies transformations in priority order:
         1. AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version
+
+        For example, https://errata.almalinux.org/8/ALSA-2025-A004.html represent the fact that
+        AlmaLinux 8 patched https://access.redhat.com/security/cve/CVE-2025-6019 ahead of RHEL 8,
+        specifically that libblockdev was patched at version 2.28-6.el8.alma.1, whereas RHEL didn't
+        patch until 2.28-7.el8_10 (see https://access.redhat.com/errata/RHSA-2025:9878). Note also
+        that the segment `el8.alma.1` indicates this is an AlmaLinux-specific package version.
+
+            $ grype db search --vuln CVE-2025-6019 | rg ':8'
+            CVE-2025-6019  libblockdev  rpm        almalinux:distro:almalinux:8   < 0:2.28-6.el8.alma.1
+            CVE-2025-6019  libblockdev  rpm        redhat:distro:redhat:8         < 0:2.28-7.el8_10
+
         2. AlmaLinux has corresponding advisory with package entry - use Alma version
+
+        This fixes a class of false positives where AlmaLinux and RHEL both fixed a package in a module,
+        but because the version of RPMs that are part of an RPM module includes a build number, the versions
+        are not comparable between RHEL and AlmaLinux. Generally, RHEL has higher builder numbers. For example,
+        https://errata.almalinux.org/8/ALSA-2023-5259.html fixes mariadb from the 10.3 module at 10.3.39-1.module_el8.8.0+3609+204d4ab0 (note 3609 in the middle)
+        while https://access.redhat.com/errata/RHSA-2023:5259 fixes mariadb for the 10.3 module at
+        10.3.39-1.module+el8.8.0+19673+72b0d35f (note 19673 in the middle). Because 19673 > 3609, this would
+        result in false positives because the patched version on AlmaLinux is actually lower than RHEL's.
+
         3. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
+
+        Here we make the assumption that if Red Hat fixed something, Alma has pulled in the fix. This
+        assumption is necessary because there are numerous advisories where AlmaLinux has a shorter
+        list of packages than RHEL, especially AlmaLinux will often omit the source RPM from the advisory,
+        whereas RHEL data historically centers around the source RPM. For example,
+        for https://access.redhat.com/security/cve/CVE-2007-4559, RHEL has a fix for "python3", specifically
+        'python3-3.6.8-56.el8_9.src.rpm' at https://access.redhat.com/errata/RHSA-2023:7151,
+        but AlmaLinux does not have a package entry for "python3" at https://errata.almalinux.org/8/ALSA-2023-7151.html.
+        Because AlmaLinux fixes a million python3 binary RPMs at 3.6.8-56.el8_9.alma.1, we assume that
+        AlmaLinux has fixed the python3 package as well, even though it is not explicitly listed in the advisory.
+
+        This assumption is important because Grype will match binary RPMs against vulnerabilities disclosed
+        against their source RPM, so we have to assume that the source RPM is fixed.
+
+        TODO: why does this example have a .alma in the RPM version?
+
         4. AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value
+
+        This catches simple cases where there's no RHEL advisory, for example, https://access.redhat.com/security/cve/CVE-2005-2541
+        is not fixed, so there's no AlmaLinux or RHEL advisory.
+
+        This also happens when there is no equivalent ALSA even though there is an RHSA. For example,
+        https://access.redhat.com/errata/RHSA-2019:3517, which fixes https://access.redhat.com/security/cve/CVE-2015-1593
+        for the kernel, has no equivalent in ALSAs (https://errata.almalinux.org/8/ALSA-2019-3517.html is a 404).
 
         Args:
             namespace: The vulnerability namespace (e.g., "rhel:8")
