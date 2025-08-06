@@ -174,16 +174,23 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
             v["Vulnerability"]["Metadata"]["CVE"] = cves
 
         if ns_pkgs_dict and ns_name in ns_pkgs_dict:
-            v["Vulnerability"]["FixedIn"] = [
-                {
+            fixed_in_list = []
+            for x in ns_pkgs_dict[ns_name]:
+                fixed_el = {
                     "Name": x[0],
                     "Version": x[1],
                     "Module": x[2],
                     "VersionFormat": "rpm",  # hard code version format for now
                     "NamespaceName": ns_name,
                 }
-                for x in ns_pkgs_dict[ns_name]
-            ]
+                # add Available object if fix version exists and issued date is available
+                if x[1] != "None" and issued:
+                    fixed_el["Available"] = {
+                        "Date": issued,
+                        "Kind": "advisory"
+                    }
+                fixed_in_list.append(fixed_el)
+            v["Vulnerability"]["FixedIn"] = fixed_in_list
         else:
             logger.warning(f"No affected packages found for {name}, this is unusual")
 
