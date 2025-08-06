@@ -5,78 +5,130 @@
       "Description": "An updated kernel release for Amazon Linux has been made available which prevents speculative execution of indirect branches within the kernel. This release incorporates latest stable open source Linux security improvements to address CVE-2017-5715 within the kernel and builds upon previously incorporated Kernel Page Table Isolation (KPTI) that addressed CVE-2017-5754. Customers must upgrade to the latest Amazon Linux kernel or AMI to effectively mitigate the impact of both CVE-2017-5754 and CVE-2017-5715 on MMU privilege separation (kernel mode vs. user mode) within their instance.Customers with existing Amazon Linux AMI instances should run the following command to ensure they receive the updated package:<i>sudo yum update kernel</i>As is standard per any update of the Linux kernel, after the yum update is complete, a reboot is required for updates to take effect.Please refer to https://aws.amazon.com/security/security-bulletins/AWS-2018-013/ for additional information regarding CVE-2017-5754.Updated on 2018-01-06: Additional KPTI improvements.Updated on 2018-01-09: Updated detailsUpdated on 2018-01-13: Additional fixes for CVE-2017-5715",
       "FixedIn": [
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-debuginfo",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-debuginfo-common-x86_64",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-devel",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-doc",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-headers",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-tools",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-tools-debuginfo",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "kernel-tools-devel",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "perf",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "perf-debuginfo",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "python-perf",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Kind": "advisory"
+          },
           "Name": "python-perf-debuginfo",
           "NamespaceName": "amzn:2",
           "Version": "4.9.76-38.79.amzn2",
@@ -99,5 +151,5 @@
       "Severity": "Critical"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.3.json"
 }
