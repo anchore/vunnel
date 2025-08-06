@@ -14,7 +14,7 @@ from vunnel.result import SQLiteReader
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
 
-DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver"])
+DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver", "date"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
 
 
@@ -111,6 +111,7 @@ class Parser:
                             distro=fixedin["distro"],
                             pkg=fixedin["pkg"],
                             ver=fixedin["ver"],
+                            date=dsa.get("date"),
                         ),
                     )
         else:
@@ -411,6 +412,16 @@ class Parser:
                                         "AdvisorySummary": [],
                                     }
                                     adv_mets[met_ns][met_sev]["neither"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
+
+                                # add Available object if fix version exists and DSA date is available
+                                if fixed_el["Version"] != "None" and matched_dsas:
+                                    # get the date from the first matched DSA (all should have same date for same advisory)
+                                    dsa_date = matched_dsas[0].date
+                                    if dsa_date:
+                                        fixed_el["Available"] = {
+                                            "Date": dsa_date,
+                                            "Kind": "advisory"
+                                        }
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
