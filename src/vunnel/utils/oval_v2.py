@@ -64,6 +64,7 @@ class OVALParserConfig:
     description_xpath_query: str = "{0}metadata/{0}description"
     cve_xpath_query: str = "{0}metadata/{0}advisory/{0}cve"
     criteria_xpath_query: str = "{0}criteria"
+    issued_date_xpath_query: str = "{0}metadata/{0}advisory/{0}issued"
 
 
 @dataclass

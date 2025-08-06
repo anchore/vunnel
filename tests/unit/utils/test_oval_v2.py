@@ -412,6 +412,80 @@ class TestOVALElementParser:
             OVALElementParser._find_with_regex(data, regex)
 
 
+class TestOVALParserConfigXpath:
+    def test_issued_date_xpath_query_default(self, dummy_config):
+        config = OVALParserConfig(
+            platform_regex=None,
+            artifact_regex=None,
+            source_url_xpath_query=None,
+            severity_map=None,
+        )
+        expected_xpath = "{0}metadata/{0}advisory/{0}issued"
+        assert config.issued_date_xpath_query == expected_xpath
+
+    @pytest.mark.parametrize(
+        ("xml_content", "expected_date"),
+        [
+            pytest.param(
+                '<definition xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5">'
+                + '<metadata>'
+                + '<advisory><issued date="2021-04-30"/></advisory>'
+                + '</metadata>'
+                + '</definition>',
+                "2021-04-30",
+                id="with-namespace-issued-date",
+            ),
+            pytest.param(
+                '<definition>'
+                + '<metadata>'
+                + '<advisory><issued date="2021-07-14"/></advisory>'
+                + '</metadata>'
+                + '</definition>',
+                "2021-07-14",
+                id="without-namespace-issued-date",
+            ),
+            pytest.param(
+                '<definition>'
+                + '<metadata>'
+                + '<advisory></advisory>'
+                + '</metadata>'
+                + '</definition>',
+                None,
+                id="no-issued-element",
+            ),
+            pytest.param(
+                '<definition>'
+                + '<metadata>'
+                + '<advisory><issued/></advisory>'
+                + '</metadata>'
+                + '</definition>',
+                None,
+                id="issued-element-no-date-attr",
+            ),
+        ],
+    )
+    def test_extract_issued_date(self, xml_content, expected_date):
+        import defusedxml.ElementTree as ET
+        
+        config = OVALParserConfig(
+            platform_regex=None,
+            artifact_regex=None,
+            source_url_xpath_query=None,
+            severity_map=None,
+        )
+        
+        xml_element = ET.fromstring(xml_content)
+        oval_ns_match = re.search(config.namespace_regex, xml_element.tag)
+        oval_ns = oval_ns_match.group(1) if oval_ns_match and len(oval_ns_match.groups()) > 0 else ""
+        
+        issued_element = xml_element.find(config.issued_date_xpath_query.format(oval_ns))
+        actual_date = None
+        if issued_element is not None and "date" in issued_element.attrib:
+            actual_date = issued_element.attrib["date"]
+        
+        assert actual_date == expected_date
+
+
 class TestIterParse:
     @pytest.mark.parametrize(
         ("content", "tag", "parser_fn", "expected"),
