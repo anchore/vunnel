@@ -466,23 +466,23 @@ class TestOVALParserConfigXpath:
     )
     def test_extract_issued_date(self, xml_content, expected_date):
         import defusedxml.ElementTree as ET
-        
+
         config = OVALParserConfig(
             platform_regex=None,
             artifact_regex=None,
             source_url_xpath_query=None,
             severity_map=None,
         )
-        
+
         xml_element = ET.fromstring(xml_content)
         oval_ns_match = re.search(config.namespace_regex, xml_element.tag)
         oval_ns = oval_ns_match.group(1) if oval_ns_match and len(oval_ns_match.groups()) > 0 else ""
-        
+
         issued_element = xml_element.find(config.issued_date_xpath_query.format(oval_ns))
         actual_date = None
         if issued_element is not None and "date" in issued_element.attrib:
             actual_date = issued_element.attrib["date"]
-        
+
         assert actual_date == expected_date
 
 

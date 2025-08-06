@@ -418,10 +418,7 @@ class Parser:
                                     # get the date from the first matched DSA (all should have same date for same advisory)
                                     dsa_date = matched_dsas[0].date
                                     if dsa_date:
-                                        fixed_el["Available"] = {
-                                            "Date": dsa_date,
-                                            "Kind": "advisory"
-                                        }
+                                        fixed_el["Available"] = {"Date": dsa_date, "Kind": "advisory"}
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)

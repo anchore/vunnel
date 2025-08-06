@@ -224,7 +224,7 @@ class Parser:
         return results
 
     @classmethod
-    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901
+    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901, PLR0912
         cls.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
@@ -303,7 +303,7 @@ class Parser:
                     available = None
                     if vulnerability_obj.issued_date:
                         try:
-                            issued_datetime = datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d")
+                            issued_datetime = datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d")  # noqa: DTZ007 # not a timezone aware datetime
                             available = FixAvailability(Date=issued_datetime, Kind="advisory")
                         except ValueError:
                             cls.logger.debug(

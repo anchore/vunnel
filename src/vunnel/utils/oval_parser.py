@@ -126,7 +126,7 @@ def _parse_severity(def_element, oval_ns, vuln_id: str, config: Config) -> str:
     return severity
 
 
-def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912
+def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912, C901
     oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
 
     def_version = def_element.attrib["version"]
@@ -185,10 +185,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
                 }
                 # add Available object if fix version exists and issued date is available
                 if x[1] != "None" and issued:
-                    fixed_el["Available"] = {
-                        "Date": issued,
-                        "Kind": "advisory"
-                    }
+                    fixed_el["Available"] = {"Date": issued, "Kind": "advisory"}
                 fixed_in_list.append(fixed_el)
             v["Vulnerability"]["FixedIn"] = fixed_in_list
         else:
