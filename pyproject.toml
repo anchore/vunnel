@@ -208,7 +208,7 @@ dev = [
     "radon<7.0,>=5.1",
     "dunamai>=1.15.0,<2.0.0",
     "ruff<1.0.0,>=0.9.2",
-    "yardstick>=0.14.0",
+    "yardstick>=0.14.1",
     "tabulate==0.9.0",
     "tox<5.0.0,>=4.11.3",
     "uv-dynamic-versioning>=0.6.0",

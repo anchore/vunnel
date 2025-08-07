@@ -616,19 +616,6 @@ def build_db(cfg: Config):
 
     logging.info("building DB")
     subprocess.run([GRYPE_DB, "build", "-s", "6", "-v", "-c", ".grype-db.yaml"], check=True)
-    subprocess.run([GRYPE_DB, "package", "-v", "-c", ".grype-db.yaml"], check=True)
-
-    archives = glob.glob(f"{build_dir}/*.tar.zst")
-    if not archives:
-        logging.error("no DB archive found")
-        return
-    if len(archives) > 1:
-        logging.error("multiple DB archives found")
-        return
-
-    archive = archives[0]
-
-    shutil.move(archive, db_archive)
 
 
 if __name__ == "__main__":
