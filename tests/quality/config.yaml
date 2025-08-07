@@ -339,3 +339,27 @@ tests:
       - wolfi:distro:wolfi:rolling
     validations:
       - *default-validations
+
+  - provider: openeuler
+    use_cache: true
+    images:
+      - docker.io/openeuler/openeuler:20.03-lts@sha256:3ef0bc8546fd01b3cef5e3e60982aa62cb415860ea94de98f0748172d7de760c
+      - docker.io/openeuler/openeuler:22.03-lts-sp4@sha256:5be64305cc73d23e4e370d46a7a73d55669474b37a91806d2c09c33ca2b64569
+      - docker.io/openeuler/openeuler:24.03-lts-sp1@sha256:f428823de56ec35902ae46f69235ca622a70d3000030835f7fa4882fe7b33f16
+    expected_namespaces:
+      - openeuler:distro:openeuler:20.03-lts
+      - openeuler:distro:openeuler:20.03-lts-sp1
+      - openeuler:distro:openeuler:20.03-lts-sp2
+      - openeuler:distro:openeuler:20.03-lts-sp3
+      - openeuler:distro:openeuler:20.03-lts-sp4
+      - openeuler:distro:openeuler:22.03-lts
+      - openeuler:distro:openeuler:22.03-lts-sp1
+      - openeuler:distro:openeuler:22.03-lts-sp2
+      - openeuler:distro:openeuler:22.03-lts-sp3
+      - openeuler:distro:openeuler:22.03-lts-sp4
+      - openeuler:distro:openeuler:24.03-lts
+      - openeuler:distro:openeuler:24.03-lts-sp1
+      - openeuler:distro:openeuler:24.03-lts-sp2
+
+    validations:
+      - *default-validations
