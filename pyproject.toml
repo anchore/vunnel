@@ -30,6 +30,7 @@ dependencies = [
     "iso8601<3.0.0,>=2.1.0",
     "zstandard<0.24,>=0.22",
     "packageurl-python<1.0.0,>=0.16.0",
+    "tqdm",
 ]
 
 [project.urls]

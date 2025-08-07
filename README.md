@@ -16,6 +16,7 @@ Supported data sources:
 - Echo (https://advisory.echohq.com/data.json)
 - GitHub Security Advisories (https://api.github.com/graphql)
 - NVD (https://services.nvd.nist.gov/rest/json/cves/2.0)
+- openEuler (https://repo.openeuler.org/security/data/)
 - Oracle (https://linux.oracle.com/security/oval)
 - RedHat (https://www.redhat.com/security/data/oval)
 - SLES (https://ftp.suse.com/pub/projects/security/oval)
@@ -65,6 +66,7 @@ github
 mariner
 minimos
 nvd
+openeuler
 oracle
 rhel
 sles
