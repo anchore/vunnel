@@ -260,6 +260,8 @@ providers:
       bookworm: '12'
       bullseye: '11'
       buster: '10'
+      duke: '15'
+      forky: '14'
       jessie: '8'
       sid: unstable
       stretch: '9'
