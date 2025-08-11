@@ -87,6 +87,7 @@ ubuntu_version_names = {
     "noble": "24.04",
     "oracular": "24.10",
     "plucky": "25.04",
+    "questing": "25.10",
 }
 
 # driver workspace
