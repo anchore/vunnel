@@ -5,9 +5,8 @@ import os
 import shutil
 
 import pytest
-from vunnel import result, workspace
+from vunnel import result, workspace, schema
 from vunnel.providers.chainguard import Config, Provider
-from vunnel.providers.wolfi import parser
 
 
 def test_provider_schema(helpers, disable_get_requests):
@@ -26,13 +25,16 @@ def test_provider_schema(helpers, disable_get_requests):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_wolfi_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",
+        snapshot_prefix="secdb"
     )
 
-    c = Config()
+    c = Config(
+        chainguard_provider_type='wolfi'
+    )
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(
@@ -47,4 +49,32 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
 
     p.update(None)
 
+    workspace.assert_result_snapshots()
+
+# TODO this is not passing, how do these tests work? What is this helpers object?
+def test_vex_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/input",
+        snapshot_prefix="vex"
+    )
+    c = Config(
+        chainguard_provider_type='vex',
+        target_url='https://packages.cgr.dev/chainguard/vex/all.json',
+        schema=schema.OpenVEXSchema(),
+    )
+    # keep all of the default values for the result store, but override the strategy
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(
+        root=workspace.root,
+        config=c,
+    )
+    def mock_download(filename: str):
+        return None
+    monkeypatch.setattr(p.parser, "_download", mock_download)
+    # def mock_index_path():
+    #     return os.path.join(os.path.dirname(os.path.realpath(__file__)), 'test-fixtures/input/vex/all.json')
+    # monkeypatch.setattr(p.parser, "_get_index_path", mock_index_path)
+    p.update(None)
+    # TODO this is comparing to OSV output, which is different
     workspace.assert_result_snapshots()
