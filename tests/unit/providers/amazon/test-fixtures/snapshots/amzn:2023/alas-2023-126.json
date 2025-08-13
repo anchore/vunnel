@@ -6,7 +6,7 @@
       "FixedIn": [
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "device-mapper-multipath",
@@ -16,7 +16,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "device-mapper-multipath-debuginfo",
@@ -26,7 +26,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "device-mapper-multipath-debugsource",
@@ -36,7 +36,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "device-mapper-multipath-devel",
@@ -46,7 +46,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "device-mapper-multipath-libs",
@@ -56,7 +56,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "device-mapper-multipath-libs-debuginfo",
@@ -66,7 +66,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "kpartx",
@@ -76,7 +76,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "kpartx-debuginfo",
@@ -86,7 +86,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "libdmmp",
@@ -96,7 +96,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "libdmmp-debuginfo",
@@ -106,7 +106,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 07 Mar 2023 00:29:00 GMT",
+            "Date": "2023-03-07",
             "Kind": "advisory"
           },
           "Name": "libdmmp-devel",

@@ -6,7 +6,7 @@
       "FixedIn": [
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel",
@@ -16,7 +16,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-debuginfo",
@@ -26,7 +26,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-debuginfo-common-x86_64",
@@ -36,7 +36,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-devel",
@@ -46,7 +46,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-doc",
@@ -56,7 +56,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-headers",
@@ -66,7 +66,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-tools",
@@ -76,7 +76,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-tools-debuginfo",
@@ -86,7 +86,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "kernel-tools-devel",
@@ -96,7 +96,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "perf",
@@ -106,7 +106,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "perf-debuginfo",
@@ -116,7 +116,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "python-perf",
@@ -126,7 +126,7 @@
         },
         {
           "Available": {
-            "Date": "Thu, 11 Jan 2018 21:05:00 GMT",
+            "Date": "2018-01-11",
             "Kind": "advisory"
           },
           "Name": "python-perf-debuginfo",

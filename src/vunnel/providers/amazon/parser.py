@@ -9,7 +9,7 @@ from html.parser import HTMLParser
 import defusedxml.ElementTree as ET
 
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import rpm
+from vunnel.utils import rpm, date
 
 namespace = "amzn"
 
@@ -327,9 +327,14 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         f.VersionFormat = "rpm"
         f.Version = item.ver
         # populate Available object only if there is a fix version available
+        fix_date = None
         if fixed_in:
-            f.Available.Date = alas.pubDate
+            fix_date = date.normalize_date(alas.pubDate)
+        if fix_date:
+            f.Available.Date = fix_date
             f.Available.Kind = "advisory"
         v.FixedIn.append(f)
 
     return v
+
+

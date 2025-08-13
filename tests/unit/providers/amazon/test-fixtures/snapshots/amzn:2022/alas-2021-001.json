@@ -6,7 +6,7 @@
       "FixedIn": [
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim",
@@ -16,7 +16,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-X11",
@@ -26,7 +26,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-X11-debuginfo",
@@ -36,7 +36,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-common",
@@ -46,7 +46,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-common-debuginfo",
@@ -56,7 +56,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-debuginfo",
@@ -66,7 +66,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-debugsource",
@@ -76,7 +76,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-default-editor",
@@ -86,7 +86,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-enhanced",
@@ -96,7 +96,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-enhanced-debuginfo",
@@ -106,7 +106,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-filesystem",
@@ -116,7 +116,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-minimal",
@@ -126,7 +126,7 @@
         },
         {
           "Available": {
-            "Date": "Tue, 26 Oct 2021 02:25:00 GMT",
+            "Date": "2021-10-26",
             "Kind": "advisory"
           },
           "Name": "vim-minimal-debuginfo",
