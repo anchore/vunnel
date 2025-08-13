@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import defusedxml.ElementTree as ET
 
 from vunnel.utils.vulnerability import vulnerability_element
+from vunnel.utils import date
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -185,7 +186,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
                 }
                 # add Available object if fix version exists and issued date is available
                 if x[1] != "None" and issued:
-                    fixed_el["Available"] = {"Date": issued, "Kind": "advisory"}
+                    fixed_el["Available"] = {"Date": date.normalize_date(issued), "Kind": "advisory"}
                 fixed_in_list.append(fixed_el)
             v["Vulnerability"]["FixedIn"] = fixed_in_list
         else:
