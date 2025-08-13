@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as ET
 
-from vunnel.utils.vulnerability import vulnerability_element
 from vunnel.utils import date
+from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
     from collections.abc import Callable

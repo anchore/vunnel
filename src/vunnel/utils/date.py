@@ -2,6 +2,7 @@ import logging
 
 from dateutil.parser import parse as dateutil_parse
 
+
 def normalize_date(date_str: str) -> str | None:
     try:
         parsed_date = dateutil_parse(date_str)

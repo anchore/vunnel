@@ -8,8 +8,8 @@ from html.parser import HTMLParser
 
 import defusedxml.ElementTree as ET
 
+from vunnel.utils import date, rpm
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import rpm, date
 
 namespace = "amzn"
 
@@ -336,5 +336,3 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         v.FixedIn.append(f)
 
     return v
-
-

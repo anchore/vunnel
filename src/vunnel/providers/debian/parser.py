@@ -11,8 +11,8 @@ from typing import Any
 import orjson
 
 from vunnel.result import SQLiteReader
+from vunnel.utils import date, vulnerability
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import vulnerability, date
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver", "date"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
