@@ -3,15 +3,40 @@ from __future__ import annotations
 import copy
 import logging
 import os
+from abc import ABC, abstractmethod
 from urllib.parse import urlparse
+from typing import TYPE_CHECKING
 
 import orjson
 
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
-class Parser:
+
+class CGParser(ABC):
+    '''
+    Define interface that all Chainguard parsers will fulfill
+    '''
+    @abstractmethod
+    def get(self) -> Generator[str, dict]:
+        '''
+        Retrieve security feed entries as vuln_id -> vuln_record
+        '''
+        return None
+
+    @property
+    @abstractmethod
+    def target_url(self) -> str:
+        '''
+        retrieve url of the data feed
+        '''
+        return ""
+
+
+class Parser(CGParser):
     _release_ = "rolling"
     _secdb_dir_ = "secdb"
     _security_reference_url_ = "https://images.chainguard.dev/security"
@@ -137,8 +162,12 @@ class Parser:
                     vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
         return vuln_dict
+    
+    @property
+    def target_url(self):
+        return self.url
 
-    def get(self):
+    def get(self) -> Generator[str, dict]:
         """
         Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
         :return:

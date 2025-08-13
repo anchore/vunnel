@@ -233,6 +233,8 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   chainguard:
+    namespace: chainguard
+    openvex_url: https://packages.cgr.dev/chainguard/vex/all.json
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -249,6 +251,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+    secdb_url: https://packages.cgr.dev/chainguard/security.json
   common:
     import_results:
       enabled: false
