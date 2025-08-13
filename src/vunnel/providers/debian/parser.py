@@ -12,7 +12,7 @@ import orjson
 
 from vunnel.result import SQLiteReader
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import vulnerability
+from vunnel.utils import vulnerability, date
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver", "date"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
@@ -193,26 +193,33 @@ class Parser:
             with open(self.dsa_file_path, encoding="utf-8") as fp:
                 dsa_rec = []
                 line = fp.readline()
+
+                def process_dsa_record():
+                    # process bunch
+                    dsa = self._parse_dsa_record(dsa_lines=dsa_rec)
+
+                    # gather all DSAs with the same base DSA ID so the missing CVEs on some DSAs can be filled in
+                    base_dsa_id_match = re.match(self._base_dsa_id_regex_, dsa["id"])
+                    base_dsa_id = base_dsa_id_match.group(1) if base_dsa_id_match else dsa["id"]
+
+                    if base_dsa_id not in dsa_map:
+                        dsa_map[base_dsa_id] = DSACollection(cves=[], nocves=[])
+
+                    if dsa["cves"]:
+                        dsa_map[base_dsa_id].cves.append(dsa)
+                    else:
+                        dsa_map[base_dsa_id].nocves.append(dsa)
+                    del dsa_rec[:]
+
                 while line:
                     if re.match(self._dsa_start_regex_, line) and dsa_rec:
-                        # process bunch
-                        dsa = self._parse_dsa_record(dsa_lines=dsa_rec)
-
-                        # gather all DSAs with the same base DSA ID so the missing CVEs on some DSAs can be filled in
-                        base_dsa_id_match = re.match(self._base_dsa_id_regex_, dsa["id"])
-                        base_dsa_id = base_dsa_id_match.group(1) if base_dsa_id_match else dsa["id"]
-
-                        if base_dsa_id not in dsa_map:
-                            dsa_map[base_dsa_id] = DSACollection(cves=[], nocves=[])
-
-                        if dsa["cves"]:
-                            dsa_map[base_dsa_id].cves.append(dsa)
-                        else:
-                            dsa_map[base_dsa_id].nocves.append(dsa)
-                        del dsa_rec[:]
+                        process_dsa_record()
 
                     dsa_rec.append(line)
                     line = fp.readline()
+
+                if dsa_rec:
+                    process_dsa_record()
 
             return dsa_map
 
@@ -416,7 +423,7 @@ class Parser:
                                 # add Available object if fix version exists and DSA date is available
                                 if fixed_el["Version"] != "None" and matched_dsas:
                                     # get the date from the first matched DSA (all should have same date for same advisory)
-                                    dsa_date = matched_dsas[0].date
+                                    dsa_date = date.normalize_date(matched_dsas[0].date)
                                     if dsa_date:
                                         fixed_el["Available"] = {"Date": dsa_date, "Kind": "advisory"}
 
