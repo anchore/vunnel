@@ -161,7 +161,7 @@ class MarinerXmlFile:
         # create availability info when a fix exists
         available = None
         if fixed_version != "None" and definition.metadata and definition.metadata.advisory_date:
-            available = FixAvailability(Date=definition.metadata.advisory_date.to_datetime(), Kind="advisory")
+            available = FixAvailability(Date=str(definition.metadata.advisory_date.to_datetime().date()), Kind="advisory")
 
         return FixedIn(
             Name=name,
