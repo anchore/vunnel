@@ -27,7 +27,7 @@ class Config:
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
-    _url = "https://repo.openeuler.org/security/data/csaf/cve/"
+    _url = "https://repo.openeuler.org/security/data/csaf/cve"
     _namespace = "openeuler"
 
     def __init__(self, root: str, config: Config | None = None):

@@ -18,8 +18,6 @@ from vunnel.utils import vulnerability
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    import requests
-
     from vunnel import workspace
 
 
@@ -47,8 +45,30 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def _fetch_data(self, url: str) -> requests.Response:
-        return http.get(f"{self.url}/{url}", self.logger, stream=True, timeout=self.download_timeout)
+    def _fetch_data(self, url: str) -> str:
+        response = http.get(f"{self.url}/{url}", self.logger, timeout=self.download_timeout)
+        if not response or not response.ok:
+            return ""
+        return response.text
+
+    def _fetch_and_write_cve(self, url: str) -> bool:
+        response = http.get(f"{self.url}/{url}", self.logger, timeout=self.download_timeout)
+        if not response or not response.ok:
+            return False
+        try:
+            # store cves by year
+            year = url.split("/")[0]
+            year_dir = self.advisories_dir_path / year
+            os.makedirs(year_dir, exist_ok=True)
+            # write into json files
+            cve_file = self.advisories_dir_path / url
+            with open(cve_file, "w", encoding="utf-8") as fp:
+                fp.write(response.text)
+        except Exception as e:
+            self.logger.warning(f"Failed to download {url}: {e}")
+            return False
+
+        return True
 
     def _download(self) -> None:
         """
@@ -58,31 +78,18 @@ class Parser:
         # download cve index.txt
         try:
             self.logger.info(f"downloading {self.namespace} cve index.txt")
-            files = self._fetch_data(self._vuln_index).text.splitlines()
+            files = self._fetch_data(self._vuln_index).splitlines()
         except Exception:
             self.logger.exception(f"Error downloading {self.namespace} advisories from {self.url}")
             raise
         # download all cve files, for example, `2025/csaf-openeuler-cve-2025-0237.json`
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = {executor.submit(self._fetch_data, file): file for file in files}
+            futures = {executor.submit(self._fetch_and_write_cve, file): file for file in files}
             for future in tqdm(as_completed(futures), total=len(files), desc=f"Downloading {self.namespace} CVE files"):
                 file = futures[future]
-                try:
-                    data = future.result()
-                    if not data:
-                        continue
-                    # store cves by year
-                    year = file.split("/")[0]
-                    if not os.path.exists(self.advisories_dir_path / year):
-                        os.makedirs(self.advisories_dir_path / year, exist_ok=True)
-                    # write into json files
-                    cve_file = self.advisories_dir_path / file
-                    with open(cve_file, "wb") as fp:
-                        fp.write(data.content)
-                    # record all stored file paths
+                # record all stored file paths
+                if future.result():
                     self.cves.append(file)
-                except Exception as e:
-                    self.logger.warning(f"Failed to download {file}: {e}")
 
     def _get_cve_link(self, references: list[dict[str, str]], cve_id: str) -> str:
         for ref in references:
