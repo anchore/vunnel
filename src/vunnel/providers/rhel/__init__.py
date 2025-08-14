@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 
+from .alma_parser import AlmaVulnerabilityCreator
 from .parser import Parser
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ class Config:
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
     rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
     ignore_hydra_errors: bool = False
+    include_alma_fixes: bool = True
 
 
 class Provider(provider.Provider):
@@ -50,7 +52,10 @@ class Provider(provider.Provider):
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
             skip_download=self.config.runtime.skip_download,
+            include_alma_fixes=self.config.include_alma_fixes,
         )
+
+        self.alma_vulnerability_creator = AlmaVulnerabilityCreator(alma_parser=self.parser.alma_parser, logger=self.logger)
 
     @classmethod
     def name(cls) -> str:
@@ -61,15 +66,27 @@ class Provider(provider.Provider):
         return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        self.parser.download_alma_data()
+
         with self.results_writer() as writer:
             for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
                 namespace = namespace.lower()
                 vuln_id = vuln_id.lower()
+
                 writer.write(
                     identifier=os.path.join(namespace, vuln_id),
                     schema=self.__schema__,
                     payload=record,
                 )
+
+                alma_record = self.alma_vulnerability_creator.create_alma_vulnerability_copy(namespace, record, self.config.include_alma_fixes)
+                if alma_record:
+                    alma_namespace = alma_record["Vulnerability"]["NamespaceName"]
+                    writer.write(
+                        identifier=os.path.join(alma_namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload=alma_record,
+                    )
         if len(writer) == 0 and self.config.runtime.skip_download:
             raise RuntimeError("skip download used on empty workspace")
         return self.parser.urls, len(writer)
