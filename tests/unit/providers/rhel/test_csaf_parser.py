@@ -123,7 +123,7 @@ def test_best_version_module_from_fpis_multi_platform(csaf_parser, fixture_dir, 
 )
 def test_is_rpm_module_purl(purl: str, expected: bool):
     assert is_rpm_module_purl(PackageURL.from_string(purl)) == expected
-    
+
 
 @pytest.mark.parametrize(
     "purl,expected",

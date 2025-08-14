@@ -42,5 +42,73 @@
         "id": "RHSA-2022:6158"
       }
     ]
+  },
+  {
+    "updateinfo_id": "ALSA-2023:1111",
+    "type": "security",
+    "severity": "Important",
+    "title": "Multiple packages same version test",
+    "pkglist": {
+      "packages": [
+        {
+          "name": "package-a",
+          "epoch": "1",
+          "version": "2.0.0",
+          "release": "1.el8"
+        },
+        {
+          "name": "package-b",
+          "epoch": "1",
+          "version": "2.0.0",
+          "release": "1.el8"
+        },
+        {
+          "name": "package-c",
+          "epoch": "1",
+          "version": "2.0.0",
+          "release": "1.el8"
+        }
+      ]
+    },
+    "references": [
+      {
+        "type": "rhsa",
+        "id": "RHSA-2023:1111"
+      }
+    ]
+  },
+  {
+    "updateinfo_id": "ALSA-2023:2222",
+    "type": "security",
+    "severity": "Important",
+    "title": "Multiple packages different versions test",
+    "pkglist": {
+      "packages": [
+        {
+          "name": "package-x",
+          "epoch": "0",
+          "version": "1.0.0",
+          "release": "1.el8"
+        },
+        {
+          "name": "package-y",
+          "epoch": "0",
+          "version": "1.1.0",
+          "release": "1.el8"
+        },
+        {
+          "name": "package-z",
+          "epoch": "0",
+          "version": "1.0.0",
+          "release": "1.el8"
+        }
+      ]
+    },
+    "references": [
+      {
+        "type": "rhsa",
+        "id": "RHSA-2023:2222"
+      }
+    ]
   }
 ]
