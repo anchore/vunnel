@@ -72,6 +72,43 @@ class AlmaParser:
         self.logger.debug(f"no fix found for package {package_name} in Alma advisory {alma_advisory_id}")
         return None
 
+    def consensus_version(self, advisory_id: str) -> str | None:
+        """
+        Check if all packages referenced by an advisory are fixed at the same version.
+
+        Args:
+            advisory_id: Advisory ID (e.g., "ALSA-2022:6158" or "RHSA-2022:6158")
+
+        Returns:
+            The consensus version if all packages have the same version, None otherwise
+        """
+        # Convert RHSA to ALSA if needed
+        alma_advisory_id = self._rhsa_to_alsa(advisory_id) if advisory_id.startswith(("RHSA-", "RHBA-", "RHEA-")) else advisory_id
+
+        # Check all AlmaLinux versions for this advisory
+        for version in self.alma_linux_versions:
+            advisory_data = self.errata_client.get_advisory_data(alma_advisory_id, version)
+
+            if advisory_data:
+                # Get all package versions from this advisory
+                package_versions = list(advisory_data.values())
+
+                if not package_versions:
+                    continue
+
+                # Normalize all versions
+                normalized_versions = [self._normalize_rpm_version(v) for v in package_versions]
+
+                # Check if all versions are the same
+                unique_versions = set(normalized_versions)
+                if len(unique_versions) == 1:
+                    return normalized_versions[0]
+                # Found the advisory but packages have different versions
+                return None
+
+        # Advisory not found in any version
+        return None
+
 
 class AlmaVulnerabilityCreator:
     """Handles creation of AlmaLinux vulnerability records from RHEL records."""
@@ -335,8 +372,15 @@ class AlmaVulnerabilityCreator:
                 alma_fix_version = alma_advisory_data.get(package_name)
 
                 if not alma_fix_version:
-                    # Case 3: Advisory exists but no package entry - inherit RHEL version
-                    new_fixed_in = copy.deepcopy(fixed_in)
+                    # Check for consensus version first
+                    consensus_ver = self.alma_parser.consensus_version(alma_advisory_id)
+                    if consensus_ver:
+                        # Use consensus version if available
+                        new_fixed_in = copy.deepcopy(fixed_in)
+                        new_fixed_in["Version"] = consensus_ver
+                    else:
+                        # Case 3: Advisory exists but no package entry - inherit RHEL version
+                        new_fixed_in = copy.deepcopy(fixed_in)
 
                     # Create updated advisory summary
                     updated_advisory = copy.deepcopy(advisory)
@@ -353,7 +397,7 @@ class AlmaVulnerabilityCreator:
 
         return None
 
-    def _try_inherit_rhel_version(self, fixed_in: dict[str, Any], rhel_version: str, package_name: str) -> dict[str, Any]:
+    def _try_inherit_rhel_version(self, fixed_in: dict[str, Any], _rhel_version: str, package_name: str) -> dict[str, Any]:
         """Case 4: AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value"""
         vendor_advisory = fixed_in.get("VendorAdvisory", {})
         rhel_has_no_advisory = vendor_advisory.get("NoAdvisory", False)
