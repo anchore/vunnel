@@ -337,7 +337,6 @@ class Parser:
                                     sev = "High"
                                 elif distro_record["urgency"] in [
                                     "unimportant",
-                                    "end-of-life",
                                 ]:
                                     sev = "Negligible"
                                 elif nvd_severity:  # no match to urgency found
