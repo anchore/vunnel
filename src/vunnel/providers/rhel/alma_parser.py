@@ -110,10 +110,22 @@ class AlmaVulnerabilityCreator:
         This fixes a class of false positives where AlmaLinux and RHEL both fixed a package in a module,
         but because the version of RPMs that are part of an RPM module includes a build number, the versions
         are not comparable between RHEL and AlmaLinux. Generally, RHEL has higher builder numbers. For example,
-        https://errata.almalinux.org/8/ALSA-2023-5259.html fixes mariadb from the 10.3 module at 10.3.39-1.module_el8.8.0+3609+204d4ab0 (note 3609 in the middle)
+        https://errata.almalinux.org/8/ALSA-2023-5259.html fixes mariadb from the 10.3 module
+        at 10.3.39-1.module_el8.8.0+3609+204d4ab0 (note 3609 in the middle)
         while https://access.redhat.com/errata/RHSA-2023:5259 fixes mariadb for the 10.3 module at
         10.3.39-1.module+el8.8.0+19673+72b0d35f (note 19673 in the middle). Because 19673 > 3609, this would
         result in false positives because the patched version on AlmaLinux is actually lower than RHEL's.
+
+            $ grype db search --vuln CVE-2022-32084 | rg ':8'
+            CVE-2022-32084  mariadb  rpm        almalinux:distro:almalinux:8  < 3:10.3.39-1.module_el8.8.0+3609+204d4ab0
+            CVE-2022-32084  mariadb  rpm        almalinux:distro:almalinux:8  < 3:10.5.22-1.module_el8.8.0+3620+5d452900
+            CVE-2022-32084  mariadb  rpm        redhat:distro:redhat:8        < 3:10.3.39-1.module+el8.8.0+19673+72b0d35f
+            CVE-2022-32084  mariadb  rpm        redhat:distro:redhat:8        < 3:10.5.22-1.module+el8.8.0+20134+a92c7654
+            (one row for mariadb 10.3, one for mariadb 10.5)
+
+            $ grype db search --vuln CVE-2007-4559 --pkg python38 | rg ':8'
+            CVE-2007-4559  python38  rpm        almalinux:distro:almalinux:8  < 0:3.8.17-2.module_el8.9.0+3633+e453b53a
+            CVE-2007-4559  python38  rpm        redhat:distro:redhat:8        < 0:3.8.17-2.module+el8.9.0+19642+a12b4af6
 
         3. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
 
@@ -127,10 +139,15 @@ class AlmaVulnerabilityCreator:
         Because AlmaLinux fixes a million python3 binary RPMs at 3.6.8-56.el8_9.alma.1, we assume that
         AlmaLinux has fixed the python3 package as well, even though it is not explicitly listed in the advisory.
 
+            $ grype db search --vuln CVE-2007-4559 --pkg python3.11 | rg ':8'
+            CVE-2007-4559  python3.11  rpm        almalinux:distro:almalinux:8  < 0:3.11.5-1.el8_9
+            CVE-2007-4559  python3.11  rpm        redhat:distro:redhat:8        < 0:3.11.5-1.el8_9
+
         This assumption is important because Grype will match binary RPMs against vulnerabilities disclosed
         against their source RPM, so we have to assume that the source RPM is fixed.
 
         TODO: why does this example have a .alma in the RPM version?
+        Asked at https://chat.almalinux.org/almalinux/pl/fbfdfbfnnff1drygixygsiouee
 
         4. AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value
 
@@ -140,6 +157,10 @@ class AlmaVulnerabilityCreator:
         This also happens when there is no equivalent ALSA even though there is an RHSA. For example,
         https://access.redhat.com/errata/RHSA-2019:3517, which fixes https://access.redhat.com/security/cve/CVE-2015-1593
         for the kernel, has no equivalent in ALSAs (https://errata.almalinux.org/8/ALSA-2019-3517.html is a 404).
+
+            $ grype db search --vuln CVE-2015-1593 --pkg kernel | rg ':8'
+            CVE-2015-1593  kernel   rpm        almalinux:distro:almalinux:8  < 0:4.18.0-147.el8
+            CVE-2015-1593  kernel   rpm        redhat:distro:redhat:8        < 0:4.18.0-147.el8
 
         Args:
             namespace: The vulnerability namespace (e.g., "rhel:8")
