@@ -1464,6 +1464,15 @@ wheels = [
 ]
 
 [[package]]
+name = "types-python-dateutil"
+version = "2.9.0.20250809"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/53/07dac71db45fb6b3c71c2fd29a87cada2239eac7ecfb318e6ebc7da00a3b/types_python_dateutil-2.9.0.20250809.tar.gz", hash = "sha256:69cbf8d15ef7a75c3801d65d63466e46ac25a0baa678d89d0a137fc31a608cc1", size = 15820 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/5e/67312e679f612218d07fcdbd14017e6d571ce240a5ba1ad734f15a8523cc/types_python_dateutil-2.9.0.20250809-py3-none-any.whl", hash = "sha256:768890cac4f2d7fd9e0feb6f3217fce2abbfdfc0cadd38d11fba325a815e4b9f", size = 17707 },
+]
+
+[[package]]
 name = "types-pyyaml"
 version = "6.0.12.20250402"
 source = { registry = "https://pypi.org/simple" }
@@ -1607,6 +1616,7 @@ dev = [
     { name = "ruff" },
     { name = "tabulate" },
     { name = "tox" },
+    { name = "types-python-dateutil" },
     { name = "types-pyyaml" },
     { name = "types-requests" },
     { name = "uv-dynamic-versioning" },
@@ -1654,6 +1664,7 @@ dev = [
     { name = "ruff", specifier = ">=0.9.2,<1.0.0" },
     { name = "tabulate", specifier = "==0.9.0" },
     { name = "tox", specifier = ">=4.11.3,<5.0.0" },
+    { name = "types-python-dateutil", specifier = ">=2.9.0.20250809" },
     { name = "types-pyyaml", specifier = ">=6.0.12.5,<7.0.0.0" },
     { name = "types-requests", specifier = ">=2.28.11.7,<3.0.0.0" },
     { name = "uv-dynamic-versioning", specifier = ">=0.6.0" },

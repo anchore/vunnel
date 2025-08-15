@@ -63,6 +63,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "bind-devel",
@@ -70,6 +74,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "bind-sdb",
@@ -77,6 +85,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "bind-libbind-devel",
@@ -84,6 +96,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "bind",
@@ -91,6 +107,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "caching-nameserver",
@@ -98,6 +118,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "bind-chroot",
@@ -105,6 +129,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "bind-libs",
@@ -112,6 +140,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:5",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2007-06-26",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                 ],
                             ),
@@ -155,6 +187,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2018-10-12",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "kernel-uek",
@@ -162,6 +198,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2018-10-12",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "kernel-uek-firmware",
@@ -169,6 +209,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2018-10-12",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "kernel-uek-debug-devel",
@@ -176,6 +220,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2018-10-12",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "kernel-uek-devel",
@@ -183,6 +231,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2018-10-12",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                     {
                                         "Name": "kernel-uek-debug",
@@ -190,6 +242,10 @@ from vunnel.providers.oracle import Config, Provider, parser
                                         "VersionFormat": "rpm",
                                         "NamespaceName": "ol:6",
                                         "Module": None,
+                                        "Available": {
+                                            "Date": "2018-10-12",
+                                            "Kind": "advisory"
+                                        },
                                     },
                                 ],
                             ),
