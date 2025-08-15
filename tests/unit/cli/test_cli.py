@@ -233,6 +233,8 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   chainguard:
+    chainguard_provider_type: wolfi
+    namespace: chainguard
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -249,6 +251,10 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+    schema:
+      url: https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json
+      version: 1.0.2
+    target_url: https://packages.cgr.dev/chainguard/security.json
   common:
     import_results:
       enabled: false

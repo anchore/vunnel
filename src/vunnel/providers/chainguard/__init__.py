@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.providers.wolfi.parser import Parser
+from .vex_parser import VexParser
 
 if TYPE_CHECKING:
     import datetime
@@ -20,14 +21,14 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    chainguard_provider_type: str = 'wolfi'
+    namespace: str = "chainguard"
+    target_url: str = 'https://packages.cgr.dev/chainguard/security.json'
+    schema: schema.Schema = schema.OSSchema()
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
-    __distribution_version__ = int(__schema__.major_version)
 
-    _url = "https://packages.cgr.dev/chainguard/security.json"
-    _namespace = "chainguard"
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -36,15 +37,23 @@ class Provider(provider.Provider):
         self.config = config
 
         self.logger.debug(f"config: {config}")
+        self._distribution_version__ = int(config.schema.major_version)
 
-        self.parser = Parser(
+        # user config to determine which parser to use
+        if config.chainguard_provider_type == 'wolfi':
+            parser = Parser
+        elif config.chainguard_provider_type == 'vex':
+            parser = VexParser
+        else:
+            raise Exception(f"invalid provider {config.chainguard_provider_type}")
+
+        self.parser = parser(
             workspace=self.workspace,
-            url=self._url,
-            namespace=self._namespace,
+            url=self.config.target_url,
+            namespace=self.config.namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
-
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)
 
@@ -58,9 +67,9 @@ class Provider(provider.Provider):
             for release, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
                     writer.write(
-                        identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                        schema=self.__schema__,
+                        identifier=os.path.join(f"{self.config.namespace.lower()}:{release.lower()}", vuln_id),
+                        schema=self.config.schema,
                         payload=record,
                     )
 
-        return [self._url], len(writer)
+        return [self.config.target_url], len(writer)
