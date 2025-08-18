@@ -36,7 +36,25 @@ class TestAlmaInheritanceCases:
 
             # Create mock errata-8.json file with all test scenarios
             mock_errata_8 = [
-                # Scenario 3: AlmaLinux has corresponding advisory with specific package version
+                # Scenario 1: AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version
+                {
+                    "updateinfo_id": "ALSA-2025:A004",
+                    "type": "security",
+                    "severity": "Critical",
+                    "title": "Critical: vulnerable-pkg security update",
+                    "pkglist": {"packages": [{"name": "vulnerable-pkg", "epoch": "0", "version": "2.1.0", "release": "1.el8.alma"}]},
+                    "references": [],  # Alma-specific, no RHSA reference
+                },
+                # Scenario 1: Another A-prefixed advisory (libblockdev example from implementation docs)
+                {
+                    "updateinfo_id": "ALSA-2025:A005",
+                    "type": "security",
+                    "severity": "Critical",
+                    "title": "Critical: libblockdev security update",
+                    "pkglist": {"packages": [{"name": "libblockdev", "epoch": "0", "version": "2.28", "release": "6.el8.alma.1"}]},
+                    "references": [],  # A-prefixed advisory, no RHSA reference
+                },
+                # Scenario 2: AlmaLinux has corresponding advisory with package entry - use Alma version
                 {
                     "updateinfo_id": "ALSA-2022:6158",
                     "type": "security",
@@ -57,37 +75,19 @@ class TestAlmaInheritanceCases:
                                 "name": "package-a",  # Different package, not httpd
                                 "epoch": "0",
                                 "version": "2.4.37",
-                                "release": "21.el8",
+                                "release": "21.el8.alma.1",
                             },
                             {
                                 "name": "package-b",  # Another package with same version
                                 "epoch": "0",
                                 "version": "2.4.37",
-                                "release": "21.el8",
+                                "release": "21.el8.alma.1",
                             }
                         ]
                     },
                     "references": [{"type": "rhsa", "id": "RHSA-2021:1809"}],
                 },
-                # Scenario 1: AlmaLinux-specific advisory with A prefix
-                {
-                    "updateinfo_id": "ALSA-2025:A004",
-                    "type": "security",
-                    "severity": "Critical",
-                    "title": "Critical: vulnerable-pkg security update",
-                    "pkglist": {"packages": [{"name": "vulnerable-pkg", "epoch": "0", "version": "2.1.0", "release": "1.el8.alma"}]},
-                    "references": [],  # Alma-specific, no RHSA reference
-                },
-                # Scenario 5: AlmaLinux-specific fix with lower version than RHEL
-                {
-                    "updateinfo_id": "ALSA-2025:A005",
-                    "type": "security",
-                    "severity": "Critical",
-                    "title": "Critical: libblockdev security update",
-                    "pkglist": {"packages": [{"name": "libblockdev", "epoch": "0", "version": "2.28", "release": "6.el8.alma.1"}]},
-                    "references": [],  # Alma-specific, no RHSA reference
-                },
-                # Scenario 6: Regular RHEL advisory with higher version number
+                # Scenario 2: Regular AlmaLinux advisory with package entry (RHEL counterpart to A005)
                 {
                     "updateinfo_id": "ALSA-2025:9878",
                     "type": "security",
@@ -96,7 +96,7 @@ class TestAlmaInheritanceCases:
                     "pkglist": {"packages": [{"name": "libblockdev", "epoch": "0", "version": "2.28", "release": "7.el8_10"}]},
                     "references": [{"type": "rhsa", "id": "RHSA-2025:9878"}],
                 },
-                # Scenario 4: No corresponding advisory - handled by absence in data
+                # Scenario 4: Fall back to RHEL version - handled by absence of matching advisory data
             ]
 
             errata_file = os.path.join(alma_dir, "errata-8.json")
@@ -155,11 +155,11 @@ class TestAlmaInheritanceCases:
         assert advisory["ID"] == "ALSA-2025:A004"
         assert advisory["Link"] == "https://errata.almalinux.org/8/ALSA-2025-A004.html"
 
-    def test_case_2_alma_advisory_exists_no_package_entry(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+    def test_case_3_alma_advisory_consensus_version(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
         """
         Case 3: AlmaLinux has corresponding advisory but no entry for this specific package, with consensus version.
         - RHEL has RHSA-2021:1809 with httpd package
-        - AlmaLinux has ALSA-2021:1809 with packages at consensus version 0:2.4.37-21.el8
+        - AlmaLinux has ALSA-2021:1809 with packages at consensus version 0:2.4.37-21.el8.alma.1
         - Should use consensus version from Alma advisory
         """
         provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
@@ -191,7 +191,7 @@ class TestAlmaInheritanceCases:
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
 
         # Should use consensus version from AlmaLinux advisory
-        assert fixed_in["Version"] == "0:2.4.37-21.el8"
+        assert fixed_in["Version"] == "0:2.4.37-21.el8.alma.1"
         assert fixed_in["VendorAdvisory"]["NoAdvisory"] is False
 
         # Advisory metadata should be converted to Alma format
@@ -199,9 +199,9 @@ class TestAlmaInheritanceCases:
         assert advisory["ID"] == "ALSA-2021:1809"
         assert advisory["Link"] == "https://errata.almalinux.org/8/ALSA-2021-1809.html"
 
-    def test_case_3_alma_advisory_with_specific_package_version(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+    def test_case_2_alma_advisory_with_package_entry(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
         """
-        Case 3: AlmaLinux has corresponding advisory with specific fix version for the package.
+        Case 2: AlmaLinux has corresponding advisory with package entry - use Alma version.
         - RHEL has RHSA-2022:6158 with php package
         - AlmaLinux has ALSA-2022:6158 with php package and specific version
         - Should use AlmaLinux version
@@ -340,7 +340,7 @@ class TestAlmaInheritanceCases:
                             ]
                         }
                     },
-                    "expected_version": "0:2.4.37-21.el8",  # Use consensus version from Alma advisory
+                    "expected_version": "0:2.4.37-21.el8.alma.1",  # Use consensus version from Alma advisory
                     "expected_advisory": "ALSA-2021:1809",
                     "expected_no_advisory": False,
                 },
