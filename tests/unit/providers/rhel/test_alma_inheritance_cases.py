@@ -495,10 +495,10 @@ class TestAlmaInheritanceCases:
         # Should not have advisory summary since no AlmaLinux advisory exists
         assert "AdvisorySummary" not in fixed_in["VendorAdvisory"]
 
-    def test_inherit_rhel_none_version_when_no_alma_advisory(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+    def test_inherit_rhel_no_fix_status(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
         """
-        Test case where RHEL has no fix (Version="None") and no AlmaLinux advisory exists.
-        Should inherit the "None" version.
+        Test case where RHEL has no fix (Version="None", NoAdvisory=True) and no AlmaLinux advisory exists.
+        Should inherit RHEL's "no fix" status completely.
         """
         provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
 

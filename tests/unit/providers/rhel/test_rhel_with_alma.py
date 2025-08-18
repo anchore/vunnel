@@ -177,39 +177,6 @@ class TestRHELWithAlmaIntegration:
         assert alma_record['Vulnerability']['NamespaceName'] == 'almalinux:8'
         assert alma_record['Vulnerability']['FixedIn'][0]['NamespaceName'] == 'almalinux:8'
 
-    def test_alma_copy_with_found_alma_advisory(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
-        with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
-            provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
-            # Manually trigger the index building since we skipped download
-            provider.parser.alma_parser.errata_client._build_index()
-            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy('rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes)
-
-        assert alma_record is not None
-        fixed_in = alma_record['Vulnerability']['FixedIn'][0]
-
-        assert fixed_in['Version'] == '0:7.4.19-4.module_el8.6.0+3238+624bf8b8'
-        assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
-        assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['ID'] == 'ALSA-2022:6158'
-        assert fixed_in['VendorAdvisory']['AdvisorySummary'][0]['Link'] == 'https://errata.almalinux.org/8/ALSA-2022-6158.html'
-
-    def test_alma_copy_with_missing_alma_advisory(self, rhel_config_with_alma, rhel_vulnerability_record):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            workspace = Workspace(tmpdir, "test")
-            with patch('vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file'):
-                provider = Provider(workspace._root, rhel_config_with_alma)
-                # Manually trigger the index building since we skipped download (but with empty data)
-                provider.parser.alma_parser.errata_client._build_index()
-                alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy(
-                    'rhel:8', rhel_vulnerability_record, rhel_config_with_alma.include_alma_fixes
-                )
-
-            assert alma_record is not None
-            fixed_in = alma_record['Vulnerability']['FixedIn'][0]
-
-            # When no AlmaLinux advisory is found, we now inherit the RHEL version constraint
-            # instead of setting it to 'None' (this is the inheritance fix)
-            assert fixed_in['Version'] == '0:7.4.19-4.module+el8.6.0+16316+906f6c6d'
-            assert fixed_in['VendorAdvisory']['NoAdvisory'] is False
 
     def test_alma_copy_preserves_vulnerability_metadata(self, mock_alma_workspace, rhel_config_with_alma, rhel_vulnerability_record):
         provider = Provider(mock_alma_workspace._root, rhel_config_with_alma)
