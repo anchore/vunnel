@@ -1,10 +1,10 @@
 """
 Test cases for the 4 AlmaLinux inheritance scenarios described:
 
-1. AlmaLinux has a fix that RHEL doesn't (Alma-specific advisory with A prefix)
-2. AlmaLinux has corresponding advisory but no package entry (use RHEL version)
-3. AlmaLinux has corresponding advisory with specific package version (use Alma version)
-4. AlmaLinux has no corresponding advisory (version = "None", NoAdvisory = True)
+1. AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version
+2. AlmaLinux has corresponding advisory with package entry - use Alma version
+3. AlmaLinux advisory exists but no package entry, with consensus version - use consensus version
+4. Fall back to RHEL version - inherit RHEL version and advisory information
 """
 
 import copy
@@ -45,7 +45,7 @@ class TestAlmaInheritanceCases:
                     "pkglist": {"packages": [{"name": "php", "epoch": "0", "version": "7.4.19", "release": "4.module_el8.6.0+3238+624bf8b8"}]},
                     "references": [{"type": "rhsa", "id": "RHSA-2022:6158"}],
                 },
-                # Scenario 2: AlmaLinux has corresponding advisory but no package entry for our test package
+                # Scenario 3: AlmaLinux has corresponding advisory but no package entry, with consensus version
                 {
                     "updateinfo_id": "ALSA-2021:1809",
                     "type": "security",
@@ -54,10 +54,16 @@ class TestAlmaInheritanceCases:
                     "pkglist": {
                         "packages": [
                             {
-                                "name": "other-package",  # Different package, not httpd
+                                "name": "package-a",  # Different package, not httpd
                                 "epoch": "0",
-                                "version": "1.0.0",
-                                "release": "1.el8",
+                                "version": "2.4.37",
+                                "release": "21.el8",
+                            },
+                            {
+                                "name": "package-b",  # Another package with same version
+                                "epoch": "0",
+                                "version": "2.4.37",
+                                "release": "21.el8",
                             }
                         ]
                     },
@@ -151,10 +157,10 @@ class TestAlmaInheritanceCases:
 
     def test_case_2_alma_advisory_exists_no_package_entry(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
         """
-        Case 2: AlmaLinux has corresponding advisory but no entry for this specific package.
+        Case 3: AlmaLinux has corresponding advisory but no entry for this specific package, with consensus version.
         - RHEL has RHSA-2021:1809 with httpd package
-        - AlmaLinux has ALSA-2021:1809 but only for other-package, not httpd
-        - Should inherit RHEL version
+        - AlmaLinux has ALSA-2021:1809 with packages at consensus version 0:2.4.37-21.el8
+        - Should use consensus version from Alma advisory
         """
         provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
 
@@ -184,8 +190,8 @@ class TestAlmaInheritanceCases:
         assert alma_record is not None
         fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
 
-        # Should inherit RHEL version since AlmaLinux advisory doesn't have this package
-        assert fixed_in["Version"] == "0:2.4.37-21.module+el8.2.0+5059+3eb3af25"
+        # Should use consensus version from AlmaLinux advisory
+        assert fixed_in["Version"] == "0:2.4.37-21.el8"
         assert fixed_in["VendorAdvisory"]["NoAdvisory"] is False
 
         # Advisory metadata should be converted to Alma format
@@ -321,7 +327,7 @@ class TestAlmaInheritanceCases:
                     "expected_advisory": "ALSA-2025:A004",
                     "expected_no_advisory": False,
                 },
-                # Case 2: Alma advisory exists, no package entry
+                # Case 3: Alma advisory exists, no package entry, with consensus version
                 {
                     "rhel": {
                         "Vulnerability": {
@@ -334,11 +340,11 @@ class TestAlmaInheritanceCases:
                             ]
                         }
                     },
-                    "expected_version": "0:2.4.37-21.el8",  # Inherit RHEL
+                    "expected_version": "0:2.4.37-21.el8",  # Use consensus version from Alma advisory
                     "expected_advisory": "ALSA-2021:1809",
                     "expected_no_advisory": False,
                 },
-                # Case 3: Alma advisory with package entry
+                # Case 2: Alma advisory with package entry
                 {
                     "rhel": {
                         "Vulnerability": {
@@ -353,6 +359,23 @@ class TestAlmaInheritanceCases:
                     },
                     "expected_version": "0:7.4.19-4.module_el8.6.0+3238+624bf8b8",  # Use Alma
                     "expected_advisory": "ALSA-2022:6158",
+                    "expected_no_advisory": False,
+                },
+                # Case 4: No corresponding Alma advisory - fall back to RHEL
+                {
+                    "rhel": {
+                        "Vulnerability": {
+                            "FixedIn": [
+                                {
+                                    "Name": "missing-pkg",
+                                    "Version": "0:1.2.3-4.el8",
+                                    "VendorAdvisory": {"NoAdvisory": False, "AdvisorySummary": [{"ID": "RHSA-2023:9999"}]},
+                                }
+                            ]
+                        }
+                    },
+                    "expected_version": "0:1.2.3-4.el8",  # Fall back to RHEL version
+                    "expected_advisory": "ALSA-2023:9999",  # RHSA converted to ALSA
                     "expected_no_advisory": False,
                 },
             ]
