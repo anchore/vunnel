@@ -257,7 +257,7 @@ tests:
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
     validations:
       - <<: *default-validations
-        # TODO: docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+        # docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
         # has no matches before 2022 that prove Alma is different from RHEL.
         max_year: 2022
 
