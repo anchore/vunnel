@@ -127,7 +127,13 @@ class AlmaVulnerabilityCreator:
         include_alma_fixes: bool = True,
     ) -> dict[str, dict[str, Any]] | None:
         """
-        Create an Alma Linux copy of a RHEL vulnerability record if applicable.
+        Create an Alma Linux copy of a RHEL vulnerability record if applicable. This method
+        encodes several assumptions about how AlmaLinux tracks and applies fixes relative to RHEL, necessary
+        because AlmaLinux advisories often have fewer packages listed than RHEL advisories, and in particular,
+        RHEL disclosures often only name the source RPM as a vulnerable package, and AlmaLinux advisories often
+        omit the source RPM as a fixed package. Depending on the availability of AlmaLinux advisories and
+        and fix data for the particular package name, the following scenarios are handled in order, returning
+        a new vulnerability record based on the first scenaqrio that applies:
 
         Applies transformations in priority order:
         1. AlmaLinux has A-prefixed advisory (always takes precedence) - use Alma version
@@ -164,14 +170,29 @@ class AlmaVulnerabilityCreator:
             CVE-2007-4559  python38  rpm        almalinux:distro:almalinux:8  < 0:3.8.17-2.module_el8.9.0+3633+e453b53a
             CVE-2007-4559  python38  rpm        redhat:distro:redhat:8        < 0:3.8.17-2.module+el8.9.0+19642+a12b4af6
 
-        3. AlmaLinux has corresponding advisory but no package entry - inherit RHEL version
+        3. AlmaLinux advisory exists and reports all packages were fixed at the same version - use that version
 
-        Here we make the assumption that if Red Hat fixed something, Alma has pulled in the fix. This
-        assumption is necessary because there are numerous advisories where AlmaLinux has a shorter
-        list of packages than RHEL, especially AlmaLinux will often omit the source RPM from the advisory,
-        whereas RHEL data historically centers around the source RPM. For example,
-        for https://access.redhat.com/security/cve/CVE-2007-4559, RHEL has a fix for "python3", specifically
-        'python3-3.6.8-56.el8_9.src.rpm' at https://access.redhat.com/errata/RHSA-2023:7151,
+        If all packages in the AlmaLinux advisory are fixed at the same version (consensus version),
+        we use that consensus version for the missing package.
+
+            $ grype db search --vuln CVE-2007-4559 --pkg python3 | rg ':8'
+            CVE-2007-4559  python3  rpm        almalinux:distro:almalinux:8  < 0:3.6.8-56.el8_9.alma.1
+            CVE-2007-4559  python3  rpm        redhat:distro:redhat:8        < 0:3.6.8-47.el8_6.4 (EUS)
+            CVE-2007-4559  python3  rpm        redhat:distro:redhat:8        < 0:3.6.8-56.el8_9
+
+        In this case, https://errata.almalinux.org/8/ALSA-2023-7151.html mentions many packages, but
+        not python3 specifically. However, all packages were fixed at 3.6.8-56.el8_9.alma.1, so assume
+        that python3 was also fixed at that version.
+
+        4. Fall back to RHEL version - inherit RHEL version and advisory information
+
+        This covers two scenarios: AlmaLinux has corresponding advisory but no package entry (and no consensus),
+        or AlmaLinux has no corresponding advisory at all. In both cases, we make the assumption that if
+        Red Hat fixed something, Alma has pulled in the fix. This assumption is necessary because there are
+        numerous advisories where AlmaLinux has a shorter list of packages than RHEL, especially AlmaLinux will
+        often omit the source RPM from the advisory, whereas RHEL data historically centers around the source RPM.
+        For example, for https://access.redhat.com/security/cve/CVE-2007-4559, RHEL has a fix for "python3",
+        specifically 'python3-3.6.8-56.el8_9.src.rpm' at https://access.redhat.com/errata/RHSA-2023:7151,
         but AlmaLinux does not have a package entry for "python3" at https://errata.almalinux.org/8/ALSA-2023-7151.html.
         Because AlmaLinux fixes a million python3 binary RPMs at 3.6.8-56.el8_9.alma.1, we assume that
         AlmaLinux has fixed the python3 package as well, even though it is not explicitly listed in the advisory.
@@ -183,12 +204,7 @@ class AlmaVulnerabilityCreator:
         This assumption is important because Grype will match binary RPMs against vulnerabilities disclosed
         against their source RPM, so we have to assume that the source RPM is fixed.
 
-        TODO: why does this example have a .alma in the RPM version?
-        Asked at https://chat.almalinux.org/almalinux/pl/fbfdfbfnnff1drygixygsiouee
-
-        4. AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value
-
-        This catches simple cases where there's no RHEL advisory, for example, https://access.redhat.com/security/cve/CVE-2005-2541
+        This also catches simple cases where there's no RHEL advisory, for example, https://access.redhat.com/security/cve/CVE-2005-2541
         is not fixed, so there's no AlmaLinux or RHEL advisory.
 
         This also happens when there is no equivalent ALSA even though there is an RHSA. For example,
@@ -221,8 +237,8 @@ class AlmaVulnerabilityCreator:
             transformers = [
                 self._try_alma_specific_advisory,
                 self._try_corresponding_alma_advisory_with_package,
-                self._try_corresponding_alma_advisory_without_package,
-                self._try_inherit_rhel_version,  # Always succeeds
+                self._try_alma_advisory_consensus_version,
+                self._inherit_rhel_version,  # Always succeeds
             ]
 
             for transformer in transformers:
@@ -335,13 +351,13 @@ class AlmaVulnerabilityCreator:
 
         return None
 
-    def _try_corresponding_alma_advisory_without_package(
+    def _try_alma_advisory_consensus_version(
         self,
         fixed_in: dict[str, Any],
         rhel_version: str,
         package_name: str,
     ) -> dict[str, Any] | None:
-        """Case 3: AlmaLinux has corresponding advisory but no package entry - inherit RHEL version"""
+        """Case 3: AlmaLinux advisory exists but no package entry, but all packages fixed at some version - use that version"""
         if not self.alma_parser:
             return None
 
@@ -372,32 +388,28 @@ class AlmaVulnerabilityCreator:
                 alma_fix_version = alma_advisory_data.get(package_name)
 
                 if not alma_fix_version:
-                    # Check for consensus version first
+                    # Check for consensus version
                     consensus_ver = self.alma_parser.consensus_version(alma_advisory_id)
                     if consensus_ver:
                         # Use consensus version if available
                         new_fixed_in = copy.deepcopy(fixed_in)
                         new_fixed_in["Version"] = consensus_ver
-                    else:
-                        # Case 3: Advisory exists but no package entry - inherit RHEL version
-                        new_fixed_in = copy.deepcopy(fixed_in)
 
-                    # Create updated advisory summary
-                    updated_advisory = copy.deepcopy(advisory)
-                    updated_advisory["ID"] = alma_advisory_id
-                    alma_advisory_url_id = alma_advisory_id.replace(":", "-")
-                    updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+                        # Create updated advisory summary
+                        updated_advisory = copy.deepcopy(advisory)
+                        updated_advisory["ID"] = alma_advisory_id
+                        alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                        updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
-                    new_fixed_in["VendorAdvisory"] = {
-                        **vendor_advisory,
-                        "AdvisorySummary": [updated_advisory],
-                    }
-                    # Keep RHEL version (already in fixed_in)
-                    return new_fixed_in
+                        new_fixed_in["VendorAdvisory"] = {
+                            **vendor_advisory,
+                            "AdvisorySummary": [updated_advisory],
+                        }
+                        return new_fixed_in
 
         return None
 
-    def _try_inherit_rhel_version(self, fixed_in: dict[str, Any], _rhel_version: str, package_name: str) -> dict[str, Any]:
+    def _inherit_rhel_version(self, fixed_in: dict[str, Any], _rhel_version: str, package_name: str) -> dict[str, Any]:
         """Case 4: AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value"""
         vendor_advisory = fixed_in.get("VendorAdvisory", {})
         rhel_has_no_advisory = vendor_advisory.get("NoAdvisory", False)
