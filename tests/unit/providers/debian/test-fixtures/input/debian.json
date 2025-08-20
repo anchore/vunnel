@@ -207,6 +207,49 @@
       }
     }
   },
+  "sope": {
+    "CVE-2025-53603": {
+      "description": "In Alinto SOPE SOGo 2.0.2 through 5.12.2, sope-core/NGExtensions/NGHashMap.m allows a NULL pointer dereference and SOGo crash via a request in which a parameter in the query string is a duplicate of a parameter in the POST body.",
+      "debianbug": 1108798,
+      "scope": "local",
+      "releases": {
+        "bookworm": {
+          "status": "resolved",
+          "repositories": {
+            "bookworm": "5.8.0-1",
+            "bookworm-security": "5.8.0-1+deb12u1"
+          },
+          "fixed_version": "5.8.0-1+deb12u1",
+          "urgency": "not yet assigned"
+        },
+        "bullseye": {
+          "status": "resolved",
+          "repositories": {
+            "bullseye": "5.0.1-2",
+            "bullseye-security": "5.0.1-2+deb11u1"
+          },
+          "fixed_version": "5.0.1-2+deb11u1",
+          "urgency": "not yet assigned"
+        },
+        "sid": {
+          "status": "resolved",
+          "repositories": {
+            "sid": "5.12.1-2"
+          },
+          "fixed_version": "5.12.1-2",
+          "urgency": "not yet assigned"
+        },
+        "trixie": {
+          "status": "resolved",
+          "repositories": {
+            "trixie": "5.12.1-2"
+          },
+          "fixed_version": "5.12.1-2",
+          "urgency": "not yet assigned"
+        }
+      }
+    }
+  },
   "chromium-browser": {
     "CVE-2022-0358": {
       "releases": []
