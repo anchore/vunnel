@@ -79,6 +79,7 @@ tests:
       - alpine:distro:alpine:3.19
       - alpine:distro:alpine:3.20
       - alpine:distro:alpine:3.21
+      - alpine:distro:alpine:3.22
       - alpine:distro:alpine:edge
       - nvd:cpe # alpine lists fixes to NVD entries, so NVD entries are also expected
     validations:
@@ -131,7 +132,7 @@ tests:
     use_cache: true
     images:
       - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
-      - docker.io/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
+      - ghcr.io/anchore/test-images/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
     expected_namespaces:
       - debian:distro:debian:7
       - debian:distro:debian:8
@@ -140,6 +141,7 @@ tests:
       - debian:distro:debian:11
       - debian:distro:debian:12
       - debian:distro:debian:13
+      - debian:distro:debian:14
       - debian:distro:debian:unstable
 
   - provider: github
@@ -228,6 +230,7 @@ tests:
       - oracle:distro:oraclelinux:7
       - oracle:distro:oraclelinux:8
       - oracle:distro:oraclelinux:9
+      - oracle:distro:oraclelinux:10
     validations:
       - <<: *default-validations
         # TODO: docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728
@@ -259,6 +262,7 @@ tests:
       - redhat:distro:redhat:7
       - redhat:distro:redhat:8
       - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
 
   - provider: sles
     additional_trigger_globs:
@@ -287,6 +291,7 @@ tests:
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
+      - sles:distro:sles:15.7
     validations:
       - *default-validations
 
@@ -326,6 +331,7 @@ tests:
       - ubuntu:distro:ubuntu:23.10
       - ubuntu:distro:ubuntu:24.04
       - ubuntu:distro:ubuntu:24.10
+      - ubuntu:distro:ubuntu:25.04
     validations:
       - *default-validations
 
