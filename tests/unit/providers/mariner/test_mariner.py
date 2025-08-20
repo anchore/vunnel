@@ -8,7 +8,8 @@ from pytest_unordered import unordered
 from vunnel import result, workspace, utils
 from vunnel.providers.mariner import Config, Provider, parser
 from vunnel.providers.mariner.parser import MarinerXmlFile
-from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
+from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory, FixAvailability
+from datetime import datetime, timezone
 
 
 @pytest.mark.parametrize(
@@ -33,6 +34,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="> 0:1.19.0.cm2, < 0:1.20.7-1.cm2",
+                            Available=None,
                         )
                     ],
                     Metadata={},
@@ -53,6 +55,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
+                            Available=FixAvailability(
+                                Date=datetime(2023, 5, 3, 16, 24, 32, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -73,6 +79,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="< 0:8.0.33-1.cm2",
+                            Available=FixAvailability(
+                                Date=datetime(2023, 5, 3, 16, 24, 32, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -93,6 +103,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="<= 0:9.16.33-1.cm2",
+                            Available=None,
                         ),
                     ],
                 ),
@@ -117,6 +128,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            Available=FixAvailability(
+                                Date=datetime(2024, 4, 17, 22, 2, 46, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -137,6 +152,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            Available=FixAvailability(
+                                Date=datetime(2024, 4, 17, 22, 2, 46, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -157,6 +176,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:18.2.1-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            Available=FixAvailability(
+                                Date=datetime(2024, 4, 17, 22, 2, 46, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},

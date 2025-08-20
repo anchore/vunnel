@@ -5,6 +5,7 @@ import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
@@ -25,7 +26,7 @@ from vunnel.utils.oval_v2 import (
     VulnerabilityParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, FixedIn, Vulnerability
 
 if TYPE_CHECKING:
     from vunnel.workspace import Workspace
@@ -223,7 +224,7 @@ class Parser:
         return results
 
     @classmethod
-    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901
+    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901, PLR0912
         cls.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
@@ -298,6 +299,19 @@ class Parser:
                         )
                         continue
 
+                    # create Available object if issued date exists
+                    available = None
+                    if vulnerability_obj.issued_date:
+                        try:
+                            issued_datetime = datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d")  # noqa: DTZ007 # not a timezone aware datetime
+                            available = FixAvailability(Date=issued_datetime, Kind="advisory")
+                        except ValueError:
+                            cls.logger.debug(
+                                "failed to parse issued date %s for %s, skipping availability info",
+                                vulnerability_obj.issued_date,
+                                vulnerability_obj.name,
+                            )
+
                     fixes.append(
                         FixedIn(
                             Name=pkg_name,
@@ -306,6 +320,7 @@ class Parser:
                             Version=pkg_version,
                             Module=None,
                             VendorAdvisory=None,
+                            Available=available,
                         ),
                     )
 
@@ -379,6 +394,7 @@ class SLESOVALVulnerability(Parsed):
     link: str
     cvss_v3_vectors: list[str]
     impact: list[Impact]
+    issued_date: str | None = None
 
 
 class SLESVulnerabilityParser(VulnerabilityParser):
@@ -387,7 +403,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
 
     @classmethod
     def parse(cls, xml_element, config: OVALParserConfig) -> SLESOVALVulnerability | None:
-        identity = name = severity = description = link = None
+        identity = name = severity = description = link = issued_date = None
         impact = cvss = []
         try:
             identity = xml_element.attrib["id"]
@@ -408,6 +424,11 @@ class SLESVulnerabilityParser(VulnerabilityParser):
             suse_ref = xml_element.find(config.source_url_xpath_query.format(oval_ns))
             link = suse_ref.attrib["ref_url"]
 
+            # extract issued date from advisory section
+            issued_element = xml_element.find(config.issued_date_xpath_query.format(oval_ns))
+            if issued_element is not None and "date" in issued_element.attrib:
+                issued_date = issued_element.attrib["date"]
+
             cvss = []
             for cve in xml_element.iterfind(config.cve_xpath_query.format(oval_ns)):
                 # example cve element
@@ -423,7 +444,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
             impact = VulnerabilityParser._parse_criteria(xml_element, oval_ns, config)  # noqa: SLF001
         except Exception:
             cls.logger.exception("ignoring error and skip parsing vulnerability definition element")
-            identity = name = severity = description = link = None
+            identity = name = severity = description = link = issued_date = None
             impact = cvss = []
 
         if identity and name and severity and link:
@@ -435,6 +456,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
                 link=link,
                 cvss_v3_vectors=cvss,
                 impact=impact,
+                issued_date=issued_date,
             )
 
         return None

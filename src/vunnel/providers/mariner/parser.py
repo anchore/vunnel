@@ -9,7 +9,7 @@ from xsdata.formats.dataclass.parsers.config import ParserConfig
 
 from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoState, RpminfoTest
 from vunnel.utils import http_wrapper as http
-from vunnel.utils.vulnerability import FixedIn, Vulnerability
+from vunnel.utils.vulnerability import FixAvailability, FixedIn, Vulnerability
 
 if TYPE_CHECKING:
     import logging
@@ -119,7 +119,7 @@ class MarinerXmlFile:
                     objects.append(obj)
         return objects
 
-    def make_fixed_in(self, definition: Definition) -> FixedIn | None:
+    def make_fixed_in(self, definition: Definition) -> FixedIn | None:  # noqa: C901
         tests = self.get_tests(definition)
         states = self.get_states(tests)
         objects = self.get_objects(tests)
@@ -158,6 +158,11 @@ class MarinerXmlFile:
 
         vulnerability_range_str = ", ".join(vulnerability_range)
 
+        # create availability info when a fix exists
+        available = None
+        if fixed_version != "None" and definition.metadata and definition.metadata.advisory_date:
+            available = FixAvailability(Date=str(definition.metadata.advisory_date.to_datetime().date()), Kind="advisory")
+
         return FixedIn(
             Name=name,
             NamespaceName=self.namespace_name(),
@@ -166,6 +171,7 @@ class MarinerXmlFile:
             VulnerableRange=vulnerability_range_str,
             Module=None,
             VendorAdvisory=None,
+            Available=available,
         )
 
     def vulnerability_id(self, definition: Definition) -> str | None:
