@@ -17,6 +17,10 @@
       "Classification": "GENERAL",
       "FixedIn": [
         {
+          "available": {
+            "date": "2024-01-01",
+            "kind": "first-observed"
+          },
           "ecosystem": "java",
           "identifier": "1.9.0",
           "name": "org.webjars.npm:jquery",
@@ -38,5 +42,5 @@
     },
     "Vulnerability": {}
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.1.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.2.json"
 }

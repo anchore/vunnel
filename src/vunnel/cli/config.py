@@ -66,7 +66,13 @@ class Providers:
 
     def __post_init__(self) -> None:
         for name in self.provider_names():
-            runtime_cfg = getattr(self, name).runtime
+            cfg = getattr(self, name)
+
+            # TODO: for the meantime, we will disable all usages of add_fix_dates (since data is still not ready yet)
+            if hasattr(cfg, "add_fix_dates"):
+                cfg.add_fix_dates = False
+
+            runtime_cfg = getattr(cfg, "runtime", None)
             if runtime_cfg and isinstance(runtime_cfg, provider.RuntimeConfig):
                 if runtime_cfg.import_results_enabled is None:
                     runtime_cfg.import_results_enabled = self.common.import_results.enabled
