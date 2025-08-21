@@ -115,9 +115,9 @@ class SQLiteStore(Store):
 
     def __init__(self, *args: Any, write_location: str | None = None, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.conn = None
-        self.engine = None
-        self.table = None
+        self.conn: db.engine.Connection | None = None
+        self.engine: db.engine.Engine | None = None
+        self.table: db.Table | None = None
         self.write_location = write_location
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
@@ -134,9 +134,9 @@ class SQLiteStore(Store):
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
             self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
-            self.conn = self.engine.connect()  # type: ignore[attr-defined]
+            self.conn = self.engine.connect()
             self.table = self._create_table()
-        return self.conn, self.table
+        return self.conn, self.table  # type: ignore[return-value]
 
     @property
     def write_dir(self) -> str:
@@ -162,7 +162,8 @@ class SQLiteStore(Store):
             db.Column("id", db.String(), primary_key=True, index=True),
             db.Column("record", db.LargeBinary()),
         )
-        metadata.create_all(self.engine)
+        if self.engine:
+            metadata.create_all(self.engine)
         return table
 
     def store(self, identifier: str, record: Envelope) -> None:
@@ -180,7 +181,7 @@ class SQLiteStore(Store):
                 statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
             else:
                 self.logger.trace(f"writing record to {identifier!r} key")  # type: ignore[attr-defined]
-                statement = db.insert(table).values(id=identifier, record=record_str)
+                statement = db.insert(table).values(id=identifier, record=record_str)  # type: ignore[assignment]
 
             conn.execute(statement)
 
@@ -204,7 +205,8 @@ class SQLiteStore(Store):
     def close(self, successful: bool) -> None:
         if self.conn:
             self.conn.close()
-            self.engine.dispose()
+            if self.engine:
+                self.engine.dispose()
 
             self.conn = None
             self.engine = None
@@ -272,9 +274,9 @@ class SQLiteReader:
     def __init__(self, sqlite_db_path: str, table_name: str = "results"):
         self.db_path = sqlite_db_path
         self.table_name = table_name
-        self.conn = None
-        self.engine = None
-        self.table = None
+        self.conn: db.engine.Connection | None = None
+        self.engine: db.engine.Engine | None = None
+        self.table: db.Table | None = None
 
     def read(self, identifier: str) -> dict[str, Any] | None:
         conn, table = self.connection()
@@ -294,10 +296,10 @@ class SQLiteReader:
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         if not self.conn:
             self.engine = db.create_engine(f"sqlite:///{self.db_path}?mode=ro")
-            self.conn = self.engine.connect()  # type: ignore[attr-defined]
-            metadata = db.MetaData(bind=self.engine)
-            self.table = db.Table(self.table_name, metadata, autoload=True, autoload_with=self.engine)
-        return self.conn, self.table
+            self.conn = self.engine.connect()
+            metadata = db.MetaData()
+            self.table = db.Table(self.table_name, metadata, autoload_with=self.engine)
+        return self.conn, self.table  # type: ignore[return-value]
 
     def __enter__(self) -> SQLiteReader:
         return self
@@ -310,7 +312,8 @@ class SQLiteReader:
     ) -> None:
         if self.conn:
             self.conn.close()
-            self.engine.dispose()
+            if self.engine:
+                self.engine.dispose()
 
             self.conn = None
             self.engine = None
