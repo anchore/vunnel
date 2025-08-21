@@ -15,20 +15,23 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from vunnel import workspace
+    from vunnel.tool import fixdate
 
 
 class Parser:
     _release_ = "rolling"
     _secdb_dir_ = "secdb"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
         url: str,
         namespace: str,
+        fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/")
@@ -51,6 +54,9 @@ class Parser:
         """
         if not os.path.exists(self.secdb_dir_path):
             os.makedirs(self.secdb_dir_path, exist_ok=True)
+
+        if self.fixdater:
+            self.fixdater.download()
 
         try:
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
@@ -79,7 +85,7 @@ class Parser:
             self.logger.exception(f"failed to load {self.namespace} sec db data")
             raise
 
-    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, dict[str, Any]]:  # noqa: C901
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -95,10 +101,10 @@ class Parser:
             pkg_el = el["pkg"]
 
             pkg = pkg_el["name"]
-            for pkg_version in pkg_el["secfixes"]:
+            for fix_version in pkg_el["secfixes"]:
                 vids = []
-                if pkg_el["secfixes"][pkg_version]:
-                    for rawvid in pkg_el["secfixes"][pkg_version]:
+                if pkg_el["secfixes"][fix_version]:
+                    for rawvid in pkg_el["secfixes"][fix_version]:
                         tmp = rawvid.split()
                         for newvid in tmp:
                             if newvid not in vids:
@@ -124,12 +130,29 @@ class Parser:
                         vuln_record = vuln_dict[vid]
 
                     # SET UP fixedins
+                    ecosystem = self.namespace + ":" + str(release)
                     fixed_el = {
                         "Name": pkg,
-                        "Version": pkg_version,
+                        "Version": fix_version,
                         "VersionFormat": "apk",
-                        "NamespaceName": self.namespace + ":" + str(release),
+                        "NamespaceName": ecosystem,
                     }
+
+                    if fix_version and self.fixdater:
+                        dates = self.fixdater.find(
+                            vuln_id=str(vid),
+                            cpe_or_package=pkg,
+                            fix_version=fix_version,
+                            ecosystem=ecosystem,
+                        )
+                        if dates:
+                            result = dates[0]
+                            available = {
+                                "Date": result.date.isoformat(),
+                                "Kind": result.kind,
+                            }
+
+                            fixed_el["Available"] = available
 
                     vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)  # type: ignore[union-attr]
 
