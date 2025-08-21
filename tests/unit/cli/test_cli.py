@@ -284,6 +284,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   echo:
+    add_fix_dates: false
     request_timeout: 125
     runtime:
       existing_input: keep
