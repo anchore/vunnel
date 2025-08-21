@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.tool import fixdate
 
 from .parser import Parser
 
@@ -20,6 +21,7 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
+    add_fix_dates: bool = True
     request_timeout: int = 125
 
 
@@ -38,8 +40,13 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
+        fixdater = None
+        if config.add_fix_dates:
+            fixdater = fixdate.default_finder(self.workspace, self.name())
+
         self.parser = Parser(
             workspace=self.workspace,
+            fixdater=fixdater,
             url=self._url,
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
