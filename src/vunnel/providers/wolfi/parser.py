@@ -154,8 +154,8 @@ class Parser:
                         if dates:
                             result = dates[0]
                             available = {
-                                "date": result.date.isoformat(),
-                                "kind": result.kind,
+                                "Date": result.date.isoformat(),
+                                "Kind": result.kind,
                             }
 
                             fixed_el["Available"] = available
