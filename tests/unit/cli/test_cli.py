@@ -458,6 +458,7 @@ providers:
       - rhel:3
       - rhel:4
   rocky:
+    add_fix_dates: false
     request_timeout: 125
     runtime:
       existing_input: keep
