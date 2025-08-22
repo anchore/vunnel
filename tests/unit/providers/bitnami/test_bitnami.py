@@ -11,7 +11,7 @@ from vunnel.providers.bitnami.parser import Parser
 
 @patch("vunnel.providers.bitnami.git.GitWrapper.clone_repo")
 @patch("vunnel.providers.bitnami.git.GitWrapper.delete_repo")
-def test_provider_schema(mock_git_delete, mock_git_clone, helpers):
+def test_provider_schema(mock_git_delete, mock_git_clone, helpers, auto_fake_fixdate_finder):
     mock_git_clone.return_value = None
     mock_git_delete.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
