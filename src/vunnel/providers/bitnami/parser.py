@@ -6,12 +6,16 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.utils import osv
+
+from .git import GitWrapper
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
-from .git import GitWrapper
 
 namespace = "bitnami"
 
@@ -20,7 +24,13 @@ class Parser:
     _git_src_url_ = "https://github.com/bitnami/vulndb.git"
     _git_src_branch_ = "main"
 
-    def __init__(self, ws: Workspace, logger: logging.Logger | None = None):
+    def __init__(
+        self,
+        ws: Workspace,
+        fixdater: fixdate.Finder | None = None,
+        logger: logging.Logger | None = None,
+    ):
+        self.fixdater = fixdater
         self.workspace = ws
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
@@ -62,7 +72,11 @@ class Parser:
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
 
+        if self.fixdater:
+            self.fixdater.download()
+
         # Load the data from the git repository
         for vuln_entry in self._load():
             # Normalize the loaded data
+            osv.patch_fix_date(vuln_entry, self.fixdater)
             yield self._normalize(vuln_entry)

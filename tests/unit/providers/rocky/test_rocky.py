@@ -10,7 +10,7 @@ from vunnel.providers.rocky.client import Client
 
 
 @patch("vunnel.providers.rocky.client.Client._download")
-def test_provider_schema(mock_download, helpers):
+def test_provider_schema(mock_download, helpers, auto_fake_fixdate_finder):
     mock_download.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
     c = Config()
@@ -24,7 +24,7 @@ def test_provider_schema(mock_download, helpers):
     assert workspace.result_schemas_valid(require_entries=True)
 
 @patch("vunnel.providers.rocky.client.Client._download")
-def test_provider_skip_download(mock_download, helpers):
+def test_provider_skip_download(mock_download, helpers, auto_fake_fixdate_finder):
     assert Provider.supports_skip_download()
 
     mock_download.side_effect = RuntimeError("should not be called")
