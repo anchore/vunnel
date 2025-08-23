@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import json
 import logging
 import sys
 from dataclasses import dataclass
@@ -182,9 +183,9 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
 @cli.command(name="status", help="describe current provider state")
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1)
 @click.option("--show-empty", default=False, is_flag=True, help="show providers with no state")
+@click.option("--json", "output_json", default=False, is_flag=True, help="output as JSON")
 @click.pass_obj
-def status_provider(cfg: config.Application, provider_names: str, show_empty: bool) -> None:  # noqa: C901
-    print(cfg.root)
+def status_provider(cfg: config.Application, provider_names: str, show_empty: bool, output_json: bool) -> None:  # noqa: C901
     selected_names = provider_names if provider_names else providers.names()
 
     @dataclass
@@ -207,6 +208,14 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
 {fill}      results: {self.count}
 {fill}      from:    {self.date}"""
 
+        def to_dict(self) -> dict[str, Any]:
+            return {
+                "count": self.count,
+                "date": self.date,
+                "error": self.error,
+                "enabled": self.enabled,
+            }
+
     # first pass: find the results that exist (which may be fewer than what is selected)
     results = {}
     for _idx, name in enumerate(selected_names):
@@ -227,17 +236,30 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
         except Exception as e:
             results[name] = CurrentState(enabled=False, error=str(e))
 
-    # second pass: show the state
-    for idx, (name, result) in enumerate(sorted(results.items())):
-        branch = "├──"
-        fill = "│"
-        if idx == len(results) - 1:
-            branch = "└──"
-            fill = " "
+    # if --json is requested, output as JSON
+    if output_json:
+        json_output = {
+            "root": cfg.root,
+            "providers": [
+                {"name": name, **result.to_dict()}  # unpack to a dict
+                for name, result in sorted(results.items())
+            ],
+        }
+        print(json.dumps(json_output, indent=2))  # noqa: TID251 # TID251: json.dumps() isn't needed for this use case
+    # otherwise, output as a tree structure
+    else:
+        # existing tree output
+        print(cfg.root)
+        for idx, (name, result) in enumerate(sorted(results.items())):
+            branch = "├──"
+            fill = "│"
+            if idx == len(results) - 1:
+                branch = "└──"
+                fill = " "
 
-        node = result.format(fill)
+            node = result.format(fill)
 
-        print(f"""{branch} {name}\n{node}""")
+            print(f"""{branch} {name}\n{node}""")
 
 
 @cli.command(name="list", help="list available providers")

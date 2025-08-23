@@ -8,12 +8,12 @@ from html.parser import HTMLParser
 
 import defusedxml.ElementTree as ET
 
+from vunnel.utils import date, rpm
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import rpm
 
 namespace = "amzn"
 
-AlasSummary = namedtuple("AlasSummary", ["id", "url", "sev", "cves"])
+AlasSummary = namedtuple("AlasSummary", ["id", "url", "sev", "cves", "pubDate"])
 AlasFixedIn = namedtuple("AlasFixedIn", ["pkg", "ver"])
 
 amazon_security_advisories = {
@@ -84,10 +84,12 @@ class Parser:
                 elif element.tag == "description":
                     desc_str = element.text.strip()
                     cves = re.sub(self._whitespace_pattern_, "", desc_str).split(",") if desc_str else []
+                elif element.tag == "pubDate":
+                    pub_date = element.text.strip()
                 elif element.tag == "link":
                     url = element.text.strip()
                 elif element.tag == "item":
-                    alas_summaries.append(AlasSummary(id=alas_id, url=url, sev=sev, cves=cves))
+                    alas_summaries.append(AlasSummary(id=alas_id, url=url, sev=sev, cves=cves, pubDate=pub_date))
                     processing = False
 
             # clear the element if its not being processed
@@ -236,6 +238,13 @@ class FixedIn(JsonifierMixin):
         self.NamespaceName = None
         self.VersionFormat = None
         self.Version = None
+        self.Available = FixAvailable()
+
+
+class FixAvailable(JsonifierMixin):
+    def __init__(self):
+        self.Date = None
+        self.Kind = None
 
 
 class PackagesHTMLParser(HTMLParser):
@@ -317,6 +326,13 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         f.NamespaceName = v.NamespaceName
         f.VersionFormat = "rpm"
         f.Version = item.ver
+        # populate Available object only if there is a fix version available
+        fix_date = None
+        if fixed_in:
+            fix_date = date.normalize_date(alas.pubDate)
+        if fix_date:
+            f.Available.Date = fix_date
+            f.Available.Kind = "advisory"
         v.FixedIn.append(f)
 
     return v
