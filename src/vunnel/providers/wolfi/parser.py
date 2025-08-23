@@ -14,14 +14,16 @@ from vunnel.utils import vulnerability
 class Parser:
     _release_ = "rolling"
     _secdb_dir_ = "secdb"
+    _security_reference_url_ = "https://images.chainguard.dev/security"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace,
         url: str,
         namespace: str,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
+        security_reference_url: str | None = None,
     ):
         self.download_timeout = download_timeout
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
@@ -29,6 +31,7 @@ class Parser:
         self.url = url
         self.namespace = namespace
         self._db_filename = self._extract_filename_from_url(url)
+        self.security_reference_url = security_reference_url.strip("/") if security_reference_url else Parser._security_reference_url_
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -37,6 +40,12 @@ class Parser:
     @staticmethod
     def _extract_filename_from_url(url):
         return os.path.basename(urlparse(url).path)
+
+    def build_reference_links(self, vulnerability_id: str) -> list[str]:
+        urls = []
+        urls.append(f"{self.security_reference_url}/{vulnerability_id}")
+        urls.extend(vulnerability.build_reference_links(vulnerability_id))
+        return urls
 
     def _download(self):
         """
@@ -103,7 +112,7 @@ class Parser:
                         # create a new record
                         vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
                         vuln_record = vuln_dict[vid]
-                        reference_links = vulnerability.build_reference_links(vid)
+                        reference_links = self.build_reference_links(vid)
 
                         # populate the static information about the new vuln record
                         vuln_record["Vulnerability"]["Name"] = str(vid)
