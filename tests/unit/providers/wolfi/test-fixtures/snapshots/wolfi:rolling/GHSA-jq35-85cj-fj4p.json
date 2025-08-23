@@ -12,12 +12,12 @@
           "VersionFormat": "apk"
         }
       ],
-      "Link": "https://github.com/advisories/GHSA-jq35-85cj-fj4p",
+      "Link": "https://images.chainguard.dev/security/GHSA-jq35-85cj-fj4p",
       "Metadata": {},
       "Name": "GHSA-jq35-85cj-fj4p",
       "NamespaceName": "wolfi:rolling",
       "Severity": "Unknown"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
 }

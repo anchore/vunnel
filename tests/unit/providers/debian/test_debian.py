@@ -80,7 +80,7 @@ class TestParser:
         no_cve_dsas = [dsa for dsa in no_cves if dsa["fixed_in"]]
         # print("")
         # print("Number of DSAs with fixes and no CVEs: {}".format(len(no_cve_dsas)))
-        assert len(no_cve_dsas) == 1
+        assert len(no_cve_dsas) == 2
 
     def test_normalize_json(self, tmpdir, helpers, disable_get_requests):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
@@ -162,8 +162,8 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, mock_legacy
 
     p.update(None)
 
-    # 18 entries from the legacy FS records, 1 from legacy DB record, 21 from the mock json data
-    expected = 39
+    # 18 entries from the legacy FS records, 1 from legacy DB record, 24 from the mock json data
+    expected = 43
     assert workspace.num_result_entries() == expected
     assert workspace.result_schemas_valid(require_entries=True)
 

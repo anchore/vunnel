@@ -5,78 +5,130 @@
       "Description": "A flaw was found in vim. A possible heap-based buffer overflow could allow an attacker to input a specially crafted file leading to a crash or code execution. The highest threat from this vulnerability is to data confidentiality and integrity as well as system availability. (CVE-2021-3778)A use-after-free vulnerability in vim could allow an attacker to input a specially crafted file leading to memory corruption and a potentially exploitable crash or code execution. The highest threat from this vulnerability is to data confidentiality and integrity as well as system availability. (CVE-2021-3796)An out-of-bounds write flaw was found in vim's drawscreen.c win_redr_status() function. This flaw allows an attacker to trick a user to open a crafted file with specific arguments in vim, triggering an out-of-bounds write. The highest threat from this vulnerability is to confidentiality, integrity, and system availability. (CVE-2021-3872)There's an out-of-bounds read flaw in Vim's ex_docmd.c. An attacker who is capable of tricking a user into opening a specially crafted file could trigger an out-of-bounds read on a memmove operation, potentially causing an impact to application availability. (CVE-2021-3875)",
       "FixedIn": [
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-X11",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-X11-debuginfo",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-common",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-common-debuginfo",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-debuginfo",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-debugsource",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-default-editor",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-enhanced",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-enhanced-debuginfo",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-filesystem",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-minimal",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
           "VersionFormat": "rpm"
         },
         {
+          "Available": {
+            "Date": "2021-10-26",
+            "Kind": "advisory"
+          },
           "Name": "vim-minimal-debuginfo",
           "NamespaceName": "amzn:2022",
           "Version": "8.2.3512-1.amzn2022",
@@ -105,5 +157,5 @@
       "Severity": "Medium"
     }
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.0.2.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
 }

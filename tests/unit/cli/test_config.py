@@ -61,6 +61,8 @@ def test_full_config(helpers):
             debian=providers.debian.Config(
                 releases={
                     # this is the defaults...
+                    "duke": "15",
+                    "forky": "14",
                     "trixie": "13",
                     "bookworm": "12",
                     "bullseye": "11",

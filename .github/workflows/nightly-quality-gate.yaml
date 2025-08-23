@@ -7,6 +7,9 @@ on:
   schedule:
     - cron:  '0 5 * * *'
 
+permissions:
+  contents: read
+
 jobs:
 
   select-providers:
@@ -14,10 +17,11 @@ jobs:
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -43,12 +47,13 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
           # we need submodules for the quality gate to work (requires vulnerability-match-labels repo)
           submodules: true
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -71,9 +76,11 @@ jobs:
     steps:
       # based on https://docs.github.com/en/actions/learn-github-actions/contexts#job-context
       # the valid result values are: success, failure, cancelled
-      - run: |
-          echo "Validations Status: ${{ needs.validate-provider.result }}"
-          if [ "${{ needs.validate-provider.result }}" != "success" ]; then
+      - env:
+          VALIDATION_STATUS: ${{ needs.validate-provider.result }}
+        run: |
+          echo "Validations Status: $VALIDATION_STATUS"
+          if [ "$VALIDATION_STATUS" != "success" ]; then
             echo "🔴 Quality gate FAILED! 😭"
             exit 1
           fi

@@ -45,6 +45,42 @@ def test_status(helpers, tmpdir, monkeypatch) -> None:
     assert expected_output.strip() == res.output.strip()
 
 
+def test_status_json(helpers, tmpdir, monkeypatch) -> None:
+    import json
+
+    data_path = helpers.local_dir("test-fixtures/data-1")
+
+    envs = {
+        "NVD_API_KEY": "secret",
+        "GITHUB_TOKEN": "secret",
+    }
+    monkeypatch.setattr(os, "environ", envs)
+
+    config = tmpdir.join("vunnel.yaml")
+    config.write(f"root: {data_path}")
+
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["-c", str(config), "status", "--json"])
+    assert res.exit_code == 0
+
+    # Parse and verify JSON output
+    output_data = json.loads(res.output)
+
+    expected_output = {
+        "root": data_path,
+        "providers": [
+            {
+                "name": "wolfi",
+                "count": 56,
+                "date": "2023-01-17 14:58:13",
+                "error": None,
+                "enabled": True
+            }
+        ]
+    }
+
+    assert output_data == expected_output
+
 def test_run(mocker, monkeypatch) -> None:
     populate_mock = MagicMock()
     create_mock = MagicMock(return_value=populate_mock)
@@ -224,6 +260,8 @@ providers:
       bookworm: '12'
       bullseye: '11'
       buster: '10'
+      duke: '15'
+      forky: '14'
       jessie: '8'
       sid: unstable
       stretch: '9'
@@ -396,6 +434,7 @@ providers:
       skip_newer_archive_check: false
   rhel:
     full_sync_interval: 2
+    ignore_hydra_errors: false
     parallelism: 4
     request_timeout: 125
     rhsa_source: CSAF

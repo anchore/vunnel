@@ -51,6 +51,7 @@ class Parser:
     _db_types = ["main", "community"]  # noqa: RUF012
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
+    _security_reference_url_ = "https://security.alpinelinux.org/vuln"
 
     def __init__(
         self,
@@ -58,6 +59,7 @@ class Parser:
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
         url: str | None = None,
+        security_reference_url: str | None = None,
     ):
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
@@ -67,6 +69,7 @@ class Parser:
         )  # no longer used except for cleanup, leaving it here for backwards compatibility
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/") if url else Parser._url_
+        self.security_reference_url = security_reference_url.strip("/") if security_reference_url else Parser._security_reference_url_
         if logger is None:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
@@ -75,6 +78,14 @@ class Parser:
     @property
     def urls(self) -> list[str]:
         return list(self._urls)
+
+    def build_reference_links(self, vulnerability_id: str) -> list[str]:
+        urls = []
+        if self.security_reference_url and vulnerability_id.startswith("CVE-"):
+            urls.append(f"{self.security_reference_url}/{vulnerability_id}")
+
+        urls.extend(build_reference_links(vulnerability_id))
+        return urls
 
     def _download(self):  # noqa: C901, PLR0912
         """
@@ -224,7 +235,7 @@ class Parser:
                                 # create a new record
                                 vuln_dict[vid] = copy.deepcopy(vulnerability_element)
                                 vuln_record = vuln_dict[vid]
-                                reference_links = build_reference_links(vid)
+                                reference_links = self.build_reference_links(vid)
 
                                 # populate the static information about the new vuln record
                                 vuln_record["Vulnerability"]["Name"] = str(vid)

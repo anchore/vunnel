@@ -4,6 +4,7 @@ set -euo pipefail
 BIN_DIR=./.tool
 GRYPE=${BIN_DIR}/grype
 GRYPE_DB=${BIN_DIR}/grype-db
+DB_PATH=./build/vulnerability.db
 
 BOLD="\033[1m"
 RED="\033[31m"
@@ -28,12 +29,7 @@ ${GRYPE_DB} pull -v
 rm -rf build
 
 step "Building grype-db"
-${GRYPE_DB} build -vvv
-
-step "Packaging grype-db"
-${GRYPE_DB} package
-GRYPE_DB_TAR=build/grype-db.tar.zst
-mv build/vulnerability-db_*.tar.zst ${GRYPE_DB_TAR}
+${GRYPE_DB} build -v
 
 step "Importing DB into grype"
-${GRYPE} db import ${GRYPE_DB_TAR}
+${GRYPE} db import ${DB_PATH}
