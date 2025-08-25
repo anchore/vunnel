@@ -170,10 +170,13 @@ class AlmaVulnerabilityCreator:
             CVE-2007-4559  python38  rpm        almalinux:distro:almalinux:8  < 0:3.8.17-2.module_el8.9.0+3633+e453b53a
             CVE-2007-4559  python38  rpm        redhat:distro:redhat:8        < 0:3.8.17-2.module+el8.9.0+19642+a12b4af6
 
-        3. AlmaLinux advisory exists and reports all packages were fixed at the same version - use that version
+        3. AlmaLinux advisory exists and reports all packages were fixed at the same version, and there's
+        substring commonality between the query package and the packages reported by the Alma advisory - use that version
 
         If all packages in the AlmaLinux advisory are fixed at the same version (consensus version),
-        we use that consensus version for the missing package.
+        we use that consensus version for the missing package if there's substring commonality between
+        the query package and the packages reported by the Alma advisory. Here is an example where
+        there is substring commonality:
 
             $ grype db search --vuln CVE-2007-4559 --pkg python3 | rg ':8'
             CVE-2007-4559  python3  rpm        almalinux:distro:almalinux:8  < 0:3.6.8-56.el8_9.alma.1
@@ -181,8 +184,16 @@ class AlmaVulnerabilityCreator:
             CVE-2007-4559  python3  rpm        redhat:distro:redhat:8        < 0:3.6.8-56.el8_9
 
         In this case, https://errata.almalinux.org/8/ALSA-2023-7151.html mentions many packages, but
-        not python3 specifically. However, all packages were fixed at 3.6.8-56.el8_9.alma.1, so assume
-        that python3 was also fixed at that version.
+        not python3 specifically. However, all packages were fixed at 3.6.8-56.el8_9.alma.1, AND there are
+        packages that contain `python3` in their name, e.g. `python3-libs`, so we assume that python3 is also fixed
+        at this version.
+
+        The substgring commonality check is necessary to avoid triggering this logic for packages that are
+        simply absent from the AlmaLinux advisory. For example, for CVE-2022-32891, the RHSA fixes two
+        source RPMs, `glib2` at 2.56.4-159.el8 and webkit2gtk3 at 2.36.7-1.el8, see https://access.redhat.com/errata/RHSA-2022:7704,
+        but the AlmaLinux advsiroy only mentions webkit2gtk3 variants, so even though the consensus version is 2.36.7-1.el8,
+        we do not assume that glib2 is fixed at that version because there is no substring commonality between glib2 and the various
+        package names on https://errata.almalinux.org/8/ALSA-2022-7704.html, e.g. `webkit2gtk3-jsc-devel`.
 
         4. Fall back to RHEL version - inherit RHEL version and advisory information
 
@@ -391,23 +402,57 @@ class AlmaVulnerabilityCreator:
                     # Check for consensus version
                     consensus_ver = self.alma_parser.consensus_version(alma_advisory_id)
                     if consensus_ver:
-                        # Use consensus version if available
-                        new_fixed_in = copy.deepcopy(fixed_in)
-                        new_fixed_in["Version"] = consensus_ver
+                        # Check for substring commonality between query package and advisory packages
+                        if self._has_package_substring_commonality(package_name, alma_advisory_data.keys()):
+                            # Use consensus version if there's substring commonality
+                            new_fixed_in = copy.deepcopy(fixed_in)
+                            new_fixed_in["Version"] = consensus_ver
 
-                        # Create updated advisory summary
-                        updated_advisory = copy.deepcopy(advisory)
-                        updated_advisory["ID"] = alma_advisory_id
-                        alma_advisory_url_id = alma_advisory_id.replace(":", "-")
-                        updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+                            # Create updated advisory summary
+                            updated_advisory = copy.deepcopy(advisory)
+                            updated_advisory["ID"] = alma_advisory_id
+                            alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                            updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
-                        new_fixed_in["VendorAdvisory"] = {
-                            **vendor_advisory,
-                            "AdvisorySummary": [updated_advisory],
-                        }
-                        return new_fixed_in
+                            new_fixed_in["VendorAdvisory"] = {
+                                **vendor_advisory,
+                                "AdvisorySummary": [updated_advisory],
+                            }
+                            return new_fixed_in
 
         return None
+
+    def _has_package_substring_commonality(self, query_package: str, advisory_packages: list[str] | set[str]) -> bool:
+        """
+        Check if there's substring commonality between query package and advisory packages.
+
+        Splits package names on '-' characters and checks if any segments from the query
+        package appear in any of the advisory package names.
+
+        Args:
+            query_package: The package being queried (e.g., "python3", "glib2")
+            advisory_packages: Package names from the AlmaLinux advisory
+
+        Returns:
+            True if there's substring commonality, False otherwise
+
+        Examples:
+            - query_package="python3", advisory_packages=["python3-libs", "python3-devel"] -> True
+            - query_package="glib2", advisory_packages=["webkit2gtk3", "webkit2gtk3-jsc"] -> False
+        """
+        if not query_package or not advisory_packages:
+            return False
+
+        # Split query package into segments
+        query_segments = set(query_package.split("-"))
+
+        # Check if any query segments appear in any advisory package
+        for advisory_package in advisory_packages:
+            advisory_segments = set(advisory_package.split("-"))
+            if query_segments & advisory_segments:  # Set intersection - any common segments
+                return True
+
+        return False
 
     def _inherit_rhel_version(self, fixed_in: dict[str, Any], _rhel_version: str, package_name: str) -> dict[str, Any]:
         """Case 4: AlmaLinux has no corresponding advisory - inherit RHEL version and NoAdvisory value"""

@@ -64,6 +64,7 @@ class TestAlmaInheritanceCases:
                     "references": [{"type": "rhsa", "id": "RHSA-2022:6158"}],
                 },
                 # Scenario 3: AlmaLinux has corresponding advisory but no package entry, with consensus version
+                # This should have substring commonality with httpd (httpd-devel, httpd-tools contain "httpd")
                 {
                     "updateinfo_id": "ALSA-2021:1809",
                     "type": "security",
@@ -72,13 +73,13 @@ class TestAlmaInheritanceCases:
                     "pkglist": {
                         "packages": [
                             {
-                                "name": "package-a",  # Different package, not httpd
+                                "name": "httpd-devel",  # Contains "httpd" - has substring commonality
                                 "epoch": "0",
                                 "version": "2.4.37",
                                 "release": "21.el8.alma.1",
                             },
                             {
-                                "name": "package-b",  # Another package with same version
+                                "name": "httpd-tools",  # Contains "httpd" - has substring commonality
                                 "epoch": "0",
                                 "version": "2.4.37",
                                 "release": "21.el8.alma.1",
@@ -95,6 +96,39 @@ class TestAlmaInheritanceCases:
                     "title": "Critical: libblockdev security update",
                     "pkglist": {"packages": [{"name": "libblockdev", "epoch": "0", "version": "2.28", "release": "7.el8_10"}]},
                     "references": [{"type": "rhsa", "id": "RHSA-2025:9878"}],
+                },
+                # Scenario 3b: AlmaLinux advisory with consensus version but no package substring commonality
+                # This represents CVE-2022-32891 where RHSA fixes glib2 and webkit2gtk3, but AlmaLinux
+                # advisory only mentions webkit2gtk3 variants. Even though consensus version exists,
+                # glib2 should not inherit it due to no substring commonality
+                {
+                    "updateinfo_id": "ALSA-2022:7704",
+                    "type": "security",
+                    "severity": "Important",
+                    "title": "Important: webkit2gtk3 security update",
+                    "pkglist": {
+                        "packages": [
+                            {
+                                "name": "webkit2gtk3",
+                                "epoch": "0",
+                                "version": "2.36.7",
+                                "release": "1.el8",
+                            },
+                            {
+                                "name": "webkit2gtk3-jsc",
+                                "epoch": "0",
+                                "version": "2.36.7",
+                                "release": "1.el8",
+                            },
+                            {
+                                "name": "webkit2gtk3-jsc-devel",
+                                "epoch": "0",
+                                "version": "2.36.7",
+                                "release": "1.el8",
+                            }
+                        ]
+                    },
+                    "references": [{"type": "rhsa", "id": "RHSA-2022:7704"}],
                 },
                 # Scenario 4: Fall back to RHEL version - handled by absence of matching advisory data
             ]
@@ -532,3 +566,51 @@ class TestAlmaInheritanceCases:
 
         # Should keep the empty advisory summary from RHEL
         assert fixed_in["VendorAdvisory"]["AdvisorySummary"] == []
+
+    def test_case_3_consensus_version_no_substring_commonality(self, mock_alma_workspace_with_scenarios, rhel_config_with_alma):
+        """
+        Test case for CVE-2022-32891 scenario where consensus version exists but should not be used
+        due to lack of package substring commonality.
+
+        - RHEL has RHSA-2022:7704 fixing both glib2 and webkit2gtk3
+        - AlmaLinux has ALSA-2022:7704 with only webkit2gtk3 variants (consensus version 0:2.36.7-1.el8)
+        - glib2 should NOT get the consensus version because there's no substring commonality
+          between "glib2" and packages like "webkit2gtk3-jsc-devel"
+        - Should fall back to Case 4: inherit RHEL version
+        """
+        provider = Provider(mock_alma_workspace_with_scenarios._root, rhel_config_with_alma)
+
+        # Mock RHEL record for glib2 package that would be affected by CVE-2022-32891
+        rhel_record = {
+            "Vulnerability": {
+                "Name": "CVE-2022-32891",
+                "NamespaceName": "rhel:8",
+                "FixedIn": [
+                    {
+                        "Name": "glib2",  # Package with no substring commonality to webkit2gtk3 variants
+                        "Version": "0:2.56.4-159.el8",  # RHEL version
+                        "VersionFormat": "rpm",
+                        "NamespaceName": "rhel:8",
+                        "VendorAdvisory": {
+                            "NoAdvisory": False,
+                            "AdvisorySummary": [{"ID": "RHSA-2022:7704", "Link": "https://access.redhat.com/errata/RHSA-2022:7704"}],
+                        },
+                    }
+                ],
+            }
+        }
+
+        with patch("vunnel.providers.rhel.alma_errata_client.AlmaErrataClient._download_errata_file"):
+            provider.parser.alma_parser.errata_client._build_index()
+            alma_record = provider.alma_vulnerability_creator.create_alma_vulnerability_copy("rhel:8", rhel_record, rhel_config_with_alma.include_alma_fixes)
+
+        assert alma_record is not None
+        fixed_in = alma_record["Vulnerability"]["FixedIn"][0]
+
+        # Should NOT use the consensus version (0:2.36.7-1.el8) due to no substring commonality
+        # Should fall back to Case 4: inherit RHEL version
+        assert fixed_in["Version"] == "0:2.56.4-159.el8"  # Keep RHEL version
+        assert fixed_in["VendorAdvisory"]["NoAdvisory"] is False
+
+        # Should not have advisory summary since falling back to Case 4 behavior
+        assert "AdvisorySummary" not in fixed_in["VendorAdvisory"]
