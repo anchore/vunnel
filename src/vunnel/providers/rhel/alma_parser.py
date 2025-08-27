@@ -84,31 +84,22 @@ class AlmaParser:
         Returns:
             The consensus version if all packages have the same version, None otherwise
         """
-        # Convert RHSA to ALSA if needed
         alma_advisory_id = self._rhsa_to_alsa(advisory_id) if advisory_id.startswith(("RHSA-", "RHBA-", "RHEA-")) else advisory_id
-
-        # Check all AlmaLinux versions for this advisory
         for version in self.alma_linux_versions:
             advisory_data = self.errata_client.get_advisory_data(alma_advisory_id, version)
 
             if advisory_data:
-                # Get all package versions from this advisory
                 package_versions = list(advisory_data.values())
 
                 if not package_versions:
                     continue
 
-                # Normalize all versions
                 normalized_versions = [self._normalize_rpm_version(v) for v in package_versions]
 
-                # Check if all versions are the same
                 unique_versions = set(normalized_versions)
                 if len(unique_versions) == 1:
                     return normalized_versions[0]
-                # Found the advisory but packages have different versions
                 return None
-
-        # Advisory not found in any version
         return None
 
 
@@ -246,7 +237,6 @@ class AlmaVulnerabilityCreator:
             fixed_in["NamespaceName"] = f"almalinux:{rhel_version}"
             package_name = fixed_in["Name"]
 
-            # Try each transformation in priority order matching docstring
             transformers = [
                 self._try_alma_specific_advisory,
                 self._try_corresponding_alma_advisory_with_package,
@@ -257,7 +247,6 @@ class AlmaVulnerabilityCreator:
             for transformer in transformers:
                 transformed_fixed_in = transformer(fixed_in, rhel_version, package_name)
                 if transformed_fixed_in is not None:
-                    # Replace the fixed_in entry with the transformation result
                     alma_record["Vulnerability"]["FixedIn"][i] = transformed_fixed_in
                     break
 
@@ -267,7 +256,6 @@ class AlmaVulnerabilityCreator:
         """Check if this record should be processed for AlmaLinux transformation."""
         if not include_alma_fixes:
             return False
-        # Only process RHEL 8, 9, and 10
         return namespace in ["rhel:8", "rhel:9", "rhel:10"]
 
     def _create_base_alma_record(self, record: dict[str, dict[str, Any]], namespace: str) -> dict[str, dict[str, Any]]:
@@ -275,7 +263,6 @@ class AlmaVulnerabilityCreator:
         rhel_version = namespace.split(":")[1]
         alma_namespace = f"almalinux:{rhel_version}"
 
-        # Create a deep copy of the record (expects {"Vulnerability": {...}})
         alma_record = copy.deepcopy(record)
         alma_record["Vulnerability"]["NamespaceName"] = alma_namespace
         return alma_record
@@ -285,18 +272,12 @@ class AlmaVulnerabilityCreator:
         if not self.alma_parser:
             return None
 
-        # Get all A-prefixed advisories for this version
         alma_specific_advisories = self.alma_parser.errata_client.get_alma_specific_advisories(rhel_version)
-
-        # Check each A-prefixed advisory for this package
         for alsa_id, package_map in alma_specific_advisories.items():
             if package_name in package_map:
                 alma_version = package_map[package_name]
                 if alma_version:
-                    # Normalize version
                     normalized_version = self.alma_parser._normalize_rpm_version(alma_version)  # noqa: SLF001
-
-                    # Create complete new FixedIn record
                     new_fixed_in = copy.deepcopy(fixed_in)
                     new_fixed_in["Version"] = normalized_version
                     new_fixed_in["VendorAdvisory"] = {
@@ -318,7 +299,6 @@ class AlmaVulnerabilityCreator:
 
         vendor_advisory = fixed_in.get("VendorAdvisory", {})
 
-        # Only proceed if RHEL has an advisory (not NoAdvisory=True)
         if vendor_advisory.get("NoAdvisory", False):
             return None
 
@@ -326,31 +306,23 @@ class AlmaVulnerabilityCreator:
         if not advisory_summaries:
             return None
 
-        # Try to map each RHEL advisory to AlmaLinux
         for advisory in advisory_summaries:
             rhsa_id = advisory.get("ID", "")
             if not rhsa_id.startswith(("RHSA-", "RHBA-", "RHEA-")):
                 continue
 
-            # Convert RHSA to ALSA ID
             alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
 
-            # Check if the AlmaLinux advisory exists at all
             alma_advisory_data = self.alma_parser.errata_client.get_advisory_data(alma_advisory_id, rhel_version)
 
             if alma_advisory_data is not None:
-                # Advisory exists - now check if package is in it
                 alma_fix_version = alma_advisory_data.get(package_name)
 
                 if alma_fix_version:
-                    # Case 2: AlmaLinux has corresponding advisory with package entry
                     normalized_version = self.alma_parser._normalize_rpm_version(alma_fix_version)  # noqa: SLF001
-
-                    # Create complete new FixedIn record
                     new_fixed_in = copy.deepcopy(fixed_in)
                     new_fixed_in["Version"] = normalized_version
 
-                    # Create updated advisory summary
                     updated_advisory = copy.deepcopy(advisory)
                     updated_advisory["ID"] = alma_advisory_id
                     alma_advisory_url_id = alma_advisory_id.replace(":", "-")
@@ -375,8 +347,6 @@ class AlmaVulnerabilityCreator:
             return None
 
         vendor_advisory = fixed_in.get("VendorAdvisory", {})
-
-        # Only proceed if RHEL has an advisory (not NoAdvisory=True)
         if vendor_advisory.get("NoAdvisory", False):
             return None
 
@@ -384,31 +354,24 @@ class AlmaVulnerabilityCreator:
         if not advisory_summaries:
             return None
 
-        # Try to map each RHEL advisory to AlmaLinux
         for advisory in advisory_summaries:
             rhsa_id = advisory.get("ID", "")
             if not rhsa_id.startswith(("RHSA-", "RHBA-", "RHEA-")):
                 continue
 
-            # Convert RHSA to ALSA ID
             alma_advisory_id = rhsa_id.replace("RHSA-", "ALSA-").replace("RHBA-", "ALBA-").replace("RHEA-", "ALEA-")
 
-            # Check if the AlmaLinux advisory exists at all
             alma_advisory_data = self.alma_parser.errata_client.get_advisory_data(alma_advisory_id, rhel_version)
 
             if alma_advisory_data is not None:
-                # Advisory exists - check if package is NOT in it (case 3)
                 alma_fix_version = alma_advisory_data.get(package_name)
 
                 if not alma_fix_version:
-                    # Check for consensus version
                     consensus_ver = self.alma_parser.consensus_version(alma_advisory_id)
                     if consensus_ver and self._has_package_substring_commonality(package_name, alma_advisory_data.keys()):
-                        # Use consensus version if there's substring commonality
                         new_fixed_in = copy.deepcopy(fixed_in)
                         new_fixed_in["Version"] = consensus_ver
 
-                        # Create updated advisory summary
                         updated_advisory = copy.deepcopy(advisory)
                         updated_advisory["ID"] = alma_advisory_id
                         alma_advisory_url_id = alma_advisory_id.replace(":", "-")
@@ -443,13 +406,10 @@ class AlmaVulnerabilityCreator:
         if not query_package or not advisory_packages:
             return False
 
-        # Split query package into segments
         query_segments = set(query_package.split("-"))
-
-        # Check if any query segments appear in any advisory package
         for advisory_package in advisory_packages:
             advisory_segments = set(advisory_package.split("-"))
-            if query_segments & advisory_segments:  # Set intersection - any common segments
+            if query_segments & advisory_segments:
                 return True
 
         return False
@@ -462,28 +422,20 @@ class AlmaVulnerabilityCreator:
         new_fixed_in = copy.deepcopy(fixed_in)
 
         if rhel_has_no_advisory:
-            # Inherit RHEL's NoAdvisory=True decision
-            # Keep the existing VendorAdvisory structure
             pass
         else:
-            # RHEL has an advisory but no AlmaLinux advisory found
             rhel_version_constraint = fixed_in.get("Version")
 
             new_fixed_in["VendorAdvisory"] = {
                 **vendor_advisory,
-                "NoAdvisory": False,  # AlmaLinux doesn't make "won't-fix" commitments
+                "NoAdvisory": False,
             }
-
-            # Remove advisory summaries since no AlmaLinux advisory exists
             if "AdvisorySummary" in new_fixed_in["VendorAdvisory"]:
                 del new_fixed_in["VendorAdvisory"]["AdvisorySummary"]
 
             if rhel_version_constraint and rhel_version_constraint != "None":
-                # Keep the RHEL version constraint - AlmaLinux likely uses the same fix
                 self.logger.debug(f"Inheriting RHEL version constraint for {package_name}: {rhel_version_constraint}")
-                # Version already copied from fixed_in
             else:
-                # No RHEL fix available
                 new_fixed_in["Version"] = "None"
 
         return new_fixed_in
