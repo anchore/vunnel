@@ -5,6 +5,8 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from vunnel.workspace import Workspace
 
 from .alma_errata_client import AlmaErrataClient
@@ -401,28 +403,26 @@ class AlmaVulnerabilityCreator:
                 if not alma_fix_version:
                     # Check for consensus version
                     consensus_ver = self.alma_parser.consensus_version(alma_advisory_id)
-                    if consensus_ver:
-                        # Check for substring commonality between query package and advisory packages
-                        if self._has_package_substring_commonality(package_name, alma_advisory_data.keys()):
-                            # Use consensus version if there's substring commonality
-                            new_fixed_in = copy.deepcopy(fixed_in)
-                            new_fixed_in["Version"] = consensus_ver
+                    if consensus_ver and self._has_package_substring_commonality(package_name, alma_advisory_data.keys()):
+                        # Use consensus version if there's substring commonality
+                        new_fixed_in = copy.deepcopy(fixed_in)
+                        new_fixed_in["Version"] = consensus_ver
 
-                            # Create updated advisory summary
-                            updated_advisory = copy.deepcopy(advisory)
-                            updated_advisory["ID"] = alma_advisory_id
-                            alma_advisory_url_id = alma_advisory_id.replace(":", "-")
-                            updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
+                        # Create updated advisory summary
+                        updated_advisory = copy.deepcopy(advisory)
+                        updated_advisory["ID"] = alma_advisory_id
+                        alma_advisory_url_id = alma_advisory_id.replace(":", "-")
+                        updated_advisory["Link"] = f"https://errata.almalinux.org/{rhel_version}/{alma_advisory_url_id}.html"
 
-                            new_fixed_in["VendorAdvisory"] = {
-                                **vendor_advisory,
-                                "AdvisorySummary": [updated_advisory],
-                            }
-                            return new_fixed_in
+                        new_fixed_in["VendorAdvisory"] = {
+                            **vendor_advisory,
+                            "AdvisorySummary": [updated_advisory],
+                        }
+                        return new_fixed_in
 
         return None
 
-    def _has_package_substring_commonality(self, query_package: str, advisory_packages: list[str] | set[str]) -> bool:
+    def _has_package_substring_commonality(self, query_package: str, advisory_packages: Iterable[str]) -> bool:
         """
         Check if there's substring commonality between query package and advisory packages.
 
