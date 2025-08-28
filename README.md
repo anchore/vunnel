@@ -21,6 +21,7 @@ Supported data sources:
 - SLES (https://ftp.suse.com/pub/projects/security/oval)
 - Ubuntu (https://launchpad.net/ubuntu-cve-tracker)
 - Wolfi (https://packages.wolfi.dev)
+- Root (https://api.root.io/external/cve_feed)
 
 
 ## Installation
@@ -56,17 +57,23 @@ List the available vulnerability data providers:
 ```
 $ vunnel list
 
+alma
 alpine
 amazon
+bitnami
 chainguard
 debian
 echo
+epss
 github
+kev
 mariner
 minimos
 nvd
 oracle
 rhel
+rocky
+rootio
 sles
 ubuntu
 wolfi
