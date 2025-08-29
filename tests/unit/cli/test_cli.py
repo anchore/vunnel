@@ -502,6 +502,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   ubuntu:
+    add_fix_dates: false
     additional_versions: {}
     enable_rev_history: true
     git_branch: master
