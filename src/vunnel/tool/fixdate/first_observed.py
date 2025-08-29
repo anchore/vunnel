@@ -39,9 +39,16 @@ class Store(Finder):
         self.engine: db.engine.Engine | None = None
         self.conn: db.engine.Connection | None = None
         self.table: db.Table | None = None
+        self._not_found = False
+        self._downloaded = False
 
     def download(self) -> None:
         """fetch the fix date database from the OCI registry using ORAS"""
+
+        # we don't need to verify that a download has actually occured, since it might be that an old DB can be used
+        # as a fallback, instead we want to ensure that we have attempted to download the DB.
+        self._downloaded = True
+
         # construct the image reference
         image_ref = f"ghcr.io/anchore/grype-db-observed-fix-date/{self.provider}:latest"
 
@@ -69,6 +76,14 @@ class Store(Finder):
             # the database file should be pulled directly as the db_path
             client.pull(target=image_ref, outdir=str(self.db_path.parent))
             self.logger.info(f"successfully fetched fix date database for {self.provider}")
+        except ValueError as e:
+            # if this is a 404 or not found error, log a warning and continue
+            if "not found" in str(e).lower():
+                self.logger.warning(f"no fix date database found for provider {self.provider}")
+                self._not_found = True
+            else:
+                self.logger.error(f"failed to fetch fix date database for {self.provider}: {e}")
+                raise e
         except Exception as e:
             self.logger.error(f"failed to fetch fix date database for {self.provider}: {e}")
             raise
@@ -80,6 +95,14 @@ class Store(Finder):
         fix_version: str | None,
         ecosystem: str | None = None,
     ) -> list[FixDate]:
+        if not self._downloaded:
+            raise RuntimeError("fix date database has not been downloaded")
+
+        if self._not_found:
+            # this is in cases where the fix date database does not exist for the provider. We want to act as
+            # if the database is empty and return no results.
+            return []
+
         """synchronous get existing vulnerability operation"""
         conn, table = self._get_connection()
 
@@ -147,6 +170,14 @@ class Store(Finder):
         Returns:
             Set of unique vulnerability IDs that have changed
         """
+        if not self._downloaded:
+            raise RuntimeError("fix date database has not been downloaded")
+
+        if self._not_found:
+            # this is in cases where the fix date database does not exist for the provider. We want to act as
+            # if the database is empty and return no results.
+            return set()
+
         conn, _ = self._get_connection()
 
         # reflect the runs table structure
