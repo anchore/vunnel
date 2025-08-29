@@ -20,7 +20,7 @@ from vunnel.tool import fixdate
 class MockFixDateFinder(Finder):
     """Mock finder that prevents actual downloads and allows configurable responses."""
 
-    def __init__(self, responses=None, default_date=None):
+    def __init__(self, responses=None, default_date=None, ids=None):
         # responses can be:
         # - None (returns default result or empty list)
         # - A list of Results (returns same for all calls)
@@ -28,6 +28,7 @@ class MockFixDateFinder(Finder):
         # - A callable that takes (vuln_id, cpe_or_package, fix_version, ecosystem) -> list of Results
         self.responses = responses
         self.default_date = default_date or datetime.date(2024, 1, 1)
+        self.ids = ids or set()
 
     def download(self) -> None:
         # no-op, prevents actual download
@@ -42,7 +43,7 @@ class MockFixDateFinder(Finder):
     ) -> list[Result]:
         if self.responses is None:
             # return a default result with the default date for easy testing
-            return [Result(date=self.default_date, kind="first-observed")]
+            return [Result(date=self.default_date, kind="first-observed", version=fix_version)]
 
         if callable(self.responses):
             return self.responses(vuln_id, cpe_or_package, fix_version, ecosystem)
@@ -64,6 +65,8 @@ class MockFixDateFinder(Finder):
 
         return []
 
+    def get_changed_vuln_ids_since(self, since_date: datetime) -> set[str]:
+        return self.ids
 
 class WorkspaceHelper:
     def __init__(self, root: str, name: str, snapshot):
