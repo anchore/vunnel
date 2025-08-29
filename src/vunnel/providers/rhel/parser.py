@@ -782,7 +782,8 @@ class Parser:
                     package_name = artifact.package
 
                     available = None
-                    if fix_version and self.fixdater:
+                    # TODO: we really need to cleanup these "None" versions on the next OS schema bump
+                    if fix_version and fix_version != "None" and self.fixdater:
                         dates = self.fixdater.find(
                             vuln_id=cve_id,
                             cpe_or_package=package_name,
@@ -798,7 +799,7 @@ class Parser:
 
                     record = {
                         "Name": package_name,
-                        "Version": fix_version,
+                        "Version": fix_version or "None",
                         "Module": artifact.module,
                         "VersionFormat": "rpm",  # hard code version format for now
                         "NamespaceName": ns,
