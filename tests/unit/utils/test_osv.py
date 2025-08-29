@@ -1,6 +1,5 @@
-import pytest
-from unittest.mock import Mock, MagicMock
-from datetime import datetime
+from unittest.mock import Mock
+from datetime import date
 
 from vunnel.utils import osv
 from vunnel.tool.fixdate.finder import Result as FixResult
@@ -181,7 +180,7 @@ class TestPatchFixDate:
 
         # Mock fixdater result
         fix_result = Mock(spec=FixResult)
-        fix_result.date = datetime(2023, 6, 15, 10, 30, 45)
+        fix_result.date = date(2023, 6, 15)
         fix_result.kind = "release"
 
         fixdater = Mock()
@@ -200,7 +199,7 @@ class TestPatchFixDate:
         # Verify the fix data was added
         expected_fix = {
             "version": "2.1.0",
-            "date": "2023-06-15T10:30:45",
+            "date": "2023-06-15",
             "kind": "release"
         }
 
@@ -234,11 +233,11 @@ class TestPatchFixDate:
 
         # Mock fixdater results for both versions
         fix_result_1 = Mock(spec=FixResult)
-        fix_result_1.date = datetime(2023, 3, 10)
+        fix_result_1.date = date(2023, 3, 10)
         fix_result_1.kind = "patch"
 
         fix_result_2 = Mock(spec=FixResult)
-        fix_result_2.date = datetime(2023, 5, 20)
+        fix_result_2.date = date(2023, 5, 20)
         fix_result_2.kind = "release"
 
         fixdater = Mock()
@@ -268,12 +267,12 @@ class TestPatchFixDate:
         expected_fixes = [
             {
                 "version": "1.2.0",
-                "date": "2023-03-10T00:00:00",
+                "date": "2023-03-10",
                 "kind": "patch"
             },
             {
                 "version": "2.1.0",
-                "date": "2023-05-20T00:00:00",
+                "date": "2023-05-20",
                 "kind": "release"
             }
         ]
@@ -309,11 +308,11 @@ class TestPatchFixDate:
 
         # Mock results for both packages
         fix_result_a = Mock(spec=FixResult)
-        fix_result_a.date = datetime(2023, 1, 15)
+        fix_result_a.date = date(2023, 1, 15)
         fix_result_a.kind = "release"
 
         fix_result_b = Mock(spec=FixResult)
-        fix_result_b.date = datetime(2023, 2, 20)
+        fix_result_b.date = date(2023, 2, 20)
         fix_result_b.kind = "patch"
 
         fixdater = Mock()
@@ -330,11 +329,11 @@ class TestPatchFixDate:
 
         assert len(pkg_a_fixes) == 1
         assert pkg_a_fixes[0]["version"] == "1.0.0"
-        assert pkg_a_fixes[0]["date"] == "2023-01-15T00:00:00"
+        assert pkg_a_fixes[0]["date"] == "2023-01-15"
 
         assert len(pkg_b_fixes) == 1
         assert pkg_b_fixes[0]["version"] == "2.0.0"
-        assert pkg_b_fixes[0]["date"] == "2023-02-20T00:00:00"
+        assert pkg_b_fixes[0]["date"] == "2023-02-20"
 
     def test_ecosystem_processor_called(self):
         """Test that ecosystem_processor is called when provided."""
@@ -354,7 +353,7 @@ class TestPatchFixDate:
         }
 
         fix_result = Mock(spec=FixResult)
-        fix_result.date = datetime(2023, 1, 1)
+        fix_result.date = date(2023, 1, 1)
         fix_result.kind = "release"
 
         fixdater = Mock()
@@ -397,7 +396,7 @@ class TestPatchFixDate:
         }
 
         fix_result = Mock(spec=FixResult)
-        fix_result.date = datetime(2023, 1, 1)
+        fix_result.date = date(2023, 1, 1)
         fix_result.kind = "release"
 
         fixdater = Mock()
