@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -209,6 +210,39 @@ class TestStore:
 
         assert len(results) == 0
 
+    def test_get_changed_vuln_ids_since(self, tmpdir, helpers):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # create test database with runs table
+        self._create_test_database_with_runs(store.db_path)
+
+        # test getting changed vuln IDs since a specific date
+        since_date = datetime(2023, 2, 15)  # should return CVE-2023-0002 and CVE-2023-0003
+        result_ids = store.get_changed_vuln_ids_since(since_date)
+
+        assert isinstance(result_ids, set)
+        assert len(result_ids) == 2
+        assert "CVE-2023-0002" in result_ids
+        assert "CVE-2023-0003" in result_ids
+        assert "CVE-2023-0001" not in result_ids  # this was from run_id=1 (2023-01-10)
+
+    def test_get_changed_vuln_ids_since_no_results(self, tmpdir, helpers):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # create test database with runs table
+        self._create_test_database_with_runs(store.db_path)
+
+        # test getting changed vuln IDs since a future date
+        since_date = datetime(2024, 1, 1)  # should return no results
+        result_ids = store.get_changed_vuln_ids_since(since_date)
+
+        assert isinstance(result_ids, set)
+        assert len(result_ids) == 0
+
     def _create_test_database(self, db_path: Path):
         """helper method to create test database with sample data"""
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -255,5 +289,83 @@ class TestStore:
 
             conn.executemany(
                 "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                test_data,
+            )
+
+    def _create_test_database_with_runs(self, db_path: Path):
+        """helper method to create test database with runs table and run_id column"""
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with sqlite3.connect(db_path) as conn:
+            # create runs table
+            conn.execute("""
+                CREATE TABLE runs (
+                    id INTEGER PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    resolution TEXT NOT NULL,
+                    provider TEXT,
+                    first_date TEXT NOT NULL,
+                    last_date TEXT NOT NULL,
+                    total_dbs_planned INTEGER NOT NULL,
+                    total_dbs_completed INTEGER NOT NULL,
+                    total_dbs_failed INTEGER NOT NULL,
+                    run_timestamp TEXT NOT NULL
+                )
+            """)
+
+            # create fixdates table with run_id column
+            conn.execute("""
+                CREATE TABLE fixdates (
+                    vuln_id TEXT,
+                    provider TEXT,
+                    package_name TEXT,
+                    full_cpe TEXT,
+                    ecosystem TEXT,
+                    fix_version TEXT,
+                    first_observed_date TEXT,
+                    resolution TEXT,
+                    source TEXT,
+                    run_id INTEGER,
+                    database_id INTEGER
+                )
+            """)
+
+            # insert test runs
+            runs_data = [
+                (1, "test", "fixed", "nvd", "2023-01-01T00:00:00", "2023-01-01T23:59:59", 1, 1, 0, "2023-01-10T12:00:00"),
+                (2, "test", "fixed", "debian", "2023-02-01T00:00:00", "2023-02-01T23:59:59", 1, 1, 0, "2023-02-20T12:00:00"),
+                (3, "test", "fixed", "rhel", "2023-03-01T00:00:00", "2023-03-01T23:59:59", 1, 1, 0, "2023-03-10T12:00:00"),
+            ]
+            conn.executemany(
+                "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                runs_data,
+            )
+
+            # insert test fixdate data with run_id
+            test_data = [
+                # run_id=1 (2023-01-10) - should not be included when filtering since 2023-02-15
+                (
+                    "CVE-2023-0001", "nvd", "",
+                    "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
+                    "2.4.42", "2023-01-15T10:30:00", "fixed", "grype-db", 1, 1,
+                ),
+                # run_id=2 (2023-02-20) - should be included
+                (
+                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
+                    "7.68.0-1ubuntu2.15", "2023-02-20T14:45:00", "fixed", "grype-db", 2, 1,
+                ),
+                (
+                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
+                    None, "2023-02-18T09:15:00", "wont-fix", "grype-db", 2, 1,
+                ),
+                # run_id=3 (2023-03-10) - should be included
+                (
+                    "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
+                    "1.1.1k-7.el8_6", "2023-03-10T16:00:00", "fixed", "grype-db", 3, 1,
+                ),
+            ]
+
+            conn.executemany(
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 test_data,
             )

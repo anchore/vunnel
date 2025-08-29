@@ -1,7 +1,7 @@
 import logging
 import os
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import oras.client
@@ -15,6 +15,10 @@ from .finder import Finder, Result
 
 @dataclass
 class FixDate:
+    """
+    This is the model representing the fixdate table in the underlying sqlite database.
+    """
+
     vuln_id: str
     provider: str
     package_name: str
@@ -121,7 +125,7 @@ class Store(Finder):
         ecosystem: str | None = None,
     ) -> list[Result]:
         return [
-            Result(date=fd.first_observed_date, kind="first-observed")
+            Result(date=fd.first_observed_date, kind="first-observed", version=fd.fix_version)
             for fd in self.get(
                 vuln_id=vuln_id,
                 cpe_or_package=cpe_or_package,
@@ -129,6 +133,47 @@ class Store(Finder):
                 ecosystem=ecosystem,
             )
         ]
+
+    def get_changed_vuln_ids_since(self, since_date: datetime) -> set[str]:
+        """get all vulnerability IDs that have been created or modified after the given date.
+
+        This queries the runs table to find applicable runs, then returns all unique
+        vuln_ids from fixdate entries with those run_ids. These vulnerabilities will
+        need to be fully reprocessed.
+
+        Args:
+            since_date: Only return vuln IDs from runs after this datetime
+
+        Returns:
+            Set of unique vulnerability IDs that have changed
+        """
+        conn, _ = self._get_connection()
+
+        # reflect the runs table structure
+        metadata = db.MetaData()
+        runs_table = db.Table("runs", metadata, autoload_with=self.engine)
+        fixdates_table = db.Table("fixdates", metadata, autoload_with=self.engine)
+
+        # get run IDs for runs after the given date
+        run_query = runs_table.select().where(runs_table.c.run_timestamp >= since_date)
+        run_results = conn.execute(run_query).fetchall()
+
+        if not run_results:
+            return set()
+
+        run_ids = [row.id for row in run_results]
+
+        # get distinct vuln_ids from fixdates with those run_ids
+        vuln_query = (
+            db.select(fixdates_table.c.vuln_id)
+            .distinct()
+            .where(
+                fixdates_table.c.run_id.in_(run_ids),
+            )
+        )
+        vuln_results = conn.execute(vuln_query).fetchall()
+
+        return {row.vuln_id for row in vuln_results}
 
     def _get_connection(self) -> tuple[db.engine.Connection, db.Table]:
         """get or create SQLAlchemy connection and table"""
