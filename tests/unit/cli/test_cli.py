@@ -320,6 +320,7 @@ providers:
       skip_newer_archive_check: false
     url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
   github:
+    add_fix_dates: false
     api_url: https://api.github.com/graphql
     request_timeout: 125
     runtime:
