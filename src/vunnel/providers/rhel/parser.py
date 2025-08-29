@@ -24,6 +24,8 @@ from vunnel.utils.vulnerability import vulnerability_element
 if TYPE_CHECKING:
     import requests
 
+    from vunnel.tool import fixdate
+
     from .rhsa_provider import RHSAProvider
 
 namespace = "rhel"
@@ -54,6 +56,7 @@ class Parser:
     def __init__(  # noqa: PLR0913
         self,
         workspace,
+        fixdater: fixdate.Finder | None = None,
         download_timeout=None,
         max_workers=None,
         full_sync_interval=None,
@@ -64,6 +67,7 @@ class Parser:
         skip_download: bool = False,
     ):
         self.workspace = workspace
+        self.fixdater = fixdater
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
         self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
         self.download_timeout = download_timeout if isinstance(download_timeout, int) else 125
@@ -228,6 +232,12 @@ class Parser:
         )
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
+
+        if self.fixdater:
+            if self.skip_download:
+                self.logger.warning("skip download requested, but fix date finder does not support skipping download")
+            else:
+                self.fixdater.download()
 
         count = self._download_minimal_cve_pages()
 
@@ -768,16 +778,37 @@ class Parser:
                                 },
                             )
 
-                    v["Vulnerability"]["FixedIn"].append(
-                        {
-                            "Name": artifact.package,
-                            "Version": artifact.version,
-                            "Module": artifact.module,
-                            "VersionFormat": "rpm",  # hard code version format for now
-                            "NamespaceName": ns,
-                            "VendorAdvisory": a,
-                        },
-                    )
+                    fix_version = artifact.version
+                    package_name = artifact.package
+
+                    available = None
+                    if fix_version and self.fixdater:
+                        dates = self.fixdater.find(
+                            vuln_id=cve_id,
+                            cpe_or_package=package_name,
+                            fix_version=fix_version,
+                            ecosystem=ns,
+                        )
+                        if dates:
+                            result = dates[0]
+                            available = {
+                                "date": result.date.isoformat(),
+                                "kind": result.kind,
+                            }
+
+                    record = {
+                        "Name": package_name,
+                        "Version": fix_version,
+                        "Module": artifact.module,
+                        "VersionFormat": "rpm",  # hard code version format for now
+                        "NamespaceName": ns,
+                        "VendorAdvisory": a,
+                    }
+
+                    if available:
+                        record["available"] = available
+
+                    v["Vulnerability"]["FixedIn"].append(record)
 
                 results.append(NamespacePayload(namespace=ns, payload=v))
 

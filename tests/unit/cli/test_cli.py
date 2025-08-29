@@ -434,6 +434,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   rhel:
+    add_fix_dates: false
     full_sync_interval: 2
     ignore_hydra_errors: false
     parallelism: 4
