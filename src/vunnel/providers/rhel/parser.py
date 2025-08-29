@@ -807,7 +807,7 @@ class Parser:
                     }
 
                     if available:
-                        record["available"] = available
+                        record["Available"] = available
 
                     v["Vulnerability"]["FixedIn"].append(record)
 
