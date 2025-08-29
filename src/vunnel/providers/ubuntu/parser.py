@@ -539,12 +539,6 @@ def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder | None = None, logg
             pkg = FixedIn()
             pkg.Name = p.package
 
-            # if self.Date:
-            #     if isinstance(self.Date, datetime):
-            #         self.Date = self.Date.date().isoformat()
-            #     elif isinstance(self.Date, str):
-            #         self.Date = date.normalize_date(self.Date)
-
             # If there is a version indicating a fix use it, else 'None' is special keyword for no-fix-available
             if p.status == "released":
                 # Can do version format check here, but requires code from anchore-engine
