@@ -437,7 +437,7 @@ class TestParser:
         assert len(result) == 2
 
 
-def test_provider_schema(helpers, fake_get_query, advisories):
+def test_provider_schema(helpers, fake_get_query, advisories, auto_fake_fixdate_finder):
     fake_get_query([advisories(), advisories(has_next_page=True)])
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
@@ -491,7 +491,7 @@ def test_provider_respects_github_rate_limit(mock_post, mock_sleep):
     mock_sleep.assert_not_called()
 
 
-def test_provider_via_snapshot(helpers, fake_get_query, advisories):
+def test_provider_via_snapshot(helpers, fake_get_query, advisories, auto_fake_fixdate_finder):
     fake_get_query([advisories(), advisories(has_next_page=True)])
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
