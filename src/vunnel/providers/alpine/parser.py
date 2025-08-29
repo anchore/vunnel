@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     import requests
 
     from vunnel import workspace
+    from vunnel.tool import fixdate
 
 namespace = "alpine"
 feedtype = "vulnerabilities"
@@ -53,14 +54,16 @@ class Parser:
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
     _security_reference_url_ = "https://security.alpinelinux.org/vuln"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
+        fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
         url: str | None = None,
         security_reference_url: str | None = None,
     ):
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
             workspace.input_path,
@@ -97,6 +100,9 @@ class Parser:
             shutil.rmtree(self.source_dir_path)
         if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
+
+        if self.fixdater:
+            self.fixdater.download()
 
         links = []
         try:
@@ -217,10 +223,10 @@ class Parser:
                     pkg_el = el["pkg"]
 
                     pkg = pkg_el["name"]
-                    for pkg_version in pkg_el["secfixes"]:
+                    for fix_version in pkg_el["secfixes"]:
                         vids = []
-                        if pkg_el["secfixes"][pkg_version]:
-                            for rawvid in pkg_el["secfixes"][pkg_version]:
+                        if pkg_el["secfixes"][fix_version]:
+                            for rawvid in pkg_el["secfixes"][fix_version]:
                                 tmp = rawvid.split()
                                 for newvid in tmp:
                                     if newvid not in vids:
@@ -249,10 +255,27 @@ class Parser:
 
                             # SET UP fixedins
                             fixed_el = {}
+                            ecosystem = f"{namespace}:{release}"
                             fixed_el["VersionFormat"] = "apk"
-                            fixed_el["NamespaceName"] = namespace + ":" + str(release)
+                            fixed_el["NamespaceName"] = ecosystem
                             fixed_el["Name"] = pkg
-                            fixed_el["Version"] = pkg_version
+                            fixed_el["Version"] = fix_version
+
+                            if fix_version and self.fixdater:
+                                dates = self.fixdater.find(
+                                    vuln_id=str(vid),
+                                    cpe_or_package=pkg,
+                                    fix_version=fix_version,
+                                    ecosystem=ecosystem,
+                                )
+                                if dates:
+                                    result = dates[0]
+                                    available = {
+                                        "Date": result.date.isoformat(),
+                                        "Kind": result.kind,
+                                    }
+
+                                    fixed_el["Available"] = available
 
                             vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
