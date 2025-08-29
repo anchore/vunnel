@@ -218,6 +218,7 @@ providers:
       '2022': https://alas.aws.amazon.com/AL2022/alas.rss
       '2023': https://alas.aws.amazon.com/AL2023/alas.rss
   bitnami:
+    add_fix_dates: false
     request_timeout: 125
     runtime:
       existing_input: keep
