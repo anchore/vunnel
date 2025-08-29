@@ -99,6 +99,7 @@ def test_run(mocker, monkeypatch) -> None:
             "./data",
             # note: this is the default config
             config=nvd.Config(
+                add_fix_dates=False,
                 runtime=provider.RuntimeConfig(
                     on_error=provider.OnErrorConfig(
                         action=provider.OnErrorAction.FAIL,
@@ -400,6 +401,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   nvd:
+    add_fix_dates: false
     api_key: secret
     overrides_enabled: false
     overrides_url: https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz

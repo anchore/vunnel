@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class Result:
     date: datetime.date
     kind: str
+    version: str | None = None
 
 
 class Finder(abc.ABC):
@@ -26,6 +27,12 @@ class Finder(abc.ABC):
     ) -> list[Result]:
         raise NotImplementedError(
             "Finder subclasses must implement the get method to retrieve date strings.",
+        )
+
+    @abc.abstractmethod
+    def get_changed_vuln_ids_since(self, since_date: datetime.datetime) -> set[str]:
+        raise NotImplementedError(
+            "Finder subclasses must implement the get_changed_vuln_ids_since method.",
         )
 
 
@@ -48,3 +55,9 @@ class CombinedFinder(Finder):
         for finder in self.finders:
             results.extend(finder.find(vuln_id, cpe_or_package, fix_version, ecosystem))
         return results
+
+    def get_changed_vuln_ids_since(self, since_date: datetime.datetime) -> set[str]:
+        changed_ids = set()
+        for finder in self.finders:
+            changed_ids.update(finder.get_changed_vuln_ids_since(since_date))
+        return changed_ids

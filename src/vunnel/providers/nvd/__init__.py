@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
+from vunnel.tool import fixdate
 
 if TYPE_CHECKING:
     import datetime
@@ -19,6 +20,7 @@ class Config:
             existing_results=result.ResultStatePolicy.KEEP,
         ),
     )
+    add_fix_dates: bool = True
     request_timeout: int = 125
     request_retry_count: int = 10
     api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
@@ -67,9 +69,14 @@ class Provider(provider.Provider):
                 "if 'overrides_enabled' is set then 'overrides_url' must be set",
             )
 
+        fixdater = None
+        if config.add_fix_dates:
+            fixdater = fixdate.default_finder(self.workspace, self.name())
+
         self.manager = Manager(
             workspace=self.workspace,
             schema=self.__schema__,
+            fixdater=fixdater,
             download_timeout=self.config.request_timeout,
             download_retry_count=self.config.request_retry_count,
             api_key=self.config.api_key,
