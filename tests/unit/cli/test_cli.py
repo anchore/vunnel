@@ -234,6 +234,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   chainguard:
+    add_fix_dates: false
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -521,6 +522,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   wolfi:
+    add_fix_dates: false
     request_timeout: 125
     runtime:
       existing_input: keep
