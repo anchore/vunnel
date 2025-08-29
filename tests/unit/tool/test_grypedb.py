@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import sqlite3
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
 from vunnel import workspace
-from vunnel.tool.fixdate.grypedb import FixDate, Store
+from vunnel.tool.fixdate.grypedb import Store
+from vunnel.tool.fixdate.finder import Result
 
 
 class TestStore:
@@ -24,7 +23,7 @@ class TestStore:
 
         # verify initialization
         assert store.workspace == ws
-        assert store.name == name
+        assert store.provider == name
         assert store.db_path == Path(ws.input_path) / "fix-dates" / f"{name}.db"
         assert store.logger.name == f"fixes-{name}"
 
@@ -39,18 +38,9 @@ class TestStore:
         # create the fixdates table that the Store expects
         self._create_test_database(store.db_path)
 
-        # run setup
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(store.setup())
-        finally:
-            loop.close()
-
-        # verify setup completed without errors and can query the database
-        results = store.get(
+        # verify can query the database
+        results = store.find(
             vuln_id="CVE-2023-0001",
-            provider="nvd",
             cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
             fix_version="2.4.42",
         )
@@ -120,20 +110,18 @@ class TestStore:
         self._create_test_database(store.db_path)
 
         # test CPE-based query
-        results = store.get(
+        results = store.find(
             vuln_id="CVE-2023-0001",
-            provider="nvd",
             cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
             fix_version="2.4.42",
         )
 
         assert len(results) == 1
         result = results[0]
-        assert result.vuln_id == "CVE-2023-0001"
-        assert result.provider == "nvd"
-        assert result.full_cpe == "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*"
-        assert result.fix_version == "2.4.42"
-        assert result.package_name == ""
+        assert isinstance(result, Result)
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 1, 15)
 
     def test_get_by_package_name(self, tmpdir, helpers):
         # create workspace and store
@@ -144,9 +132,8 @@ class TestStore:
         self._create_test_database(store.db_path)
 
         # test package name-based query
-        results = store.get(
+        results = store.find(
             vuln_id="CVE-2023-0002",
-            provider="debian",
             cpe_or_package="curl",
             fix_version="7.68.0-1ubuntu2.15",
             ecosystem="debian:11",
@@ -154,11 +141,10 @@ class TestStore:
 
         assert len(results) == 1
         result = results[0]
-        assert result.vuln_id == "CVE-2023-0002"
-        assert result.provider == "debian"
-        assert result.package_name == "curl"
-        assert result.ecosystem == "debian:11"
-        assert result.full_cpe == ""
+        assert isinstance(result, Result)
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 2, 20)
 
     def test_get_with_ecosystem(self, tmpdir, helpers):
         # create workspace and store
@@ -169,36 +155,20 @@ class TestStore:
         self._create_test_database(store.db_path)
 
         # test query with ecosystem filter
-        results = store.get(
+        results = store.find(
             vuln_id="CVE-2023-0002",
-            provider="debian",
             cpe_or_package="curl",
             fix_version=None,
             ecosystem="debian:11",
         )
 
         assert len(results) == 2  # should return both with and without fix_version
+        # verify all results are Result objects with correct kind
+        for result in results:
+            assert isinstance(result, Result)
+            assert result.kind == "first-observed"
 
-    def test_get_without_fix_version(self, tmpdir, helpers):
-        # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
-
-        # create test database
-        self._create_test_database(store.db_path)
-
-        # test query without fix_version
-        results = store.get(
-            vuln_id="CVE-2023-0002",
-            provider="debian",
-            cpe_or_package="curl",
-            fix_version=None,
-            ecosystem="debian:11",
-        )
-
-        assert len(results) == 2  # both records should match
-
-    def test_get_returns_fixdate_objects(self, tmpdir, helpers):
+    def test_find_returns_result_objects(self, tmpdir, helpers):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test", create=True)
         store = Store(ws, "test-db")
@@ -207,9 +177,8 @@ class TestStore:
         self._create_test_database(store.db_path)
 
         # get results
-        results = store.get(
+        results = store.find(
             vuln_id="CVE-2023-0001",
-            provider="nvd",
             cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
             fix_version="2.4.42",
         )
@@ -217,13 +186,13 @@ class TestStore:
         assert len(results) == 1
         result = results[0]
 
-        # verify it's a FixDate object with correct types
-        assert isinstance(result, FixDate)
-        assert isinstance(result.first_observed_date, datetime)
-        assert result.resolution == "fixed"
-        assert result.source == "grype-db"
+        # verify it's a Result object with correct types
+        assert isinstance(result, Result)
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 1, 15)
 
-    def test_get_empty_results(self, tmpdir, helpers):
+    def test_find_empty_results(self, tmpdir, helpers):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test", create=True)
         store = Store(ws, "test-db")
@@ -232,9 +201,8 @@ class TestStore:
         self._create_test_database(store.db_path)
 
         # test query that should return no results
-        results = store.get(
+        results = store.find(
             vuln_id="CVE-9999-9999",
-            provider="nonexistent",
             cpe_or_package="nonexistent",
             fix_version=None,
         )
@@ -265,23 +233,23 @@ class TestStore:
             test_data = [
                 # CPE-based record
                 (
-                    "CVE-2023-0001", "nvd", "",
+                    "CVE-2023-0001", "test-db", "",
                     "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
-                    "2.4.42", "2023-01-15T10:30:00", "fixed", "grype-db",
+                    "2.4.42", "2023-01-15", "fixed", "grype-db",
                 ),
                 # package name-based records
                 (
-                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
-                    "7.68.0-1ubuntu2.15", "2023-02-20T14:45:00", "fixed", "grype-db",
+                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
+                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db",
                 ),
                 (
-                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
-                    None, "2023-02-18T09:15:00", "wont-fix", "grype-db",
+                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
+                    None, "2023-02-18", "wont-fix", "grype-db",
                 ),
                 # additional test record
                 (
                     "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
-                    "1.1.1k-7.el8_6", "2023-03-10T16:00:00", "fixed", "grype-db",
+                    "1.1.1k-7.el8_6", "2023-03-10", "fixed", "grype-db",
                 ),
             ]
 

@@ -1,11 +1,12 @@
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date
 from pathlib import Path
 
 import oras.client
 import sqlalchemy as db
+from sqlalchemy import event
 
 from vunnel import workspace
 
@@ -20,7 +21,7 @@ class FixDate:
     full_cpe: str
     ecosystem: str
     fix_version: str | None
-    first_observed_date: datetime
+    first_observed_date: date
     resolution: str
     source: str
 
@@ -34,19 +35,6 @@ class Store(Finder):
         self.engine: db.engine.Engine | None = None
         self.conn: db.engine.Connection | None = None
         self.table: db.Table | None = None
-
-    async def setup(self) -> None:
-        # configure SQLAlchemy engine with SQLite pragmas
-        @db.event.listens_for(db.engine.Engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
-            cursor = dbapi_connection.cursor()
-            cursor.execute("PRAGMA query_only = ON")
-            cursor.execute("PRAGMA cache_size=1000")
-            cursor.execute("PRAGMA temp_store=memory")
-            cursor.close()
-
-        # create engine and test connection
-        self._get_connection()
 
     def download(self) -> None:
         """fetch the fix date database from the OCI registry using ORAS"""
@@ -118,7 +106,7 @@ class Store(Finder):
                 full_cpe=row.full_cpe,
                 ecosystem=row.ecosystem,
                 fix_version=row.fix_version,
-                first_observed_date=row.first_observed_date,
+                first_observed_date=date.fromisoformat(row.first_observed_date),
                 resolution=row.resolution,
                 source=row.source,
             )
@@ -133,7 +121,7 @@ class Store(Finder):
         ecosystem: str | None = None,
     ) -> list[Result]:
         return [
-            Result(date=fd.first_observed_date.date(), kind="first-observed")
+            Result(date=fd.first_observed_date, kind="first-observed")
             for fd in self.get(
                 vuln_id=vuln_id,
                 cpe_or_package=cpe_or_package,
@@ -146,6 +134,16 @@ class Store(Finder):
         """get or create SQLAlchemy connection and table"""
         if not self.conn:
             self.engine = db.create_engine(f"sqlite:///{self.db_path}")
+
+            # configure SQLAlchemy engine with SQLite pragmas
+            @event.listens_for(self.engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA query_only = ON")
+                cursor.execute("PRAGMA cache_size=1000")
+                cursor.execute("PRAGMA temp_store=memory")
+                cursor.close()
+
             self.conn = self.engine.connect()
 
             # reflect the existing table structure
