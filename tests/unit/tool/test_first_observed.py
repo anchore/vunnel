@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from vunnel import workspace
-from vunnel.tool.fixdate.grypedb import Store
+from vunnel.tool.fixdate.first_observed import Store
 from vunnel.tool.fixdate.finder import Result
 
 
@@ -38,6 +38,9 @@ class TestStore:
 
         # create the fixdates table that the Store expects
         self._create_test_database(store.db_path)
+
+        # mark as downloaded to avoid runtime error
+        store._downloaded = True
 
         # verify can query the database
         results = store.find(
@@ -85,6 +88,23 @@ class TestStore:
         with pytest.raises(Exception, match="Download failed"):
             store.download()
 
+    @patch("oras.client.OrasClient")
+    def test_download_not_found(self, mock_oras_client_class, tmpdir):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # mock the ORAS client to raise a "not found" ValueError
+        mock_client = Mock()
+        mock_client.pull.side_effect = ValueError("repository not found")
+        mock_oras_client_class.return_value = mock_client
+
+        # verify download doesn't raise exception but sets _not_found flag
+        store.download()
+
+        assert store._not_found is True
+        assert store._downloaded is True
+
     def test_download_creates_directories(self, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test", create=True)
@@ -102,6 +122,109 @@ class TestStore:
             # verify directory was created
             assert store.db_path.parent.exists()
 
+    @patch("oras.client.OrasClient")
+    def test_get_after_not_found_download(self, mock_oras_client_class, tmpdir):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # mock the ORAS client to raise a "not found" ValueError
+        mock_client = Mock()
+        mock_client.pull.side_effect = ValueError("repository not found")
+        mock_oras_client_class.return_value = mock_client
+
+        # download to trigger not found behavior
+        store.download()
+
+        # verify get returns empty list (no error)
+        results = store.get(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="test",
+            fix_version="1.0.0",
+        )
+        assert results == []
+
+    @patch("oras.client.OrasClient")
+    def test_find_after_not_found_download(self, mock_oras_client_class, tmpdir):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # mock the ORAS client to raise a "not found" ValueError
+        mock_client = Mock()
+        mock_client.pull.side_effect = ValueError("repository not found")
+        mock_oras_client_class.return_value = mock_client
+
+        # download to trigger not found behavior
+        store.download()
+
+        # verify find returns empty list (no error)
+        results = store.find(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="test",
+            fix_version="1.0.0",
+        )
+        assert results == []
+
+    @patch("oras.client.OrasClient")
+    def test_get_changed_vuln_ids_since_after_not_found(self, mock_oras_client_class, tmpdir):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # mock the ORAS client to raise a "not found" ValueError
+        mock_client = Mock()
+        mock_client.pull.side_effect = ValueError("repository not found")
+        mock_oras_client_class.return_value = mock_client
+
+        # download to trigger not found behavior
+        store.download()
+
+        # verify get_changed_vuln_ids_since returns empty set (no error)
+        from datetime import datetime
+        result_ids = store.get_changed_vuln_ids_since(datetime(2023, 1, 1))
+        assert result_ids == set()
+
+    def test_get_without_download_raises_error(self, tmpdir):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # verify calling get without download raises RuntimeError
+        with pytest.raises(RuntimeError, match="fix date database has not been downloaded"):
+            store.get(
+                vuln_id="CVE-2023-0001",
+                cpe_or_package="test",
+                fix_version="1.0.0",
+            )
+
+    @patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token'})
+    @patch("oras.client.OrasClient")
+    def test_download_with_github_token(self, mock_oras_client_class, tmpdir):
+        # create workspace and store
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # mock the ORAS client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # run download
+        store.download()
+
+        # verify login was called with GitHub token
+        mock_client.login.assert_called_once_with(
+            hostname="ghcr.io",
+            username="token",
+            password="test-token",
+        )
+
+        # verify pull was still called
+        mock_client.pull.assert_called_once_with(
+            target="ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
+            outdir=str(store.db_path.parent),
+        )
+
     def test_get_by_cpe(self, tmpdir, helpers):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test", create=True)
@@ -109,6 +232,7 @@ class TestStore:
 
         # create test database
         self._create_test_database(store.db_path)
+        store._downloaded = True
 
         # test CPE-based query
         results = store.find(
@@ -131,6 +255,7 @@ class TestStore:
 
         # create test database
         self._create_test_database(store.db_path)
+        store._downloaded = True
 
         # test package name-based query
         results = store.find(
@@ -154,6 +279,7 @@ class TestStore:
 
         # create test database
         self._create_test_database(store.db_path)
+        store._downloaded = True
 
         # test query with ecosystem filter
         results = store.find(
@@ -176,6 +302,7 @@ class TestStore:
 
         # create test database
         self._create_test_database(store.db_path)
+        store._downloaded = True
 
         # get results
         results = store.find(
@@ -200,6 +327,7 @@ class TestStore:
 
         # create test database
         self._create_test_database(store.db_path)
+        store._downloaded = True
 
         # test query that should return no results
         results = store.find(
@@ -217,6 +345,7 @@ class TestStore:
 
         # create test database with runs table
         self._create_test_database_with_runs(store.db_path)
+        store._downloaded = True
 
         # test getting changed vuln IDs since a specific date
         since_date = datetime(2023, 2, 15)  # should return CVE-2023-0002 and CVE-2023-0003
@@ -235,6 +364,7 @@ class TestStore:
 
         # create test database with runs table
         self._create_test_database_with_runs(store.db_path)
+        store._downloaded = True
 
         # test getting changed vuln IDs since a future date
         since_date = datetime(2024, 1, 1)  # should return no results
