@@ -115,7 +115,7 @@ class Store(Finder):
             query = query.where(table.c.full_cpe == cpe_or_package)
         else:
             query = query.where(
-                (table.c.package_name == cpe_or_package) & (table.c.full_cpe == ""),
+                (table.c.package_name.collate("NOCASE") == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
             )
             if ecosystem:
                 query = query.where(table.c.ecosystem == ecosystem)
@@ -227,3 +227,15 @@ class Store(Finder):
             self.table = db.Table("fixdates", metadata, autoload_with=self.engine)
 
         return self.conn, self.table  # type: ignore[return-value]
+
+
+def normalize_package_name(name: str, ecosystem: str | None) -> str:
+    """normalize package name for consistent lookups"""
+    normalized = name.strip()
+
+    if ecosystem in ("pypi", "python"):
+        # follow PEP 503 normalization for Python packages (https://peps.python.org/pep-0503/)
+        # note: any casing normalization is handled by the database queries
+        normalized = normalized.replace("_", "-").replace(".", "-")
+
+    return normalized

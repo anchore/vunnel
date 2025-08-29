@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from vunnel import workspace
-from vunnel.tool.fixdate.first_observed import Store
+from vunnel.tool.fixdate.first_observed import Store, normalize_package_name
 from vunnel.tool.fixdate.finder import Result
 
 
@@ -373,6 +373,159 @@ class TestStore:
         assert isinstance(result_ids, set)
         assert len(result_ids) == 0
 
+    def test_package_name_case_insensitive_matching(self, tmpdir, helpers):
+        """test that package name matching is case insensitive"""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # create test database with mixed case package names
+        self._create_test_database_with_case_variations(store.db_path)
+        store._downloaded = True
+
+        # test case insensitive matching
+        test_cases = [
+            ("curl", "debian:11", 1),  # lowercase input
+            ("CURL", "debian:11", 1),  # uppercase input
+            ("Curl", "debian:11", 1),  # mixed case input
+            ("CuRl", "debian:11", 1),  # random case input
+        ]
+
+        for package_name, ecosystem, expected_count in test_cases:
+            results = store.find(
+                vuln_id="CVE-2023-0002",
+                cpe_or_package=package_name,
+                fix_version=None,
+                ecosystem=ecosystem,
+            )
+            assert len(results) == expected_count, f"Case insensitive test failed for '{package_name}': got {len(results)}, expected {expected_count}"
+
+    def test_python_package_normalization_matching(self, tmpdir, helpers):
+        """test that Python package name normalization works end-to-end"""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # create test database with python packages stored with underscores
+        self._create_test_database_with_python_packages(store.db_path)
+        store._downloaded = True
+
+        # test that we can find packages using different separator formats
+        test_cases = [
+            ("my_package", "python", 1),     # exact match
+            ("my-package", "python", 1),     # normalized input should match stored underscore version
+            ("My_Package", "python", 1),     # case insensitive + normalization
+            ("MY.PACKAGE", "python", 1),     # case + dot normalization
+            ("my.package", "pypi", 1),       # pypi ecosystem
+            ("MY_package.TEST", "python", 1), # complex case + mixed separators
+        ]
+
+        for package_name, ecosystem, expected_count in test_cases:
+            results = store.find(
+                vuln_id="CVE-2023-9001",
+                cpe_or_package=package_name,
+                fix_version=None,
+                ecosystem=ecosystem,
+            )
+            assert len(results) == expected_count, f"Python normalization test failed for '{package_name}' in {ecosystem}: got {len(results)}, expected {expected_count}"
+
+    def test_cpe_queries_unaffected_by_normalization(self, tmpdir, helpers):
+        """test that CPE-based queries are not affected by package name normalization"""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws, "test-db")
+
+        # create test database
+        self._create_test_database(store.db_path)
+        store._downloaded = True
+
+        # test CPE query (should work exactly as before)
+        results = store.find(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+            fix_version="2.4.42",
+        )
+
+        assert len(results) == 1
+        result = results[0]
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 1, 15)
+
+    def _create_test_database_with_case_variations(self, db_path: Path):
+        """helper method to create test database with case variation test data"""
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with sqlite3.connect(db_path) as conn:
+            # create table schema with COLLATE NOCASE
+            conn.execute("""
+                CREATE TABLE fixdates (
+                    vuln_id TEXT,
+                    provider TEXT,
+                    package_name TEXT COLLATE NOCASE,
+                    full_cpe TEXT,
+                    ecosystem TEXT,
+                    fix_version TEXT,
+                    first_observed_date TEXT,
+                    resolution TEXT,
+                    source TEXT
+                )
+            """)
+
+            # insert test data with mixed case package names
+            test_data = [
+                # package stored with lowercase
+                (
+                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
+                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db",
+                ),
+            ]
+
+            conn.executemany(
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                test_data,
+            )
+
+    def _create_test_database_with_python_packages(self, db_path: Path):
+        """helper method to create test database with Python package test data"""
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with sqlite3.connect(db_path) as conn:
+            # create table schema with COLLATE NOCASE
+            conn.execute("""
+                CREATE TABLE fixdates (
+                    vuln_id TEXT,
+                    provider TEXT,
+                    package_name TEXT COLLATE NOCASE,
+                    full_cpe TEXT,
+                    ecosystem TEXT,
+                    fix_version TEXT,
+                    first_observed_date TEXT,
+                    resolution TEXT,
+                    source TEXT
+                )
+            """)
+
+            # insert test data with python packages stored in normalized form
+            test_data = [
+                # python package stored with normalized form (hyphens)
+                (
+                    "CVE-2023-9001", "test-db", "my-package", "", "python",
+                    "1.0.0", "2023-02-20", "fixed", "grype-db",
+                ),
+                (
+                    "CVE-2023-9001", "test-db", "my-package", "", "pypi",
+                    "1.0.0", "2023-02-20", "fixed", "grype-db",
+                ),
+                # another test package with mixed separators in storage (normalized)
+                (
+                    "CVE-2023-9001", "test-db", "my-package-test", "", "python",
+                    "2.0.0", "2023-02-21", "fixed", "grype-db",
+                ),
+            ]
+
+            conn.executemany(
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                test_data,
+            )
+
     def _create_test_database(self, db_path: Path):
         """helper method to create test database with sample data"""
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -383,7 +536,7 @@ class TestStore:
                 CREATE TABLE fixdates (
                     vuln_id TEXT,
                     provider TEXT,
-                    package_name TEXT,
+                    package_name TEXT COLLATE NOCASE,
                     full_cpe TEXT,
                     ecosystem TEXT,
                     fix_version TEXT,
@@ -448,7 +601,7 @@ class TestStore:
                 CREATE TABLE fixdates (
                     vuln_id TEXT,
                     provider TEXT,
-                    package_name TEXT,
+                    package_name TEXT COLLATE NOCASE,
                     full_cpe TEXT,
                     ecosystem TEXT,
                     fix_version TEXT,
@@ -499,3 +652,142 @@ class TestStore:
                 "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 test_data,
             )
+
+
+class TestNormalizePackageName:
+    """tests for package name normalization functionality"""
+
+    def test_basic_normalization(self):
+        """test basic normalization for all ecosystems"""
+        tests = [
+            {
+                "name": "no case conversion",
+                "input": "CURL",
+                "ecosystem": "debian",
+                "expected": "CURL",
+            },
+            {
+                "name": "strip spaces",
+                "input": "  curl  ",
+                "ecosystem": "debian",
+                "expected": "curl",
+            },
+            {
+                "name": "strip spaces preserve case",
+                "input": "  CURL  ",
+                "ecosystem": None,
+                "expected": "CURL",
+            },
+            {
+                "name": "empty string",
+                "input": "",
+                "ecosystem": "debian",
+                "expected": "",
+            },
+            {
+                "name": "no changes needed",
+                "input": "curl",
+                "ecosystem": "debian",
+                "expected": "curl",
+            },
+        ]
+
+        for test in tests:
+            result = normalize_package_name(test["input"], test["ecosystem"])
+            assert result == test["expected"], f"test '{test['name']}' failed: got {result}, expected {test['expected']}"
+
+    def test_python_ecosystem_normalization(self):
+        """test Python-specific normalization rules"""
+        tests = [
+            {
+                "name": "python ecosystem with underscores",
+                "input": "my_package",
+                "ecosystem": "python",
+                "expected": "my-package",
+            },
+            {
+                "name": "python ecosystem with dots",
+                "input": "my.package",
+                "ecosystem": "python",
+                "expected": "my-package",
+            },
+            {
+                "name": "python ecosystem mixed separators",
+                "input": "my_package.name",
+                "ecosystem": "python",
+                "expected": "my-package-name",
+            },
+            {
+                "name": "pypi ecosystem with underscores",
+                "input": "my_package",
+                "ecosystem": "pypi",
+                "expected": "my-package",
+            },
+            {
+                "name": "pypi ecosystem with dots",
+                "input": "my.package",
+                "ecosystem": "pypi",
+                "expected": "my-package",
+            },
+            {
+                "name": "python ecosystem with case and separators preserved",
+                "input": "MY_Package.Name",
+                "ecosystem": "python",
+                "expected": "MY-Package-Name",
+            },
+            {
+                "name": "python ecosystem with spaces and separators",
+                "input": "  my_package.name  ",
+                "ecosystem": "python",
+                "expected": "my-package-name",
+            },
+        ]
+
+        for test in tests:
+            result = normalize_package_name(test["input"], test["ecosystem"])
+            assert result == test["expected"], f"test '{test['name']}' failed: got {result}, expected {test['expected']}"
+
+    def test_non_python_ecosystems(self):
+        """test that non-Python ecosystems only get basic normalization"""
+        tests = [
+            {
+                "name": "debian with underscores unchanged",
+                "input": "my_package",
+                "ecosystem": "debian",
+                "expected": "my_package",
+            },
+            {
+                "name": "debian with dots unchanged",
+                "input": "my.package",
+                "ecosystem": "debian",
+                "expected": "my.package",
+            },
+            {
+                "name": "rhel with underscores and case unchanged",
+                "input": "MY_Package",
+                "ecosystem": "rhel:8",
+                "expected": "MY_Package",
+            },
+            {
+                "name": "alpine with dots and case unchanged",
+                "input": "My.Package",
+                "ecosystem": "alpine",
+                "expected": "My.Package",
+            },
+            {
+                "name": "npm with underscores unchanged",
+                "input": "my_package",
+                "ecosystem": "npm",
+                "expected": "my_package",
+            },
+            {
+                "name": "none ecosystem with separators unchanged",
+                "input": "my_package.name",
+                "ecosystem": None,
+                "expected": "my_package.name",
+            },
+        ]
+
+        for test in tests:
+            result = normalize_package_name(test["input"], test["ecosystem"])
+            assert result == test["expected"], f"test '{test['name']}' failed: got {result}, expected {test['expected']}"
