@@ -85,9 +85,6 @@ class Parser:
         if not self.token:
             raise ValueError("Github token must be defined")
 
-        if self.fixdater:
-            self.fixdater.download()
-
         query = graphql_advisories(timestamp=self.timestamp, cursor=self.cursor, vuln_cursor=vuln_cursor)
 
         return get_query(self.token, query, self.download_timeout, self.api_url)
@@ -175,6 +172,9 @@ class Parser:
         return advisories
 
     def get(self):
+        if self.fixdater:
+            self.fixdater.download()
+
         # determine if a run was completed by looking for a timestamp
         metadata = self.db.get_metadata()
 
@@ -190,7 +190,7 @@ class Parser:
 
         # Process everything that was persisted first
         for node_data in self.db.get_all():
-            yield NodeParser(node_data.load(), logger=self.logger).parse()
+            yield NodeParser(node_data.load(), self.fixdater, logger=self.logger).parse()
 
         while has_cursor:
             # download graphql data as json, if the timestamp is present, then the
@@ -650,9 +650,10 @@ class NodeParser(dict):
                 version_range = item.get("vulnerableVersionRange", "").replace(",", "")
 
                 available = None
+                vid = self.data.get("ghsaId")
                 if fix_version and self.fixdater:
                     dates = self.fixdater.find(
-                        vuln_id=self.data.get("ghsaId"),
+                        vuln_id=vid,
                         cpe_or_package=package_name,
                         fix_version=fix_version,
                         ecosystem=ecosystem,
