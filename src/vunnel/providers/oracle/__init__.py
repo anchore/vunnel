@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.tool import fixdate
 
 from .parser import Parser, ol_config
 
@@ -20,6 +21,7 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
+    add_fix_dates: bool = True
     request_timeout: int = 125
 
 
@@ -35,8 +37,13 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
+        fixdater = None
+        if config.add_fix_dates:
+            fixdater = fixdate.default_finder(self.workspace, self.name())
+
         self.parser = Parser(
             workspace=self.workspace,
+            fixdater=fixdater,
             config=ol_config,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
@@ -52,9 +59,7 @@ class Provider(provider.Provider):
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            vuln_dict = self.parser.get()
-
-            for (vuln_id, namespace), (_, record) in vuln_dict.items():
+            for (vuln_id, namespace), (_, record) in self.parser.get():
                 namespace = namespace.lower()
                 vuln_id = vuln_id.lower()
 
