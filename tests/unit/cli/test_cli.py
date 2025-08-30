@@ -260,6 +260,7 @@ providers:
       path: providers/{provider_name}/listing.json
       skip_newer_archive_check: false
   debian:
+    add_fix_dates: true
     releases:
       bookworm: '12'
       bullseye: '11'
@@ -424,6 +425,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   oracle:
+    add_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
