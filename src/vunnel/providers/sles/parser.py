@@ -29,6 +29,9 @@ from vunnel.utils.oval_v2 import (
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, FixedIn, Vulnerability
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
 namespace = "sles"
@@ -62,9 +65,11 @@ class Parser:
         self,
         workspace: Workspace,
         allow_versions: list[str],
+        fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        self.fixdater = fixdater
         self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
         self.download_timeout = download_timeout
@@ -223,9 +228,8 @@ class Parser:
 
         return results
 
-    @classmethod
-    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901, PLR0912
-        cls.logger.info(
+    def _transform_oval_vulnerabilities(self, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901, PLR0912
+        self.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
         )
@@ -246,7 +250,7 @@ class Parser:
             # process CVSS once per oval vulnerability and reuse it for all normalized vulnerabilities
             normalized_cvss_list = []
             for cvss_vector in vulnerability_obj.cvss_v3_vectors:
-                cvss_object = cls._make_cvss(cvss_vector, vulnerability_obj.name)
+                cvss_object = self._make_cvss(cvss_vector, vulnerability_obj.name)
                 if cvss_object:
                     normalized_cvss_list.append(cvss_object)
 
@@ -256,7 +260,7 @@ class Parser:
                 (
                     release_name,
                     release_version,
-                ) = cls._get_name_and_version_from_test(
+                ) = self._get_name_and_version_from_test(
                     impact_item.namespace_test_id,
                     tests_dict,
                     artifacts_dict,
@@ -265,7 +269,7 @@ class Parser:
 
                 # validate release
                 if not release_name:
-                    cls.logger.debug(
+                    self.logger.debug(
                         "release name is invalid, skipping %s",
                         vulnerability_obj.name,
                     )
@@ -273,7 +277,7 @@ class Parser:
 
                 # validate version is inline with major version
                 if not release_version or not release_version.startswith(major_version):
-                    cls.logger.debug(
+                    self.logger.debug(
                         "%s %s is an unsupported namespace for major version %s, skipping %s for this namespace",
                         release_name,
                         release_version,
@@ -291,9 +295,9 @@ class Parser:
                     (
                         pkg_name,
                         pkg_version,
-                    ) = cls._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
+                    ) = self._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
                     if not pkg_name or not pkg_version:
-                        cls.logger.debug(
+                        self.logger.debug(
                             "package name and or version invalid, skipping fixed-in for %s",
                             test_id,
                         )
@@ -306,11 +310,22 @@ class Parser:
                             issued_datetime = datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d")  # noqa: DTZ007 # not a timezone aware datetime
                             available = FixAvailability(Date=issued_datetime, Kind="advisory")
                         except ValueError:
-                            cls.logger.debug(
+                            self.logger.debug(
                                 "failed to parse issued date %s for %s, skipping availability info",
                                 vulnerability_obj.issued_date,
                                 vulnerability_obj.name,
                             )
+
+                    if not available and pkg_version and self.fixdater:
+                        dates = self.fixdater.find(
+                            vuln_id=vulnerability_obj.name,
+                            cpe_or_package=pkg_name,
+                            fix_version=pkg_version,
+                            ecosystem=feed_ns,
+                        )
+                        if dates:
+                            result = dates[0]
+                            available = FixAvailability(Date=result.date, Kind=result.kind)
 
                     fixes.append(
                         FixedIn(
@@ -346,14 +361,17 @@ class Parser:
                     version_release_feed[release_version][release_name] = feed_obj
 
             # resolve multiple normalized entries per version
-            results.extend(cls._release_resolver(version_release_feed, vulnerability_obj.name))
+            results.extend(self._release_resolver(version_release_feed, vulnerability_obj.name))
 
             # free the contents
             version_release_feed.clear()
 
         return results
 
-    def get(self):
+    def get(self) -> Generator[tuple[str, str, dict], None, None]:
+        if self.fixdater:
+            self.fixdater.download()
+
         parser_factory = OVALParserFactory(
             parsers=[
                 SLESVulnerabilityParser,

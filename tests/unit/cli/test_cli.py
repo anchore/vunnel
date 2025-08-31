@@ -99,7 +99,7 @@ def test_run(mocker, monkeypatch) -> None:
             "./data",
             # note: this is the default config
             config=nvd.Config(
-                add_fix_dates=True,
+                add_first_observed_fix_dates=True,
                 runtime=provider.RuntimeConfig(
                     on_error=provider.OnErrorConfig(
                         action=provider.OnErrorAction.FAIL,
@@ -178,7 +178,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   alpine:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -218,7 +218,7 @@ providers:
       '2022': https://alas.aws.amazon.com/AL2022/alas.rss
       '2023': https://alas.aws.amazon.com/AL2023/alas.rss
   bitnami:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -236,7 +236,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   chainguard:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -260,7 +260,7 @@ providers:
       path: providers/{provider_name}/listing.json
       skip_newer_archive_check: false
   debian:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     releases:
       bookworm: '12'
       bullseye: '11'
@@ -289,7 +289,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   echo:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -326,7 +326,7 @@ providers:
       skip_newer_archive_check: false
     url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
   github:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     api_url: https://api.github.com/graphql
     request_timeout: 125
     runtime:
@@ -385,7 +385,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   minimos:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -403,7 +403,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   nvd:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     api_key: secret
     overrides_enabled: false
     overrides_url: https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz
@@ -425,7 +425,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   oracle:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -443,7 +443,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   rhel:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     full_sync_interval: 2
     ignore_hydra_errors: false
     parallelism: 4
@@ -468,7 +468,7 @@ providers:
       - rhel:3
       - rhel:4
   rocky:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -486,6 +486,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   sles:
+    add_first_observed_fix_dates: true
     allow_versions:
       - '11'
       - '12'
@@ -507,7 +508,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   ubuntu:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     additional_versions: {}
     enable_rev_history: true
     git_branch: master
@@ -530,7 +531,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   wolfi:
-    add_fix_dates: true
+    add_first_observed_fix_dates: true
     request_timeout: 125
     runtime:
       existing_input: keep

@@ -21,7 +21,7 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    add_fix_dates: bool = True
+    add_first_observed_fix_dates: bool = True
     request_timeout: int = 125
     parallelism: int = 4
     full_sync_interval: int = 2  # in days
@@ -43,7 +43,7 @@ class Provider(provider.Provider):
         self.logger.debug(f"config: {config}")
 
         fixdater = None
-        if config.add_fix_dates:
+        if config.add_first_observed_fix_dates:
             fixdater = fixdate.default_finder(self.workspace, self.name())
 
         self.parser = Parser(

@@ -23,6 +23,7 @@ from vunnel.utils.oval_v2 import (
     iter_parse_vulnerability_file,
 )
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, FixedIn, Vulnerability, VendorAdvisory
+from vunnel.tool import fixdate
 
 
 class TestSLESVulnerabilityParser:
@@ -358,7 +359,9 @@ class TestSLESParser:
         actual = Parser._release_resolver(test_input, "NA")
         assert sorted(actual) == sorted(expected)
 
-    def test_transform_oval_vulnerabilities(self, parsed_vulnerabilities, helpers):
+    def test_transform_oval_vulnerabilities(self, parsed_vulnerabilities, helpers, auto_fake_fixdate_finder):
+        workspace = helpers.provider_workspace_helper(name=Provider.name())
+
         mock_data_path = helpers.local_dir("test-fixtures/suse_truncated.xml")
 
         parser_factory = OVALParserFactory(
@@ -377,14 +380,16 @@ class TestSLESParser:
             parser_factory=parser_factory,
         )
 
-        actual = Parser._transform_oval_vulnerabilities("15", parsed_dict)
+        p = Parser(workspace=workspace, allow_versions=["15"], logger=None, fixdater=fixdate.default_finder(workspace, "sles"))
+
+        actual = p._transform_oval_vulnerabilities("15", parsed_dict)
         actual.sort(key=lambda x: x.NamespaceName)
         parsed_vulnerabilities.sort(key=lambda x: x.NamespaceName)
 
         assert actual == parsed_vulnerabilities
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config(allow_versions=["15"])
@@ -405,7 +410,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
