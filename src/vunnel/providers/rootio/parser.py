@@ -13,6 +13,7 @@ from vunnel.utils import vulnerability
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
     from vunnel import workspace
 
 
@@ -75,7 +76,7 @@ class Parser:
                     record["Vulnerability"]["Description"] = f"Vulnerability {cve_id} in {package_name}"
                     record["Vulnerability"]["FixedIn"] = []
                     record["Vulnerability"]["Metadata"] = {
-                        "CVE": [{"Name": cve_id, "Link": reference_links[0] if reference_links else ""}]
+                        "CVE": [{"Name": cve_id, "Link": reference_links[0] if reference_links else ""}],
                     }
                     vuln_dict[cve_id] = record
 
@@ -96,7 +97,7 @@ class Parser:
                         "Version": fixed_version,
                         "VersionFormat": version_format,
                         "NamespaceName": namespace,
-                        "VendorAdvisory": {"NoAdvisory": True}
+                        "VendorAdvisory": {"NoAdvisory": True},
                     })
 
                 # If no fixed versions, add unfixed entry
@@ -106,7 +107,7 @@ class Parser:
                         "Version": "",  # Empty version indicates no fix available
                         "VersionFormat": version_format,
                         "NamespaceName": namespace,
-                        "VendorAdvisory": {"NoAdvisory": True}
+                        "VendorAdvisory": {"NoAdvisory": True},
                     })
 
         return vuln_dict
