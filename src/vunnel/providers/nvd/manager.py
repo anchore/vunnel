@@ -83,7 +83,7 @@ class Manager:
         changed_cve_ids = set()
         if self.fixdater and last_updated:
             changed_vuln_ids = self.fixdater.get_changed_vuln_ids_since(last_updated)
-            changed_cve_ids = {id_to_cve(vid) for vid in changed_vuln_ids}
+            changed_cve_ids = set(changed_vuln_ids)
 
         # main NVD data download and processing
         cves_processed = set()
