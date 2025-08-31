@@ -200,7 +200,7 @@ class Manager:
         """
         override = self.overrides.cve(cve_id)
         if override:
-            self.logger.debug(f"applying override for {cve_id}")
+            self.logger.trace(f"applying override for {cve_id}")  # type: ignore[attr-defined]
             # ignore empty overrides
             if override is None or "cve" not in override:
                 return record
