@@ -172,7 +172,7 @@ class TestParser:
 
         assert counter == 1
 
-    def test_normalize(self, mock_parsed_data, tmpdir):
+    def test_normalize(self, mock_parsed_data, tmpdir, auto_fake_fixdate_finder):
         p = Parser(
             workspace=workspace.Workspace(tmpdir, "test", create=True),
             url="https://packages.wolfi.dev/os/security.json",

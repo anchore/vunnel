@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Any
 from vunnel import result
 from vunnel.providers.nvd.api import NvdAPI
 from vunnel.providers.nvd.overrides import NVDOverrides
+from vunnel.tool import fixdate
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from vunnel import schema as schema_def
-    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
 
@@ -33,6 +33,9 @@ class Manager:
         overrides_enabled: bool = False,
     ) -> None:
         self.workspace = workspace
+
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
 
         if not logger:
@@ -76,14 +79,14 @@ class Manager:
         # download dependencies
         if self.overrides.enabled:
             self.overrides.download()
-        if self.fixdater:
-            self.fixdater.download()
+
+        self.fixdater.download()
 
         # track CVEs with changed fix dates that need reprocessing
         changed_cve_ids = set()
-        if self.fixdater and last_updated:
+        if last_updated:
             changed_vuln_ids = self.fixdater.get_changed_vuln_ids_since(last_updated)
-            changed_cve_ids = {id_to_cve(vid) for vid in changed_vuln_ids}
+            changed_cve_ids = set(changed_vuln_ids)
 
         # main NVD data download and processing
         cves_processed = set()
@@ -200,7 +203,7 @@ class Manager:
         """
         override = self.overrides.cve(cve_id)
         if override:
-            self.logger.debug(f"applying override for {cve_id}")
+            self.logger.trace(f"applying override for {cve_id}")  # type: ignore[attr-defined]
             # ignore empty overrides
             if override is None or "cve" not in override:
                 return record
@@ -253,16 +256,14 @@ class Manager:
 
                     # look up fix dates for this CPE and CVE
                     # get the underlying FixDate objects with version info
-                    fix_dates = self.fixdater.find(
+                    fix_date = self.fixdater.best(
                         vuln_id=cve_id,
                         cpe_or_package=criteria,
                         fix_version=fix_version,
                         ecosystem=None,  # nvd has no ecosystem
                     )
 
-                    if fix_dates:
-                        # use the first result (could be enhanced to pick best match)
-                        fix_date = fix_dates[0]
+                    if fix_date and fix_date.date:
                         cpe_match["fix"] = {
                             "version": fix_date.version or "",
                             "date": fix_date.date.isoformat(),

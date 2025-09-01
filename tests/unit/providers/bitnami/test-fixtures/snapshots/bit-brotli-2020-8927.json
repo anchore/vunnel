@@ -14,8 +14,8 @@
               "anchore": {
                 "fixes": [
                   {
-                    "date": "2024-01-01",
-                    "kind": "first-observed",
+                    "date": "2024-03-06",
+                    "kind": "advisory",
                     "version": "1.0.8"
                   }
                 ]

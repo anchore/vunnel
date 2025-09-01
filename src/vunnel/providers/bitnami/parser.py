@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import osv
 
 from .git import GitWrapper
@@ -13,7 +14,6 @@ from .git import GitWrapper
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
 
@@ -30,6 +30,8 @@ class Parser:
         fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
         self.fixdater = fixdater
         self.workspace = ws
         self.git_url = self._git_src_url_
@@ -72,8 +74,7 @@ class Parser:
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
 
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         # Load the data from the git repository
         for vuln_entry in self._load():

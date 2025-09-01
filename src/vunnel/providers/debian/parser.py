@@ -11,6 +11,7 @@ from typing import Any
 import orjson
 
 from vunnel.result import SQLiteReader
+from vunnel.tool import fixdate
 from vunnel.utils import date, vulnerability
 from vunnel.utils import http_wrapper as http
 
@@ -47,8 +48,11 @@ class Parser:
     _fixed_in_note_regex_ = re.compile(r"^\s+NOTE:\s+\[(.*)\][-\s]+([^\s]*)(.*)")
     _base_dsa_id_regex_ = re.compile(r"(DSA-[^-]+).*")
 
-    def __init__(self, workspace, download_timeout=125, logger=None, distro_map=None):
+    def __init__(self, workspace, fixdater: fixdate.Finder | None = None, download_timeout=125, logger=None, distro_map=None):
         self.workspace = workspace
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         if not distro_map:
             distro_map = debian_distro_map
@@ -318,6 +322,8 @@ class Parser:
                         if distro_record.get("status", "") == "undetermined":
                             complete = False
 
+                        ecosystem = "debian:" + str(relno)
+
                         if complete:
                             if vid not in vuln_records[relno]:
                                 # create a new record
@@ -327,7 +333,7 @@ class Parser:
                                 # populate the static information about the new vuln record
                                 vuln_record["Vulnerability"]["Description"] = vulnerability_data.get("description", "")
                                 vuln_record["Vulnerability"]["Name"] = str(vid)
-                                vuln_record["Vulnerability"]["NamespaceName"] = "debian:" + str(relno)
+                                vuln_record["Vulnerability"]["NamespaceName"] = ecosystem
                                 vuln_record["Vulnerability"]["Link"] = "https://security-tracker.debian.org/tracker/" + str(vid)
                                 vuln_record["Vulnerability"]["Severity"] = "Unknown"
                             else:
@@ -422,11 +428,31 @@ class Parser:
                                     adv_mets[met_ns][met_sev]["neither"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
 
                                 # add Available object if fix version exists and DSA date is available
+                                advisory_fix_date = None
                                 if fixed_el["Version"] != "None" and matched_dsas:
                                     # get the date from the first matched DSA (all should have same date for same advisory)
-                                    dsa_date = date.normalize_date(matched_dsas[0].date)
-                                    if dsa_date:
-                                        fixed_el["Available"] = {"Date": dsa_date, "Kind": "advisory"}
+                                    advisory_fix_date = date.normalize_date(matched_dsas[0].date)
+
+                                # getting the date information from the DSA is preferred, but is not reliable;
+                                # we should fallback to other methods in these cases.
+                                result = self.fixdater.best(
+                                    vuln_id=str(vid),
+                                    cpe_or_package=pkg,
+                                    fix_version=fixed_el["Version"],
+                                    ecosystem=ecosystem,
+                                    candidates=[
+                                        fixdate.Result(
+                                            date=advisory_fix_date,
+                                            kind="advisory",
+                                            accurate=True,
+                                        ),
+                                    ],
+                                )
+                                if result:
+                                    fixed_el["Available"] = {
+                                        "Date": result.date.isoformat(),
+                                        "Kind": result.kind,
+                                    }
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
@@ -457,7 +483,8 @@ class Parser:
         for relno, vuln_dict in fs_legacy_records.items():
             if relno not in legacy_records:
                 legacy_records[relno] = {}
-            legacy_records[relno].update(vuln_dict)
+            for vid, vuln_record in vuln_dict.items():
+                legacy_records[relno][vid] = self._patch_fix_date(vuln_record)
 
         if legacy_records:
             self.logger.info(f"found existing legacy data for the following releases: {list(legacy_records.keys())}")
@@ -465,6 +492,33 @@ class Parser:
             self.logger.info("no existing legacy data found")
 
         return legacy_records
+
+    def _patch_fix_date(self, vuln_record: dict[str, Any]) -> dict[str, Any]:
+        vid = vuln_record.get("Vulnerability", {}).get("Name", "")
+        if not vid:
+            return vuln_record
+
+        fixed_in_list = vuln_record.get("Vulnerability", {}).get("FixedIn", [])
+        for fixedin in fixed_in_list:
+            if "Available" in fixedin and "Date" in fixedin["Available"]:
+                continue
+            if "Version" not in fixedin or fixedin["Version"] in ("None", "0"):
+                continue
+
+            result = self.fixdater.best(
+                vuln_id=vid,
+                cpe_or_package=fixedin.get("Name", ""),
+                fix_version=fixedin["Version"],
+                ecosystem=fixedin.get("NamespaceName", "").lower(),
+            )
+            if result:
+                available = {
+                    "Date": result.date.isoformat(),
+                    "Kind": result.kind,
+                }
+
+                fixedin["Available"] = available
+        return vuln_record
 
     def _get_legacy_records_from_results_db(self) -> dict[str, dict[str, Any]]:
         legacy_records = {}
@@ -484,7 +538,7 @@ class Parser:
                         legacy_records[relno] = {}
 
                     records += 1
-                    legacy_records[relno][vid] = envelope.item
+                    legacy_records[relno][vid] = self._patch_fix_date(envelope.item)
 
             self.logger.debug(f"legacy dataset {file_path} contains {len(releases)} releases with {records} records")
 
@@ -531,6 +585,8 @@ class Parser:
         # download the files
         self._download_json()
         self._download_dsa()
+
+        self.fixdater.download()
 
         # normalize dsa list first
         ns_cve_dsalist = self._normalize_dsa_list()
