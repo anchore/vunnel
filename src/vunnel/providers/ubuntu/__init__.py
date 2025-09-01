@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.tool import fixdate
 
 from .parser import Parser, default_git_branch, default_git_url, default_max_workers
 
@@ -21,7 +20,6 @@ class Config:
             existing_input=provider.InputStatePolicy.KEEP,
         ),
     )
-    add_fix_dates: bool = True
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=dict)
     enable_rev_history: bool = True
@@ -45,13 +43,8 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        fixdater = None
-        if config.add_fix_dates:
-            fixdater = fixdate.default_finder(self.workspace, self.name())
-
         self.parser = Parser(
             workspace=self.workspace,
-            fixdater=fixdater,
             logger=self.logger,
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,

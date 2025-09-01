@@ -133,7 +133,7 @@ class TestAlpineProvider:
 
         assert counter == 1
 
-    def test_normalize(self, mock_parsed_data, tmpdir):
+    def test_normalize(self, mock_parsed_data, tmpdir, auto_fake_fixdate_finder):
         p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         release = mock_parsed_data[0]
         dbtype_data_dict = mock_parsed_data[1]

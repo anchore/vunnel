@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -10,7 +11,7 @@ from sqlalchemy import event
 
 from vunnel import workspace
 
-from .finder import Finder, Result
+from .finder import Result, Strategy
 
 
 @dataclass
@@ -28,17 +29,19 @@ class FixDate:
     first_observed_date: date
     resolution: str
     source: str
+    run_id: int
+    database_id: int
 
 
-class Store(Finder):
-    def __init__(self, ws: workspace.Workspace, provider: str) -> None:
+class Store(Strategy):
+    def __init__(self, ws: workspace.Workspace) -> None:
         self.workspace = ws
+        provider = ws.name
         self.provider = provider
         self.db_path = Path(ws.input_path) / "fix-dates" / f"{provider}.db"
         self.logger = logging.getLogger("fixes-" + provider)
         self.engine: db.engine.Engine | None = None
-        self.conn: db.engine.Connection | None = None
-        self.table: db.Table | None = None
+        self._thread_local = threading.local()
         self._not_found = False
         self._downloaded = False
 
@@ -125,6 +128,9 @@ class Store(Finder):
 
         results = conn.execute(query).fetchall()
 
+        if not results:
+            return []
+
         return [
             FixDate(
                 vuln_id=row.vuln_id,
@@ -136,8 +142,11 @@ class Store(Finder):
                 first_observed_date=date.fromisoformat(row.first_observed_date),
                 resolution=row.resolution,
                 source=row.source,
+                run_id=row.run_id,
+                database_id=row.database_id,
             )
             for row in results
+            if row and row.first_observed_date
         ]
 
     def find(
@@ -146,9 +155,15 @@ class Store(Finder):
         cpe_or_package: str,
         fix_version: str | None,
         ecosystem: str | None = None,
+        candidates: list[Result] | None = None,
     ) -> list[Result]:
         return [
-            Result(date=fd.first_observed_date, kind="first-observed", version=fd.fix_version)
+            Result(
+                date=fd.first_observed_date,
+                kind="first-observed",
+                version=fd.fix_version,
+                accurate=fd.database_id != 1,
+            )
             for fd in self.get(
                 vuln_id=vuln_id,
                 cpe_or_package=cpe_or_package,
@@ -207,26 +222,54 @@ class Store(Finder):
         return {row.vuln_id for row in vuln_results}
 
     def _get_connection(self) -> tuple[db.engine.Connection, db.Table]:
-        """get or create SQLAlchemy connection and table"""
-        if not self.conn:
-            self.engine = db.create_engine(f"sqlite:///{self.db_path}")
+        """get or create thread-local SQLAlchemy connection and table"""
+        # get thread-local connection and table, or create them if they don't exist
+        if not hasattr(self._thread_local, "conn") or not hasattr(self._thread_local, "table"):
+            # create engine once if it doesn't exist
+            if not self.engine:
+                self.engine = db.create_engine(f"sqlite:///{self.db_path}")
 
-            # configure SQLAlchemy engine with SQLite pragmas
-            @event.listens_for(self.engine, "connect")
-            def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
-                cursor = dbapi_connection.cursor()
-                cursor.execute("PRAGMA query_only = ON")
-                cursor.execute("PRAGMA cache_size=1000")
-                cursor.execute("PRAGMA temp_store=memory")
-                cursor.close()
+                # configure SQLAlchemy engine with SQLite pragmas
+                @event.listens_for(self.engine, "connect")
+                def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA query_only = ON")
+                    cursor.execute("PRAGMA cache_size=1000")
+                    cursor.execute("PRAGMA temp_store=memory")
+                    cursor.close()
 
-            self.conn = self.engine.connect()
+            # create thread-local connection
+            self._thread_local.conn = self.engine.connect()
 
-            # reflect the existing table structure
+            # reflect the existing table structure for this thread
             metadata = db.MetaData()
-            self.table = db.Table("fixdates", metadata, autoload_with=self.engine)
+            self._thread_local.table = db.Table("fixdates", metadata, autoload_with=self.engine)
 
-        return self.conn, self.table  # type: ignore[return-value]
+        return self._thread_local.conn, self._thread_local.table
+
+    def cleanup_thread_connections(self) -> None:
+        """clean up thread-local connections for the current thread"""
+        if hasattr(self._thread_local, "conn"):
+            try:
+                self._thread_local.conn.close()
+            except Exception:  # noqa: S110
+                # ignore errors during cleanup
+                pass
+            finally:
+                # clear the thread-local storage
+                if hasattr(self._thread_local, "conn"):
+                    delattr(self._thread_local, "conn")
+                if hasattr(self._thread_local, "table"):
+                    delattr(self._thread_local, "table")
+
+    def __enter__(self) -> "Store":
+        """context manager entry - ensure connection is ready"""
+        self._get_connection()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        """context manager exit - cleanup thread connections"""
+        self.cleanup_thread_connections()
 
 
 def normalize_package_name(name: str, ecosystem: str | None) -> str:

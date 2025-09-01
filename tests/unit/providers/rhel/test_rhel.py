@@ -690,7 +690,7 @@ class TestParser:
         assert fixed_in.version == "None"
         assert fixed_in.advisory.wont_fix is True
 
-    def test_parse_cve(self, tmpdir, mock_cve):
+    def test_parse_cve(self, tmpdir, mock_cve, auto_fake_fixdate_finder):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 
@@ -701,7 +701,7 @@ class TestParser:
         assert all(payload.get("Name") == mock_cve.get("name") for payload in payloads)
         assert all(payload.get("Severity") == "Low" for payload in payloads)
 
-    def test_parse_cve_partial_fix(self, tmpdir, mock_cve_partial_fix):
+    def test_parse_cve_partial_fix(self, tmpdir, mock_cve_partial_fix, auto_fake_fixdate_finder):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
 

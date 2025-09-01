@@ -3,31 +3,36 @@ from __future__ import annotations
 import datetime
 import json
 import os
-from pathlib import Path
-import subprocess
-import uuid
 import os.path
 import shutil
+import subprocess
+import uuid
 
 import jsonschema
 import orjson
 import pytest
 
-from vunnel.tool.fixdate.finder import Finder, Result
 from vunnel.tool import fixdate
+from vunnel.tool.fixdate.finder import Finder, Result
 
 
 class MockFixDateFinder(Finder):
     """Mock finder that prevents actual downloads and allows configurable responses."""
 
-    def __init__(self, responses=None, default_date=None, ids=None):
+    def __init__(self, responses=None, default_date=..., ids=None):
+        # initialize parent Finder with empty strategies and self as first_observed
+        super().__init__(strategies=[], first_observed=self)
         # responses can be:
         # - None (returns default result or empty list)
         # - A list of Results (returns same for all calls)
         # - A dict mapping (vuln_id, package) -> list of Results
         # - A callable that takes (vuln_id, cpe_or_package, fix_version, ecosystem) -> list of Results
         self.responses = responses
-        self.default_date = default_date or datetime.date(2024, 1, 1)
+        # Use ellipsis as sentinel to distinguish between no argument and explicit None
+        if default_date is ...:
+            self.default_date = datetime.date(2024, 1, 1)
+        else:
+            self.default_date = default_date
         self.ids = ids or set()
 
     def download(self) -> None:
@@ -41,17 +46,18 @@ class MockFixDateFinder(Finder):
         fix_version: str | None,
         ecosystem: str | None = None,
     ) -> list[Result]:
+        results = []
+
         if self.responses is None:
-            # return a default result with the default date for easy testing
-            return [Result(date=self.default_date, kind="first-observed", version=fix_version)]
+            # return empty list by default to make the mock transparent
+            # tests that need default results should configure them explicitly
+            return []
 
         if callable(self.responses):
-            return self.responses(vuln_id, cpe_or_package, fix_version, ecosystem)
-
-        if isinstance(self.responses, list):
-            return self.responses
-
-        if isinstance(self.responses, dict):
+            results = self.responses(vuln_id, cpe_or_package, fix_version, ecosystem)
+        elif isinstance(self.responses, list):
+            results = self.responses
+        elif isinstance(self.responses, dict):
             # try different key combinations for flexibility
             keys_to_try = [
                 (vuln_id, cpe_or_package, fix_version, ecosystem),
@@ -61,9 +67,26 @@ class MockFixDateFinder(Finder):
             ]
             for key in keys_to_try:
                 if key in self.responses:
-                    return self.responses[key]
+                    results = self.responses[key]
+                    break
 
-        return []
+        # Mimic the behavior of the real Store.find() method by setting the version field
+        # to the fix_version parameter (this matches what the real Store does)
+        adjusted_results = []
+        for result in results:
+            # Create a new Result with the version set to fix_version if not already set
+            if result.version is None:
+                adjusted_result = Result(
+                    date=result.date,
+                    kind=result.kind,
+                    version=fix_version,
+                    accurate=result.accurate,
+                )
+                adjusted_results.append(adjusted_result)
+            else:
+                adjusted_results.append(result)
+
+        return adjusted_results
 
     def get_changed_vuln_ids_since(self, since_date: datetime) -> set[str]:
         return self.ids
@@ -155,7 +178,7 @@ class WorkspaceHelper:
                 else:
                     d = orjson.loads(f.read())
                     expected_bytes = orjson.dumps(
-                        d, option=orjson.OPT_APPEND_NEWLINE | orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS
+                        d, option=orjson.OPT_APPEND_NEWLINE | orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
                     )
                     self.snapshot.assert_match(expected_bytes, snapshot_path)
 
@@ -179,7 +202,7 @@ class WorkspaceHelper:
             pytest.fail("\n".join(message_lines), pytrace=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def validate_json_schema():
     def apply(content: str):
         doc = json.loads(content)
@@ -235,7 +258,7 @@ class Helpers:
         return os.path.join(parent, path)
 
     def provider_workspace_helper(
-        self, name: str, create: bool = True, input_fixture: str | None = None, snapshot_prefix: str = ""
+        self, name: str, create: bool = True, input_fixture: str | None = None, snapshot_prefix: str = "",
     ) -> WorkspaceHelper:
         root = self.tmpdir
         if create:
@@ -256,7 +279,7 @@ class Helpers:
         return h
 
 
-@pytest.fixture()
+@pytest.fixture
 def helpers(request, tmpdir, snapshot):
     """
     Returns a common set of helper functions for tests.
@@ -273,7 +296,7 @@ def git_root() -> str:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def dummy_file():
     def apply(d: str, name: str = ""):
         if name == "":
@@ -288,7 +311,7 @@ def dummy_file():
     return apply
 
 
-@pytest.fixture()
+@pytest.fixture
 def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
@@ -323,12 +346,12 @@ def _schema_validator(schema: dict) -> jsonschema.Draft7Validator:
     return jsonschema.Draft7Validator(schema, registry=registry)
 
 
-@pytest.fixture()
+@pytest.fixture
 def auto_fake_fixdate_finder(fake_fixdate_finder):
-    return fake_fixdate_finder()
+    return fake_fixdate_finder(responses=[Result(date=datetime.date(2024, 1, 1), kind="first-observed")])
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_fixdate_finder(monkeypatch):
     """
     Mock fixture for fixdate.Finder that prevents actual downloads and allows configurable responses.
@@ -395,6 +418,6 @@ def fake_fixdate_finder(monkeypatch):
     """
     def apply(responses=None, default_date=None):
         mock_finder = MockFixDateFinder(responses=responses, default_date=default_date)
-        monkeypatch.setattr(fixdate, "default_finder", lambda ws, name: mock_finder)
+        monkeypatch.setattr(fixdate.first_observed, "Store", lambda ws: mock_finder)
         return mock_finder
     return apply

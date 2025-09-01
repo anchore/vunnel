@@ -93,7 +93,7 @@ class TestParser:
         }
         return release, data
 
-    def test_normalize(self, mock_parsed_data, tmpdir):
+    def test_normalize(self, mock_parsed_data, tmpdir, auto_fake_fixdate_finder):
         p = Parser(
             workspace=workspace.Workspace(tmpdir, "test", create=True),
             url="https://advisory.echohq.com/data.json",

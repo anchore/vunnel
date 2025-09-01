@@ -16,11 +16,11 @@ class TestStore:
 
     def test_store_initialization(self, tmpdir):
         # create a workspace
-        ws = workspace.Workspace(tmpdir, "test", create=True)
         name = "test-db"
+        ws = workspace.Workspace(tmpdir, name, create=True)
 
         # create store instance
-        store = Store(ws, name)
+        store = Store(ws)
 
         # verify initialization
         assert store.workspace == ws
@@ -30,8 +30,8 @@ class TestStore:
 
     def test_setup(self, tmpdir):
         # create a workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # ensure db directory exists
         store.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -53,8 +53,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_download_success(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client
         mock_client = Mock()
@@ -76,8 +76,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_download_failure(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client to raise an exception
         mock_client = Mock()
@@ -91,8 +91,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_download_not_found(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -107,8 +107,8 @@ class TestStore:
 
     def test_download_creates_directories(self, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # ensure directory doesn't exist initially
         assert not store.db_path.parent.exists()
@@ -125,8 +125,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_get_after_not_found_download(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -147,8 +147,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_find_after_not_found_download(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -169,8 +169,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_get_changed_vuln_ids_since_after_not_found(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -187,8 +187,8 @@ class TestStore:
 
     def test_get_without_download_raises_error(self, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # verify calling get without download raises RuntimeError
         with pytest.raises(RuntimeError, match="fix date database has not been downloaded"):
@@ -202,8 +202,8 @@ class TestStore:
     @patch("oras.client.OrasClient")
     def test_download_with_github_token(self, mock_oras_client_class, tmpdir):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # mock the ORAS client
         mock_client = Mock()
@@ -227,8 +227,8 @@ class TestStore:
 
     def test_get_by_cpe(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database
         self._create_test_database(store.db_path)
@@ -250,8 +250,8 @@ class TestStore:
 
     def test_get_by_package_name(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database
         self._create_test_database(store.db_path)
@@ -274,8 +274,8 @@ class TestStore:
 
     def test_get_with_ecosystem(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database
         self._create_test_database(store.db_path)
@@ -297,8 +297,8 @@ class TestStore:
 
     def test_find_returns_result_objects(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database
         self._create_test_database(store.db_path)
@@ -322,8 +322,8 @@ class TestStore:
 
     def test_find_empty_results(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database
         self._create_test_database(store.db_path)
@@ -340,8 +340,8 @@ class TestStore:
 
     def test_get_changed_vuln_ids_since(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database with runs table
         self._create_test_database_with_runs(store.db_path)
@@ -359,8 +359,8 @@ class TestStore:
 
     def test_get_changed_vuln_ids_since_no_results(self, tmpdir, helpers):
         # create workspace and store
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database with runs table
         self._create_test_database_with_runs(store.db_path)
@@ -375,8 +375,8 @@ class TestStore:
 
     def test_package_name_case_insensitive_matching(self, tmpdir, helpers):
         """test that package name matching is case insensitive"""
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database with mixed case package names
         self._create_test_database_with_case_variations(store.db_path)
@@ -401,8 +401,8 @@ class TestStore:
 
     def test_python_package_normalization_matching(self, tmpdir, helpers):
         """test that Python package name normalization works end-to-end"""
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database with python packages stored with underscores
         self._create_test_database_with_python_packages(store.db_path)
@@ -429,8 +429,8 @@ class TestStore:
 
     def test_cpe_queries_unaffected_by_normalization(self, tmpdir, helpers):
         """test that CPE-based queries are not affected by package name normalization"""
-        ws = workspace.Workspace(tmpdir, "test", create=True)
-        store = Store(ws, "test-db")
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
         # create test database
         self._create_test_database(store.db_path)
@@ -454,6 +454,28 @@ class TestStore:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sqlite3.connect(db_path) as conn:
+            # create databases table
+            conn.execute("""
+                CREATE TABLE databases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    build_date TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    vulnerability_count INTEGER,
+                    run_id INTEGER,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+
+            # insert default database record
+            conn.execute("""
+                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
+                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 1, '2023-01-01T00:00:00')
+            """)
+
             # create table schema with COLLATE NOCASE
             conn.execute("""
                 CREATE TABLE fixdates (
@@ -465,7 +487,9 @@ class TestStore:
                     fix_version TEXT,
                     first_observed_date TEXT,
                     resolution TEXT,
-                    source TEXT
+                    source TEXT,
+                    run_id INTEGER,
+                    database_id INTEGER
                 )
             """)
 
@@ -474,12 +498,12 @@ class TestStore:
                 # package stored with lowercase
                 (
                     "CVE-2023-0002", "test-db", "curl", "", "debian:11",
-                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db",
+                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1,
                 ),
             ]
 
             conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 test_data,
             )
 
@@ -488,6 +512,28 @@ class TestStore:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sqlite3.connect(db_path) as conn:
+            # create databases table
+            conn.execute("""
+                CREATE TABLE databases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    build_date TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    vulnerability_count INTEGER,
+                    run_id INTEGER,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+
+            # insert default database record
+            conn.execute("""
+                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
+                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 3, '2023-01-01T00:00:00')
+            """)
+
             # create table schema with COLLATE NOCASE
             conn.execute("""
                 CREATE TABLE fixdates (
@@ -499,7 +545,9 @@ class TestStore:
                     fix_version TEXT,
                     first_observed_date TEXT,
                     resolution TEXT,
-                    source TEXT
+                    source TEXT,
+                    run_id INTEGER,
+                    database_id INTEGER
                 )
             """)
 
@@ -508,21 +556,21 @@ class TestStore:
                 # python package stored with normalized form (hyphens)
                 (
                     "CVE-2023-9001", "test-db", "my-package", "", "python",
-                    "1.0.0", "2023-02-20", "fixed", "grype-db",
+                    "1.0.0", "2023-02-20", "fixed", "grype-db", None, 1,
                 ),
                 (
                     "CVE-2023-9001", "test-db", "my-package", "", "pypi",
-                    "1.0.0", "2023-02-20", "fixed", "grype-db",
+                    "1.0.0", "2023-02-20", "fixed", "grype-db", None, 1,
                 ),
                 # another test package with mixed separators in storage (normalized)
                 (
                     "CVE-2023-9001", "test-db", "my-package-test", "", "python",
-                    "2.0.0", "2023-02-21", "fixed", "grype-db",
+                    "2.0.0", "2023-02-21", "fixed", "grype-db", None, 1,
                 ),
             ]
 
             conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 test_data,
             )
 
@@ -531,6 +579,28 @@ class TestStore:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sqlite3.connect(db_path) as conn:
+            # create databases table
+            conn.execute("""
+                CREATE TABLE databases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    build_date TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    vulnerability_count INTEGER,
+                    run_id INTEGER,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+
+            # insert default database record
+            conn.execute("""
+                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
+                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 4, '2023-01-01T00:00:00')
+            """)
+
             # create table schema
             conn.execute("""
                 CREATE TABLE fixdates (
@@ -542,7 +612,9 @@ class TestStore:
                     fix_version TEXT,
                     first_observed_date TEXT,
                     resolution TEXT,
-                    source TEXT
+                    source TEXT,
+                    run_id INTEGER,
+                    database_id INTEGER
                 )
             """)
 
@@ -552,26 +624,26 @@ class TestStore:
                 (
                     "CVE-2023-0001", "test-db", "",
                     "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
-                    "2.4.42", "2023-01-15", "fixed", "grype-db",
+                    "2.4.42", "2023-01-15", "fixed", "grype-db", None, 1,
                 ),
                 # package name-based records
                 (
                     "CVE-2023-0002", "test-db", "curl", "", "debian:11",
-                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db",
+                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1,
                 ),
                 (
                     "CVE-2023-0002", "test-db", "curl", "", "debian:11",
-                    None, "2023-02-18", "wont-fix", "grype-db",
+                    None, "2023-02-18", "wont-fix", "grype-db", None, 1,
                 ),
                 # additional test record
                 (
                     "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
-                    "1.1.1k-7.el8_6", "2023-03-10", "fixed", "grype-db",
+                    "1.1.1k-7.el8_6", "2023-03-10", "fixed", "grype-db", None, 1,
                 ),
             ]
 
             conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 test_data,
             )
 
@@ -580,6 +652,28 @@ class TestStore:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         with sqlite3.connect(db_path) as conn:
+            # create databases table
+            conn.execute("""
+                CREATE TABLE databases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    build_date TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    vulnerability_count INTEGER,
+                    run_id INTEGER,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+
+            # insert default database record
+            conn.execute("""
+                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
+                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 4, '2023-01-01T00:00:00')
+            """)
+
             # create runs table
             conn.execute("""
                 CREATE TABLE runs (

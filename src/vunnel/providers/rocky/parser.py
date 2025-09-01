@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
 from .client import Client
@@ -25,6 +25,8 @@ class Parser:
         logger: logging.Logger | None = None,
         skip_download: bool = False,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
         self.fixdater = fixdater
         self.workspace = ws
         if not logger:

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
 
@@ -15,7 +16,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from vunnel import workspace
-    from vunnel.tool import fixdate
 
 
 class Parser:
@@ -32,6 +32,8 @@ class Parser:
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.advisories_dir_path = Path(workspace.input_path) / self._advisories_dir
@@ -50,8 +52,7 @@ class Parser:
         if not os.path.exists(self.advisories_dir_path):
             os.makedirs(self.advisories_dir_path, exist_ok=True)
 
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         try:
             self.logger.info(f"downloading {self.namespace} advisories {self.url}")
@@ -98,23 +99,20 @@ class Parser:
                     "NamespaceName": ecosystem,
                 }
 
-                available = None
-                if fix_version and self.fixdater:
-                    dates = self.fixdater.find(
-                        vuln_id=cve_id,
-                        cpe_or_package=package,
-                        fix_version=fix_version,
-                        ecosystem=ecosystem,
-                    )
-                    if dates:
-                        result = dates[0]
-                        available = {
-                            "Date": result.date.isoformat(),
-                            "Kind": result.kind,
-                        }
-
-                if available:
-                    fixed_in["Available"] = available
+                result = self.fixdater.best(
+                    vuln_id=cve_id,
+                    cpe_or_package=package,
+                    fix_version=fix_version,
+                    ecosystem=ecosystem,
+                    # as of today, there isn't any good candidate for a fix date. In the future
+                    # we might be able to use the date on the aports commit that added the fix.
+                    # candidates=[],
+                )
+                if result and result.date:
+                    fixed_in["Available"] = {
+                        "Date": result.date.isoformat(),
+                        "Kind": result.kind,
+                    }
 
                 cve_record["Vulnerability"]["FixedIn"].append(fixed_in)  # type: ignore[union-attr]
 
