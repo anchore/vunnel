@@ -94,7 +94,7 @@ class TestParser:
         # print("Number of DSAs with fixes and no CVEs: {}".format(len(no_cve_dsas)))
         assert len(no_cve_dsas) == 2
 
-    def test_normalize_json(self, tmpdir, helpers, disable_get_requests):
+    def test_normalize_json(self, tmpdir, helpers, disable_get_requests, auto_fake_fixdate_finder):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         subject.logger = MagicMock()
 
@@ -121,7 +121,7 @@ class TestParser:
 
     def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests, mock_legacy_db, auto_fake_fixdate_finder):
         ws = workspace.Workspace(tmpdir, "test", create=True)
-        subject = parser.Parser(workspace=ws, fixdater=fixdate.default_finder(ws, "debian"))
+        subject = parser.Parser(workspace=ws)
 
         mock_data_path = helpers.local_dir("test-fixtures/input")
         shutil.copytree(mock_data_path, subject.workspace.input_path, dirs_exist_ok=True)

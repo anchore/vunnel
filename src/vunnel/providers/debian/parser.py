@@ -6,16 +6,14 @@ import logging
 import os
 import re
 from collections import namedtuple
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import orjson
 
 from vunnel.result import SQLiteReader
+from vunnel.tool import fixdate
 from vunnel.utils import date, vulnerability
 from vunnel.utils import http_wrapper as http
-
-if TYPE_CHECKING:
-    from vunnel.tool import fixdate
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver", "date"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
@@ -50,8 +48,10 @@ class Parser:
     _fixed_in_note_regex_ = re.compile(r"^\s+NOTE:\s+\[(.*)\][-\s]+([^\s]*)(.*)")
     _base_dsa_id_regex_ = re.compile(r"(DSA-[^-]+).*")
 
-    def __init__(self, workspace, download_timeout=125, logger=None, distro_map=None, fixdater: fixdate.Finder | None = None):
+    def __init__(self, workspace, fixdater: fixdate.Finder | None = None, download_timeout=125, logger=None, distro_map=None):
         self.workspace = workspace
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.download_timeout = download_timeout
         if not distro_map:
@@ -428,35 +428,31 @@ class Parser:
                                     adv_mets[met_ns][met_sev]["neither"]["notfixed" if fixed_el["Version"] == "None" else "fixed"] += 1
 
                                 # add Available object if fix version exists and DSA date is available
-                                if fixed_el["Version"] != "None":
-                                    found_date = False
-                                    if matched_dsas:
-                                        # get the date from the first matched DSA (all should have same date for same advisory)
-                                        dsa_date = date.normalize_date(matched_dsas[0].date)
-                                        if dsa_date:
-                                            fixed_el["Available"] = {
-                                                "Date": dsa_date,
-                                                "Kind": "advisory",
-                                            }
-                                            found_date = True
+                                advisory_fix_date = None
+                                if fixed_el["Version"] != "None" and matched_dsas:
+                                    # get the date from the first matched DSA (all should have same date for same advisory)
+                                    advisory_fix_date = date.normalize_date(matched_dsas[0].date)
 
-                                    # getting the date information from the DSA is preferred, but is not reliable;
-                                    # we should fallback to other methods in these cases.
-                                    if not found_date and self.fixdater:
-                                        dates = self.fixdater.find(
-                                            vuln_id=str(vid),
-                                            cpe_or_package=pkg,
-                                            fix_version=fixed_el["Version"],
-                                            ecosystem=ecosystem,
-                                        )
-                                        if dates:
-                                            result = dates[0]
-                                            available = {
-                                                "Date": result.date.isoformat(),
-                                                "Kind": result.kind,
-                                            }
-
-                                            fixed_el["Available"] = available
+                                # getting the date information from the DSA is preferred, but is not reliable;
+                                # we should fallback to other methods in these cases.
+                                result = self.fixdater.best(
+                                    vuln_id=str(vid),
+                                    cpe_or_package=pkg,
+                                    fix_version=fixed_el["Version"],
+                                    ecosystem=ecosystem,
+                                    candidates=[
+                                        fixdate.Result(
+                                            date=advisory_fix_date,
+                                            kind="advisory",
+                                            accurate=True,
+                                        ),
+                                    ]
+                                )
+                                if result:
+                                    fixed_el["Available"] = {
+                                        "Date": result.date.isoformat(),
+                                        "Kind": result.kind,
+                                    }
 
                                 # append fixed in record to vulnerability
                                 vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
@@ -498,9 +494,6 @@ class Parser:
         return legacy_records
 
     def _patch_fix_date(self, vuln_record: dict[str, Any]) -> dict[str, Any]:
-        if not self.fixdater:
-            return vuln_record
-
         vid = vuln_record.get("Vulnerability", {}).get("Name", "")
         if not vid:
             return vuln_record
@@ -512,14 +505,13 @@ class Parser:
             if "Version" not in fixedin or fixedin["Version"] in ("None", "0"):
                 continue
 
-            dates = self.fixdater.find(
+            result = self.fixdater.best(
                 vuln_id=vid,
                 cpe_or_package=fixedin.get("Name", ""),
                 fix_version=fixedin["Version"],
                 ecosystem=fixedin.get("NamespaceName", "").lower(),
             )
-            if dates:
-                result = dates[0]
+            if result:
                 available = {
                     "Date": result.date.isoformat(),
                     "Kind": result.kind,
@@ -594,8 +586,7 @@ class Parser:
         self._download_json()
         self._download_dsa()
 
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         # normalize dsa list first
         ns_cve_dsalist = self._normalize_dsa_list()

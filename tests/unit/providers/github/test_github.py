@@ -7,6 +7,7 @@ from vunnel import result, workspace
 from vunnel.providers.github import Config, Provider, parser
 from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
+from vunnel.tool import fixdate
 
 
 @pytest.fixture()
@@ -175,23 +176,27 @@ def fake_get_query(monkeypatch):
 
 
 class TestNodeParser:
-    def test_no_such_attribute(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_no_such_attribute(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         with pytest.raises(AttributeError):
             result.foo
 
-    def test_gets_classification(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_classification(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert result["Classification"] == "GENERAL"
         assert result.Classification == "GENERAL"
 
-    def test_gets_severity(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_severity(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert result["Severity"] == "Critical"
         assert result.Severity == "Critical"
 
-    def test_gets_cvss(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_cvss(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         expected = CVSS(
             version="3.0",
             vector_string="CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -202,9 +207,10 @@ class TestNodeParser:
         assert result["CVSS"] == expected
         assert result.CVSS == expected
 
-    def test_trailing_slash_cvss(self, node):
+    def test_trailing_slash_cvss(self, node, helpers, auto_fake_fixdate_finder):
         node["cvss"]["vectorString"] = node["cvss"]["vectorString"] + "/"
-        result = parser.NodeParser(node).parse()
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         expected = CVSS(
             version="3.0",
             vector_string="CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -215,27 +221,32 @@ class TestNodeParser:
         assert result["CVSS"] == expected
         assert result.CVSS == expected
 
-    def test_gets_published(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_published(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         result["published"] = "2020-02-04T03:07:31Z"
         result.published = "2020-02-04T03:07:31Z"
 
-    def test_gets_updated(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_updated(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         result["updated"] = "2020-02-04T03:07:32Z"
         result.updated = "2020-02-04T03:07:32Z"
 
-    def test_gets_withdrawn(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_withdrawn(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         result["withdrawn"] = "2020-02-04T03:07:33Z"
         result.withdrawn = "2020-02-04T03:07:33Z"
 
-    def test_gets_fixedin(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_fixedin(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert len(result["FixedIn"]) == 2
 
-    def test_gets_multiple_fixedin(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_multiple_fixedin(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         name = sorted([x["name"] for x in result["FixedIn"]])
         identifier = sorted([x["identifier"] for x in result["FixedIn"]])
         ecosystem = sorted([x["ecosystem"] for x in result["FixedIn"]])
@@ -245,36 +256,42 @@ class TestNodeParser:
         assert ecosystem == sorted(["go", "python"])
         assert namespace == sorted(["github:python", "github:go"])
 
-    def test_fixedin_metadata(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_fixedin_metadata(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         ranges = sorted([x["range"] for x in result["FixedIn"]])
         assert ranges == sorted([">= 1.2.0 < 1.4.2", "< 1.4.2"])
 
-    def test_gets_summary(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_summary(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert result.Summary == "Critical severity vulnerability that affects waitress"
         assert result["Summary"] == "Critical severity vulnerability that affects waitress"
 
-    def test_gets_link(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_link(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert result.url == "https://github.com/advisories/GHSA-73m2-3pwg-5fgc"
         assert result["url"] == "https://github.com/advisories/GHSA-73m2-3pwg-5fgc"
 
-    def test_gets_cve_only(self, node):
-        result = parser.NodeParser(node).parse()
+    def test_gets_cve_only(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert set(result["Metadata"]["CVE"]) == {"CVE-2020-5236"}
         assert set(result.Metadata["CVE"]) == {"CVE-2020-5236"}
 
-    def test_cves_arent_present(self, node):
+    def test_cves_arent_present(self, node, helpers, auto_fake_fixdate_finder):
         sans_cve_data = node.copy()
         sans_cve_data["identifiers"] = []
-        result = parser.NodeParser(sans_cve_data).parse()
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(sans_cve_data, fixdater=fixdate.default_finder(ws)).parse()
         assert result.Metadata == {"CVE": []}
 
-    def test_ecosystems_not_repeated(self, node):
+    def test_ecosystems_not_repeated(self, node, helpers, auto_fake_fixdate_finder):
         repeated = {"package": {"ecosystem": "PIP", "name": "waitress"}}
         node["vulnerabilities"]["nodes"].append(repeated)
-        result = parser.NodeParser(node).parse()
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         assert result.ecosystems == {"go", "python"}
 
 

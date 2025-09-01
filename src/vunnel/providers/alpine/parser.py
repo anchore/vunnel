@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
     import requests
 
     from vunnel import workspace
-    from vunnel.tool import fixdate
 
 namespace = "alpine"
 feedtype = "vulnerabilities"
@@ -63,6 +63,8 @@ class Parser:
         url: str | None = None,
         security_reference_url: str | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
@@ -101,8 +103,7 @@ class Parser:
         if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
 
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         links = []
         try:
@@ -261,21 +262,19 @@ class Parser:
                             fixed_el["Name"] = pkg
                             fixed_el["Version"] = fix_version
 
-                            if fix_version and self.fixdater:
-                                dates = self.fixdater.find(
-                                    vuln_id=str(vid),
-                                    cpe_or_package=pkg,
-                                    fix_version=fix_version,
-                                    ecosystem=ecosystem,
-                                )
-                                if dates:
-                                    result = dates[0]
-                                    available = {
-                                        "Date": result.date.isoformat(),
-                                        "Kind": result.kind,
-                                    }
+                            candidate = self.fixdater.best(
+                                vuln_id=str(vid),
+                                cpe_or_package=pkg,
+                                fix_version=fix_version,
+                                ecosystem=ecosystem,
+                            )
+                            if candidate:
+                                available = {
+                                    "Date": candidate.date.isoformat(),
+                                    "Kind": candidate.kind,
+                                }
 
-                                    fixed_el["Available"] = available
+                                fixed_el["Available"] = available
 
                             vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 

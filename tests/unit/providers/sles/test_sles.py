@@ -380,7 +380,7 @@ class TestSLESParser:
             parser_factory=parser_factory,
         )
 
-        p = Parser(workspace=workspace, allow_versions=["15"], logger=None, fixdater=fixdate.default_finder(workspace, "sles"))
+        p = Parser(workspace=workspace, allow_versions=["15"], logger=None)
 
         actual = p._transform_oval_vulnerabilities("15", parsed_dict)
         actual.sort(key=lambda x: x.NamespaceName)

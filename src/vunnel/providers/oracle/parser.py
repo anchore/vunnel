@@ -6,14 +6,13 @@ import os
 import re
 from typing import TYPE_CHECKING, Any
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import rpm
 from vunnel.utils.oval_parser import Config, parse
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    from vunnel.tool import fixdate
 
 # One time initialization of driver specific configuration
 ol_config = Config()
@@ -57,6 +56,8 @@ class Parser:
     _xml_file_ = "com.oracle.elsa-all.xml"
 
     def __init__(self, workspace, config=None, download_timeout=125, logger=None, fixdater: fixdate.Finder | None = None):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.config = config if config else ol_config
         self.download_timeout = download_timeout
@@ -71,8 +72,7 @@ class Parser:
         return [self._url_]
 
     def _download(self):
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         try:
             self.logger.info(f"downloading ELSA from {self._url_}")
@@ -108,9 +108,6 @@ class Parser:
             yield (vuln_id, namespace), (version, self._patch_fix_date(record))
 
     def _patch_fix_date(self, vuln_record: dict[str, Any]) -> dict[str, Any]:
-        if not self.fixdater:
-            return vuln_record
-
         vid = vuln_record.get("Vulnerability", {}).get("Name", "")
         if not vid:
             return vuln_record
@@ -122,20 +119,17 @@ class Parser:
             if "Version" not in fixedin or fixedin["Version"] in ("None", "0"):
                 continue
 
-            dates = self.fixdater.find(
+            result = self.fixdater.best(
                 vuln_id=vid,
                 cpe_or_package=fixedin.get("Name", ""),
                 fix_version=fixedin["Version"],
                 ecosystem=fixedin.get("NamespaceName", "").lower(),
             )
-            if dates:
-                result = dates[0]
-                available = {
+            if result:
+                fixedin["Available"] = {
                     "Date": result.date.isoformat(),
                     "Kind": result.kind,
                 }
-
-                fixedin["Available"] = available
         return vuln_record
 
 

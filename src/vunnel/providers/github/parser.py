@@ -29,11 +29,11 @@ from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
 from vunnel import utils
+from vunnel.tool import fixdate
 from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 
 if TYPE_CHECKING:
-    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
 # this is the ecosystem in GHSA to a syft package type
@@ -65,6 +65,8 @@ class Parser:
         api_url: str = "https://api.github.com/graphql",
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.db = db.connection(workspace.input_path, serializer="json")
         self.download_timeout = download_timeout
@@ -172,8 +174,7 @@ class Parser:
         return advisories
 
     def get(self):
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         # determine if a run was completed by looking for a timestamp
         metadata = self.db.get_metadata()
@@ -523,7 +524,7 @@ class NodeParser(dict):
         "_withdrawn",
     )
 
-    def __init__(self, data: dict, fixdater: fixdate.Finder | None = None, logger: logging.Logger | None = None):
+    def __init__(self, data: dict, fixdater: fixdate.Finder, logger: logging.Logger | None = None):
         self.fixdater = fixdater
         self.description = None
         self.identifier = None
@@ -649,22 +650,6 @@ class NodeParser(dict):
                 package_name = item.get("package", {}).get("name")
                 version_range = item.get("vulnerableVersionRange", "").replace(",", "")
 
-                available = None
-                vid = self.data.get("ghsaId")
-                if fix_version and self.fixdater:
-                    dates = self.fixdater.find(
-                        vuln_id=vid,
-                        cpe_or_package=package_name,
-                        fix_version=fix_version,
-                        ecosystem=ecosystem,
-                    )
-                    if dates:
-                        result = dates[0]
-                        available = {
-                            "date": result.date.isoformat(),
-                            "kind": result.kind,
-                        }
-
                 record = {
                     "name": package_name,
                     "identifier": fix_version or "None",
@@ -673,8 +658,18 @@ class NodeParser(dict):
                     "range": version_range,
                 }
 
-                if available:
-                    record["available"] = available
+                vid = self.data.get("ghsaId")
+                result = self.fixdater.best(
+                    vuln_id=vid,
+                    cpe_or_package=package_name,
+                    fix_version=fix_version,
+                    ecosystem=ecosystem,
+                )
+                if result:
+                    record["available"] = {
+                        "date": result.date.isoformat(),
+                        "kind": result.kind,
+                    }
 
                 self["FixedIn"].append(record)
             else:

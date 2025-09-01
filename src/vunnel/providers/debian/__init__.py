@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
-from vunnel.tool import fixdate
 
 from .parser import Parser, debian_distro_map
 
@@ -22,7 +21,6 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    add_first_observed_fix_dates: bool = True
     request_timeout: int = 125
 
     def __post_init__(self) -> None:
@@ -41,13 +39,8 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        fixdater = None
-        if config.add_first_observed_fix_dates:
-            fixdater = fixdate.default_finder(self.workspace, self.name())
-
         self.parser = Parser(
             workspace=self.workspace,
-            fixdater=fixdater,
             download_timeout=self.config.request_timeout,
             distro_map=self.config.releases,
             logger=self.logger,

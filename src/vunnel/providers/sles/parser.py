@@ -13,6 +13,7 @@ import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
@@ -31,7 +32,6 @@ from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, F
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from vunnel.tool import fixdate
     from vunnel.workspace import Workspace
 
 namespace = "sles"
@@ -69,6 +69,8 @@ class Parser:
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
@@ -303,29 +305,21 @@ class Parser:
                         )
                         continue
 
-                    # create Available object if issued date exists
                     available = None
-                    if vulnerability_obj.issued_date:
-                        try:
-                            issued_datetime = datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d")  # noqa: DTZ007 # not a timezone aware datetime
-                            available = FixAvailability(Date=issued_datetime, Kind="advisory")
-                        except ValueError:
-                            self.logger.debug(
-                                "failed to parse issued date %s for %s, skipping availability info",
-                                vulnerability_obj.issued_date,
-                                vulnerability_obj.name,
-                            )
-
-                    if not available and pkg_version and self.fixdater:
-                        dates = self.fixdater.find(
-                            vuln_id=vulnerability_obj.name,
-                            cpe_or_package=pkg_name,
-                            fix_version=pkg_version,
-                            ecosystem=feed_ns,
-                        )
-                        if dates:
-                            result = dates[0]
-                            available = FixAvailability(Date=result.date, Kind=result.kind)
+                    result = self.fixdater.best(
+                        vuln_id=vulnerability_obj.name,
+                        cpe_or_package=pkg_name,
+                        fix_version=pkg_version,
+                        ecosystem=feed_ns,
+                        candidates=[
+                            fixdate.Result(
+                                date=datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d"),  # noqa: DTZ007 # not a timezone aware datetime
+                                kind="advisory",
+                            ),
+                        ],
+                    )
+                    if result:
+                        available = FixAvailability(Date=result.date.isoformat(), Kind=result.kind)
 
                     fixes.append(
                         FixedIn(
@@ -369,8 +363,7 @@ class Parser:
         return results
 
     def get(self) -> Generator[tuple[str, str, dict], None, None]:
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         parser_factory = OVALParserFactory(
             parsers=[
