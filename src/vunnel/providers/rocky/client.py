@@ -15,7 +15,7 @@ class Client:
     def __init__(  # noqa: PLR0913
         self,
         download_path: str,
-        fixdater: fixdate.Finder | None = None,
+        fixdater: fixdate.Finder,
         logger: logging.Logger | None = None,
         rocky_versions: list[str] | None = None,
         api_host: str = "https://apollo.build.resf.org",
@@ -34,8 +34,7 @@ class Client:
         self._skip_download = skip_download
 
     def _download(self) -> None:
-        if self.fixdater:
-            self.fixdater.download()
+        self.fixdater.download()
 
         next_page = self._default_api_path_
         while next_page:

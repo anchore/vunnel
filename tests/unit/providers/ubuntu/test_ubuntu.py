@@ -281,12 +281,12 @@ class TestUbuntuParser:
             got = parse_multiline_keyvalue(header, split_lines)
             assert got == result
 
-    def test_mapper(self):
+    def test_mapper(self, fake_fixdate_finder):
         with open(self._data_) as f:
             parsed = parse_cve_file("CVE-2017-9996", f.readlines())
 
         parsed.name = "CVE-TEST-123"
-        vulns = map_parsed(parsed)
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
         for i in vulns:
             j = i.json()
             print(json.dumps(j))

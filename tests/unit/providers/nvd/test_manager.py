@@ -490,7 +490,7 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
 
     # create manager instance
     if fixdater_config is None:
-        fixdater_instance = None
+        fixdater_instance = fake_fixdate_finder()
     else:
         fixdater_instance = fake_fixdate_finder(fixdater_config)
 

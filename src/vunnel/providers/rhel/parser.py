@@ -17,14 +17,13 @@ from dateutil import parser as dt_parser
 
 from vunnel import utils
 from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
     import requests
-
-    from vunnel.tool import fixdate
 
     from .rhsa_provider import RHSAProvider
 
@@ -67,6 +66,8 @@ class Parser:
         skip_download: bool = False,
     ):
         self.workspace = workspace
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
         self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
@@ -233,11 +234,10 @@ class Parser:
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
 
-        if self.fixdater:
-            if self.skip_download:
-                self.logger.warning("skip download requested, but fix date finder does not support skipping download")
-            else:
-                self.fixdater.download()
+        if self.skip_download:
+            self.logger.warning("skip download requested, but fix date finder does not support skipping download")
+        else:
+            self.fixdater.download()
 
         count = self._download_minimal_cve_pages()
 
@@ -781,22 +781,6 @@ class Parser:
                     fix_version = artifact.version
                     package_name = artifact.package
 
-                    available = None
-                    # TODO: we really need to cleanup these "None" versions on the next OS schema bump
-                    if fix_version and fix_version != "None" and self.fixdater:
-                        dates = self.fixdater.find(
-                            vuln_id=cve_id,
-                            cpe_or_package=package_name,
-                            fix_version=fix_version,
-                            ecosystem=ns,
-                        )
-                        if dates:
-                            result = dates[0]
-                            available = {
-                                "date": result.date.isoformat(),
-                                "kind": result.kind,
-                            }
-
                     record = {
                         "Name": package_name,
                         "Version": fix_version or "None",
@@ -806,8 +790,19 @@ class Parser:
                         "VendorAdvisory": a,
                     }
 
-                    if available:
-                        record["Available"] = available
+                    result = self.fixdater.best(
+                        vuln_id=cve_id,
+                        cpe_or_package=package_name,
+                        fix_version=fix_version,
+                        ecosystem=ns,
+                        # TODO: consider getting issued date from CSAF or OVAL data as possible candidate
+                        # candidates=[]
+                    )
+                    if result:
+                        record["Available"] = {
+                            "date": result.date.isoformat(),
+                            "kind": result.kind,
+                        }
 
                     v["Vulnerability"]["FixedIn"].append(record)
 
