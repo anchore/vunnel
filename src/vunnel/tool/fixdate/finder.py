@@ -7,6 +7,26 @@ from vunnel.utils import date
 
 logger = logging.getLogger(__name__)
 
+# mapping from GHSA ecosystems (or similar candidates) to syft package types
+ecosystem_mapping = {
+    "composer": "php-composer",
+    "php": "php-composer",
+    "rust": "rust-crate",
+    "cargo": "rust-crate",
+    "dart": "dart-pub",
+    "nuget": "dotnet",
+    ".net": "dotnet",
+    "go": "go-module",
+    "golang": "go-module",
+    "maven": "java-archive",
+    "java": "java-archive",
+    "javascript": "npm",
+    "pypi": "python",
+    "pip": "python",
+    "rubygems": "gem",
+    "ruby": "gem",
+}
+
 
 @dataclass
 class Result:
@@ -62,6 +82,14 @@ class Finder:
         self.first_observed.download()
         for s in self.strategies:
             s.download()
+
+    def _normalize_ecosystem(self, ecosystem: str | None) -> str | None:
+        if not ecosystem:
+            return ecosystem
+
+        ecosystem = ecosystem.lower()
+
+        return ecosystem_mapping.get(ecosystem, ecosystem)
 
     def best(
         self,

@@ -263,3 +263,88 @@ class TestFinder:
 
         # should return the candidate with a date
         assert result == high_quality_with_date
+
+    def test_normalize_ecosystem_returns_none_for_none_input(self):
+        """Test that _normalize_ecosystem returns None when input is None."""
+        finder = Finder([], Mock(spec=Strategy))
+        result = finder._normalize_ecosystem(None)
+        assert result is None
+
+    def test_normalize_ecosystem_returns_empty_string_for_empty_input(self):
+        """Test that _normalize_ecosystem returns empty string when input is empty."""
+        finder = Finder([], Mock(spec=Strategy))
+        result = finder._normalize_ecosystem("")
+        assert result == ""
+
+    def test_normalize_ecosystem_maps_known_ecosystems(self):
+        """Test that _normalize_ecosystem correctly maps known ecosystem names."""
+        finder = Finder([], Mock(spec=Strategy))
+
+        test_cases = [
+            ("composer", "php-composer"),
+            ("php", "php-composer"),
+            ("rust", "rust-crate"),
+            ("cargo", "rust-crate"),
+            ("dart", "dart-pub"),
+            ("nuget", "dotnet"),
+            (".net", "dotnet"),
+            ("go", "go-module"),
+            ("golang", "go-module"),
+            ("maven", "java-archive"),
+            ("java", "java-archive"),
+            ("npm", "npm"),
+            ("javascript", "npm"),
+            ("pypi", "python"),
+            ("python", "python"),
+            ("pip", "python"),
+            ("swift", "swift"),
+            ("rubygems", "gem"),
+            ("ruby", "gem"),
+            ("gem", "gem"),
+            ("apk", "apk"),
+            ("rpm", "rpm"),
+            ("deb", "deb"),
+            ("github-action", "github-action"),
+        ]
+
+        for input_ecosystem, expected_output in test_cases:
+            result = finder._normalize_ecosystem(input_ecosystem)
+            assert result == expected_output, f"Expected {expected_output} for {input_ecosystem}, got {result}"
+
+    def test_normalize_ecosystem_handles_case_insensitive_input(self):
+        """Test that _normalize_ecosystem handles case insensitive input."""
+        finder = Finder([], Mock(spec=Strategy))
+
+        test_cases = [
+            ("COMPOSER", "php-composer"),
+            ("Rust", "rust-crate"),
+            ("CARGO", "rust-crate"),
+            ("Go", "go-module"),
+            ("NPM", "npm"),
+            ("PyPI", "python"),
+        ]
+
+        for input_ecosystem, expected_output in test_cases:
+            result = finder._normalize_ecosystem(input_ecosystem)
+            assert result == expected_output, f"Expected {expected_output} for {input_ecosystem}, got {result}"
+
+    def test_normalize_ecosystem_returns_unknown_ecosystems_unchanged(self):
+        """Test that _normalize_ecosystem returns unknown ecosystem names unchanged."""
+        finder = Finder([], Mock(spec=Strategy))
+
+        unknown_ecosystems = ["unknown", "custom-package", "proprietary"]
+
+        for ecosystem in unknown_ecosystems:
+            result = finder._normalize_ecosystem(ecosystem)
+            assert result == ecosystem, f"Expected {ecosystem} to be unchanged, got {result}"
+
+    def test_normalize_ecosystem_preserves_case_for_unknown_ecosystems(self):
+        """Test that _normalize_ecosystem preserves original case for unknown ecosystems."""
+        finder = Finder([], Mock(spec=Strategy))
+
+        test_cases = ["UnknownEcosystem", "CUSTOM", "Mixed-Case"]
+
+        for ecosystem in test_cases:
+            result = finder._normalize_ecosystem(ecosystem)
+            # unknown ecosystems should be lowercased since we call .lower() first
+            assert result == ecosystem.lower(), f"Expected {ecosystem.lower()} for {ecosystem}, got {result}"
