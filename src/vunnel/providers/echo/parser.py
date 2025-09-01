@@ -108,7 +108,7 @@ class Parser:
                     # we might be able to use the date on the aports commit that added the fix.
                     # candidates=[],
                 )
-                if result:
+                if result and result.date:
                     fixed_in["Available"] = {
                         "Date": result.date.isoformat(),
                         "Kind": result.kind,

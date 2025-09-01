@@ -20,7 +20,6 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    add_fix_dates: bool = True
     request_timeout: int = 125
     allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15])  # corresponds to major versions
 

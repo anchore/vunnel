@@ -143,7 +143,7 @@ class Parser:
                         fix_version=fix_version,
                         ecosystem=ecosystem,
                     )
-                    if result:
+                    if result and result.date:
                         fixed_el["Available"] = {
                             "Date": result.date.isoformat(),
                             "Kind": result.kind,

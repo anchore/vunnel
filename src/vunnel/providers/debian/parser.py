@@ -446,7 +446,7 @@ class Parser:
                                             kind="advisory",
                                             accurate=True,
                                         ),
-                                    ]
+                                    ],
                                 )
                                 if result:
                                     fixed_el["Available"] = {

@@ -11,7 +11,7 @@ from sqlalchemy import event
 
 from vunnel import workspace
 
-from .finder import Finder, Result
+from .finder import Result, Strategy
 
 
 @dataclass
@@ -29,11 +29,14 @@ class FixDate:
     first_observed_date: date
     resolution: str
     source: str
+    run_id: int
+    database_id: int
 
 
-class Store(Finder):
-    def __init__(self, ws: workspace.Workspace, provider: str) -> None:
+class Store(Strategy):
+    def __init__(self, ws: workspace.Workspace) -> None:
         self.workspace = ws
+        provider = ws.name
         self.provider = provider
         self.db_path = Path(ws.input_path) / "fix-dates" / f"{provider}.db"
         self.logger = logging.getLogger("fixes-" + provider)
@@ -139,6 +142,8 @@ class Store(Finder):
                 first_observed_date=date.fromisoformat(row.first_observed_date),
                 resolution=row.resolution,
                 source=row.source,
+                run_id=row.run_id,
+                database_id=row.database_id,
             )
             for row in results
             if row and row.first_observed_date
@@ -150,9 +155,15 @@ class Store(Finder):
         cpe_or_package: str,
         fix_version: str | None,
         ecosystem: str | None = None,
+        candidates: list[Result] | None = None,
     ) -> list[Result]:
         return [
-            Result(date=fd.first_observed_date, kind="first-observed", version=fd.fix_version)
+            Result(
+                date=fd.first_observed_date,
+                kind="first-observed",
+                version=fd.fix_version,
+                accurate=fd.database_id != 1,
+            )
             for fd in self.get(
                 vuln_id=vuln_id,
                 cpe_or_package=cpe_or_package,

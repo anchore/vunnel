@@ -263,7 +263,7 @@ class Manager:
                         ecosystem=None,  # nvd has no ecosystem
                     )
 
-                    if fix_date:
+                    if fix_date and fix_date.date:
                         cpe_match["fix"] = {
                             "version": fix_date.version or "",
                             "date": fix_date.date.isoformat(),

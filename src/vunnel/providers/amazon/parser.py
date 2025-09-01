@@ -346,7 +346,7 @@ def map_to_vulnerability(version, alas, fixed_in, description, fixdater: fixdate
             fixdater.best(
                 vuln_id=alas.id,
                 cpe_or_package=item.pkg,
-                fix_version=fixed_in,
+                fix_version=item.ver,
                 ecosystem=ecosystem,
                 candidates=[
                     # take the pubDate as default fix date candidate if no better date is found

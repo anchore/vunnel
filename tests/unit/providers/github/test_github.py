@@ -411,13 +411,13 @@ class TestGetNestedVulnerabilities:
 
 
 class TestParser:
-    def test_get_with_no_cursor_no_timestamp(self, fake_get_query, tmpdir, empty_response):
+    def test_get_with_no_cursor_no_timestamp(self, fake_get_query, tmpdir, empty_response, auto_fake_fixdate_finder):
         fake_get_query([empty_response])
         p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
         result = list(p.get())
         assert result == []
 
-    def test_get_commits_timestamp(self, fake_get_query, tmpdir, empty_response):
+    def test_get_commits_timestamp(self, fake_get_query, tmpdir, empty_response, auto_fake_fixdate_finder):
         fake_get_query([empty_response])
         ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
         p = parser.Parser(ws, "secret")
@@ -429,7 +429,7 @@ class TestParser:
         assert isinstance(timestamp, str)
         assert timestamp.endswith("Z") or timestamp.endswith("+00:00")
 
-    def test_get_commits_timestamp_with_cursors(self, advisories, fake_get_query, tmpdir, empty_response):
+    def test_get_commits_timestamp_with_cursors(self, advisories, fake_get_query, tmpdir, empty_response, auto_fake_fixdate_finder):
         fake_get_query([empty_response, advisories(has_next_page=True)])
         ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
         p = parser.Parser(ws, "secret")
@@ -441,13 +441,13 @@ class TestParser:
         assert isinstance(timestamp, str)
         assert timestamp.endswith("Z") or timestamp.endswith("+00:00")
 
-    def test_has_next_page(self, advisories, fake_get_query, tmpdir, empty_response):
+    def test_has_next_page(self, advisories, fake_get_query, tmpdir, empty_response, auto_fake_fixdate_finder):
         fake_get_query([empty_response, advisories(has_next_page=True)])
         p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
         result = list(p.get())
         assert len(result) == 1
 
-    def test_has_next_page_with_advisories(self, advisories, fake_get_query, tmpdir):
+    def test_has_next_page_with_advisories(self, advisories, fake_get_query, tmpdir, auto_fake_fixdate_finder):
         fake_get_query([advisories(), advisories(has_next_page=True)])
         p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret")
         result = list(p.get())
