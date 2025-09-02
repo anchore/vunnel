@@ -21,8 +21,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    # openvex_url: str = "https://libraries.cgr.dev/openvex/v1/all.json"
-    openvex_url = "http://localhost:8080/all.json"
+    openvex_url: str = "https://libraries.cgr.dev/openvex/v1/all.json"
 
 
 class Provider(provider.Provider):
