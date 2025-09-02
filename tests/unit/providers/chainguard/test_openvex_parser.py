@@ -44,7 +44,7 @@ class TestOpenVEXParser:
             namespace="chainguard",
             logger=mock_logger
         )
-        
+
         assert parser.namespace == "chainguard"
         assert parser.download_timeout == 125  # default value
         assert parser.url == "https://packages.cgr.dev/chainguard/vex/all.json"
@@ -55,7 +55,7 @@ class TestOpenVEXParser:
     def test_init_custom_values(self, mock_workspace, mock_logger):
         custom_url = "https://custom.example.com/vex/index.json/"
         custom_security_url = "https://custom.security.com/"
-        
+
         parser = OpenVEXParser(
             workspace=mock_workspace,
             url=custom_url,
@@ -64,7 +64,7 @@ class TestOpenVEXParser:
             logger=mock_logger,
             security_reference_url=custom_security_url
         )
-        
+
         assert parser.namespace == "custom"
         assert parser.download_timeout == 30
         assert parser.url == "https://custom.example.com/vex/index.json"
@@ -79,9 +79,9 @@ class TestOpenVEXParser:
     def test_build_reference_links(self, openvex_parser):
         with patch('vunnel.providers.chainguard.openvex_parser.vulnerability.build_reference_links') as mock_build:
             mock_build.return_value = ["https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-1234"]
-            
+
             links = openvex_parser.build_reference_links("CVE-2023-1234")
-            
+
             assert "https://images.chainguard.dev/security/CVE-2023-1234" in links
             assert "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-1234" in links
             mock_build.assert_called_once_with("CVE-2023-1234")
@@ -95,9 +95,9 @@ class TestOpenVEXParser:
         mock_response = Mock()
         mock_response.iter_content.return_value = [b'test data']
         mock_http_get.return_value = mock_response
-        
+
         openvex_parser._download("test.json")
-        
+
         mock_makedirs.assert_called_with("/tmp/test/openvex", exist_ok=True)
         mock_http_get.assert_called_once_with(
             "https://packages.cgr.dev/chainguard/vex/test.json",
@@ -113,10 +113,10 @@ class TestOpenVEXParser:
     def test_download_handles_exception(self, mock_http_get, mock_exists, mock_makedirs, openvex_parser):
         mock_exists.return_value = True
         mock_http_get.side_effect = Exception("Network error")
-        
+
         # Should not raise exception
         openvex_parser._download("test.json")
-        
+
         openvex_parser.logger.exception.assert_called_once()
 
     @patch('os.walk')
@@ -165,19 +165,19 @@ class TestOpenVEXParser:
             ]
         }
         mock_file.return_value.read.return_value = json.dumps(index_data).encode()
-        
+
         # Mock load and normalize
         mock_load.return_value = [("rolling", {"test": "data"})]
         mock_normalize.return_value = [{"normalized": "data"}]
-        
+
         results = list(openvex_parser.get())
-        
+
         # Verify downloads
         assert mock_download.call_count == 3  # index + 2 entries
         mock_download.assert_any_call("all.json")
         mock_download.assert_any_call("file1.json")
         mock_download.assert_any_call("subdir/file2.json")
-        
+
         # Verify results
         assert len(results) == 1
         release, normalized_data = results[0]
@@ -197,13 +197,13 @@ class TestOpenVEXParser:
         with patch('logging.getLogger') as mock_get_logger:
             mock_logger = Mock()
             mock_get_logger.return_value = mock_logger
-            
+
             parser = OpenVEXParser(
                 workspace=mock_workspace,
                 url="https://test.com/vex/all.json",
                 namespace="test"
             )
-            
+
             assert parser.logger == mock_logger
             mock_get_logger.assert_called_once_with("OpenVEXParser")
 
@@ -213,7 +213,7 @@ def test_openvex_parser_via_snapshot(helpers, disable_get_requests, monkeypatch)
         input_fixture="test-fixtures/input",
         snapshot_prefix="openvex",
     )
-    
+
     openvex_parser = OpenVEXParser(
         workspace=workspace,
         url="https://packages.cgr.dev/chainguard/vex/all.json",
@@ -221,10 +221,10 @@ def test_openvex_parser_via_snapshot(helpers, disable_get_requests, monkeypatch)
         download_timeout=60,
         security_reference_url="https://images.chainguard.dev/security"
     )
-    
+
     def mock_download(filename):
         return None
-    
+
     monkeypatch.setattr(openvex_parser, "_download", mock_download)
 
     # expects [('rolling', {vex: data}), ('rolling', {vex: data})]
@@ -235,7 +235,7 @@ def test_openvex_parser_via_snapshot(helpers, disable_get_requests, monkeypatch)
     for release, statement in tups:
         assert release == "rolling"
         d.update(statement)
-    
+
     assert d == {
         'CVE-2007-2728': {'vulnerability': {'name': 'CVE-2007-2728'}, 'products': [{'identifiers': {'purl': 'pkg:pypi/chainguard/php@1.1+cgr.1'}}], 'status': 'fixed'},
         'CVE-2023-27898': {'vulnerability': {'name': 'CVE-2023-27898'}, 'products': [{'identifiers': {'purl': 'pkg:pypi/chainguard/jenkins@2.394+cgr.0'}}], 'status': 'fixed'}

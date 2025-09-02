@@ -5,11 +5,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.providers.wolfi.parser import Parser, CGParser
+from vunnel.providers.wolfi.parser import CGParser, Parser
+
 from .openvex_parser import OpenVEXParser
 
 if TYPE_CHECKING:
     import datetime
+
 
 @dataclass
 class Config:
@@ -24,6 +26,7 @@ class Config:
     secdb_url: str = "https://packages.cgr.dev/chainguard/security.json"
     openvex_url: str = "https://packages.cgr.dev/chainguard/vex/all.json"
 
+
 class Provider(provider.Provider):
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -33,26 +36,26 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parsers : dict[str, CGParser] = {}
+        self.parsers: dict[str, CGParser] = {}
         self.schemas: dict[str, schema.Schema] = {}
         if self.config.secdb_url != "":
-            self.parsers['secdb'] = Parser(
+            self.parsers["secdb"] = Parser(
                 workspace=self.workspace,
                 url=self.config.secdb_url,
                 namespace=self.config.namespace,
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
             )
-            self.schemas['secdb'] = schema.OSSchema()
+            self.schemas["secdb"] = schema.OSSchema()
         if self.config.openvex_url != "":
-            self.parsers['openvex'] = OpenVEXParser(
+            self.parsers["openvex"] = OpenVEXParser(
                 workspace=self.workspace,
                 url=self.config.openvex_url,
                 namespace=self.config.namespace,
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
             )
-            self.schemas['openvex'] = schema.OpenVEXSchema()
+            self.schemas["openvex"] = schema.OpenVEXSchema()
 
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)

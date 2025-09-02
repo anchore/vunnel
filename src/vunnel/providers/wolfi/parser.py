@@ -4,8 +4,9 @@ import copy
 import logging
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Generator
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
-from typing import TYPE_CHECKING
 
 import orjson
 
@@ -18,22 +19,23 @@ if TYPE_CHECKING:
 
 
 class CGParser(ABC):
-    '''
+    """
     Define interface that all Chainguard parsers will fulfill
-    '''
+    """
+
     @abstractmethod
-    def get(self) -> Generator[str, dict]:
-        '''
+    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+        """
         Retrieve security feed entries as vuln_id -> vuln_record
-        '''
+        """
         return None
 
     @property
     @abstractmethod
     def target_url(self) -> str:
-        '''
+        """
         retrieve url of the data feed
-        '''
+        """
         return ""
 
 
@@ -183,12 +185,12 @@ class Parser(CGParser):
                     vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
         return vuln_dict
-    
+
     @property
     def target_url(self):
         return self.url
 
-    def get(self) -> Generator[str, dict]:
+    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """
         Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
         :return:

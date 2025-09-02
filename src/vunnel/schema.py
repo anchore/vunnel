@@ -95,12 +95,14 @@ def OSVSchema(version: str = OSV_SCHEMA_VERSION) -> Schema:
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-{version}.json",
     )
 
+
 def OpenVEXSchema(version: str = OPENVEX_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         # TODO: make path valid path
-        url=f"https://github.com/openvex/spec/openvex_json_schema_{version}.json"
+        url=f"https://github.com/openvex/spec/openvex_json_schema_{version}.json",
     )
+
 
 def KnownExploitedVulnerabilitySchema(version: str = KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION) -> Schema:
     return Schema(
