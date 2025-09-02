@@ -24,7 +24,7 @@ def mock_logger():
 def openvex_parser(mock_workspace, mock_logger):
     return OpenVEXParser(
         workspace=mock_workspace,
-        url="https://libraries.cgr.dev/vex/all.json",
+        url="https://libraries.cgr.dev/openvex/v1/all.json",
         namespace="chainguard",
         download_timeout=60,
         logger=mock_logger,
@@ -36,15 +36,15 @@ class TestOpenVEXParser:
     def test_init_default_values(self, mock_workspace, mock_logger):
         parser = OpenVEXParser(
             workspace=mock_workspace,
-            url="https://libraries.cgr.dev/vex/all.json",
+            url="https://libraries.cgr.dev/openvex/v1/all.json",
             namespace="chainguard",
             logger=mock_logger
         )
 
         assert parser.namespace == "chainguard"
         assert parser.download_timeout == 125  # default value
-        assert parser.url == "https://libraries.cgr.dev/vex/all.json"
-        assert parser._base_url == "https://libraries.cgr.dev/vex/"
+        assert parser.url == "https://libraries.cgr.dev/openvex/v1/all.json"
+        assert parser._base_url == "https://libraries.cgr.dev/openvex/v1/"
         assert parser._index_filename == "all.json"
         assert parser.output_path == "/tmp/test/openvex"
 
@@ -96,7 +96,7 @@ class TestOpenVEXParser:
 
         mock_makedirs.assert_called_with("/tmp/test/openvex", exist_ok=True)
         mock_http_get.assert_called_once_with(
-            "https://libraries.cgr.dev/vex/test.json",
+            "https://libraries.cgr.dev/openvex/v1/test.json",
             openvex_parser.logger,
             stream=True,
             timeout=60
