@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.providers.wolfi.parser import Parser
+
+from .openvex_parser import OpenVEXParser
 
 if TYPE_CHECKING:
     import datetime
@@ -20,14 +21,13 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    # openvex_url: str = "https://packages.cgr.dev/chainguard/vex/all.json"
+    openvex_url = "http://localhost:8080/all.json"
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
-    __distribution_version__ = int(__schema__.major_version)
-
-    _url = "https://packages.cgr.dev/chainguard/security.json"
-    _namespace = "chainguard"
+    __schema__ = schema.OpenVEXSchema()
+    _namespace = "chainguard-libraries"
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -37,9 +37,9 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
+        self.parser = OpenVEXParser(
             workspace=self.workspace,
-            url=self._url,
+            url=self.config.openvex_url,
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
@@ -50,17 +50,18 @@ class Provider(provider.Provider):
 
     @classmethod
     def name(cls) -> str:
-        return "chainguard"
+        return "chainguard-libraries"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for release, vuln_dict in self.parser.get():
+            for ecosystem, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
+                    # TODO do we need separate identifiers by parser? Or will vuln_id never overlap
                     writer.write(
-                        identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
+                        identifier=os.path.join(f"{self._namespace}:{ecosystem.lower()}", vuln_id),
                         schema=self.__schema__,
                         payload=record,
                     )
 
-        return [self._url], len(writer)
+        return [self.config.openvex_url], len(writer)

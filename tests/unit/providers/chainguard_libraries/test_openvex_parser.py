@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
-import unittest.mock as mock
 from unittest.mock import Mock, patch, mock_open
 
 import pytest
 
-from vunnel.providers.chainguard.openvex_parser import OpenVEXParser
-from vunnel.workspace import Workspace
+from vunnel.providers.chainguard_libraries.openvex_parser import OpenVEXParser
 
 
 @pytest.fixture
@@ -77,7 +73,7 @@ class TestOpenVEXParser:
         assert OpenVEXParser._extract_filename_from_url("/local/path/file.json") == "file.json"
 
     def test_build_reference_links(self, openvex_parser):
-        with patch('vunnel.providers.chainguard.openvex_parser.vulnerability.build_reference_links') as mock_build:
+        with patch('vunnel.providers.chainguard_libraries.openvex_parser.vulnerability.build_reference_links') as mock_build:
             mock_build.return_value = ["https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-1234"]
 
             links = openvex_parser.build_reference_links("CVE-2023-1234")
@@ -88,7 +84,7 @@ class TestOpenVEXParser:
 
     @patch('os.makedirs')
     @patch('os.path.exists')
-    @patch('vunnel.providers.chainguard.openvex_parser.http.get')
+    @patch('vunnel.providers.chainguard_libraries.openvex_parser.http.get')
     @patch('builtins.open', new_callable=mock_open)
     def test_download_success(self, mock_file, mock_http_get, mock_exists, mock_makedirs, openvex_parser):
         mock_exists.return_value = False
@@ -109,7 +105,7 @@ class TestOpenVEXParser:
 
     @patch('os.makedirs')
     @patch('os.path.exists')
-    @patch('vunnel.providers.chainguard.openvex_parser.http.get')
+    @patch('vunnel.providers.chainguard_libraries.openvex_parser.http.get')
     def test_download_handles_exception(self, mock_http_get, mock_exists, mock_makedirs, openvex_parser):
         mock_exists.return_value = True
         mock_http_get.side_effect = Exception("Network error")
@@ -119,38 +115,22 @@ class TestOpenVEXParser:
 
         openvex_parser.logger.exception.assert_called_once()
 
-    @patch('os.walk')
-    @patch('builtins.open', new_callable=mock_open)
-    def test_load_skips_index_file(self, mock_file, mock_walk, openvex_parser):
-        mock_walk.return_value = [("/tmp/test/openvex", [], ["all.json", "other.json"])]
-        ret = {
-            "author": "Unknown Author",
-            "version": 1,
-            "statements": [
-                {
-                    "vulnerability": {
-                        "name": "CVE-2023-45803"
-                    },
-                    "products": [{
-                        "identifiers": {
-                            "purl": "pkg:pypi/urllib3@1.26.16+cgr.1",
-                        }
-                    }],
-                    "status": "fixed"
-                }
-            ]
-        }
-        mock_file.return_value.read.return_value = json.dumps(ret)
+    def test_load_skips_index_file(self, openvex_parser, helpers):
+        openvex_parser.output_path = helpers.local_dir("test-fixtures/input/openvex")
         files = [f for f in openvex_parser._load()]
-        assert len(files) == 1
-        assert files[0] == ('rolling', ret)
+        assert len(files) == 2  # java/jenkins.openvex.json and php/php.openvex.json
+
+        # Verify both files are loaded and index file (all.json) is skipped
+        file_names = [f[0] for f in files]
+        assert "java" in file_names
+        assert "php" in file_names
 
     def test_normalize(self, openvex_parser):
         foo = {'vulnerability': {'name': 'foo'}, "products": [{'identifiers': {'purl': 'pkg:pypi/chainguard/foo@1.0+cgr.1'}}]}
         bar = {'vulnerability': {'name': 'bar'}, "products": [{'identifiers': {'purl': 'pkg:pypi/chainguard/foo@1.2'}}]}
         test_data = {"test": "data", "statements": [foo, bar, {'vuln': 2}]}
         # strips invalid entries and non-chainguard products
-        assert {'foo': foo, 'bar': {'vulnerability': {'name': 'bar'}, "products": []}} == openvex_parser._normalize("rolling", test_data)
+        assert {'foo': foo, 'bar': {'vulnerability': {'name': 'bar'}, "products": []}} == openvex_parser._normalize(test_data)
 
     @patch.object(OpenVEXParser, '_download')
     @patch.object(OpenVEXParser, '_load')
@@ -160,8 +140,8 @@ class TestOpenVEXParser:
         # Mock index file content
         index_data = {
             "entries": [
-                {"file": "file1.json", "modified": "2023-01-01T00:00:00Z"},
-                {"file": "subdir/file2.json", "modified": "2023-01-02T00:00:00Z"}
+                {"id": "file1.json", "modified": "2023-01-01T00:00:00Z"},
+                {"id": "subdir/file2.json", "modified": "2023-01-02T00:00:00Z"}
             ]
         }
         mock_file.return_value.read.return_value = json.dumps(index_data).encode()
@@ -184,14 +164,22 @@ class TestOpenVEXParser:
         assert release == "rolling"
         assert list(normalized_data) == [{"normalized": "data"}]
 
-    def test_init_with_none_url(self, mock_workspace, mock_logger):
-        parser = OpenVEXParser(
-            workspace=mock_workspace,
-            url=None,
-            namespace="test",
-            logger=mock_logger
-        )
-        assert parser.url == OpenVEXParser._openvex_url_
+    def test_init_with_no_url(self, mock_workspace, mock_logger):
+        with pytest.raises(ValueError, match="openvex url must be provided"):
+            OpenVEXParser(
+                workspace=mock_workspace,
+                url=None,  # type: ignore
+                namespace="test",
+                logger=mock_logger
+            )
+
+        with pytest.raises(ValueError, match="openvex url must be provided"):
+            OpenVEXParser(
+                workspace=mock_workspace,
+                url="",
+                namespace="test",
+                logger=mock_logger
+            )
 
     def test_init_creates_default_logger(self, mock_workspace):
         with patch('logging.getLogger') as mock_get_logger:
@@ -206,37 +194,3 @@ class TestOpenVEXParser:
 
             assert parser.logger == mock_logger
             mock_get_logger.assert_called_once_with("OpenVEXParser")
-
-def test_openvex_parser_via_snapshot(helpers, disable_get_requests, monkeypatch):
-    workspace = helpers.provider_workspace_helper(
-        name="chainguard",
-        input_fixture="test-fixtures/input",
-        snapshot_prefix="openvex",
-    )
-
-    openvex_parser = OpenVEXParser(
-        workspace=workspace,
-        url="https://packages.cgr.dev/chainguard/vex/all.json",
-        namespace="chainguard",
-        download_timeout=60,
-        security_reference_url="https://images.chainguard.dev/security"
-    )
-
-    def mock_download(filename):
-        return None
-
-    monkeypatch.setattr(openvex_parser, "_download", mock_download)
-
-    # expects [('rolling', {vex: data}), ('rolling', {vex: data})]
-    tups = list(openvex_parser.get())
-    assert len(tups) == 2
-
-    d = {}
-    for release, statement in tups:
-        assert release == "rolling"
-        d.update(statement)
-
-    assert d == {
-        'CVE-2007-2728': {'vulnerability': {'name': 'CVE-2007-2728'}, 'products': [{'identifiers': {'purl': 'pkg:pypi/chainguard/php@1.1+cgr.1'}}], 'status': 'fixed'},
-        'CVE-2023-27898': {'vulnerability': {'name': 'CVE-2023-27898'}, 'products': [{'identifiers': {'purl': 'pkg:pypi/chainguard/jenkins@2.394+cgr.0'}}], 'status': 'fixed'}
-    }

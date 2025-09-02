@@ -1,23 +1,18 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://packages.cgr.dev/chainguard/vex/php.openvex.json",
+  "@id": "https://packages.cgr.dev/chainguard/vex/jenkins.openvex.json",
   "author": "Chainguard Inc",
   "timestamp": "2023-05-15T10:30:00Z",
   "version": "1",
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2007-2728"
+        "name": "CVE-2023-27898"
       },
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:pypi/chainguard/php@0"
-          }
-        },
-        {
-          "identifiers": {
-            "purl": "pkg:pypi/chainguard/php@1.1+cgr.1"
+            "purl": "pkg:pypi/chainguard/jenkins@2.394+cgr.0"
           }
         }
       ],

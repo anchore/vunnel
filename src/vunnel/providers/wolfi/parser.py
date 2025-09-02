@@ -4,7 +4,6 @@ import copy
 import logging
 import os
 from abc import ABC, abstractmethod
-from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 

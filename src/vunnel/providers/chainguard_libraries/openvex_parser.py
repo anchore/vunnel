@@ -19,10 +19,8 @@ if TYPE_CHECKING:
 
 
 class OpenVEXParser(CGParser):
-    _release_ = "rolling"
     _openvex_dir_ = "openvex"
     _security_reference_url_ = "https://images.chainguard.dev/security"
-    _openvex_url_ = "https://packages.cgr.dev/chainguard/vex/all.json"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -48,7 +46,9 @@ class OpenVEXParser(CGParser):
         self.output_path = os.path.join(workspace.input_path, self._openvex_dir_)
 
         # openvex feed and security info urls
-        self.url = url.strip("/") if url else OpenVEXParser._openvex_url_
+        if not url:
+            raise ValueError("openvex url must be provided")
+        self.url = url.strip("/")
         self.security_reference_url = security_reference_url.strip("/") if security_reference_url else OpenVEXParser._security_reference_url_
 
         # results in stripping `all.json` from feed url
@@ -94,11 +94,11 @@ class OpenVEXParser(CGParser):
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
-    def _load(self) -> Generator[tuple[str, Any], dict[str, Any], None]:
+    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """
         Loads all openvex json files and yields them
         :yields:
-            str: release name
+            str: ecosystem name (derived from directory name of the processed file)
             dict: [openvex data](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md)
         """
         for d, _, files in os.walk(self.output_path):
@@ -106,18 +106,20 @@ class OpenVEXParser(CGParser):
                 # skip the index file, usually all.json
                 if os.path.basename(file) == self._index_filename:
                     continue
+
+                path = os.path.join(d, file)
+                dir_name = os.path.basename(d)
                 try:
-                    path = os.path.join(d, file)
                     self.logger.info(f"reading {path}")
                     with open(path, "rb") as f:
                         # yield [openvex data](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md)
                         openvex_doc_dict = orjson.loads(f.read())
-                        yield self._release_, openvex_doc_dict
+                        yield dir_name, openvex_doc_dict
                 except Exception:
                     self.logger.exception(f"failed to load {self.namespace} openvex data: {path}")
                     raise
 
-    def _normalize(self, _: str, doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    def _normalize(self, doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """
         Normalize all the openvex entries into an array of openvex statements
         :param release:
@@ -187,11 +189,9 @@ class OpenVEXParser(CGParser):
             # expected format "entries": [{"filename": "<path>", "modified": "<RFC3339>"}...]
             index_dict = orjson.loads(f.read())
             for entry in index_dict["entries"]:
-                # TODO does this handle subpaths? (IE pypi/foo.openvex.json)
-                # expected [openvex data](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md)
-                self._download(entry["file"])
+                self._download(entry["id"])
 
         # load the data
-        for release, openvex_doc_dict in self._load():
+        for ecosystem, openvex_doc_dict in self._load():
             # normalize the loaded data
-            yield release, self._normalize(release, openvex_doc_dict)
+            yield ecosystem, self._normalize(openvex_doc_dict)
