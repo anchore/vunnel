@@ -66,7 +66,9 @@ class Providers:
 
     def __post_init__(self) -> None:
         for name in self.provider_names():
-            runtime_cfg = getattr(self, name).runtime
+            cfg = getattr(self, name)
+
+            runtime_cfg = getattr(cfg, "runtime", None)
             if runtime_cfg and isinstance(runtime_cfg, provider.RuntimeConfig):
                 if runtime_cfg.import_results_enabled is None:
                     runtime_cfg.import_results_enabled = self.common.import_results.enabled

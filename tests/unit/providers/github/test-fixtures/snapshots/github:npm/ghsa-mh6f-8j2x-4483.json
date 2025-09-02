@@ -24,6 +24,10 @@
           "range": ""
         },
         {
+          "available": {
+            "date": "2024-01-01",
+            "kind": "first-observed"
+          },
           "ecosystem": "npm",
           "identifier": "4.0.0",
           "name": "event-stream",
@@ -45,5 +49,5 @@
     },
     "Vulnerability": {}
   },
-  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.1.json"
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.2.json"
 }
