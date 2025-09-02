@@ -118,19 +118,40 @@ class TestOpenVEXParser:
     def test_load_skips_index_file(self, openvex_parser, helpers):
         openvex_parser.output_path = helpers.local_dir("test-fixtures/input/openvex")
         files = [f for f in openvex_parser._load()]
-        assert len(files) == 2  # java/jenkins.openvex.json and php/php.openvex.json
+        assert len(files) == 2  # pypi/joblib.openvex.json and urllib3.openvex.json
 
         # Verify both files are loaded and index file (all.json) is skipped
         file_names = [f[0] for f in files]
-        assert "java" in file_names
-        assert "php" in file_names
+        assert "pypi" in file_names
 
-    def test_normalize(self, openvex_parser):
-        foo = {'vulnerability': {'name': 'foo'}, "products": [{'identifiers': {'purl': 'pkg:pypi/chainguard/foo@1.0+cgr.1'}}]}
-        bar = {'vulnerability': {'name': 'bar'}, "products": [{'identifiers': {'purl': 'pkg:pypi/chainguard/foo@1.2'}}]}
-        test_data = {"test": "data", "statements": [foo, bar, {'vuln': 2}]}
-        # strips invalid entries and non-chainguard products
-        assert {'foo': foo, 'bar': {'vulnerability': {'name': 'bar'}, "products": []}} == openvex_parser._normalize(test_data)
+    @pytest.mark.parametrize(
+        "test_data,expected",
+        [
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'foo'}, "products": [{'identifiers': {'purl': 'pkg:pypi/chainguard/foo@1.0+cgr.1'}}]}
+                ]},
+                {'foo': {'vulnerability': {'name': 'foo'}, "products": [{'identifiers': {'purl': 'pkg:pypi/chainguard/foo@1.0+cgr.1'}}]}},
+                id="good-purl-with-plus",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'baz'}, "products": [{'identifiers': {'purl': 'pkg:pypi/joblib@1.0.0'}}]}
+                ]},
+                {'baz': {'vulnerability': {'name': 'baz'}, "products": []}},
+                id="ignore-non-chainguard-purls",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'baz'}, "products": [{'identifiers': {'purl': 'pkg:pypi/joblib@1.0.0%2Bcgr.1'}}]}
+                ]},
+                {'baz': {'vulnerability': {'name': 'baz'}, "products": [{'identifiers': {'purl': 'pkg:pypi/joblib@1.0.0%2Bcgr.1'}}]}},
+                id="encoded-purl-without-plus",
+            ),
+        ],
+    )
+    def test_normalize(self, openvex_parser, test_data, expected):
+        assert expected == openvex_parser._normalize(test_data)
 
     @patch.object(OpenVEXParser, '_download')
     @patch.object(OpenVEXParser, '_load')

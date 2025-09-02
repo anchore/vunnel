@@ -155,7 +155,7 @@ class OpenVEXParser(CGParser):
                 continue
             purl = PackageURL.from_string(pid)
             # keep product if valid type and matches chainguard fragment for type
-            if purl.type in d and d[purl.type] in pid:
+            if purl.type in d and purl.version and d[purl.type] in purl.version:
                 new_products.append(product)
         statement["products"] = new_products
         return statement
