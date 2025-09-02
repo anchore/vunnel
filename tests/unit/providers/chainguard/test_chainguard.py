@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 
 from vunnel import result
-from vunnel.providers.chainguard_libraries import Config, Provider
+from vunnel.providers.chainguard import Config, Provider
 
 
 def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder):

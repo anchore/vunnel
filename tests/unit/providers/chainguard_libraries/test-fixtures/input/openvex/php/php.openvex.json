@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://packages.cgr.dev/chainguard/vex/php.openvex.json",
+  "@id": "https://libraries.cgr.dev/vex/php.openvex.json",
   "author": "Chainguard Inc",
   "timestamp": "2023-05-15T10:30:00Z",
   "version": "1",

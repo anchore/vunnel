@@ -21,7 +21,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    # openvex_url: str = "https://packages.cgr.dev/chainguard/vex/all.json"
+    # openvex_url: str = "https://libraries.cgr.dev/vex/all.json"
     openvex_url = "http://localhost:8080/all.json"
 
 
