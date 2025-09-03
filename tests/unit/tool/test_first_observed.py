@@ -4,12 +4,184 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
+from typing import List, Tuple, Optional
 
 import pytest
 
 from vunnel import workspace
 from vunnel.tool.fixdate.first_observed import Store, normalize_package_name
 from vunnel.tool.fixdate.finder import Result
+
+
+class DatabaseFixture:
+    """Centralized test database fixture for creating consistent test databases"""
+
+    def __init__(self, db_path: Path, *, include_runs: bool = False):
+        self.create_tables(db_path, include_runs=include_runs)
+
+    @staticmethod
+    def create_tables(db_path: Path, *, include_runs: bool = False) -> None:
+        """Create all database tables with standard schema
+
+        Args:
+            db_path: Path to the database file
+            include_runs: Whether to include runs table
+        """
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with sqlite3.connect(db_path) as conn:
+            # Create databases table
+            conn.execute("""
+                CREATE TABLE databases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT UNIQUE NOT NULL,
+                    schema_version INTEGER NOT NULL,
+                    build_date TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    vulnerability_count INTEGER,
+                    run_id INTEGER,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+            """)
+
+            # Insert default database record
+            conn.execute("""
+                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
+                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 4, '2023-01-01T00:00:00')
+            """)
+
+            # Create fixdates table
+            conn.execute("""
+                CREATE TABLE fixdates (
+                    vuln_id TEXT,
+                    provider TEXT,
+                    package_name TEXT COLLATE NOCASE,
+                    full_cpe TEXT,
+                    ecosystem TEXT,
+                    fix_version TEXT,
+                    first_observed_date TEXT,
+                    resolution TEXT,
+                    source TEXT,
+                    run_id INTEGER,
+                    database_id INTEGER
+                )
+            """)
+
+            # Create runs table if requested
+            if include_runs:
+                conn.execute("""
+                    CREATE TABLE runs (
+                        id INTEGER PRIMARY KEY,
+                        source TEXT NOT NULL,
+                        resolution TEXT NOT NULL,
+                        provider TEXT,
+                        first_date TEXT NOT NULL,
+                        last_date TEXT NOT NULL,
+                        total_dbs_planned INTEGER NOT NULL,
+                        total_dbs_completed INTEGER NOT NULL,
+                        total_dbs_failed INTEGER NOT NULL,
+                        run_timestamp TEXT NOT NULL
+                    )
+                """)
+
+    @staticmethod
+    def insert_standard_data(db_path: Path) -> None:
+        """Insert standard test data for basic functionality tests"""
+        with sqlite3.connect(db_path) as conn:
+            test_data = [
+                # CPE-based record
+                (
+                    "CVE-2023-0001", "test-db", "",
+                    "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
+                    "2.4.42", "2023-01-15", "fixed", "grype-db", None, 1,
+                ),
+                # package name-based records
+                (
+                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
+                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1,
+                ),
+                (
+                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
+                    None, "2023-02-18", "wont-fix", "grype-db", None, 1,
+                ),
+                # additional test record
+                (
+                    "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
+                    "1.1.1k-7.el8_6", "2023-03-10", "fixed", "grype-db", None, 1,
+                ),
+            ]
+
+            conn.executemany(
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                test_data,
+            )
+
+    @staticmethod
+    def insert_runs_data(db_path: Path) -> None:
+        """Insert test data for runs table and related fixdates"""
+        with sqlite3.connect(db_path) as conn:
+            # Insert runs data
+            runs_data = [
+                (1, "test", "fixed", "nvd", "2023-01-01T00:00:00", "2023-01-01T23:59:59", 1, 1, 0, "2023-01-10T12:00:00"),
+                (2, "test", "fixed", "debian", "2023-02-01T00:00:00", "2023-02-01T23:59:59", 1, 1, 0, "2023-02-20T12:00:00"),
+                (3, "test", "fixed", "rhel", "2023-03-01T00:00:00", "2023-03-01T23:59:59", 1, 1, 0, "2023-03-10T12:00:00"),
+            ]
+            conn.executemany(
+                "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                runs_data,
+            )
+
+            # Insert fixdate data with run_id for testing changed vuln IDs
+            fixdate_data = [
+                # run_id=1 (2023-01-10) - should not be included when filtering since 2023-02-15
+                (
+                    "CVE-2023-0001", "nvd", "",
+                    "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
+                    "2.4.42", "2023-01-15T10:30:00", "fixed", "grype-db", 1, 1,
+                ),
+                # run_id=2 (2023-02-20) - should be included
+                (
+                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
+                    "7.68.0-1ubuntu2.15", "2023-02-20T14:45:00", "fixed", "grype-db", 2, 1,
+                ),
+                (
+                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
+                    None, "2023-02-18T09:15:00", "wont-fix", "grype-db", 2, 1,
+                ),
+                # run_id=3 (2023-03-10) - should be included
+                (
+                    "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
+                    "1.1.1k-7.el8_6", "2023-03-10T16:00:00", "fixed", "grype-db", 3, 1,
+                ),
+            ]
+
+            conn.executemany(
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                fixdate_data,
+            )
+
+    @staticmethod
+    def insert_custom_data(db_path: Path, data: List[Tuple], vulnerability_count: Optional[int] = None) -> None:
+        """Insert custom fixdate data
+
+        Args:
+            db_path: Path to the database file
+            data: Custom fixdate data to insert
+            vulnerability_count: Override vulnerability count in databases table
+        """
+        with sqlite3.connect(db_path) as conn:
+            if vulnerability_count is not None:
+                conn.execute(
+                    "UPDATE databases SET vulnerability_count = ? WHERE id = 1",
+                    (vulnerability_count,)
+                )
+
+            conn.executemany(
+                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                data,
+            )
 
 
 class TestStore:
@@ -37,7 +209,8 @@ class TestStore:
         store.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         # create the fixdates table that the Store expects
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
 
         # mark as downloaded to avoid runtime error
         store._downloaded = True
@@ -231,7 +404,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
         store._downloaded = True
 
         # test CPE-based query
@@ -254,7 +428,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
         store._downloaded = True
 
         # test package name-based query
@@ -278,7 +453,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
         store._downloaded = True
 
         # test query with ecosystem filter
@@ -301,7 +477,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
         store._downloaded = True
 
         # get results
@@ -326,7 +503,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
         store._downloaded = True
 
         # test query that should return no results
@@ -344,7 +522,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database with runs table
-        self._create_test_database_with_runs(store.db_path)
+        db = DatabaseFixture(store.db_path, include_runs=True)
+        db.insert_runs_data(store.db_path)
         store._downloaded = True
 
         # test getting changed vuln IDs since a specific date
@@ -363,7 +542,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database with runs table
-        self._create_test_database_with_runs(store.db_path)
+        db = DatabaseFixture(store.db_path, include_runs=True)
+        db.insert_runs_data(store.db_path)
         store._downloaded = True
 
         # test getting changed vuln IDs since a future date
@@ -379,7 +559,12 @@ class TestStore:
         store = Store(ws)
 
         # create test database with mixed case package names
-        self._create_test_database_with_case_variations(store.db_path)
+        case_variation_data = [
+            ("CVE-2023-0002", "test-db", "curl", "", "debian:11",
+             "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, case_variation_data, vulnerability_count=1)
         store._downloaded = True
 
         # test case insensitive matching
@@ -405,7 +590,16 @@ class TestStore:
         store = Store(ws)
 
         # create test database with python packages stored with underscores
-        self._create_test_database_with_python_packages(store.db_path)
+        python_package_data = [
+            ("CVE-2023-9001", "test-db", "my-package", "", "python",
+             "1.0.0", "2023-02-20", "fixed", "grype-db", None, 1),
+            ("CVE-2023-9001", "test-db", "my-package", "", "pypi",
+             "1.0.0", "2023-02-20", "fixed", "grype-db", None, 1),
+            ("CVE-2023-9001", "test-db", "my-package-test", "", "python",
+             "2.0.0", "2023-02-21", "fixed", "grype-db", None, 1),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, python_package_data, vulnerability_count=3)
         store._downloaded = True
 
         # test that we can find packages using different separator formats
@@ -433,7 +627,8 @@ class TestStore:
         store = Store(ws)
 
         # create test database
-        self._create_test_database(store.db_path)
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
         store._downloaded = True
 
         # test CPE query (should work exactly as before)
@@ -449,303 +644,122 @@ class TestStore:
         from datetime import date
         assert result.date == date(2023, 1, 15)
 
-    def _create_test_database_with_case_variations(self, db_path: Path):
-        """helper method to create test database with case variation test data"""
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    def test_vuln_id_case_insensitive_matching(self, tmpdir, helpers):
+        """test that vuln_id matching is case insensitive"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
-        with sqlite3.connect(db_path) as conn:
-            # create databases table
-            conn.execute("""
-                CREATE TABLE databases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    url TEXT UNIQUE NOT NULL,
-                    schema_version INTEGER NOT NULL,
-                    build_date TEXT NOT NULL,
-                    filename TEXT NOT NULL,
-                    status TEXT DEFAULT 'pending',
-                    vulnerability_count INTEGER,
-                    run_id INTEGER,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
+        # create test database with mixed case vulnerability IDs
+        case_variation_data = [
+            ("CVE-2023-0002", "test-db", "curl", "", "debian:11",
+             "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, case_variation_data, vulnerability_count=1)
+        store._downloaded = True
 
-            # insert default database record
-            conn.execute("""
-                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
-                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 1, '2023-01-01T00:00:00')
-            """)
+        # test case insensitive matching for vuln_id
+        test_cases = [
+            ("cve-2023-0002", 1),  # lowercase input
+            ("CVE-2023-0002", 1),  # uppercase input
+            ("Cve-2023-0002", 1),  # mixed case input
+            ("CvE-2023-0002", 1),  # random case input
+        ]
 
-            # create table schema with COLLATE NOCASE
-            conn.execute("""
-                CREATE TABLE fixdates (
-                    vuln_id TEXT,
-                    provider TEXT,
-                    package_name TEXT COLLATE NOCASE,
-                    full_cpe TEXT,
-                    ecosystem TEXT,
-                    fix_version TEXT,
-                    first_observed_date TEXT,
-                    resolution TEXT,
-                    source TEXT,
-                    run_id INTEGER,
-                    database_id INTEGER
-                )
-            """)
-
-            # insert test data with mixed case package names
-            test_data = [
-                # package stored with lowercase
-                (
-                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
-                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1,
-                ),
-            ]
-
-            conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                test_data,
+        for vuln_id, expected_count in test_cases:
+            results = store.find(
+                vuln_id=vuln_id,
+                cpe_or_package="curl",
+                fix_version=None,
+                ecosystem="debian:11",
             )
+            assert len(results) == expected_count, f"Case insensitive vuln_id test failed for '{vuln_id}': got {len(results)}, expected {expected_count}"
 
-    def _create_test_database_with_python_packages(self, db_path: Path):
-        """helper method to create test database with Python package test data"""
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    def test_provider_case_insensitive_matching(self, tmpdir, helpers):
+        """test that provider matching is case insensitive"""
+        ws = workspace.Workspace(tmpdir, "Test-DB", create=True)  # mixed case provider
+        store = Store(ws)
 
-        with sqlite3.connect(db_path) as conn:
-            # create databases table
-            conn.execute("""
-                CREATE TABLE databases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    url TEXT UNIQUE NOT NULL,
-                    schema_version INTEGER NOT NULL,
-                    build_date TEXT NOT NULL,
-                    filename TEXT NOT NULL,
-                    status TEXT DEFAULT 'pending',
-                    vulnerability_count INTEGER,
-                    run_id INTEGER,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
+        # create test database
+        mixed_case_provider_data = [
+            ("CVE-2023-0002", "Test-DB", "curl", "", "debian:11",
+             "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, mixed_case_provider_data, vulnerability_count=1)
+        store._downloaded = True
 
-            # insert default database record
-            conn.execute("""
-                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
-                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 3, '2023-01-01T00:00:00')
-            """)
+        # test that queries work regardless of how provider was stored
+        results = store.find(
+            vuln_id="CVE-2023-0002",
+            cpe_or_package="curl",
+            fix_version=None,
+            ecosystem="debian:11",
+        )
+        assert len(results) == 1, f"Provider case insensitive test failed: got {len(results)}, expected 1"
 
-            # create table schema with COLLATE NOCASE
-            conn.execute("""
-                CREATE TABLE fixdates (
-                    vuln_id TEXT,
-                    provider TEXT,
-                    package_name TEXT COLLATE NOCASE,
-                    full_cpe TEXT,
-                    ecosystem TEXT,
-                    fix_version TEXT,
-                    first_observed_date TEXT,
-                    resolution TEXT,
-                    source TEXT,
-                    run_id INTEGER,
-                    database_id INTEGER
-                )
-            """)
+    def test_ecosystem_case_insensitive_matching(self, tmpdir, helpers):
+        """test that ecosystem matching is case insensitive"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
-            # insert test data with python packages stored in normalized form
-            test_data = [
-                # python package stored with normalized form (hyphens)
-                (
-                    "CVE-2023-9001", "test-db", "my-package", "", "python",
-                    "1.0.0", "2023-02-20", "fixed", "grype-db", None, 1,
-                ),
-                (
-                    "CVE-2023-9001", "test-db", "my-package", "", "pypi",
-                    "1.0.0", "2023-02-20", "fixed", "grype-db", None, 1,
-                ),
-                # another test package with mixed separators in storage (normalized)
-                (
-                    "CVE-2023-9001", "test-db", "my-package-test", "", "python",
-                    "2.0.0", "2023-02-21", "fixed", "grype-db", None, 1,
-                ),
-            ]
+        # create test database with mixed case ecosystems
+        case_variation_data = [
+            ("CVE-2023-0002", "test-db", "curl", "", "debian:11",
+             "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, case_variation_data, vulnerability_count=1)
+        store._downloaded = True
 
-            conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                test_data,
+        # test case insensitive matching for ecosystem
+        test_cases = [
+            ("debian:11", 1),     # lowercase input
+            ("DEBIAN:11", 1),     # uppercase input
+            ("Debian:11", 1),     # mixed case input
+            ("DeBiAn:11", 1),     # random case input
+        ]
+
+        for ecosystem, expected_count in test_cases:
+            results = store.find(
+                vuln_id="CVE-2023-0002",
+                cpe_or_package="curl",
+                fix_version=None,
+                ecosystem=ecosystem,
             )
+            assert len(results) == expected_count, f"Case insensitive ecosystem test failed for '{ecosystem}': got {len(results)}, expected {expected_count}"
 
-    def _create_test_database(self, db_path: Path):
-        """helper method to create test database with sample data"""
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    def test_full_cpe_case_insensitive_matching(self, tmpdir, helpers):
+        """test that full_cpe matching is case insensitive"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
 
-        with sqlite3.connect(db_path) as conn:
-            # create databases table
-            conn.execute("""
-                CREATE TABLE databases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    url TEXT UNIQUE NOT NULL,
-                    schema_version INTEGER NOT NULL,
-                    build_date TEXT NOT NULL,
-                    filename TEXT NOT NULL,
-                    status TEXT DEFAULT 'pending',
-                    vulnerability_count INTEGER,
-                    run_id INTEGER,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
+        # create test database with mixed case CPEs
+        mixed_case_cpe_data = [
+            ("CVE-2023-0001", "test-db", "",
+             "CPE:2.3:A:Apache:HttpD:2.4.41:*:*:*:*:*:*:*", "",  # Mixed case CPE in storage
+             "2.4.42", "2023-01-15", "fixed", "grype-db", None, 1),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, mixed_case_cpe_data, vulnerability_count=1)
+        store._downloaded = True
 
-            # insert default database record
-            conn.execute("""
-                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
-                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 4, '2023-01-01T00:00:00')
-            """)
+        # test case insensitive matching for full_cpe
+        test_cases = [
+            ("cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", 1),       # lowercase input
+            ("CPE:2.3:A:APACHE:HTTPD:2.4.41:*:*:*:*:*:*:*", 1),       # uppercase input
+            ("Cpe:2.3:A:Apache:Httpd:2.4.41:*:*:*:*:*:*:*", 1),       # mixed case input
+            ("CPe:2.3:a:Apache:HTTPD:2.4.41:*:*:*:*:*:*:*", 1),       # random case input
+        ]
 
-            # create table schema
-            conn.execute("""
-                CREATE TABLE fixdates (
-                    vuln_id TEXT,
-                    provider TEXT,
-                    package_name TEXT COLLATE NOCASE,
-                    full_cpe TEXT,
-                    ecosystem TEXT,
-                    fix_version TEXT,
-                    first_observed_date TEXT,
-                    resolution TEXT,
-                    source TEXT,
-                    run_id INTEGER,
-                    database_id INTEGER
-                )
-            """)
-
-            # insert test data
-            test_data = [
-                # CPE-based record
-                (
-                    "CVE-2023-0001", "test-db", "",
-                    "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
-                    "2.4.42", "2023-01-15", "fixed", "grype-db", None, 1,
-                ),
-                # package name-based records
-                (
-                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
-                    "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1,
-                ),
-                (
-                    "CVE-2023-0002", "test-db", "curl", "", "debian:11",
-                    None, "2023-02-18", "wont-fix", "grype-db", None, 1,
-                ),
-                # additional test record
-                (
-                    "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
-                    "1.1.1k-7.el8_6", "2023-03-10", "fixed", "grype-db", None, 1,
-                ),
-            ]
-
-            conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                test_data,
+        for cpe, expected_count in test_cases:
+            results = store.find(
+                vuln_id="CVE-2023-0001",
+                cpe_or_package=cpe,
+                fix_version="2.4.42",
             )
+            assert len(results) == expected_count, f"Case insensitive full_cpe test failed for '{cpe}': got {len(results)}, expected {expected_count}"
 
-    def _create_test_database_with_runs(self, db_path: Path):
-        """helper method to create test database with runs table and run_id column"""
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with sqlite3.connect(db_path) as conn:
-            # create databases table
-            conn.execute("""
-                CREATE TABLE databases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    url TEXT UNIQUE NOT NULL,
-                    schema_version INTEGER NOT NULL,
-                    build_date TEXT NOT NULL,
-                    filename TEXT NOT NULL,
-                    status TEXT DEFAULT 'pending',
-                    vulnerability_count INTEGER,
-                    run_id INTEGER,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
-
-            # insert default database record
-            conn.execute("""
-                INSERT INTO databases (id, url, schema_version, build_date, filename, status, vulnerability_count, created_at)
-                VALUES (1, 'test://db', 1, '2023-01-01', 'test.db', 'completed', 4, '2023-01-01T00:00:00')
-            """)
-
-            # create runs table
-            conn.execute("""
-                CREATE TABLE runs (
-                    id INTEGER PRIMARY KEY,
-                    source TEXT NOT NULL,
-                    resolution TEXT NOT NULL,
-                    provider TEXT,
-                    first_date TEXT NOT NULL,
-                    last_date TEXT NOT NULL,
-                    total_dbs_planned INTEGER NOT NULL,
-                    total_dbs_completed INTEGER NOT NULL,
-                    total_dbs_failed INTEGER NOT NULL,
-                    run_timestamp TEXT NOT NULL
-                )
-            """)
-
-            # create fixdates table with run_id column
-            conn.execute("""
-                CREATE TABLE fixdates (
-                    vuln_id TEXT,
-                    provider TEXT,
-                    package_name TEXT COLLATE NOCASE,
-                    full_cpe TEXT,
-                    ecosystem TEXT,
-                    fix_version TEXT,
-                    first_observed_date TEXT,
-                    resolution TEXT,
-                    source TEXT,
-                    run_id INTEGER,
-                    database_id INTEGER
-                )
-            """)
-
-            # insert test runs
-            runs_data = [
-                (1, "test", "fixed", "nvd", "2023-01-01T00:00:00", "2023-01-01T23:59:59", 1, 1, 0, "2023-01-10T12:00:00"),
-                (2, "test", "fixed", "debian", "2023-02-01T00:00:00", "2023-02-01T23:59:59", 1, 1, 0, "2023-02-20T12:00:00"),
-                (3, "test", "fixed", "rhel", "2023-03-01T00:00:00", "2023-03-01T23:59:59", 1, 1, 0, "2023-03-10T12:00:00"),
-            ]
-            conn.executemany(
-                "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                runs_data,
-            )
-
-            # insert test fixdate data with run_id
-            test_data = [
-                # run_id=1 (2023-01-10) - should not be included when filtering since 2023-02-15
-                (
-                    "CVE-2023-0001", "nvd", "",
-                    "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "",
-                    "2.4.42", "2023-01-15T10:30:00", "fixed", "grype-db", 1, 1,
-                ),
-                # run_id=2 (2023-02-20) - should be included
-                (
-                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
-                    "7.68.0-1ubuntu2.15", "2023-02-20T14:45:00", "fixed", "grype-db", 2, 1,
-                ),
-                (
-                    "CVE-2023-0002", "debian", "curl", "", "debian:11",
-                    None, "2023-02-18T09:15:00", "wont-fix", "grype-db", 2, 1,
-                ),
-                # run_id=3 (2023-03-10) - should be included
-                (
-                    "CVE-2023-0003", "rhel", "openssl", "", "rhel:8",
-                    "1.1.1k-7.el8_6", "2023-03-10T16:00:00", "fixed", "grype-db", 3, 1,
-                ),
-            ]
-
-            conn.executemany(
-                "INSERT INTO fixdates VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                test_data,
-            )
 
 
 class TestNormalizePackageName:
