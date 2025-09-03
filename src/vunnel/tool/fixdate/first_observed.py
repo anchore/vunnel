@@ -111,17 +111,18 @@ class Store(Strategy):
 
         # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
         query = table.select().where(
-            (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
+            (table.c.vuln_id.collate("NOCASE") == vuln_id) & (table.c.provider.collate("NOCASE") == self.provider),
         )
 
-        if cpe_or_package.startswith("cpe:"):
-            query = query.where(table.c.full_cpe == cpe_or_package)
+        if cpe_or_package.lower().startswith("cpe:"):
+            query = query.where(table.c.full_cpe.collate("NOCASE") == cpe_or_package)
         else:
             query = query.where(
-                (table.c.package_name.collate("NOCASE") == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                (table.c.package_name.collate("NOCASE") == normalize_package_name(cpe_or_package, ecosystem))
+                & (table.c.full_cpe.collate("NOCASE") == ""),
             )
             if ecosystem:
-                query = query.where(table.c.ecosystem == ecosystem)
+                query = query.where(table.c.ecosystem.collate("NOCASE") == ecosystem)
 
         if fix_version:
             query = query.where(table.c.fix_version == fix_version)
