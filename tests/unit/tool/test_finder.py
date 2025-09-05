@@ -348,3 +348,19 @@ class TestFinder:
             result = finder._normalize_ecosystem(ecosystem)
             # unknown ecosystems should be lowercased since we call .lower() first
             assert result == ecosystem.lower(), f"Expected {ecosystem.lower()} for {ecosystem}, got {result}"
+
+    def test_best_normalizes_ecosystems(self):
+        """Test that best() normalizes ecosystem parameter before passing to strategies and first_observed."""
+        strategy1 = self.create_mock_strategy([self.create_result("2023-01-01", "strategy1")])
+        strategy2 = self.create_mock_strategy([])
+        first_observed = self.create_mock_strategy([])
+
+        finder = Finder([strategy1, strategy2], first_observed)
+
+        # use an ecosystem that needs normalization: "composer" should become "php-composer"
+        finder.best("CVE-2023-0001", "package", "1.0.0", ecosystem="composer")
+
+        # verify that normalized ecosystem was passed to all strategies and first_observed
+        strategy1.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
+        strategy2.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
+        first_observed.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
