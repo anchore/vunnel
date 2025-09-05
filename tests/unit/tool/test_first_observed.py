@@ -55,15 +55,15 @@ class DatabaseFixture:
             # Create fixdates table
             conn.execute("""
                 CREATE TABLE fixdates (
-                    vuln_id TEXT,
-                    provider TEXT,
+                    vuln_id TEXT COLLATE NOCASE,
+                    provider TEXT COLLATE NOCASE,
                     package_name TEXT COLLATE NOCASE,
-                    full_cpe TEXT,
-                    ecosystem TEXT,
-                    fix_version TEXT,
-                    first_observed_date TEXT,
-                    resolution TEXT,
-                    source TEXT,
+                    full_cpe TEXT COLLATE NOCASE,
+                    ecosystem TEXT COLLATE NOCASE,
+                    fix_version TEXT COLLATE NOCASE,
+                    first_observed_date TEXT COLLATE NOCASE,
+                    resolution TEXT COLLATE NOCASE,
+                    source TEXT COLLATE NOCASE,
                     run_id INTEGER,
                     database_id INTEGER
                 )
