@@ -101,6 +101,8 @@ class Finder:
     ) -> Result | None:
         results = []
 
+        ecosystem = self._normalize_ecosystem(ecosystem)
+
         if not fix_version or fix_version in ("None", "0"):
             # if we don't have a fix version, we can't determine a fix date
             return None
