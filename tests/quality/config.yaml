@@ -47,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
+  version: CrosleyZack/grype-db@crosley/add-vex-feed-provider
 
 tests:
 
@@ -122,6 +122,15 @@ tests:
       - ghcr.io/chainguard-images/scanner-test:latest@sha256:59bddc101fba0c45d5c093575c6bc5bfee7f0e46ff127e6bb4e5acaaafb525f9
     expected_namespaces:
       - chainguard:distro:chainguard:rolling
+    validations:
+      - *default-validations
+
+  - provider: chainguard-libraries
+    additional_providers:
+      - name: github
+        use_cache: true
+    images:
+      - ghcr.io/chainguard-images/scanner-test:python-library-chainguard@sha256:5784ff619513afd0faf0b03e3284152312ba01fb7b1f24a3e3e67551ee9a91d8
     validations:
       - *default-validations
 

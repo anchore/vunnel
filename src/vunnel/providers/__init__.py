@@ -10,6 +10,7 @@ from vunnel.providers import (
     amazon,
     bitnami,
     chainguard,
+    chainguard_libraries,
     debian,
     echo,
     epss,
@@ -47,6 +48,7 @@ _providers: dict[str, type[provider.Provider]] = {
     ubuntu.Provider.name(): ubuntu.Provider,
     wolfi.Provider.name(): wolfi.Provider,
     chainguard.Provider.name(): chainguard.Provider,
+    chainguard_libraries.Provider.name(): chainguard_libraries.Provider,
     minimos.Provider.name(): minimos.Provider,
     # auxiliary vulnerability data (decorates vulnerability entries from providers)
     kev.Provider.name(): kev.Provider,
