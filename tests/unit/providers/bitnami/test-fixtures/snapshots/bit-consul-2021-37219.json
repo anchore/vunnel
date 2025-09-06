@@ -1,0 +1,96 @@
+{
+  "identifier": "bit-consul-2021-37219",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "Bitnami",
+          "name": "consul",
+          "purl": "pkg:bitnami/consul"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-03-06",
+                    "kind": "advisory",
+                    "version": "1.8.15"
+                  },
+                  {
+                    "date": "2024-03-06",
+                    "kind": "advisory",
+                    "version": "1.9.9"
+                  },
+                  {
+                    "date": "2024-03-06",
+                    "kind": "advisory",
+                    "version": "1.10.2"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "1.8.15"
+              },
+              {
+                "introduced": "1.9.0"
+              },
+              {
+                "fixed": "1.9.9"
+              },
+              {
+                "introduced": "1.10.0"
+              },
+              {
+                "fixed": "1.10.2"
+              }
+            ],
+            "type": "SEMVER"
+          }
+        ],
+        "severity": [
+          {
+            "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "type": "CVSS_V3"
+          }
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2021-37219"
+    ],
+    "database_specific": {
+      "cpes": [
+        "cpe:2.3:a:hashicorp:consul:*:*:*:*:-:*:*:*",
+        "cpe:2.3:a:hashicorp:consul:*:*:*:*:enterprise:*:*:*"
+      ],
+      "severity": "High"
+    },
+    "details": "HashiCorp Consul and Consul Enterprise 1.10.1 Raft RPC layer allows non-server agents with a valid certificate signed by the same CA to access server-only functionality, enabling privilege escalation. Fixed in 1.8.15, 1.9.9 and 1.10.2.",
+    "id": "BIT-consul-2021-37219",
+    "modified": "2024-03-06T11:25:28.861Z",
+    "published": "2024-03-06T10:53:02.967Z",
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://discuss.hashicorp.com/t/hcsec-2021-22-consul-raft-rpc-privilege-escalation/29024"
+      },
+      {
+        "type": "WEB",
+        "url": "https://security.gentoo.org/glsa/202207-01"
+      },
+      {
+        "type": "WEB",
+        "url": "https://www.hashicorp.com/blog/category/consul"
+      }
+    ],
+    "schema_version": "1.5.0"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.5.0.json"
+}
