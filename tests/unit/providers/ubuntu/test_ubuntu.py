@@ -281,12 +281,12 @@ class TestUbuntuParser:
             got = parse_multiline_keyvalue(header, split_lines)
             assert got == result
 
-    def test_mapper(self):
+    def test_mapper(self, fake_fixdate_finder):
         with open(self._data_) as f:
             parsed = parse_cve_file("CVE-2017-9996", f.readlines())
 
         parsed.name = "CVE-TEST-123"
-        vulns = map_parsed(parsed)
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
         for i in vulns:
             j = i.json()
             print(json.dumps(j))
@@ -535,7 +535,7 @@ def hydrate_git_repo(tmpdir, helpers):
         #         └── cve-2022-41861.json
     ],
 )
-def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker):
+def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker, auto_fake_fixdate_finder):
     path = hydrate_git_repo(mock_data_path)
 
     c = ubuntu.Config()
@@ -550,7 +550,7 @@ def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_wri
     assert ws.result_schemas_valid(require_entries=expected_written_entries > 0)
 
 
-def test_provider_via_snapshot(helpers, hydrate_git_repo, mocker):
+def test_provider_via_snapshot(helpers, hydrate_git_repo, mocker, auto_fake_fixdate_finder):
     path = hydrate_git_repo("test-fixtures/repo-fast-export")
 
     c = ubuntu.Config()

@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
 
@@ -21,14 +22,18 @@ class Parser:
     _release_ = "rolling"
     _secdb_dir_ = "secdb"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
         url: str,
         namespace: str,
+        fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/")
@@ -52,6 +57,8 @@ class Parser:
         if not os.path.exists(self.secdb_dir_path):
             os.makedirs(self.secdb_dir_path, exist_ok=True)
 
+        self.fixdater.download()
+
         try:
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
             r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
@@ -67,8 +74,6 @@ class Parser:
         Loads all db json and yields it
         :return:
         """
-        dbtype_data_dict = {}
-
         # parse and transform the json
         try:
             with open(f"{self.secdb_dir_path}/{self._db_filename}") as fh:
@@ -79,7 +84,7 @@ class Parser:
             self.logger.exception(f"failed to load {self.namespace} sec db data")
             raise
 
-    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, dict[str, Any]]:  # noqa: C901
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -95,10 +100,10 @@ class Parser:
             pkg_el = el["pkg"]
 
             pkg = pkg_el["name"]
-            for pkg_version in pkg_el["secfixes"]:
+            for fix_version in pkg_el["secfixes"]:
                 vids = []
-                if pkg_el["secfixes"][pkg_version]:
-                    for rawvid in pkg_el["secfixes"][pkg_version]:
+                if pkg_el["secfixes"][fix_version]:
+                    for rawvid in pkg_el["secfixes"][fix_version]:
                         tmp = rawvid.split()
                         for newvid in tmp:
                             if newvid not in vids:
@@ -124,12 +129,25 @@ class Parser:
                         vuln_record = vuln_dict[vid]
 
                     # SET UP fixedins
+                    ecosystem = self.namespace + ":" + str(release)
                     fixed_el = {
                         "Name": pkg,
-                        "Version": pkg_version,
+                        "Version": fix_version,
                         "VersionFormat": "apk",
-                        "NamespaceName": self.namespace + ":" + str(release),
+                        "NamespaceName": ecosystem,
                     }
+
+                    result = self.fixdater.best(
+                        vuln_id=str(vid),
+                        cpe_or_package=pkg,
+                        fix_version=fix_version,
+                        ecosystem=ecosystem,
+                    )
+                    if result and result.date:
+                        fixed_el["Available"] = {
+                            "Date": result.date.isoformat(),
+                            "Kind": result.kind,
+                        }
 
                     vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)  # type: ignore[union-attr]
 

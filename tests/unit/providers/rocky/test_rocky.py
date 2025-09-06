@@ -10,7 +10,7 @@ from vunnel.providers.rocky.client import Client
 
 
 @patch("vunnel.providers.rocky.client.Client._download")
-def test_provider_schema(mock_download, helpers):
+def test_provider_schema(mock_download, helpers, auto_fake_fixdate_finder):
     mock_download.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
     c = Config()
@@ -24,7 +24,7 @@ def test_provider_schema(mock_download, helpers):
     assert workspace.result_schemas_valid(require_entries=True)
 
 @patch("vunnel.providers.rocky.client.Client._download")
-def test_provider_skip_download(mock_download, helpers):
+def test_provider_skip_download(mock_download, helpers, auto_fake_fixdate_finder):
     assert Provider.supports_skip_download()
 
     mock_download.side_effect = RuntimeError("should not be called")
@@ -55,7 +55,7 @@ def test_provider_skip_download_error_on_empty():
 
 
 @patch("vunnel.providers.rocky.client.Client._download")
-def test_parser(mock_download, helpers):
+def test_parser(mock_download, helpers, auto_fake_fixdate_finder):
     mock_download.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
     mock_data_path = helpers.local_dir("test-fixtures")
@@ -71,7 +71,7 @@ def test_parser(mock_download, helpers):
     assert vuln_tuples[2][1] == "1.3.1"
 
 @patch("vunnel.utils.http_wrapper.get")
-def test_client(mock_http_get, helpers):
+def test_client(mock_http_get, helpers, auto_fake_fixdate_finder):
     page1 = MagicMock()
     page1.json.return_value = {
         "links": {"next": "/api/v3/osv/?page=2"},
@@ -85,7 +85,7 @@ def test_client(mock_http_get, helpers):
     mock_http_get.side_effect = [page1, page2]
     mock_host = "https://apollo.example.com"
     logger = MagicMock()
-    client = Client(download_path=helpers.local_dir("test-fixtures"), logger=logger, api_host=mock_host)
+    client = Client(download_path=helpers.local_dir("test-fixtures"), logger=logger, api_host=mock_host, fixdater=auto_fake_fixdate_finder)
     client._download()
     assert mock_http_get.call_count == 2
     expected_calls = [

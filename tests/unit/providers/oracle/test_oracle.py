@@ -431,7 +431,7 @@ class TestKspliceFilterer:
         assert f.filter(input_vulnerability) == expected_output
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
@@ -452,7 +452,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()

@@ -8,8 +8,9 @@ from html.parser import HTMLParser
 
 import defusedxml.ElementTree as ET
 
-from vunnel.utils import date, rpm
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
+from vunnel.utils import rpm
 
 namespace = "amzn"
 
@@ -37,20 +38,23 @@ class Parser:
     _rss_file_name_ = "{}_rss.xml"
     _html_dir_name_ = "{}_html"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace,
+        fixdater: fixdate.Finder | None = None,
         download_timeout=125,
         security_advisories=None,
         logger=None,
         max_allowed_alas_http_403=25,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.workspace = workspace
         self.version_url_map = security_advisories if security_advisories else amazon_security_advisories
         self.download_timeout = download_timeout
         self.max_allowed_alas_http_403 = max_allowed_alas_http_403
         self.urls = []
-
         self.alas_403s = []
 
         if not logger:
@@ -155,6 +159,8 @@ class Parser:
                     self.logger.warning(f" - {url}")
 
     def _get(self, skip_if_exists):
+        self.fixdater.download()
+
         for version, url in self.version_url_map.items():
             rss_file = os.path.join(self.workspace.input_path, self._rss_file_name_.format(version))
             html_dir = os.path.join(self.workspace.input_path, self._html_dir_name_.format(version))
@@ -190,7 +196,7 @@ class Parser:
                 description = "".join(parser.issue_overview_text)
 
                 # construct a vulnerability object and yield it
-                yield map_to_vulnerability(version, alas, fixed_in, description)
+                yield map_to_vulnerability(version, alas, fixed_in, description, self.fixdater)
 
 
 class JsonifierMixin:
@@ -245,6 +251,15 @@ class FixAvailable(JsonifierMixin):
     def __init__(self):
         self.Date = None
         self.Kind = None
+
+    @staticmethod
+    def from_result(result: fixdate.Result | None) -> FixAvailable | None:
+        if not result:
+            return None
+        fa = FixAvailable()
+        fa.Date = result.date
+        fa.Kind = result.kind
+        return fa
 
 
 class PackagesHTMLParser(HTMLParser):
@@ -303,13 +318,14 @@ class PackagesHTMLParser(HTMLParser):
         #     print('Ignoring data: {}'.format(data.strip()))
 
 
-def map_to_vulnerability(version, alas, fixed_in, description):
+def map_to_vulnerability(version, alas, fixed_in, description, fixdater: fixdate.Finder):
     if not alas:
         raise ValueError("Invalid reference to AlasSummary")
 
     v = Vulnerability()
     v.Name = alas.id
-    v.NamespaceName = namespace + ":" + version
+    ecosystem = namespace + ":" + version
+    v.NamespaceName = ecosystem
     v.Description = description
     v.Severity = severity_map.get(alas.sev, "Unknown")
     v.Metadata = {
@@ -326,13 +342,23 @@ def map_to_vulnerability(version, alas, fixed_in, description):
         f.NamespaceName = v.NamespaceName
         f.VersionFormat = "rpm"
         f.Version = item.ver
-        # populate Available object only if there is a fix version available
-        fix_date = None
-        if fixed_in:
-            fix_date = date.normalize_date(alas.pubDate)
-        if fix_date:
-            f.Available.Date = fix_date
-            f.Available.Kind = "advisory"
+        f.Available = FixAvailable.from_result(
+            fixdater.best(
+                vuln_id=alas.id,
+                cpe_or_package=item.pkg,
+                fix_version=item.ver,
+                ecosystem=ecosystem,
+                candidates=[
+                    # take the pubDate as default fix date candidate if no better date is found
+                    fixdate.Result(
+                        date=alas.pubDate,
+                        kind="advisory",
+                        accurate=True,
+                    ),
+                ],
+            ),
+        )
+
         v.FixedIn.append(f)
 
     return v

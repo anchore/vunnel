@@ -22,14 +22,19 @@ import logging
 import os
 import time
 from decimal import Decimal, DecimalException
+from typing import TYPE_CHECKING
 
 import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
 from vunnel import utils
+from vunnel.tool import fixdate
 from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
+
+if TYPE_CHECKING:
+    from vunnel.workspace import Workspace
 
 # this is the ecosystem in GHSA to a syft package type
 ecosystem_map = {
@@ -51,14 +56,18 @@ GITHUB_RATE_LIMIT_RESET_HEADER = "x-ratelimit-reset"
 
 
 class Parser:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        workspace,
-        token,
-        download_timeout=125,
-        api_url="https://api.github.com/graphql",
-        logger=None,
+        workspace: Workspace,
+        token: str,
+        fixdater: fixdate.Finder | None = None,
+        download_timeout: int = 125,
+        api_url: str = "https://api.github.com/graphql",
+        logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.db = db.connection(workspace.input_path, serializer="json")
         self.download_timeout = download_timeout
         self.api_url = api_url
@@ -70,14 +79,14 @@ class Parser:
         self.logger = logger
 
     def _download(self, vuln_cursor=None):
-        if not self.token:
-            raise ValueError("Github token must be defined")
-
         """
         Download the advisories from Github via the GraphQL API, using a cursor
         if it was defined in the class. Advisories stay in memory until
         persisted later in the process.
         """
+        if not self.token:
+            raise ValueError("Github token must be defined")
+
         query = graphql_advisories(timestamp=self.timestamp, cursor=self.cursor, vuln_cursor=vuln_cursor)
 
         return get_query(self.token, query, self.download_timeout, self.api_url)
@@ -159,12 +168,14 @@ class Parser:
                 current_vulnerabilities = node_data.get("vulnerabilities", {}).get("nodes", [])
                 current_vulnerabilities.extend(extra_vulnerabilities)
 
-            parsed = NodeParser(node_data, logger=self.logger).parse()
+            parsed = NodeParser(node_data, self.fixdater, logger=self.logger).parse()
             advisories.append(parsed)
 
         return advisories
 
     def get(self):
+        self.fixdater.download()
+
         # determine if a run was completed by looking for a timestamp
         metadata = self.db.get_metadata()
 
@@ -180,7 +191,7 @@ class Parser:
 
         # Process everything that was persisted first
         for node_data in self.db.get_all():
-            yield NodeParser(node_data.load(), logger=self.logger).parse()
+            yield NodeParser(node_data.load(), self.fixdater, logger=self.logger).parse()
 
         while has_cursor:
             # download graphql data as json, if the timestamp is present, then the
@@ -513,7 +524,8 @@ class NodeParser(dict):
         "_withdrawn",
     )
 
-    def __init__(self, data, logger=None):
+    def __init__(self, data: dict, fixdater: fixdate.Finder, logger: logging.Logger | None = None):
+        self.fixdater = fixdater
         self.description = None
         self.identifier = None
         self.summary = None
@@ -631,21 +643,35 @@ class NodeParser(dict):
                 self.ecosystems.add(ecosystem)
 
                 try:
-                    identifier = item.get("firstPatchedVersion", {}).get("identifier", "None")
+                    fix_version = item.get("firstPatchedVersion", {}).get("identifier", None)
                 except AttributeError:
-                    identifier = "None"
-                package_name = item.get("package", {}).get("name")
+                    fix_version = None
 
+                package_name = item.get("package", {}).get("name")
                 version_range = item.get("vulnerableVersionRange", "").replace(",", "")
-                self["FixedIn"].append(
-                    {
-                        "name": package_name,
-                        "identifier": identifier,
-                        "ecosystem": ecosystem,
-                        "namespace": f"github:{ecosystem}",
-                        "range": version_range,
-                    },
+
+                record = {
+                    "name": package_name,
+                    "identifier": fix_version or "None",
+                    "ecosystem": ecosystem,
+                    "namespace": f"github:{ecosystem}",
+                    "range": version_range,
+                }
+
+                vid = self.data.get("ghsaId")
+                result = self.fixdater.best(
+                    vuln_id=vid,
+                    cpe_or_package=package_name,
+                    fix_version=fix_version,
+                    ecosystem=ecosystem,
                 )
+                if result:
+                    record["available"] = {
+                        "date": result.date.isoformat(),
+                        "kind": result.kind,
+                    }
+
+                self["FixedIn"].append(record)
             else:
                 # Log vuln skipped for unknown ecosystem
                 self.logger.debug("dropping github vuln from unmapped ecosystem: %s", github_ecosystem)

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
 
@@ -22,14 +23,18 @@ class Parser:
     _advisories_dir = "echo-advisories"
     _advisories_filename = "data.json"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
         url: str,
         namespace: str,
+        fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.advisories_dir_path = Path(workspace.input_path) / self._advisories_dir
         self.url = url
@@ -46,6 +51,8 @@ class Parser:
         """
         if not os.path.exists(self.advisories_dir_path):
             os.makedirs(self.advisories_dir_path, exist_ok=True)
+
+        self.fixdater.download()
 
         try:
             self.logger.info(f"downloading {self.namespace} advisories {self.url}")
@@ -81,14 +88,34 @@ class Parser:
                     record["Vulnerability"]["FixedIn"] = []
                     vuln_dict[cve_id] = record
                 cve_record = vuln_dict[cve_id]
-                cve_record["Vulnerability"]["FixedIn"].append(  # type: ignore[union-attr]
-                    {
-                        "Name": package,
-                        "Version": cve_info.get("fixed_version", ""),
-                        "VersionFormat": "dpkg",
-                        "NamespaceName": self.namespace + ":" + str(release),
-                    },
+
+                ecosystem = self.namespace + ":" + str(release)
+                fix_version = cve_info.get("fixed_version", "")
+
+                fixed_in = {
+                    "Name": package,
+                    "Version": fix_version,
+                    "VersionFormat": "dpkg",
+                    "NamespaceName": ecosystem,
+                }
+
+                result = self.fixdater.best(
+                    vuln_id=cve_id,
+                    cpe_or_package=package,
+                    fix_version=fix_version,
+                    ecosystem=ecosystem,
+                    # as of today, there isn't any good candidate for a fix date. In the future
+                    # we might be able to use the date on the aports commit that added the fix.
+                    # candidates=[],
                 )
+                if result and result.date:
+                    fixed_in["Available"] = {
+                        "Date": result.date.isoformat(),
+                        "Kind": result.kind,
+                    }
+
+                cve_record["Vulnerability"]["FixedIn"].append(fixed_in)  # type: ignore[union-attr]
+
         return vuln_dict
 
     def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]], None, None]:
