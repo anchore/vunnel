@@ -250,6 +250,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   chainguard_libraries:
+    openvex_url: https://libraries.cgr.dev/openvex/v1/all.json
     request_timeout: 125
     runtime:
       existing_input: keep
