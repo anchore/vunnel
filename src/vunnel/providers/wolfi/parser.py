@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import logging
 import os
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -17,28 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-class CGParser(ABC):
-    """
-    Define interface that all Chainguard parsers will fulfill
-    """
-
-    @abstractmethod
-    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
-        """
-        Retrieve security feed entries as vuln_id -> vuln_record
-        """
-        return None
-
-    @property
-    @abstractmethod
-    def target_url(self) -> str:
-        """
-        retrieve url of the data feed
-        """
-        return ""
-
-
-class Parser(CGParser):
+class Parser:
     _release_ = "rolling"
     _secdb_dir_ = "secdb"
     _security_reference_url_ = "https://images.chainguard.dev/security"

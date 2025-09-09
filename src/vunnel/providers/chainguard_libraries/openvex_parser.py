@@ -8,7 +8,6 @@ from urllib.parse import urljoin, urlparse
 import orjson
 from packageurl import PackageURL
 
-from vunnel.providers.wolfi.parser import CGParser
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
 
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
     from vunnel import workspace
 
 
-class OpenVEXParser(CGParser):
+class OpenVEXParser:
     _openvex_dir_ = "openvex"
     _security_reference_url_ = "https://images.chainguard.dev/security"
 
