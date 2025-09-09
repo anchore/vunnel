@@ -25,7 +25,7 @@ def test_parser(tmpdir, helpers, mock_data_path, mocker, auto_fake_fixdate_finde
     for v in json_dict["vulnerabilities"]:
         cve_id = v["cve"]["id"]
         year = cve_id.split("-")[1]
-        identity = f"{year}/{cve_id}"
+        identity = f"{year}/{cve_id}".lower()
         expected_vulns.append((identity, v))
 
     subject = manager.Manager(
