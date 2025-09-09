@@ -131,18 +131,17 @@ class OpenVEXParser:
         # format as vuln_id -> statement for provider
         return {
             # https://github.com/openvex/spec?tab=readme-ov-file#what-does-an-openvex-document-look-like
-            name: self._clean_statements(statement)
+            name: self._filter_statements(statement)
             for statement in doc["statements"]
             if (name := statement.get("vulnerability", {}).get("name", None))
         }
 
-    def _clean_statements(self, statement: dict[str, Any]) -> dict[str, Any]:
+    def _filter_statements(self, statement: dict[str, Any]) -> dict[str, Any]:
         """
-        check if a statement is valid
+        check if a statement is valid and only include chainguard-related artifacts for supported ecosystems
         :param statement: [openvex statement](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md)
         :return: statement with only chainguard products
         """
-        # map package type to chainguard purl fragment
         d = {
             "pypi": "+cgr.",
         }
