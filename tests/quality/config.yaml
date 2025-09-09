@@ -132,7 +132,8 @@ tests:
     images:
       - ghcr.io/chainguard-images/scanner-test:python-library-chainguard@sha256:5784ff619513afd0faf0b03e3284152312ba01fb7b1f24a3e3e67551ee9a91d8
     validations:
-      - *default-validations
+      - <<: *default-validations
+        max_year: 2025
 
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
