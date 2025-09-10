@@ -11,7 +11,7 @@ from vunnel.providers.nvd.overrides import NVDOverrides
 from vunnel.tool import fixdate
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Generator
 
     from vunnel import schema as schema_def
     from vunnel.workspace import Workspace
@@ -63,11 +63,12 @@ class Manager:
     ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         """main method to fetch and process NVD vulnerability data.
 
-        This orchestrates e few concerns:
+        This orchestrates a few concerns:
         1. downloads NVD API data (with incremental updates by default)
         2. applies configuration overrides for CPE matching
         3. enriches records with fix dates from external databases
-        4. handles CVEs with updated fix dates even if not in incremental sync
+        4. processes CVEs that have override data but weren't in the main sync
+        5. handles CVEs with updated fix dates even if not in incremental sync
 
         Args:
             last_updated: Only process CVEs modified after this datetime (for incremental updates)
@@ -82,32 +83,17 @@ class Manager:
 
         self.fixdater.download()
 
-        # track CVEs with changed fix dates that need reprocessing
-        changed_cve_ids = set()
-        if last_updated:
-            changed_vuln_ids = self.fixdater.get_changed_vuln_ids_since(last_updated)
-            changed_cve_ids = set(changed_vuln_ids)
-
         # main NVD data download and processing
         cves_processed = set()
         for record_id, record in self._download_nvd_input(last_updated, skip_if_exists):
             cves_processed.add(id_to_cve(record_id))
             yield record_id, record
 
-        # process remaining override CVEs
-        override_cves, override_generator = self._process_override_cves(cves_processed)
-        yield from override_generator()
+        self.logger.info(f"Added {len(cves_processed)} CVEs")
 
-        # process remaining CVEs with changed fix dates
-        changed_cves, changed_generator = self._process_changed_fix_date_cves(changed_cve_ids, cves_processed)
-        yield from changed_generator()
+        yield from self._finalize_all_records(cves_processed)
 
-        all_processed = cves_processed.union(override_cves).union(changed_cves)
-        self.logger.info(f"total CVEs processed: {len(all_processed)}")
-
-        yield from self._process_remaining_fix_date_cves(all_processed)
-
-    def _process_remaining_fix_date_cves(self, already_processed: set[str]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def _finalize_all_records(self, already_processed: set[str]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
         """process any CVEs in the local database that have fix dates but weren't processed yet.
 
         This ensures that any CVEs that might have been missed in the main download
@@ -123,7 +109,9 @@ class Manager:
         if not self.fixdater:
             return
 
-        self.logger.info("applying current fix dates to remaining CVEs...")
+        self.logger.info("applying current fix dates and overrides to remaining CVEs...")
+
+        overrides_applied = 0
 
         with self._sqlite_reader() as reader:
             for record in reader.each():
@@ -136,7 +124,12 @@ class Manager:
                     self.logger.warning(f"missing original data for CVE {cve_id}")
                     continue
 
-                yield cve_to_id(cve_id), self._apply_fix_dates(cve_id, original_record)
+                modified, record_with_overrides = self._apply_override(cve_id=cve_id, record=original_record)
+                if modified:
+                    overrides_applied += 1
+                yield cve_to_id(cve_id), self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+
+        self.logger.info(f"applied {overrides_applied} CVE overrides")
 
     def _download_nvd_input(
         self,
@@ -229,10 +222,10 @@ class Manager:
             writer.write(record_id, self.schema, vuln)
 
             # apply overrides and fix dates to output
-            record_with_overrides = self._apply_override(cve_id=cve_id, record=vuln)
+            _, record_with_overrides = self._apply_override(cve_id=cve_id, record=vuln)
             yield record_id, self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
 
-    def _apply_override(self, cve_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    def _apply_override(self, cve_id: str, record: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
         """apply configuration overrides to modify CPE matching rules for a CVE.
 
         Overrides allow customizing the affected software configurations for specific CVEs.
@@ -240,20 +233,22 @@ class Manager:
         additional software versions that are affected.
         """
         override = self.overrides.cve(cve_id)
+        modified = False
         if override:
             self.logger.trace(f"applying override for {cve_id}")  # type: ignore[attr-defined]
             # ignore empty overrides
             if override is None or "cve" not in override:
-                return record
+                return False, record
             # explicitly only support CPE configurations for now and always override the
             # original record configurations. Can figure out more complicated scenarios
             # later if needed
             if "configurations" not in override["cve"]:
-                return record
+                return False, record
 
             record["cve"]["configurations"] = override["cve"]["configurations"]
+            modified = True
 
-        return record
+        return modified, record
 
     def _apply_fix_dates(self, cve_id: str, record: dict[str, Any]) -> dict[str, Any]:
         """enrich CVE records with fix date information from external databases.
@@ -309,93 +304,6 @@ class Manager:
                         }
 
         return record
-
-    def _process_override_cves(self, cves_processed: set[str]) -> tuple[set[str], Callable[[], Generator[tuple[str, dict[str, Any]], Any, None]]]:
-        """process CVEs that need override application but weren't in the main download.
-
-        Some CVEs may have overrides defined but not be included in incremental downloads
-        (because they weren't recently modified in NVD). This method ensures all CVEs
-        with overrides are processed by fetching them from the local SQLite database
-        and applying both overrides and fix dates.
-
-        Returns:
-            tuple: (set of CVEs to process, generator callback function)
-        """
-        if not self.overrides.enabled:
-            self.logger.debug("overrides are not enabled, skipping...")
-            return set(), lambda: iter([])  # type: ignore[return-value]
-
-        override_cves = {cve.lower() for cve in self.overrides.cves()}
-        override_remaining_cves = override_cves - cves_processed
-
-        if not override_remaining_cves:
-            self.logger.debug("no remaining CVEs need overrides")
-            return set(), lambda: iter([])  # type: ignore[return-value]
-
-        def _generator() -> Generator[tuple[str, dict[str, Any]], Any, None]:
-            self.urls.append(self.overrides.url)
-            self.logger.debug("applying NVD data overrides...")
-
-            with self._sqlite_reader() as reader:
-                for cve in override_remaining_cves:
-                    original_record = reader.read(cve_to_id(cve))
-                    if not original_record:
-                        self.logger.warning(f"override for {cve} not found in original data")
-                        continue
-
-                    original_record = original_record["item"]
-                    if not original_record:
-                        self.logger.warning(f"missing original data for {cve}")
-                        continue
-
-                    record_with_overrides = self._apply_override(cve, original_record)
-                    yield cve_to_id(cve), self._apply_fix_dates(cve, record_with_overrides)
-
-            self.logger.debug(f"applied overrides for {len(override_remaining_cves)} CVEs")
-
-        return override_remaining_cves, _generator
-
-    def _process_changed_fix_date_cves(
-        self,
-        changed_cve_ids: set[str],
-        cves_processed: set[str],
-    ) -> tuple[set[str], Callable[[], Generator[tuple[str, dict[str, Any]], Any, None]]]:
-        """process CVEs with changed fix dates that weren't already handled.
-
-        Even during incremental updates, some CVEs may not be reprocessed by NVD
-        but their fix date information may have been updated in our external database.
-        This method ensures those CVEs get reprocessed with the latest fix date data
-        by fetching them from local storage and applying current overrides and fix dates.
-
-        Returns:
-            tuple: (set of CVEs to process, generator callback function)
-        """
-        if not self.fixdater or not changed_cve_ids:
-            return set(), lambda: iter([])  # type: ignore[return-value]
-
-        remaining_changed_cves = changed_cve_ids - cves_processed
-        if not remaining_changed_cves:
-            return set(), lambda: iter([])  # type: ignore[return-value]
-
-        def _generator() -> Generator[tuple[str, dict[str, Any]], Any, None]:
-            self.logger.debug(f"processing {len(remaining_changed_cves)} CVEs with changed fix dates...")
-
-            with self._sqlite_reader() as reader:
-                for cve in remaining_changed_cves:
-                    original_record = reader.read(cve_to_id(cve))
-                    if not original_record:
-                        self.logger.warning(f"CVE with changed fix date {cve} not found in original data")
-                        continue
-
-                    original_record = original_record["item"]
-                    if not original_record:
-                        self.logger.warning(f"missing original data for CVE with changed fix date {cve}")
-                        continue
-
-                    record_with_overrides = self._apply_override(cve, original_record)
-                    yield cve_to_id(cve), self._apply_fix_dates(cve, record_with_overrides)
-
-        return remaining_changed_cves, _generator
 
 
 def cve_to_id(cve: str) -> str:
