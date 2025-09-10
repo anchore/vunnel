@@ -10,6 +10,7 @@
 .grype-db
 *.tar.gz
 *.zip
+contents
 
 # common data directories
 /bin
@@ -51,6 +52,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MagicMock/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

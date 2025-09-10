@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import orjson
@@ -10,6 +11,9 @@ import orjson
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class Parser:
@@ -159,7 +163,11 @@ class Parser:
 
         return vuln_dict
 
-    def get(self):
+    @property
+    def target_url(self):
+        return self.url
+
+    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """
         Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
         :return:

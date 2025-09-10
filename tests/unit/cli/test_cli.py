@@ -249,6 +249,24 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+  chainguard_libraries:
+    openvex_url: https://libraries.cgr.dev/openvex/v1/all.json
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_download: false
+      skip_newer_archive_check: false
   common:
     import_results:
       enabled: false
