@@ -34,6 +34,7 @@ class Result:
     kind: str
     version: str | None = None
     accurate: bool | None = None
+    source: str | None = None
 
     def __post_init__(self) -> None:
         if isinstance(self.date, datetime.datetime):
@@ -59,7 +60,7 @@ class Strategy(abc.ABC):
         self,
         vuln_id: str,
         cpe_or_package: str,
-        fix_version: str | None,
+        fix_version: str,
         ecosystem: str | None = None,
     ) -> list[Result]:
         raise NotImplementedError(
