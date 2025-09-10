@@ -58,6 +58,14 @@ class Parser:
         vuln_id = vuln_entry["id"]
         vuln_schema = vuln_entry.get("schema_version", "1.7.0")  # TODO: this is a bit of a hack;
         # we should see whether upstream is willing to put schema versions in the data.
+
+        # Add vunnel-specific metadata to indicate this is an advisory record
+        if "database_specific" not in vuln_entry:
+            vuln_entry["database_specific"] = {}
+        if "vunnel" not in vuln_entry["database_specific"]:
+            vuln_entry["database_specific"]["vunnel"] = {}
+        vuln_entry["database_specific"]["vunnel"]["record_type"] = "advisory"
+
         return os.path.join(f"almalinux{version}", vuln_id), vuln_schema, vuln_entry
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
