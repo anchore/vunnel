@@ -85,29 +85,17 @@ class CSAFParser:
         # If there is no grandparent, the parent is the platform. If there is a grandparent, the parent is the module
         # and the grandparent is the platform.
         module = None
-        plat_or_module = doc.product_tree.parent(fpi)
-        if not plat_or_module:
+        plat = doc.product_tree.parent(fpi)
+        if not plat:
             return None, None, None, None
-        plat = doc.product_tree.parent(plat_or_module)
-        if plat:
-            module = plat_or_module.removeprefix(f"{plat}:")
-            package = fpi.removeprefix(f"{plat}:{module}:")
-        else:
-            plat = plat_or_module
-            package = fpi.removeprefix(f"{plat}:")
-
-        version = None
-        name = None
+        package = fpi.removeprefix(f"{plat}:")
+        module_fields = package.split(".rpm-")
+        if len(module_fields) > 1:
+            module = module_fields[-1]
 
         purl = doc.product_tree.purl_for_product_id(package)
-
         if purl:
             parsed_purl = PackageURL.from_string(purl)
-            if is_rpm_module_purl(parsed_purl):
-                # fpi is a module, not a member of a module; return None; the next pass will find a member of the module if one matches
-                return None, None, None, None
-            # vunnel fixed versions start with an epoch, which is not part of the PURL version, but instead
-            # stored in the PURL qualifiers. If the PURL has an epoch, prepend it to the version.
             epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
             version = f"{epoch}:{parsed_purl.version}"
             name = parsed_purl.name
@@ -124,15 +112,16 @@ class CSAFParser:
             # this product cannot be attributed to any vunnel namespace, so drop it.
             return None, None, None, None
 
-        if module:
-            # If there is a module, get its unambiguous name and version by finding the PURL for the module
-            mod_purl = doc.product_tree.purl_for_product_id(module)
-            if mod_purl:
-                parsed_mod_purl = PackageURL.from_string(mod_purl)
-                module = resolve_module_name_from_purl(parsed_mod_purl)
-                self.logger.trace(f"module: {module} for {fpi} by {mod_purl}")  # type: ignore[attr-defined]
-            else:
-                self.logger.trace(f"no module purl for {module} from {fpi}")  # type: ignore[attr-defined]
+        # TODO: is this needed anymore?
+        # if module:
+        #     # If there is a module, get its unambiguous name and version by finding the PURL for the module
+        #     mod_purl = doc.product_tree.purl_for_product_id(module)
+        #     if mod_purl:
+        #         parsed_mod_purl = PackageURL.from_string(mod_purl)
+        #         module = resolve_module_name_from_purl(parsed_mod_purl)
+        #         self.logger.trace(f"module: {module} for {fpi} by {mod_purl}")  # type: ignore[attr-defined]
+        #     else:
+        #         self.logger.trace(f"no module purl for {module} from {fpi}")  # type: ignore[attr-defined]
 
         # This is enuogh information to compare to an affected release and decide that
         # the patch is about the same package whose vulnerability is mentioned in the CSAF document.
