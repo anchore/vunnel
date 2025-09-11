@@ -31,30 +31,19 @@ def multi_platform_csaf_doc(fixture_dir):
 @pytest.mark.parametrize(
     "csaf_input,expected",
     [
-        # # Old format with custom rpmmod package url type
-        # (
-        #     "csaf/advisories/rhsa-2023_3821.json",
-        #     {
-        #         "fpi": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
-        #         "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
-        #         "module_name": "ruby:2.7",
-        #         "package_name": "ruby",
-        #         "package_version": "0:2.7.8-139.module+el8.8.0+18745+f1bef313",
-        #     }
-        # ),
-        # # Updated format with rpmmod qualifier on a standard rpm package url type
-        # (
-        #     "csaf/advisories/rhsa-2023_7025.json",
-        #     {
-        #         "fpi": "AppStream-8.9.0.GA:ruby:2.5:8090020230627084142:b46abd14:ruby-0:2.5.9-111.module+el8.9.0+19193+435404ae.src",
-        #         "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
-        #         "module_name": "ruby:2.5",
-        #         "package_name": "ruby",
-        #         "package_version": "0:2.5.9-111.module+el8.9.0+19193+435404ae",
-        #     }
-        # ),
-        # new FPI introduced sept 11 2025
         (
+            # Old format with custom rpmmod package url type
+                "csaf/advisories/rhsa-2023_3821.json",
+                {
+                    "fpi": "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.aarch64.rpm-ruby:2.7",
+                    "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                    "module_name": "ruby:2.7",
+                    "package_name": "ruby",
+                    "package_version": "0:2.7.8-139.module+el8.8.0+18745+f1bef313",
+                }
+        ),
+        (
+            # Updated format with rpmmod qualifier on a standard rpm package url type
             "csaf/advisories/rhsa-2023_7025.json",
             {
                 "fpi": "AppStream-8.9.0.GA:ruby-2.5.9-111.module+el8.9.0+19193+435404ae.src.rpm-ruby:2.5",
@@ -62,16 +51,6 @@ def multi_platform_csaf_doc(fixture_dir):
                 "module_name": "ruby:2.5",
                 "package_name": "ruby",
                 "package_version": "0:2.5.9-111.module+el8.9.0+19193+435404ae",
-            }
-        ),
-        (
-            "csaf/advisories/rhsa-2023_3821.json",
-            {
-                "fpi": "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.aarch64.rpm-ruby:2.7",
-                "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
-                "module_name": "ruby:2.7",
-                "package_name": "ruby",
-                "package_version": "0:2.7.8-139.module+el8.8.0+18745+f1bef313",
             }
         ),
         (
