@@ -882,7 +882,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
 
 
 @patch("vunnel.providers.rhel.Parser._sync_cves")
-def test_rhel_provider_supports_skip_download(mock_sync_cves, helpers):
+def test_rhel_provider_supports_skip_download(mock_sync_cves, helpers, auto_fake_fixdate_finder):
     assert Provider.supports_skip_download()
 
     workspace = helpers.provider_workspace_helper(

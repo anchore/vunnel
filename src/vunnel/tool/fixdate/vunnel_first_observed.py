@@ -206,7 +206,7 @@ class Store:
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA cache_size=1000")
                     cursor.execute("PRAGMA temp_store=memory")
-                    cursor.execute("PRAGMA journal_mode=WAL")
+                    cursor.execute("PRAGMA journal_mode=DELETE")  # we don't want wal and shm files lingering around in the result workspace
                     cursor.execute("PRAGMA synchronous=NORMAL")
                     cursor.execute("PRAGMA busy_timeout=30000")
                     cursor.close()
@@ -229,10 +229,12 @@ class Store:
         """clean up thread-local connections for the current thread"""
         if hasattr(self._thread_local, "conn"):
             try:
+                self.logger.debug("closing vunnel fixdates database")
+                self._thread_local.conn.execute(db.text("VACUUM"))
                 self._thread_local.conn.close()
-            except Exception:  # noqa: S110
+            except Exception:
                 # ignore errors during cleanup
-                pass
+                self.logger.exception("error closing vunnel fixdates database connection")
             finally:
                 # clear the thread-local storage
                 if hasattr(self._thread_local, "conn"):
@@ -241,10 +243,7 @@ class Store:
                     delattr(self._thread_local, "table")
 
     def __enter__(self) -> "Store":
-        """context manager entry - ensure connection is ready"""
-        self._get_connection()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
-        """context manager exit - cleanup thread connections"""
         self.cleanup_thread_connections()

@@ -261,10 +261,11 @@ class Store(Strategy):
         """clean up thread-local connections for the current thread"""
         if hasattr(self._thread_local, "conn"):
             try:
+                self.logger.debug("closing grype-db fixdates database")
                 self._thread_local.conn.close()
-            except Exception:  # noqa: S110
+            except Exception:
                 # ignore errors during cleanup
-                pass
+                self.logger.exception("error closing grype-db fixdates database connection")
             finally:
                 # clear the thread-local storage
                 if hasattr(self._thread_local, "conn"):
@@ -273,10 +274,7 @@ class Store(Strategy):
                     delattr(self._thread_local, "table")
 
     def __enter__(self) -> "Store":
-        """context manager entry - ensure connection is ready"""
-        self._get_connection()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
-        """context manager exit - cleanup thread connections"""
         self.cleanup_thread_connections()
