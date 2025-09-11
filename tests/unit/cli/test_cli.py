@@ -83,6 +83,8 @@ def test_status_json(helpers, tmpdir, monkeypatch) -> None:
 
 def test_run(mocker, monkeypatch) -> None:
     populate_mock = MagicMock()
+    populate_mock.__enter__ = MagicMock(return_value=populate_mock)
+    populate_mock.__exit__ = MagicMock(return_value=None)
     create_mock = MagicMock(return_value=populate_mock)
     mocker.patch.object(providers, "create", create_mock)
 
@@ -131,7 +133,10 @@ def test_run(mocker, monkeypatch) -> None:
 )
 def test_clear(mocker, monkeypatch, args, clear, clear_input, clear_results) -> None:
     workspace_mock = MagicMock()
-    create_mock = MagicMock(return_value=MagicMock(workspace=workspace_mock))
+    provider_mock = MagicMock(workspace=workspace_mock)
+    provider_mock.__enter__ = MagicMock(return_value=provider_mock)
+    provider_mock.__exit__ = MagicMock(return_value=None)
+    create_mock = MagicMock(return_value=provider_mock)
     mocker.patch.object(providers, "create", create_mock)
 
     runner = CliRunner()

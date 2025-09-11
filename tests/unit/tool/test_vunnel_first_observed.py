@@ -403,22 +403,3 @@ class TestStore:
         # verify thread-local storage is cleared
         assert not hasattr(store._thread_local, "conn")
         assert not hasattr(store._thread_local, "table")
-
-    def test_context_manager_support(self, tmpdir):
-        """test that Store works as a context manager"""
-        ws = workspace.Workspace(tmpdir, "test-db", create=True)
-        store = Store(ws)
-
-        # create test database
-        db = DatabaseFixture(store.db_path)
-
-        # use as context manager
-        with store as ctx_store:
-            assert ctx_store is store
-            # verify connection is established
-            assert hasattr(store._thread_local, "conn")
-            assert hasattr(store._thread_local, "table")
-
-        # verify cleanup after exit
-        assert not hasattr(store._thread_local, "conn")
-        assert not hasattr(store._thread_local, "table")

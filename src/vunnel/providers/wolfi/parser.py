@@ -14,6 +14,7 @@ from vunnel.utils import vulnerability
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
 
 class Parser:
@@ -45,6 +46,13 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     @staticmethod
     def _extract_filename_from_url(url):
