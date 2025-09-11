@@ -49,6 +49,12 @@ class Result:
 
 
 class Strategy(abc.ABC):
+    def __enter__(self) -> "Strategy":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        return None
+
     @abc.abstractmethod
     def download(self) -> None:
         raise NotImplementedError(
@@ -78,6 +84,17 @@ class Finder:
     def __init__(self, strategies: list[Strategy], first_observed: Strategy):
         self.strategies = strategies
         self.first_observed = first_observed
+
+    def __enter__(self) -> "Finder":
+        for s in self.strategies:
+            s.__enter__()
+        self.first_observed.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        for s in self.strategies:
+            s.__exit__(exc_type, exc_val, exc_tb)
+        self.first_observed.__exit__(exc_type, exc_val, exc_tb)
 
     def download(self) -> None:
         self.first_observed.download()

@@ -35,6 +35,12 @@ class MockFixDateFinder(Finder):
             self.default_date = default_date
         self.ids = ids or set()
 
+    def __enter__(self) -> MockFixDateFinder:
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        return None
+
     def download(self) -> None:
         # no-op, prevents actual download
         pass
@@ -88,7 +94,7 @@ class MockFixDateFinder(Finder):
 
         return adjusted_results
 
-    def get_changed_vuln_ids_since(self, since_date: datetime) -> set[str]:
+    def get_changed_vuln_ids_since(self, since_date: datetime.datetime) -> set[str]:
         return self.ids
 
 class WorkspaceHelper:

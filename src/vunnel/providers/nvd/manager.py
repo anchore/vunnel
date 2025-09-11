@@ -12,6 +12,7 @@ from vunnel.tool import fixdate
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel import schema as schema_def
     from vunnel.workspace import Workspace
@@ -55,6 +56,12 @@ class Manager:
 
         self.urls = [self.api._cve_api_url_]
         self.schema = schema
+
+    def __enter__(self) -> Manager:
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def get(
         self,
