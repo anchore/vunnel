@@ -8,11 +8,13 @@ from urllib.parse import urljoin, urlparse
 import orjson
 from packageurl import PackageURL
 
+from vunnel.tool import fixdate
+from vunnel.utils import date, vulnerability
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import vulnerability
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel import workspace
 
@@ -26,6 +28,7 @@ class OpenVEXParser:
         workspace: workspace.Workspace,
         url: str,
         namespace: str,
+        fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
@@ -40,6 +43,11 @@ class OpenVEXParser:
         """
         self.download_timeout = download_timeout
         self.namespace = namespace
+        self.workspace = workspace
+
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
 
         # where to store feed files
         self.output_path = os.path.join(workspace.input_path, self._openvex_dir_)
@@ -60,6 +68,13 @@ class OpenVEXParser:
         self._cwd = os.getcwd()
         self.logger = logger if logger else logging.getLogger(self.__class__.__name__)
 
+    def __enter__(self) -> OpenVEXParser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
     @staticmethod
     def _extract_filename_from_url(url: str) -> str:
         return os.path.basename(urlparse(url).path)
@@ -79,19 +94,20 @@ class OpenVEXParser:
         Downloads chainguard openvex file from <self._base_url> and saves in <self.output_dir>
         :return:
         """
+
         if not os.path.exists(self.output_path):
             os.makedirs(self.output_path, exist_ok=True)
-        try:
-            uri_path = urljoin(self._base_url, filename)
-            filepath = os.path.join(self._cwd, self.output_path, filename)
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            self.logger.info(f"downloading {self.namespace} openvex {uri_path} to {filepath}")
-            r = http.get(uri_path, self.logger, stream=True, timeout=self.download_timeout)
-            with open(filepath, "wb+") as f:
-                for chunk in r.iter_content():
-                    f.write(chunk)
-        except Exception:
-            self.logger.exception(f"ignoring error processing secdb for {self.url}")
+
+        uri_path = urljoin(self._base_url, filename)
+        filepath = os.path.join(self._cwd, self.output_path, filename)
+
+        self.logger.info(f"downloading {self.namespace} openvex {uri_path} to {filepath}")
+
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        r = http.get(uri_path, self.logger, stream=True, timeout=self.download_timeout)
+        with open(filepath, "wb+") as f:
+            for chunk in r.iter_content():
+                f.write(chunk)
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """
@@ -118,9 +134,9 @@ class OpenVEXParser:
                     self.logger.exception(f"failed to load {self.namespace} openvex data: {path}")
                     raise
 
-    def _normalize(self, doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    def _finalize(self, doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """
-        Normalize all the openvex entries into an array of openvex statements
+        Normalize all the openvex entries into an array of openvex statements and add any additional information (e.g. fix dates)
         :param release:
         :param data: [openvex document](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md)
         :return: Tuple[str, dict] where dict is an openvex statement
@@ -131,10 +147,88 @@ class OpenVEXParser:
         # format as vuln_id -> statement for provider
         return {
             # https://github.com/openvex/spec?tab=readme-ov-file#what-does-an-openvex-document-look-like
-            name: self._filter_statements(statement)
+            name: self._wrap_openvex_document(self._filter_statements(statement))
             for statement in doc["statements"]
             if (name := statement.get("vulnerability", {}).get("name", None))
         }
+
+    def _wrap_openvex_document(self, statement: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        """
+        Add fix dates to openvex statements if missing and available from the fixdate finder and wrap the original openvex document
+        :param document: dict of vulnerability id -> openvex statement
+        """
+        vulnerability_name = self._validate_statement(statement)
+        candidates = self._build_date_candidates(statement, vulnerability_name)
+        fixes = self._collect_product_fixes(statement, vulnerability_name, candidates)
+
+        return {
+            "document": statement,
+            "fixes": fixes,
+        }
+
+    def _validate_statement(self, statement: dict[str, Any]) -> str:
+        """validate openvex statement and return vulnerability name"""
+        vulnerability_name = statement.get("vulnerability", {}).get("name", "")
+        if not vulnerability_name:
+            raise ValueError("missing vulnerability name in openvex statement")
+
+        # only validate status if it exists
+        if "status" in statement:
+            status_value = statement.get("status", "")
+            if not isinstance(status_value, str):
+                raise ValueError(f"unexpected status type {type(status_value)} in openvex statement for {vulnerability_name}, expected string")
+            status = status_value.lower()
+            if status != "fixed":
+                raise ValueError(f"unexpected status {status} in openvex statement for {vulnerability_name}, expected 'fixed'")
+
+        return vulnerability_name
+
+    def _build_date_candidates(self, statement: dict[str, Any], vulnerability_name: str) -> list[fixdate.Result]:
+        """extract timestamp from statement and build date candidates for fixdater"""
+        candidates = []
+        timestamp_value = statement.get("timestamp", "")
+        if not isinstance(timestamp_value, str):
+            raise ValueError(f"unexpected timestamp type {type(timestamp_value)} in openvex statement for {vulnerability_name}, expected string")
+        if date_str := date.normalize_date(timestamp_value):
+            candidates.append(
+                fixdate.Result(
+                    date=date_str,  # type: ignore[arg-type]  # Result.__post_init__ handles string conversion
+                    kind="advisory",
+                    accurate=True,
+                ),
+            )
+        return candidates
+
+    def _collect_product_fixes(self, statement: dict[str, Any], vulnerability_name: str, candidates: list[fixdate.Result]) -> list[dict[str, Any]]:
+        """process products and collect fix information using fixdater"""
+        fixes: list[dict[str, Any]] = []
+
+        for product in statement.get("products", []):
+            if not isinstance(product, dict):
+                continue
+            if not (pid := self._get_purl(product)):
+                continue
+            purl = PackageURL.from_string(pid)
+            if not purl.version:
+                continue
+
+            if result := self.fixdater.best(
+                vuln_id=vulnerability_name,
+                cpe_or_package=purl.name,
+                fix_version=purl.version,
+                ecosystem=purl.type,
+                candidates=candidates,
+            ):
+                fixes.append(
+                    {
+                        "product": pid,
+                        "available": {
+                            "date": result.date,
+                            "kind": result.kind,
+                        },
+                    },
+                )
+        return fixes
 
     def _filter_statements(self, statement: dict[str, Any]) -> dict[str, Any]:
         """
@@ -179,6 +273,8 @@ class OpenVEXParser:
         Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
         :return:
         """
+        self.fixdater.download()
+
         # download the openvex index data
         self._download(self._index_filename)
 
@@ -192,4 +288,4 @@ class OpenVEXParser:
         # load the data
         for ecosystem, openvex_doc_dict in self._load():
             # normalize the loaded data
-            yield ecosystem, self._normalize(openvex_doc_dict)
+            yield ecosystem, self._finalize(openvex_doc_dict)
