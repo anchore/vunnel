@@ -5,7 +5,7 @@ from vunnel import result
 from vunnel.providers.chainguard_libraries import Config, Provider
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",

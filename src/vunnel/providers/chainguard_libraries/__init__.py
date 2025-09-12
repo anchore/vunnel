@@ -25,7 +25,7 @@ class Config:
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OpenVEXSchema()
+    __schema__ = schema.AnnotatedOpenVEXSchema()
     _namespace = "chainguard-libraries"
 
     def __init__(self, root: str, config: Config | None = None):
@@ -52,7 +52,7 @@ class Provider(provider.Provider):
         return "chainguard-libraries"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
+        with self.results_writer() as writer, self.parser:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for ecosystem, vuln_dict in self.parser.get():
                 for vuln_id, record in vuln_dict.items():
