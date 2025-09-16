@@ -59,6 +59,19 @@ class Parser:
         vuln_schema = vuln_entry.get("schema_version", "1.7.0")  # TODO: this is a bit of a hack;
         # we should see whether upstream is willing to put schema versions in the data.
 
+        # Parse modularity from summary field
+        rpm_modularity = None
+        summary = vuln_entry.get("summary", "")
+        if summary:
+            rpm_modularity = self._parse_modularity_from_summary(summary)
+
+        # Add modularity to affected packages if found
+        if rpm_modularity and "affected" in vuln_entry:
+            for affected_pkg in vuln_entry["affected"]:
+                if "ecosystem_specific" not in affected_pkg:
+                    affected_pkg["ecosystem_specific"] = {}
+                affected_pkg["ecosystem_specific"]["rpm_modularity"] = rpm_modularity
+
         # Add vunnel-specific metadata to indicate this is an advisory record
         if "database_specific" not in vuln_entry:
             vuln_entry["database_specific"] = {}
@@ -67,6 +80,36 @@ class Parser:
         vuln_entry["database_specific"]["vunnel"]["record_type"] = "advisory"
 
         return os.path.join(f"almalinux{version}", vuln_id), vuln_schema, vuln_entry
+
+    def _parse_modularity_from_summary(self, summary: str) -> str | None:
+        """Parse modularity information from OSV summary field.
+
+        Expected format: '<Severity>: <module_name>:<module_version> security update'
+        Examples:
+        - 'Moderate: mariadb:10.3 security update'
+        - 'Important: nodejs:16 security update'
+        """
+        if not summary:
+            return None
+
+        # Find first space (after severity)
+        first_space = summary.find(' ')
+        if first_space == -1:
+            return None
+
+        # Find second space (after colon and module info)
+        second_space = summary.find(' ', first_space + 1)
+        if second_space == -1:
+            return None
+
+        # Extract the module info between first and second space
+        module_info = summary[first_space + 1:second_space].strip()
+
+        # Check if it has the colon pattern for modularity
+        if ':' in module_info and not module_info.startswith(':') and not module_info.endswith(':'):
+            return module_info
+
+        return None
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
         # Initialize the git repository
