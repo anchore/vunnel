@@ -93,20 +93,20 @@ class Parser:
             return None
 
         # Find first space (after severity)
-        first_space = summary.find(' ')
+        first_space = summary.find(" ")
         if first_space == -1:
             return None
 
         # Find second space (after colon and module info)
-        second_space = summary.find(' ', first_space + 1)
+        second_space = summary.find(" ", first_space + 1)
         if second_space == -1:
             return None
 
         # Extract the module info between first and second space
-        module_info = summary[first_space + 1:second_space].strip()
+        module_info = summary[first_space + 1 : second_space].strip()
 
         # Check if it has the colon pattern for modularity
-        if ':' in module_info and not module_info.startswith(':') and not module_info.endswith(':'):
+        if ":" in module_info and not module_info.startswith(":") and not module_info.endswith(":"):
             return module_info
 
         return None
