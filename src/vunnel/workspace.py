@@ -108,9 +108,10 @@ class State(DataClassDictMixin):
             full_path = os.path.join(root, self.listing.path)
             with open(full_path) as f:
                 for _digest, filepath in (line.split() for line in f.readlines()):
-                    if filepath.endswith(".db"):
+                    if filepath.endswith("results.db"):
                         # open up the sqlite db and count the records in the "results" table
-                        with sqlite3.connect(os.path.join(root, filepath)) as db:
+                        db_path = os.path.join(root, filepath)
+                        with sqlite3.connect(db_path) as db:
                             count += db.execute("SELECT COUNT(*) FROM results").fetchone()[0]
                     else:
                         count += 1
