@@ -813,7 +813,8 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
 
     # configure fixdate finder to return specific fix dates
     fixdate_responses = {
-        "CVE-2024-1234": [Result(date=datetime.date(2024, 6, 15), kind="first-observed")]
+        "CVE-2024-1234": [Result(date=datetime.date(2024, 6, 15), kind="first-observed")],
+        "CVE-99999-1234": [Result(date=datetime.date(2030, 6, 15), kind="first-observed")],
     }
     fixdater_instance = fake_fixdate_finder(responses=fixdate_responses)
 
@@ -845,26 +846,53 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
         ]
     }
 
-    # override data that changes versionEndExcluding
     override_data = {
-        "cve": {
-            "configurations": [
-                {
-                    "nodes": [
-                        {
-                            "operator": "OR",
-                            "cpeMatch": [
-                                {
-                                    "vulnerable": True,
-                                    "criteria": "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
-                                    "matchCriteriaId": "12345678-1234-5678-9abc-123456789012",
-                                    "versionEndExcluding": "3.0.0",  # override changes from 2.0.0 to 3.0.0
-                                }
-                            ],
-                        }
-                    ]
-                }
-            ]
+        # override data that changes versionEndExcluding
+        "CVE-2024-1234": {
+            "cve": {
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": True,
+                                        "criteria": "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "12345678-1234-5678-9abc-123456789012",
+                                        "versionEndExcluding": "3.0.0",  # override changes from 2.0.0 to 3.0.0
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        # override data that synthesizes an entire record for CVE-99999-1234
+        "CVE-99999-1234": {
+            "_annotation": {
+                "description": "this doesn't exist, create it",
+            },
+            "cve": {
+                "configurations": [
+                    {
+                        "nodes": [
+                            {
+                                "operator": "OR",
+                                "cpeMatch": [
+                                    {
+                                        "vulnerable": True,
+                                        "criteria": "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
+                                        "matchCriteriaId": "12345678-1234-5678-9abc-123456789012",
+                                        "versionEndExcluding": "3.0.0",  # override changes from 2.0.0 to 3.0.0
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                ]
+            }
         }
     }
 
@@ -880,28 +908,49 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
     # mock API and override methods
     manager_instance.api.cve = mocker.Mock(return_value=[nvd_api_response])
     manager_instance.overrides.download = mocker.Mock()
-    manager_instance.overrides.cve = mocker.Mock(return_value=override_data)
+    manager_instance.overrides.cve = mocker.Mock(wraps=lambda cve_id: override_data.get(cve_id))
+    manager_instance.overrides.cves = mocker.Mock(return_value = list(override_data.keys()))
 
     # spy on the internal methods to verify they're both called
     apply_override_spy = mocker.spy(manager_instance, '_apply_override')
     apply_fix_dates_spy = mocker.spy(manager_instance, '_apply_fix_dates')
+    synthesize_nvd_record_from_override_spy = mocker.spy(manager_instance, '_synthesize_nvd_record_from_override')
 
     # get results
     results = list(manager_instance.get(None))
 
-    # verify both methods were called
-    apply_override_spy.assert_called_once_with(cve_id="CVE-2024-1234", record=nvd_api_response["vulnerabilities"][0])
-    apply_fix_dates_spy.assert_called_once()
+    # verify methods were called in expected ways
+    synthesize_nvd_record_from_override_spy.assert_called_once_with("CVE-99999-1234")
 
-    # verify fix dates was called with the result of override application
-    fix_dates_call_args = apply_fix_dates_spy.call_args
-    assert fix_dates_call_args[1]["cve_id"] == "CVE-2024-1234"
+    assert apply_override_spy.call_count == 2
+    apply_override_spy.assert_has_calls([
+        mocker.call(
+            cve_id="CVE-2024-1234", 
+            record=nvd_api_response["vulnerabilities"][0]
+        ),
+        mocker.call(
+            cve_id="CVE-99999-1234", 
+            record=synthesize_nvd_record_from_override_spy.spy_return
+        )
+    ])
+
+    assert apply_fix_dates_spy.call_count == 2
+    apply_fix_dates_spy.assert_has_calls([
+        mocker.call(
+            cve_id="CVE-2024-1234", 
+            record=apply_override_spy.spy_return_list[0][1]
+        ),
+        mocker.call(
+            cve_id="CVE-99999-1234", 
+            record=synthesize_nvd_record_from_override_spy.spy_return
+        )
+    ])
+
     # verify the record passed to _apply_fix_dates has the override applied (3.0.0 not 2.0.0)
-    record_with_override = fix_dates_call_args[1]["record"]
-    assert record_with_override["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]["versionEndExcluding"] == "3.0.0"
+    assert apply_fix_dates_spy.spy_return_list[0]["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]["versionEndExcluding"] == "3.0.0"
+    assert len(results) == 2
 
-    # verify final result contains both override changes AND fix date information
-    assert len(results) == 1
+    # verify final result for CVE-2024-1234 contains both override changes AND fix date information
     record_id, final_record = results[0]
     assert record_id == "2024/cve-2024-1234"
 
@@ -914,6 +963,34 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
     assert final_cpe_match["fix"]["date"] == "2024-06-15"
     assert final_cpe_match["fix"]["kind"] == "first-observed"
 
+    # verify final result for CVE-99999-1234 has expected structure
+    record_id, final_record = results[1]
+    assert record_id == "99999/cve-99999-1234"
+    assert final_record["cve"]["descriptions"] == [
+        {
+            "lang": "en",
+            "value": "this doesn't exist, create it"
+        }
+    ]
+
+    assert final_record["cve"]["sourceIdentifier"] == "anchore"
+    assert final_record["cve"]["vulnStatus"] == "Reserved"
+
+    assert final_record["cve"]["lastModified"]
+    assert final_record["cve"]["published"]
+
+    # verify override was applied (version changed from 2.0.0 to 3.0.0)
+    final_cpe_match = final_record["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]
+    assert final_cpe_match["versionEndExcluding"] == "3.0.0"
+
+    # verify fix date was applied (should have "fix" field added)
+    assert "fix" in final_cpe_match
+    assert final_cpe_match["fix"]["date"] == "2030-06-15"
+    assert final_cpe_match["fix"]["kind"] == "first-observed"
+
     # verify override download and lookup were called
     manager_instance.overrides.download.assert_called_once()
-    manager_instance.overrides.cve.assert_called_with("CVE-2024-1234")
+    manager_instance.overrides.cve.assert_has_calls([
+        mocker.call("CVE-2024-1234"), 
+        mocker.call("CVE-99999-1234"),
+    ])
