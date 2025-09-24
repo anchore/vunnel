@@ -277,7 +277,7 @@ def test_result_count_with_multiple_db_files_regression(tmpdir):
 
     # Create a fake observed-fix-dates.db file with a different table schema
     # This simulates what the fix-dates feature creates
-    fake_fixdates_db = os.path.join(ws.results_path, "observed-fix-dates.db")
+    fake_fixdates_db = os.path.join(ws.results_path, "test-observed-fix-dates.db")
     with sqlite3.connect(fake_fixdates_db) as db:
         db.execute("CREATE TABLE fixdates (id INTEGER PRIMARY KEY, vuln_id TEXT, fix_date TEXT)")
         db.execute("INSERT INTO fixdates (vuln_id, fix_date) VALUES ('CVE-2023-1111', '2023-01-01')")
@@ -295,12 +295,12 @@ def test_result_count_with_multiple_db_files_regression(tmpdir):
     state = ws.state()
 
     # Before the fix, this would fail with "no such table: results" when trying to
-    # query the observed-fix-dates.db for a results table that doesn't exist
+    # query the test-observed-fix-dates.db for a results table that doesn't exist
     result_count = state.result_count(ws.path)
 
-    # Should count: 2 results from results.db + 1 for observed-fix-dates.db (as regular file)
+    # Should count: 2 results from results.db + 1 for test-observed-fix-dates.db (as regular file)
     # Before the fix, this would crash with "no such table: results"
-    # After the fix, observed-fix-dates.db is treated as a regular file (+1) instead of being queried
+    # After the fix, test-observed-fix-dates.db is treated as a regular file (+1) instead of being queried
     assert result_count == 3
 
     # Verify both database files are tracked in the workspace
@@ -309,6 +309,5 @@ def test_result_count_with_multiple_db_files_regression(tmpdir):
     assert len(db_files) == 2
 
     # Verify we can identify which is which
-    db_paths = [f.path for f in db_files]
-    assert any("results.db" in path for path in db_paths)
-    assert any("observed-fix-dates.db" in path for path in db_paths)
+    assert any("results.db" in f.path for f in db_files)
+    assert any("test-observed-fix-dates.db" in f.path for f in db_files)

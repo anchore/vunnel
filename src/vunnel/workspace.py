@@ -111,8 +111,14 @@ class State(DataClassDictMixin):
                     if filepath.endswith("results.db"):
                         # open up the sqlite db and count the records in the "results" table
                         db_path = os.path.join(root, filepath)
-                        with sqlite3.connect(db_path) as db:
-                            count += db.execute("SELECT COUNT(*) FROM results").fetchone()[0]
+                        if os.path.exists(db_path):
+                            with sqlite3.connect(db_path) as db:
+                                query = "SELECT COUNT(*) FROM results"
+                                result = db.execute(query).fetchone()
+                                count += result[0]
+                        # if file doesn't exist, treat as regular file
+                        else:
+                            count += 1
                     else:
                         count += 1
 
