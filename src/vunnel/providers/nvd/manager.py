@@ -101,11 +101,15 @@ class Manager:
         yield from self._finalize_all_records(cves_processed)
 
     def _finalize_all_records(self, already_processed: set[str]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
-        """process any CVEs in the local database that have fix dates but weren't processed yet.
+        """process any CVEs in the local database that weren't processed yet.
 
         This ensures that any CVEs that might have been missed in the main download
         (e.g., due to being very old and not recently modified) but have fix dates
         are still processed and yielded.
+
+        This also allows synthesis of new CVE records from overrides where there isn't
+        yet json data available from NVD, for instance for a CVE that is already
+        published in the wild but is still showing as reserved in CVE or NVD
 
         Args:
             already_processed: Set of CVE IDs that have already been processed
@@ -134,7 +138,23 @@ class Manager:
                 modified, record_with_overrides = self._apply_override(cve_id=cve_id, record=original_record)
                 if modified:
                     overrides_applied += 1
+
+                already_processed.add(cve_id)
                 yield cve_to_id(cve_id), self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+
+        # Now we need to synthesize an NVD record for any overrides where there wasn't an existing NVD record
+        if self.overrides.enabled:
+            for cve_id in self.overrides.cves():
+                if cve_id in already_processed:
+                    continue
+
+                synthesized_record = self._synthesize_nvd_record_from_override(cve_id=cve_id)
+                if not synthesized_record:
+                    continue
+
+                overrides_applied += 1
+                already_processed.add(cve_id)
+                yield cve_to_id(cve_id), self._apply_fix_dates(cve_id=cve_id, record=synthesized_record)
 
         self.logger.info(f"applied {overrides_applied} CVE overrides")
 
@@ -232,6 +252,56 @@ class Manager:
             _, record_with_overrides = self._apply_override(cve_id=cve_id, record=vuln)
             yield record_id, self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
 
+
+    def _is_empty_override(self, override: dict[str, Any] | None) -> bool:
+        return override is None or "cve" not in override or "configurations" not in override["cve"]
+
+
+    def _synthesize_nvd_record_from_override(self, cve_id: str) -> dict[str, Any] | None:
+        override = self.overrides.cve(cve_id)
+        if self._is_empty_override(override):
+            return None
+
+        annotation = override.get("_annotation") # type: ignore[union-attr]
+        if not annotation:
+            return None
+
+        self.logger.trace(f"synthesizing NVD record from override for {cve_id}") # type: ignore[attr-defined]
+
+        cve_record = {
+            "id": cve_id,
+            "sourceIdentifier": annotation.get("cna", "anchore"),
+            "published": annotation.get("published", datetime.datetime.now(datetime.UTC).isoformat()),
+            "lastModified": annotation.get("modified", datetime.datetime.now(datetime.UTC).isoformat()),
+            "vulnStatus": "Reserved",
+        }
+
+        description = annotation.get("description")
+
+        if not description:
+            self.logger.warning(f"failed synthesizing NVD record from override for {cve_id} because description is required")
+            return None
+
+        cve_record["descriptions"] = [
+            {
+                "lang": "en",
+                "value": description,
+            },
+        ]
+
+        references = annotation.get("references", [])
+        refs = []
+
+        for r in references:
+            refs.append({
+                "url": r,
+            })
+
+        cve_record["references"] = refs
+        _, record = self._apply_override(cve_id=cve_id, record={"cve": cve_record})
+        return record
+
+
     def _apply_override(self, cve_id: str, record: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
         """apply configuration overrides to modify CPE matching rules for a CVE.
 
@@ -244,14 +314,11 @@ class Manager:
         if override:
             self.logger.trace(f"applying override for {cve_id}")  # type: ignore[attr-defined]
             # ignore empty overrides
-            if override is None or "cve" not in override:
+            if self._is_empty_override(override):
                 return False, record
             # explicitly only support CPE configurations for now and always override the
             # original record configurations. Can figure out more complicated scenarios
             # later if needed
-            if "configurations" not in override["cve"]:
-                return False, record
-
             record["cve"]["configurations"] = override["cve"]["configurations"]
             modified = True
 
