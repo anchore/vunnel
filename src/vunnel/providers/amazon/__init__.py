@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -53,6 +54,7 @@ class Provider(provider.Provider):
         return "amazon"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        start_time = time.time()
         with self.results_writer() as writer, self.parser:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for vuln in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
@@ -65,4 +67,6 @@ class Provider(provider.Provider):
                     payload={"Vulnerability": vuln.json()},
                 )
 
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
         return self.parser.urls, len(writer)

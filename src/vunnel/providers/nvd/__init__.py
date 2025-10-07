@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
@@ -83,6 +84,7 @@ class Provider(provider.Provider):
         return "nvd"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        start_time = time.time()
         with self.results_writer() as writer, self.manager:
             for identifier, record in self.manager.get(
                 skip_if_exists=self.config.runtime.skip_if_exists,
@@ -94,4 +96,6 @@ class Provider(provider.Provider):
                     payload=record,
                 )
 
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
         return self.manager.urls, len(writer)

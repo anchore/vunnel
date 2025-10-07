@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -55,6 +56,7 @@ class Provider(provider.Provider):
         return None
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        start_time = time.time()
         # TODO: use of last_updated as NVD provider does to avoid downloading all
         # vulnerability data from the source and make incremental updates instead
         with self.results_writer() as writer:
@@ -72,4 +74,6 @@ class Provider(provider.Provider):
                     payload=record,
                 )
 
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
         return self.parser.urls, len(writer)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -56,6 +57,7 @@ class Provider(provider.Provider):
         return "debian"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        start_time = time.time()
         with self.results_writer() as writer, self.parser:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for relno, vuln_id, record in self.parser.get():
@@ -66,4 +68,6 @@ class Provider(provider.Provider):
                     payload=record,
                 )
 
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
         return self.parser.urls, len(writer)
