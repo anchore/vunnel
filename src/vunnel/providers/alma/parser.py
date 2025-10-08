@@ -72,12 +72,12 @@ class Parser:
                     affected_pkg["ecosystem_specific"] = {}
                 affected_pkg["ecosystem_specific"]["rpm_modularity"] = rpm_modularity
 
-        # Add vunnel-specific metadata to indicate this is an advisory record
+        # Add anchore-specific metadata to indicate this is an advisory record
         if "database_specific" not in vuln_entry:
             vuln_entry["database_specific"] = {}
-        if "vunnel" not in vuln_entry["database_specific"]:
-            vuln_entry["database_specific"]["vunnel"] = {}
-        vuln_entry["database_specific"]["vunnel"]["record_type"] = "advisory"
+        if "anchore" not in vuln_entry["database_specific"]:
+            vuln_entry["database_specific"]["anchore"] = {}
+        vuln_entry["database_specific"]["anchore"]["record_type"] = "advisory"
 
         return os.path.join(f"almalinux{version}", vuln_id), vuln_schema, vuln_entry
 
