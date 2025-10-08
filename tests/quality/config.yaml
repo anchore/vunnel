@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/vulnerability.db
+      version: feat-alma-unaffected+import-db=build/vulnerability.db
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
+      version: feat-alma-unaffected+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
       takes: SBOM
       label: reference
 
@@ -47,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
+  version: feat-non-language-osv
 
 tests:
 
@@ -355,3 +355,22 @@ tests:
       - wolfi:distro:wolfi:rolling
     validations:
       - *default-validations
+
+  - provider: alma
+    additional_providers:
+      - name: rhel
+        use_cache: true
+    images:
+      - docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+      - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
+    expected_namespaces:
+      - almalinux:distro:almalinux:8
+      - almalinux:distro:almalinux:9
+      - almalinux:distro:almalinux:10
+      - redhat:distro:redhat:8
+      - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
+    validations:
+      - <<: *default-validations
+        max_year: 2022
+        candidate_tool_label: custom-db
