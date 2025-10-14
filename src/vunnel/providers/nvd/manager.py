@@ -252,21 +252,19 @@ class Manager:
             _, record_with_overrides = self._apply_override(cve_id=cve_id, record=vuln)
             yield record_id, self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
 
-
     def _is_empty_override(self, override: dict[str, Any] | None) -> bool:
         return override is None or "cve" not in override or "configurations" not in override["cve"]
-
 
     def _synthesize_nvd_record_from_override(self, cve_id: str) -> dict[str, Any] | None:
         override = self.overrides.cve(cve_id)
         if self._is_empty_override(override):
             return None
 
-        annotation = override.get("_annotation") # type: ignore[union-attr]
+        annotation = override.get("_annotation")  # type: ignore[union-attr]
         if not annotation:
             return None
 
-        self.logger.trace(f"synthesizing NVD record from override for {cve_id}") # type: ignore[attr-defined]
+        self.logger.trace(f"synthesizing NVD record from override for {cve_id}")  # type: ignore[attr-defined]
 
         cve_record = {
             "id": cve_id,
@@ -293,14 +291,15 @@ class Manager:
         refs = []
 
         for r in references:
-            refs.append({
-                "url": r,
-            })
+            refs.append(
+                {
+                    "url": r,
+                },
+            )
 
         cve_record["references"] = refs
         _, record = self._apply_override(cve_id=cve_id, record={"cve": cve_record})
         return record
-
 
     def _apply_override(self, cve_id: str, record: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
         """apply configuration overrides to modify CPE matching rules for a CVE.
