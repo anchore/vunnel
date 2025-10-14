@@ -13,10 +13,26 @@ if TYPE_CHECKING:
 
 from .git import GitWrapper
 
+_known_library_gaps_ = {
+    "ALSA-2019:3706": {"lua": "lua-libs"},
+    "ALSA-2020:5487": {"pacemaker": "pacemaker-libs"},
+    "ALSA-2021:4386": {"gcc": "libgcc"},
+    "ALSA-2021:4393": {"cups": "cups-libs"},
+    "ALSA-2021:4489": {"rpm-build": "rpm-build-libs"},
+    "ALSA-2021:4587": {"gcc": "libgcc"},
+    "ALSA-2022:0368": {"rpm-build": "rpm-build-libs"},
+    "ALSA-2022:7928": {"device-mapper-multipath": "device-mapper-multipath-libs"},
+}
+
 
 class Parser:
     _git_src_url_ = "https://github.com/AlmaLinux/osv-database.git"
     _git_src_branch_ = "master"
+
+    # Known library package gaps in AlmaLinux advisories
+    # Some ALSAs are missing library packages that are available in the repos but not mentioned in the advisory
+    # TODO: Remove once AlmaLinux fixes these gaps upstream
+    # Last audit: 2025-10-14
 
     def __init__(self, ws: Workspace, logger: logging.Logger | None = None, alma_linux_versions: list[str] | None = None):
         if alma_linux_versions is None:
@@ -49,6 +65,41 @@ class Parser:
                 with open(full_path, encoding="utf-8") as f:
                     yield orjson.loads(f.read())
 
+    def _add_missing_library_packages(self, vuln_entry: dict[str, Any]) -> None:
+        """Add missing library packages to advisories that have known gaps.
+
+        Some ALSAs omit library packages that are available in repos but not mentioned in the advisory.
+        This causes false positives when those library packages are installed.
+        We temporarily fix this in vunnel until AlmaLinux fixes the upstream data.
+        """
+        vuln_id = vuln_entry.get("id")
+        if not vuln_id or vuln_id not in _known_library_gaps_:
+            return
+
+        gaps = _known_library_gaps_[vuln_id]
+        if "affected" not in vuln_entry:
+            return
+
+        # Find the affected entries for base packages and clone them for library packages
+        for affected_pkg in list(vuln_entry["affected"]):  # Use list() to avoid modifying during iteration
+            pkg_name = affected_pkg.get("package", {}).get("name")
+            if pkg_name in gaps:
+                library_pkg_name = gaps[pkg_name]
+
+                # Check if library package already exists
+                existing_names = {p.get("package", {}).get("name") for p in vuln_entry["affected"]}
+                if library_pkg_name in existing_names:
+                    continue
+
+                # Clone the affected entry for the library package
+                library_affected = affected_pkg.copy()
+                library_affected["package"] = affected_pkg["package"].copy()
+                library_affected["package"]["name"] = library_pkg_name
+
+                # Add to affected list
+                vuln_entry["affected"].append(library_affected)
+                self.logger.debug(f"Added missing library package '{library_pkg_name}' to {vuln_id} (base package: {pkg_name})")
+
     def _normalize(self, vuln_entry: dict[str, Any], version: str) -> tuple[str, str, dict[str, Any]]:
         self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
 
@@ -71,6 +122,9 @@ class Parser:
                 if "ecosystem_specific" not in affected_pkg:
                     affected_pkg["ecosystem_specific"] = {}
                 affected_pkg["ecosystem_specific"]["rpm_modularity"] = rpm_modularity
+
+        # Add missing library packages for known advisory gaps
+        self._add_missing_library_packages(vuln_entry)
 
         # Add anchore-specific metadata to indicate this is an advisory record
         if "database_specific" not in vuln_entry:
