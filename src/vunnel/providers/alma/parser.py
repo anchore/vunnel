@@ -20,7 +20,7 @@ class Parser:
 
     def __init__(self, ws: Workspace, logger: logging.Logger | None = None, alma_linux_versions: list[str] | None = None):
         if alma_linux_versions is None:
-            alma_linux_versions = ["8", "9"]
+            alma_linux_versions = ["8", "9", "10"]
         self.alma_linux_versions = alma_linux_versions
         self.workspace = ws
         self.git_url = self._git_src_url_
