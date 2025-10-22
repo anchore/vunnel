@@ -47,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: feat-non-language-osv
+  version: main
 
 tests:
 
