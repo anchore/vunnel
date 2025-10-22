@@ -355,3 +355,22 @@ tests:
       - wolfi:distro:wolfi:rolling
     validations:
       - *default-validations
+
+  - provider: alma
+    additional_providers:
+      - name: rhel
+        use_cache: true
+    images:
+      - docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+      - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
+    expected_namespaces:
+      - almalinux:distro:almalinux:8
+      - almalinux:distro:almalinux:9
+      - almalinux:distro:almalinux:10
+      - redhat:distro:redhat:8
+      - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
+    validations:
+      - <<: *default-validations
+        max_year: 2022
+        candidate_tool_label: custom-db
