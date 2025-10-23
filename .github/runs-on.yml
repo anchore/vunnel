@@ -43,19 +43,6 @@ runners:
       - "r6i*"  # memory-optimized gen 6 Intel
       - "m7*"   # general-purpose gen 7
       - "m6i*"  # general-purpose gen 6 Intel
-    spot: price-capacity-optimized
-    extras: s3-cache
-
-  # quality-gate-ondemand: same as quality-gate but using on-demand instances for reliability
-  # disk: 40GB (default)
-  quality-gate-ondemand:
-    cpu: 2
-    ram: [16, 32]
-    family:
-      - "r7*"   # memory-optimized gen 7 (* = all sizes)
-      - "r6i*"  # memory-optimized gen 6 Intel
-      - "m7*"   # general-purpose gen 7
-      - "m6i*"  # general-purpose gen 6 Intel
     spot: false
     extras: s3-cache
 
