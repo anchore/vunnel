@@ -17,6 +17,19 @@ runners:
     spot: price-capacity-optimized
     extras: s3-cache
 
+  # small-ondemand: same as small but using on-demand instances for reliability
+  # disk: 40GB (default)
+  small-ondemand:
+    cpu: 2
+    ram: [4, 8]
+    family:
+      - "c7*"   # compute-optimized gen 7 (* = all sizes)
+      - "m7*"   # general-purpose gen 7
+      - "c6i*"  # compute-optimized gen 6 Intel
+      - "m6i*"  # general-purpose gen 6 Intel
+    spot: false
+    extras: s3-cache
+
   # quality-gate: beefy runners for vulnerability data processing
   # - downloading and processing large vulnerability databases
   # - running provider validation against real-world data sets
@@ -31,6 +44,19 @@ runners:
       - "m7*"   # general-purpose gen 7
       - "m6i*"  # general-purpose gen 6 Intel
     spot: price-capacity-optimized
+    extras: s3-cache
+
+  # quality-gate-ondemand: same as quality-gate but using on-demand instances for reliability
+  # disk: 40GB (default)
+  quality-gate-ondemand:
+    cpu: 2
+    ram: [16, 32]
+    family:
+      - "r7*"   # memory-optimized gen 7 (* = all sizes)
+      - "r6i*"  # memory-optimized gen 6 Intel
+      - "m7*"   # general-purpose gen 7
+      - "m6i*"  # general-purpose gen 6 Intel
+    spot: false
     extras: s3-cache
 
   # release: reliable on-demand runners for production deployments
