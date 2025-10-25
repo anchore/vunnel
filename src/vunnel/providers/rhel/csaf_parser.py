@@ -16,7 +16,7 @@ def is_rpm_module_purl(purl: PackageURL) -> bool:
     return bool(isinstance(purl.qualifiers, dict) and purl.qualifiers.get("rpmmod"))
 
 
-def resolve_module_name_from_purl(purl: PackageURL) -> str:
+def resolve_module_name_from_purl(purl: PackageURL) -> str | None:
     if purl.type == "rpmmod":
         # The prior redhat module purl looked like pkg:rpmmod/redhat/ruby@2.5:8090020230627084142:b46abd14
         # and we want ruby:2.5 back from that
@@ -28,9 +28,19 @@ def resolve_module_name_from_purl(purl: PackageURL) -> str:
             mod_version = mod_version.split(":")[0]
         return f"{purl.name}:{mod_version}"
 
-    # The newer format with an rpmmod qualifier on an rpm purl looks like pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14,
-    # so we can just take the purl components directly
-    return f"{purl.name}:{purl.version}"
+    # The newer format with an rpmmod qualifier on an rpm purl looks like pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14
+    # Extract the rpmmod qualifier which contains the module stream information
+    if isinstance(purl.qualifiers, dict) and "rpmmod" in purl.qualifiers:
+        rpmmod = purl.qualifiers["rpmmod"]
+        # rpmmod format: "ruby:3.1:8090020240311122605:a75119d5"
+        # We want: "ruby:3.1" (name:stream)
+        if ":" in rpmmod:
+            parts = rpmmod.split(":")
+            if len(parts) >= 2:
+                return f"{parts[0]}:{parts[1]}"
+        return rpmmod
+
+    return None
 
 
 class CSAFParser:
@@ -72,18 +82,17 @@ class CSAFParser:
         version, for example, and multiple numbers of -, since - is allowed in package names and is used to separate parts of the
         package version. Therefore, rely on relationships encoded in the document structure to parse this.
 
-        The convention is that a full product ID takes the form {platform}:{package}.rpm-{module} where there is
-        a module and {platform}:{package} where there is not. The document contains a relationship structure
-        that allows unambiguous parsing to extract the package component and obtain the associated PURL.
+        The FPI format has changed over time:
+        - Old format: {platform}:{package}.rpm-{module}
+        - New format: {platform}:{package}::{module}
+        Rather than parsing these varying formats, we extract module information from the PURL which is stable.
         """
 
         # The CSAF document only associates purls with ID segments, but associates fixes with full product IDs.
-        # That is, given a string like "{platform}:{package}.rpm-{module}" or "{platform}:{package}" extract the
-        # "{package}" part and ask the CSAF Doc for the associated PURL in order to unambiguously parse a name
-        # and version from the PURL.
+        # That is, given a string like "{platform}:{package}.rpm-{module}" or "{platform}:{package}::{module}"
+        # extract the "{package}" part and ask the CSAF Doc for the associated PURL in order to unambiguously
+        # parse name, version, and module information from the PURL.
 
-        # extract the platform (parent) from the FPI and then get the package portion
-        # modules are now specified at the end after ".rpm-" if present
         module = None
         version = None
         name = None
@@ -91,9 +100,6 @@ class CSAFParser:
         if not plat:
             return None, None, None, None
         package = fpi.removeprefix(f"{plat}:")
-        module_fields = package.split(".rpm-")
-        if len(module_fields) > 1:
-            module = module_fields[-1]
 
         purl = doc.product_tree.purl_for_product_id(package)
         if purl:
@@ -101,6 +107,11 @@ class CSAFParser:
             epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
             version = f"{epoch}:{parsed_purl.version}"
             name = parsed_purl.name
+
+            # Extract module information from PURL instead of parsing FPI string
+            # This is robust to FPI format changes (old: .rpm-, new: ::)
+            if is_rpm_module_purl(parsed_purl):
+                module = resolve_module_name_from_purl(parsed_purl)
         else:
             self.logger.trace(f"no purl for {package} from {fpi}")  # type: ignore[attr-defined]
 
