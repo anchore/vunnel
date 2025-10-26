@@ -63,6 +63,17 @@ def multi_platform_csaf_doc(fixture_dir):
                     "package_version": "0:1.9.5p2-9.el9_2.2",
                 }
         ),
+        (
+            # New format with :: separator instead of .rpm-
+            "csaf/advisories/rhsa-2024_1431.json",
+            {
+                "fpi": "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+                "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                "module_name": "ruby:3.1",
+                "package_name": "ruby",
+                "package_version": "0:3.1.4-142.module+el8.9.0+21471+7d1e4a35",
+            }
+        ),
     ]
 )
 def test_csaf_parser_platform_module_name_version_from_fpi(csaf_input, expected, fixture_dir, csaf_parser):
@@ -148,11 +159,11 @@ def test_is_rpm_module_purl(purl: str, expected: bool):
         ),
         (
             "pkg:rpm/redhat/mariadb@10.3?rpmmod=",
-            "mariadb:10.3",
+            None,
         ),
         (
             "pkg:rpm/redhat/mariadb@10.3",
-            "mariadb:10.3",
+            None,
         ),
         (
             "pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14",
