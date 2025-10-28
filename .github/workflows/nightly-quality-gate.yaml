@@ -15,7 +15,8 @@ jobs:
   select-providers:
     runs-on: runs-on=${{ github.run_id }}/runner=small
     outputs:
-      providers: ${{ steps.determine-providers.outputs.providers }}
+      ubuntu-providers: ${{ steps.determine-providers.outputs.ubuntu-providers }}
+      other-providers: ${{ steps.determine-providers.outputs.other-providers }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
         with:
@@ -32,16 +33,57 @@ jobs:
         id: determine-providers
         run: |
           # select all providers as test subjects (this populates the matrix downstream)
-          content=`cd tests/quality && make all-providers`
-          echo $content
-          echo "providers=$content" >> $GITHUB_OUTPUT
+          all_providers=`cd tests/quality && make all-providers`
+          echo "All providers: $all_providers"
+
+          # split ubuntu from other providers
+          ubuntu_providers='["ubuntu"]'
+          other_providers=$(echo $all_providers | jq -c '. - ["ubuntu"]')
+
+          echo "Ubuntu providers: $ubuntu_providers"
+          echo "Other providers: $other_providers"
+
+          echo "ubuntu-providers=$ubuntu_providers" >> $GITHUB_OUTPUT
+          echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 
   validate-provider:
     runs-on: runs-on=${{ github.run_id }}/runner=quality-gate
     needs: select-providers
     strategy:
       matrix:
-        provider: ${{fromJson(needs.select-providers.outputs.providers)}}
+        provider: ${{fromJson(needs.select-providers.outputs.other-providers)}}
+      fail-fast: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+          # we need submodules for the quality gate to work (requires vulnerability-match-labels repo)
+          submodules: true
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+        with:
+          go: true
+
+      - name: Run quality gate
+        uses: ./.github/actions/quality-gate
+        with:
+          provider: ${{ matrix.provider }}
+        env:
+          # needed as a secret for the github provider
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  validate-ubuntu-provider:
+    runs-on: runs-on=${{ github.run_id }}/cpu=16/ram=32/family=i4i*+i3*+i3en*/spot=false/extras=s3-cache
+    needs: select-providers
+    strategy:
+      matrix:
+        provider: ${{fromJson(needs.select-providers.outputs.ubuntu-providers)}}
       fail-fast: false
     permissions:
       contents: read
@@ -71,16 +113,25 @@ jobs:
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Nightly-Quality-Gate:
     runs-on: runs-on=${{ github.run_id }}/runner=small
-    needs: validate-provider
+    needs:
+      - validate-provider
+      - validate-ubuntu-provider
     if: ${{ always() && !cancelled() }}
     steps:
       # based on https://docs.github.com/en/actions/learn-github-actions/contexts#job-context
-      # the valid result values are: success, failure, cancelled
+      # the valid result values are: success, failure, cancelled, skipped
       - env:
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
+          UBUNTU_VALIDATION_STATUS: ${{ needs.validate-ubuntu-provider.result }}
         run: |
           echo "Validations Status: $VALIDATION_STATUS"
-          if [ "$VALIDATION_STATUS" != "success" ]; then
+          echo "Ubuntu Validation Status: $UBUNTU_VALIDATION_STATUS"
+          # Check validation status (success or skipped are both acceptable)
+          if [[ "$VALIDATION_STATUS" != "success" && "$VALIDATION_STATUS" != "skipped" ]]; then
+            echo "🔴 Quality gate FAILED! 😭"
+            exit 1
+          fi
+          if [[ "$UBUNTU_VALIDATION_STATUS" != "success" && "$UBUNTU_VALIDATION_STATUS" != "skipped" ]]; then
             echo "🔴 Quality gate FAILED! 😭"
             exit 1
           fi

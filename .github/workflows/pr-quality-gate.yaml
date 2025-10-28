@@ -17,7 +17,8 @@ jobs:
   select-providers:
     runs-on: runs-on=${{ github.run_id }}/runner=small
     outputs:
-      providers: ${{ steps.determine-providers.outputs.providers }}
+      ubuntu-providers: ${{ steps.determine-providers.outputs.ubuntu-providers }}
+      other-providers: ${{ steps.determine-providers.outputs.other-providers }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
         with:
@@ -38,9 +39,18 @@ jobs:
           make show-changes
 
           # determine which providers to run (to later populate the matrix)
-          content=`make select-providers`
-          echo $content
-          echo "providers=$content" >> $GITHUB_OUTPUT
+          all_providers=`make select-providers`
+          echo "All providers: $all_providers"
+
+          # split ubuntu from other providers
+          ubuntu_providers=$(echo $all_providers | jq -c 'if . == [] then [] elif any(. == "ubuntu") then ["ubuntu"] else [] end')
+          other_providers=$(echo $all_providers | jq -c '. - ["ubuntu"]')
+
+          echo "Ubuntu providers: $ubuntu_providers"
+          echo "Other providers: $other_providers"
+
+          echo "ubuntu-providers=$ubuntu_providers" >> $GITHUB_OUTPUT
+          echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 
   validate-provider:
     runs-on: runs-on=${{ github.run_id }}/runner=quality-gate
@@ -49,7 +59,43 @@ jobs:
 
     strategy:
       matrix:
-        provider: ${{fromJson(needs.select-providers.outputs.providers)}}
+        provider: ${{fromJson(needs.select-providers.outputs.other-providers)}}
+      fail-fast: false
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+          # we need submodules for the quality gate to work (requires vulnerability-match-labels repo)
+          submodules: true
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+        with:
+          go: true
+
+      - name: Run quality gate
+        uses: ./.github/actions/quality-gate
+        with:
+          provider: ${{ matrix.provider }}
+        env:
+          # needed as a secret for the github provider
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  validate-ubuntu-provider:
+    runs-on: runs-on=${{ github.run_id }}/cpu=16/ram=32/family=i4i*+i3*+i3en*/spot=false/extras=s3-cache
+    needs: select-providers
+    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate')
+
+    strategy:
+      matrix:
+        provider: ${{fromJson(needs.select-providers.outputs.ubuntu-providers)}}
       fail-fast: false
 
     permissions:
@@ -82,21 +128,35 @@ jobs:
     runs-on: runs-on=${{ github.run_id }}/runner=small
     needs:
      - validate-provider
+     - validate-ubuntu-provider
      - select-providers
     if: ${{ always() }}
     steps:
       - env:
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
-          PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.providers }}
+          UBUNTU_VALIDATION_STATUS: ${{ needs.validate-ubuntu-provider.result }}
+          UBUNTU_PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.ubuntu-providers }}
+          OTHER_PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.other-providers }}
         run: |
           echo "Validations Status: $VALIDATION_STATUS"
-          echo "Providers that require testing: $PROVIDERS_TO_TEST"
+          echo "Ubuntu Validation Status: $UBUNTU_VALIDATION_STATUS"
+          echo "Ubuntu providers that require testing: $UBUNTU_PROVIDERS_TO_TEST"
+          echo "Other providers that require testing: $OTHER_PROVIDERS_TO_TEST"
           echo
-          if [ "$PROVIDERS_TO_TEST" == '[]' ]; then
+          if [ "$UBUNTU_PROVIDERS_TO_TEST" == '[]' ] && [ "$OTHER_PROVIDERS_TO_TEST" == '[]' ]; then
             echo "🟢 Quality gate passed! (no providers changed)"
             exit 0
           fi
-          if [ "$VALIDATION_STATUS" != "success" ]; then
+          # Check validation status (success or skipped are both acceptable)
+          if [[ "$VALIDATION_STATUS" != "success" && "$VALIDATION_STATUS" != "skipped" ]]; then
+            echo "🔴 Quality gate FAILED! 😭"
+            echo
+            echo "This could happen for a couple of reasons:"
+            echo "  - A provider test failed, in which case see the logs in previous jobs for more details"
+            echo "  - A required provider test was skipped. You might need to add the 'run-pr-quality-gate' label to your PR to prevent skipping the test."
+            exit 1
+          fi
+          if [[ "$UBUNTU_VALIDATION_STATUS" != "success" && "$UBUNTU_VALIDATION_STATUS" != "skipped" ]]; then
             echo "🔴 Quality gate FAILED! 😭"
             echo
             echo "This could happen for a couple of reasons:"
