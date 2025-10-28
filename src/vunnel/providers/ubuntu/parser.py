@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 namespace = "ubuntu"
 
-default_max_workers = 8
+default_max_workers = 32
 default_git_url = "git://git.launchpad.net/ubuntu-cve-tracker"
 default_git_branch = "master"
 
