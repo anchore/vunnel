@@ -89,7 +89,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate-ubuntu-provider:
-    runs-on: runs-on=${{ github.run_id }}/cpu=16/family=i4g*+i8g*/spot=false/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}/cpu=16/family=i4g*+i8g*/image=ubuntu22-full-arm64/spot=false/extras=s3-cache
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate')
 
