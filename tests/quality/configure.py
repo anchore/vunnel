@@ -30,6 +30,7 @@ from yardstick.cli.config import Application as YardstickApplication
 BIN_DIR = "./bin"
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
 GRYPE_DB = f"{BIN_DIR}/grype-db"
+ORAS = "../../.tool/oras"  # installed by binny at repo root
 
 
 class Application(YardstickApplication, DataClassDictMixin):
@@ -611,7 +612,7 @@ def build_db(cfg: Config):
     # fetch cache for other providers
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
-        subprocess.run(["oras", "pull", f"ghcr.io/anchore/grype-db/data/{provider}:latest"], check=True)
+        subprocess.run([ORAS, "pull", f"ghcr.io/anchore/grype-db/data/{provider}:latest"], check=True)
         subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
 
