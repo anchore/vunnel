@@ -155,8 +155,8 @@ def run_provider(cfg: config.Application, provider_name: str, skip_download: boo
     if config and config.runtime and hasattr(config.runtime, "skip_download"):
         config.runtime.skip_download = skip_download
 
-    provider = providers.create(provider_name, cfg.root, config=config)
-    provider.run()
+    with providers.create(provider_name, cfg.root, config=config) as provider:
+        provider.run()
 
 
 @cli.command(name="clear", help="clear provider state")
@@ -171,13 +171,13 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
     for provider_name in provider_names:
         logging.info(f"clearing {provider_name} provider state")
 
-        provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
-        if not _input and not result:
-            provider.workspace.clear()
-        elif _input:
-            provider.workspace.clear_input()
-        elif result:
-            provider.workspace.clear_results()
+        with providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name)) as provider:
+            if not _input and not result:
+                provider.workspace.clear()
+            elif _input:
+                provider.workspace.clear_input()
+            elif result:
+                provider.workspace.clear_results()
 
 
 @cli.command(name="status", help="describe current provider state")
@@ -220,15 +220,14 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
     results = {}
     for _idx, name in enumerate(selected_names):
         try:
-            provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
-
-            state = provider.workspace.state()
-            if not state:
-                raise FileNotFoundError("no state found")
-            results[name] = CurrentState(
-                count=state.result_count(provider.workspace.path),
-                date=state.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            )
+            with providers.create(name, cfg.root, config=cfg.providers.get(name)) as provider:
+                state = provider.workspace.state()
+                if not state:
+                    raise FileNotFoundError("no state found")
+                results[name] = CurrentState(
+                    count=state.result_count(provider.workspace.path),
+                    date=state.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                )
         except FileNotFoundError:
             if not show_empty:
                 continue

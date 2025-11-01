@@ -83,7 +83,7 @@ class Provider(provider.Provider):
         return "nvd"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
+        with self.results_writer() as writer, self.manager:
             for identifier, record in self.manager.get(
                 skip_if_exists=self.config.runtime.skip_if_exists,
                 last_updated=last_updated,

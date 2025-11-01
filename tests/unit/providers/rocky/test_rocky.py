@@ -41,7 +41,7 @@ def test_provider_skip_download(mock_download, helpers, auto_fake_fixdate_finder
     assert 3 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
 
-def test_provider_skip_download_error_on_empty():
+def test_provider_skip_download_error_on_empty(auto_fake_fixdate_finder):
     assert Provider.supports_skip_download()
 
     workspace = MagicMock()

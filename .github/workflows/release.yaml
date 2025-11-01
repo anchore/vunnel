@@ -16,7 +16,7 @@ permissions:
 jobs:
   quality-gate:
     environment: release
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5.0.0
         with:
@@ -87,7 +87,7 @@ jobs:
   tag:
     needs:
       - quality-gate
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     permissions:
       contents: write
       packages: write
@@ -118,7 +118,7 @@ jobs:
   release-pypi:
     needs:
       - tag
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     # important! PyPI OIDC auth will fail without environment: release
     environment: release
     permissions:
@@ -142,7 +142,7 @@ jobs:
   release-docker:
     needs:
       - tag
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     permissions:
       contents: read
       packages: write
@@ -173,7 +173,7 @@ jobs:
   release-github:
     needs:
       - tag
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     permissions:
       contents: write
       packages: write

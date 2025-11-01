@@ -13,7 +13,7 @@ permissions:
 jobs:
 
   select-providers:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
@@ -37,7 +37,7 @@ jobs:
           echo "providers=$content" >> $GITHUB_OUTPUT
 
   validate-provider:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=quality-gate
     needs: select-providers
     strategy:
       matrix:
@@ -70,7 +70,7 @@ jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Nightly-Quality-Gate:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     needs: validate-provider
     if: ${{ always() && !cancelled() }}
     steps:
@@ -86,7 +86,7 @@ jobs:
           fi
           echo "🟢 Quality gate passed!"
 
-      - uses: 8398a7/action-slack@1750b5085f3ec60384090fb7c52965ef822e869e #v3.18.0
+      - uses: 8398a7/action-slack@77eaa4f1c608a7d68b38af4e3f739dcd8cba273e #v3.19.0
         if: ${{ failure() }}
         with:
           status: ${{ job.status }}

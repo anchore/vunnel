@@ -16,7 +16,7 @@ jobs:
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Static-Analysis:
     name: "Static Analysis"
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     permissions:
       contents: read
     steps:
@@ -37,7 +37,7 @@ jobs:
           cd tests/quality && make validate-test-tool-versions
 
   Test:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     permissions:
       contents: read
     strategy:
@@ -72,7 +72,7 @@ jobs:
   # as well as the release.yaml workflow
   Test-Gate:
     if: ${{ always() }}
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     name: Test Gate
     needs: [Test]
     steps:
@@ -86,7 +86,7 @@ jobs:
           fi
 
   Publish-PreProd:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     needs: [Static-Analysis, Test]
     if: github.ref == 'refs/heads/main'
     permissions:

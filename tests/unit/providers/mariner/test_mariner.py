@@ -34,7 +34,10 @@ from datetime import datetime, timezone
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="> 0:1.19.0.cm2, < 0:1.20.7-1.cm2",
-                            Available=None,
+                            Available=FixAvailability(
+                                Date=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+                                Kind="first-observed"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -188,16 +191,16 @@ from datetime import datetime, timezone
         ),
     ],
 )
-def test_parse(tmpdir, helpers, input_file, expected):
+def test_parse(tmpdir, helpers, input_file, expected, auto_fake_fixdate_finder):
     mock_data_path = helpers.local_dir(input_file)
-    subject = MarinerXmlFile(mock_data_path, logger=logging.getLogger("test_pariner"))
+    subject = MarinerXmlFile(mock_data_path, logger=logging.getLogger("test_pariner"), fixdater=auto_fake_fixdate_finder)
 
     vulnerabilities = [v for v in subject.vulnerabilities()]
     assert len(vulnerabilities) == len(expected)
     assert vulnerabilities == expected
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config(allow_versions=["2.0"])
@@ -218,7 +221,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config(allow_versions=["2.0"])

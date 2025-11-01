@@ -53,7 +53,7 @@ class Provider(provider.Provider):
         return "amazon"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
+        with self.results_writer() as writer, self.parser:
             # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
             for vuln in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
                 namespace = vuln.NamespaceName.lower()

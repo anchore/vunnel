@@ -2,6 +2,7 @@ import concurrent.futures
 import contextlib
 import csv
 import functools
+import glob
 import logging
 import os
 from datetime import UTC, datetime
@@ -15,6 +16,8 @@ from vunnel.workspace import Workspace
 RH_URL_PREFIX = "https://access.redhat.com/errata/"
 
 ADVISORIES_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/advisories/archive_latest.txt"
+
+ADVISORIES_ARCHIVE_PREFIX = "csaf_advisories_"
 
 
 class RedHatAdvisoryID:
@@ -77,7 +80,7 @@ class CSAFClient:
             latest_resp = http.get(self.latest_url, logger=self.logger)
             latest_name = latest_resp.text.strip()
             self.latest_archive_url = self.latest_url.replace(self.latest_filename, latest_name)
-            date_part = latest_name.removeprefix("csaf_advisories_").removesuffix(".tar.zst")
+            date_part = latest_name.removeprefix(ADVISORIES_ARCHIVE_PREFIX).removesuffix(".tar.zst")
             self.archive_date = datetime.strptime(date_part, "%Y-%m-%d").replace(tzinfo=UTC)
         return self.latest_archive_url
 
@@ -153,6 +156,14 @@ class CSAFClient:
             os.makedirs(self.advisories_path, exist_ok=True)
         # if there's a new one, the paths won't match and we need to download it
         if not os.path.exists(archive_path):
+            # we're going to download a new tarball, however, there could be existing archives already here (with different dates in the name).
+            # we should remove them, because they are stale and just take up space
+            for existing_archive in glob.glob(os.path.join(self.workspace.input_path, ADVISORIES_ARCHIVE_PREFIX + "*")):
+                try:
+                    os.remove(existing_archive)
+                except Exception as e:
+                    self.logger.warning(f"Failed to remove existing archive {existing_archive}: {e}")
+
             self._download_stream(self._archive_url(), archive_path)
             extract(archive_path, self.advisories_path)
         # always download and process changes and deletions

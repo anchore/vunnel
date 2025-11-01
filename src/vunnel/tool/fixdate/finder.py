@@ -34,6 +34,7 @@ class Result:
     kind: str
     version: str | None = None
     accurate: bool | None = None
+    source: str | None = None
 
     def __post_init__(self) -> None:
         if isinstance(self.date, datetime.datetime):
@@ -48,6 +49,12 @@ class Result:
 
 
 class Strategy(abc.ABC):
+    def __enter__(self) -> "Strategy":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        return None
+
     @abc.abstractmethod
     def download(self) -> None:
         raise NotImplementedError(
@@ -59,7 +66,7 @@ class Strategy(abc.ABC):
         self,
         vuln_id: str,
         cpe_or_package: str,
-        fix_version: str | None,
+        fix_version: str,
         ecosystem: str | None = None,
     ) -> list[Result]:
         raise NotImplementedError(
@@ -77,6 +84,17 @@ class Finder:
     def __init__(self, strategies: list[Strategy], first_observed: Strategy):
         self.strategies = strategies
         self.first_observed = first_observed
+
+    def __enter__(self) -> "Finder":
+        for s in self.strategies:
+            s.__enter__()
+        self.first_observed.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        for s in self.strategies:
+            s.__exit__(exc_type, exc_val, exc_tb)
+        self.first_observed.__exit__(exc_type, exc_val, exc_tb)
 
     def download(self) -> None:
         self.first_observed.download()

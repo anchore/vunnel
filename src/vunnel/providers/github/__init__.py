@@ -65,7 +65,7 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         namespace = "github"
-        with self.results_writer() as writer:
+        with self.results_writer() as writer, self.parser:
             for advisory in self.parser.get():
                 all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
                 for ecosystem in advisory.ecosystems:

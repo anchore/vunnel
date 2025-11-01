@@ -15,6 +15,8 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     import requests
 
     from vunnel import workspace
@@ -79,6 +81,13 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self._urls = set()
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     @property
     def urls(self) -> list[str]:

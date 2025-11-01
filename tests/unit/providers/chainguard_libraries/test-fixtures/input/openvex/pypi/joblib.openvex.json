@@ -1,0 +1,31 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-19f7550fa29078b1afbddaad66a7c0a49e7c0c475704bc39a793fb21fd949664",
+  "author": "Chainguard Team",
+  "timestamp": "2025-08-29T22:13:16.561Z",
+  "last_updated": "2025-08-29T22:13:16.561Z",
+  "version": 1,
+  "supplier": "Chainguard",
+  "statements": [
+    {
+      "vulnerability": {
+        "@id": "https://images.chainguard.dev/security/CGA-48gh-376r-gw73",
+        "name": "CGA-48gh-376r-gw73",
+        "aliases": [
+          "CVE-2022-21797",
+          "GHSA-6hrg-qmvc-2xh8"
+        ]
+      },
+      "timestamp": "2025-08-29T22:13:16.561Z",
+      "last_updated": "2025-08-29T22:13:16.561Z",
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:pypi/joblib@1.0.0%2Bcgr.1"
+          }
+        }
+      ],
+      "status": "fixed"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ from .git import GitWrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -678,6 +679,13 @@ class Parser:
             ubuntu_version_names.update(additional_versions)
         self.enable_rev_history = enable_rev_history
         self._max_workers = max_workers
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def fetch(self, skip_if_exists=False):
         self.fixdater.download()

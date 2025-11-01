@@ -23,6 +23,8 @@ from vunnel.utils import rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     import requests
 
     from .rhsa_provider import RHSAProvider
@@ -86,6 +88,13 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download_minimal_cves(self, page, limit=1000):
         path_params = {"per_page": str(limit), "page": page, "product": self.__cve_rhel_product_name_base__}

@@ -8,7 +8,7 @@ import os
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import urlparse
 
 from vunnel.utils import archive, hasher
@@ -17,6 +17,9 @@ from vunnel.utils import http_wrapper as http
 from . import distribution, result, workspace
 from . import schema as schema_def
 from .result import ResultStatePolicy
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 class OnErrorAction(str, enum.Enum):
@@ -132,6 +135,12 @@ class Provider(abc.ABC):
         self.runtime_cfg = runtime_cfg
         if runtime_cfg.skip_download and not self.__class__.supports_skip_download():
             self.logger.warning(f"skip_download is not supported by {self.name()}")
+
+    def __enter__(self) -> Provider:
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        return None
 
     @classmethod
     def version(cls) -> int:

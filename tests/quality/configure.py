@@ -369,7 +369,13 @@ def select_providers(cfg: Config, output_json: bool):
     selected_providers = set()
 
     # look for gate changes, if any, then run all providers
-    gate_globs = ["tests/quality/*.py", "tests/quality/*.yaml", "tests/quality/vulnerability-match-labels/**"]
+    gate_globs = [
+        "tests/quality/*.py",
+        "tests/quality/*.yaml",
+        "tests/quality/vulnerability-match-labels/**",
+        ".github/workflows/pr-quality-gate.yaml",
+        ".github/workflows/nightly-quality-gate.yaml",
+    ]
 
     for search_glob in gate_globs:
         for changed_file in changed_files:

@@ -125,6 +125,16 @@ tests:
     validations:
       - *default-validations
 
+  - provider: chainguard-libraries
+    additional_providers:
+      - name: github
+        use_cache: true
+    images:
+      - ghcr.io/chainguard-images/scanner-test:python-library-chainguard@sha256:5784ff619513afd0faf0b03e3284152312ba01fb7b1f24a3e3e67551ee9a91d8
+    validations:
+      - <<: *default-validations
+        max_year: 2025
+
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
     # of legacy information that is in the debian data cache (for debian 7, 8, and 9) we must test with
@@ -345,3 +355,22 @@ tests:
       - wolfi:distro:wolfi:rolling
     validations:
       - *default-validations
+
+  - provider: alma
+    additional_providers:
+      - name: rhel
+        use_cache: true
+    images:
+      - docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+      - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
+    expected_namespaces:
+      - almalinux:distro:almalinux:8
+      - almalinux:distro:almalinux:9
+      - almalinux:distro:almalinux:10
+      - redhat:distro:redhat:8
+      - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
+    validations:
+      - <<: *default-validations
+        max_year: 2022
+        candidate_tool_label: custom-db

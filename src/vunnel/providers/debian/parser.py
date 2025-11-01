@@ -6,7 +6,7 @@ import logging
 import os
 import re
 from collections import namedtuple
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import orjson
 
@@ -14,6 +14,10 @@ from vunnel.result import SQLiteReader
 from vunnel.tool import fixdate
 from vunnel.utils import date, vulnerability
 from vunnel.utils import http_wrapper as http
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
 
 DSAFixedInTuple = namedtuple("DSAFixedInTuple", ["dsa", "link", "distro", "pkg", "ver", "date"])
 DSACollection = namedtuple("DSACollection", ["cves", "nocves"])
@@ -65,6 +69,13 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download_json(self):
         """

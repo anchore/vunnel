@@ -1,0 +1,47 @@
+{
+  "identifier": "chainguard-libraries:pypi/CGA-7qjw-ggh3-pp9f",
+  "item": {
+    "document": {
+      "last_updated": "2025-08-29T22:11:56.755Z",
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:pypi/urllib3@1.26.16%2Bcgr.0"
+          }
+        },
+        {
+          "identifiers": {
+            "purl": "pkg:pypi/urllib3@1.26.16%2Bcgr.1"
+          }
+        }
+      ],
+      "status": "fixed",
+      "timestamp": "2025-08-29T22:11:56.755Z",
+      "vulnerability": {
+        "@id": "https://images.chainguard.dev/security/CGA-7qjw-ggh3-pp9f",
+        "aliases": [
+          "CVE-2023-45803",
+          "GHSA-g4mx-q9vg-27p4"
+        ],
+        "name": "CGA-7qjw-ggh3-pp9f"
+      }
+    },
+    "fixes": [
+      {
+        "available": {
+          "date": "2025-08-29",
+          "kind": "advisory"
+        },
+        "product": "pkg:pypi/urllib3@1.26.16%2Bcgr.0"
+      },
+      {
+        "available": {
+          "date": "2025-08-29",
+          "kind": "advisory"
+        },
+        "product": "pkg:pypi/urllib3@1.26.16%2Bcgr.1"
+      }
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/annotated-openvex/schema-1.0.0.json"
+}
