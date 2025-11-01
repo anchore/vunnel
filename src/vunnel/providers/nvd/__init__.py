@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
-import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
+from vunnel.utils import timer
 
 if TYPE_CHECKING:
     import datetime
@@ -84,18 +84,16 @@ class Provider(provider.Provider):
         return "nvd"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        start_time = time.time()
-        with self.results_writer() as writer, self.manager:
-            for identifier, record in self.manager.get(
-                skip_if_exists=self.config.runtime.skip_if_exists,
-                last_updated=last_updated,
-            ):
-                writer.write(
-                    identifier=identifier.lower(),
-                    schema=self.__schema__,
-                    payload=record,
-                )
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.manager:
+                for identifier, record in self.manager.get(
+                    skip_if_exists=self.config.runtime.skip_if_exists,
+                    last_updated=last_updated,
+                ):
+                    writer.write(
+                        identifier=identifier.lower(),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
 
-        elapsed_time = time.time() - start_time
-        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
-        return self.manager.urls, len(writer)
+            return self.manager.urls, len(writer)

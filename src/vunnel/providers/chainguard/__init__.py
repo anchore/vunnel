@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
-import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.providers.wolfi.parser import Parser
+from vunnel.utils import timer
 
 if TYPE_CHECKING:
     import datetime
@@ -54,17 +54,15 @@ class Provider(provider.Provider):
         return "chainguard"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        start_time = time.time()
-        with self.results_writer() as writer, self.parser:
-            # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for release, vuln_dict in self.parser.get():
-                for vuln_id, record in vuln_dict.items():
-                    writer.write(
-                        identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                        schema=self.__schema__,
-                        payload=record,
-                    )
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                for release, vuln_dict in self.parser.get():
+                    for vuln_id, record in vuln_dict.items():
+                        writer.write(
+                            identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
+                            schema=self.__schema__,
+                            payload=record,
+                        )
 
-        elapsed_time = time.time() - start_time
-        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
-        return [self._url], len(writer)
+            return [self._url], len(writer)

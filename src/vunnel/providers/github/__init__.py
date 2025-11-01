@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import copy
 import os
-import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
@@ -65,29 +65,27 @@ class Provider(provider.Provider):
         return "github"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        start_time = time.time()
-        namespace = "github"
-        with self.results_writer() as writer, self.parser:
-            for advisory in self.parser.get():
-                all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
-                for ecosystem in advisory.ecosystems:
-                    advisory["namespace"] = f"{namespace}:{ecosystem}"
+        with timer(self.name(), self.logger):
+            namespace = "github"
+            with self.results_writer() as writer, self.parser:
+                for advisory in self.parser.get():
+                    all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
+                    for ecosystem in advisory.ecosystems:
+                        advisory["namespace"] = f"{namespace}:{ecosystem}"
 
-                    # filter the list of fixes for this ecosystem
-                    advisory["FixedIn"] = [item for item in all_fixes if item.get("ecosystem") == ecosystem]
+                        # filter the list of fixes for this ecosystem
+                        advisory["FixedIn"] = [item for item in all_fixes if item.get("ecosystem") == ecosystem]
 
-                    vuln_id = advisory["ghsaId"]
+                        vuln_id = advisory["ghsaId"]
 
-                    namespace = namespace.lower()
-                    ecosystem = ecosystem.lower()
-                    vuln_id = vuln_id.lower()
+                        namespace = namespace.lower()
+                        ecosystem = ecosystem.lower()
+                        vuln_id = vuln_id.lower()
 
-                    writer.write(
-                        identifier=os.path.join(f"{namespace}:{ecosystem}", vuln_id),
-                        schema=self.__schema__,
-                        payload={"Vulnerability": {}, "Advisory": dict(advisory)},
-                    )
+                        writer.write(
+                            identifier=os.path.join(f"{namespace}:{ecosystem}", vuln_id),
+                            schema=self.__schema__,
+                            payload={"Vulnerability": {}, "Advisory": dict(advisory)},
+                        )
 
-        elapsed_time = time.time() - start_time
-        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
-        return [self.parser.api_url], len(writer)
+            return [self.parser.api_url], len(writer)

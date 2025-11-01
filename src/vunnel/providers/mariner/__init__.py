@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
-import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.providers.mariner.parser import Parser
+from vunnel.utils import timer
 
 if TYPE_CHECKING:
     import datetime
@@ -48,14 +48,12 @@ class Provider(provider.Provider):
         return "mariner"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        start_time = time.time()
-        with self.results_writer() as writer, self.parser:
-            for namespace, vuln_id, record in self.parser.get():
-                writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
-                    schema=self.__schema__,
-                    payload=record,
-                )
-        elapsed_time = time.time() - start_time
-        self.logger.info(f"updating {self.name()} took {elapsed_time:.2f} seconds")
-        return self.parser.urls, len(writer)
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                for namespace, vuln_id, record in self.parser.get():
+                    writer.write(
+                        identifier=os.path.join(namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+            return self.parser.urls, len(writer)

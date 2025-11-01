@@ -6,10 +6,11 @@ import os
 import random
 import shutil
 import time
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 
 def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callable[[Any], Any]:
@@ -60,3 +61,15 @@ def move_dir(src: str, dst: str) -> None:
     if os.path.exists(dst):
         silent_remove(dst, tree=True)
     shutil.move(src, dst)
+
+
+@contextmanager
+def timer(name: str, logger: logging.Logger) -> Iterator[None]:
+    # Iterator[None] because @contextmanager transforms a generator into a context manager,
+    # but type checkers see the raw generator function
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        elapsed_time = time.time() - start_time
+        logger.info(f"updating {name} took {elapsed_time:.2f} seconds")
