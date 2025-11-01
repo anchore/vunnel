@@ -11,6 +11,7 @@ from vunnel.utils import osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -39,6 +40,13 @@ class Parser:
             skip_download=skip_download,
         )
         self.urls = self.client.urls
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _load(self) -> Generator[dict[str, Any], None, None]:
         for path in self.client.get():

@@ -1,0 +1,36 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-9ee9ccc3e0bc993a6f8255f5df79f5395f1eb5ff598c889ac798f9a5a35bb111",
+  "author": "Chainguard Team",
+  "timestamp": "2025-08-29T22:11:56.755Z",
+  "last_updated": "2025-08-29T22:11:56.755Z",
+  "version": 1,
+  "supplier": "Chainguard",
+  "statements": [
+    {
+      "vulnerability": {
+        "@id": "https://images.chainguard.dev/security/CGA-7qjw-ggh3-pp9f",
+        "name": "CGA-7qjw-ggh3-pp9f",
+        "aliases": [
+          "CVE-2023-45803",
+          "GHSA-g4mx-q9vg-27p4"
+        ]
+      },
+      "timestamp": "2025-08-29T22:11:56.755Z",
+      "last_updated": "2025-08-29T22:11:56.755Z",
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:pypi/urllib3@1.26.16%2Bcgr.0"
+          }
+        },
+        {
+          "identifiers": {
+            "purl": "pkg:pypi/urllib3@1.26.16%2Bcgr.1"
+          }
+        }
+      ],
+      "status": "fixed"
+    }
+  ]
+}

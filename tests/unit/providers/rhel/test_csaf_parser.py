@@ -31,28 +31,49 @@ def multi_platform_csaf_doc(fixture_dir):
 @pytest.mark.parametrize(
     "csaf_input,expected",
     [
-        # Old format with custom rpmmod package url type
         (
-            "csaf/advisories/rhsa-2023_3821.json",
-            {
-                "fpi": "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
-                "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
-                "module_name": "ruby:2.7",
-                "package_name": "ruby",
-                "package_version": "0:2.7.8-139.module+el8.8.0+18745+f1bef313",
-            }
+            # Old format with custom rpmmod package url type
+                "csaf/advisories/rhsa-2023_3821.json",
+                {
+                    "fpi": "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.aarch64.rpm-ruby:2.7",
+                    "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                    "module_name": "ruby:2.7",
+                    "package_name": "ruby",
+                    "package_version": "0:2.7.8-139.module+el8.8.0+18745+f1bef313",
+                }
         ),
-        # Updated format with rpmmod qualifier on a standard rpm package url type
         (
+            # Updated format with rpmmod qualifier on a standard rpm package url type
             "csaf/advisories/rhsa-2023_7025.json",
             {
-                "fpi": "AppStream-8.9.0.GA:ruby:2.5:8090020230627084142:b46abd14:ruby-0:2.5.9-111.module+el8.9.0+19193+435404ae.src",
+                "fpi": "AppStream-8.9.0.GA:ruby-2.5.9-111.module+el8.9.0+19193+435404ae.src.rpm-ruby:2.5",
                 "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
                 "module_name": "ruby:2.5",
                 "package_name": "ruby",
                 "package_version": "0:2.5.9-111.module+el8.9.0+19193+435404ae",
             }
-        )
+        ),
+        (
+                "csaf/advisories/rhsa-2024_0811.json",
+                {
+                    "fpi": "AppStream-9.2.0.Z.EUS:sudo-0:1.9.5p2-9.el9_2.2.x86_64",
+                    "platform_cpe": "cpe:/a:redhat:rhel_eus:9.2::appstream",
+                    "module_name": None,
+                    "package_name": "sudo",
+                    "package_version": "0:1.9.5p2-9.el9_2.2",
+                }
+        ),
+        (
+            # New format with :: separator instead of .rpm-
+            "csaf/advisories/rhsa-2024_1431.json",
+            {
+                "fpi": "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+                "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                "module_name": "ruby:3.1",
+                "package_name": "ruby",
+                "package_version": "0:3.1.4-142.module+el8.9.0+21471+7d1e4a35",
+            }
+        ),
     ]
 )
 def test_csaf_parser_platform_module_name_version_from_fpi(csaf_input, expected, fixture_dir, csaf_parser):
@@ -67,9 +88,9 @@ def test_best_version_module_from_fpis_package_name(csaf_parser, fixture_dir):
     # and more than one platform
     fpis = [
         # right answer:
-        "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:ruby-0:2.7.8-139.module+el8.8.0+18745+f1bef313.src",
+        "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.src.rpm-ruby:2.7",
         # wrong package name (note: different version):
-        "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygem-irb-0:1.2.6-139.module+el8.8.0+18745+f1bef313.noarch",
+        "AppStream-8.8.0.Z.MAIN.EUS:rubygem-irb-1.2.6-139.module+el8.8.0+18745+f1bef313.noarch.rpm-ruby:2.7",
     ]
     doc = from_path(fixture_dir / "csaf/advisories/rhsa-2023_3821.json")
     actual_version, actual_module = csaf_parser.best_version_module_from_fpis(
@@ -123,7 +144,7 @@ def test_best_version_module_from_fpis_multi_platform(csaf_parser, fixture_dir, 
 )
 def test_is_rpm_module_purl(purl: str, expected: bool):
     assert is_rpm_module_purl(PackageURL.from_string(purl)) == expected
-    
+
 
 @pytest.mark.parametrize(
     "purl,expected",
@@ -138,11 +159,11 @@ def test_is_rpm_module_purl(purl: str, expected: bool):
         ),
         (
             "pkg:rpm/redhat/mariadb@10.3?rpmmod=",
-            "mariadb:10.3",
+            None,
         ),
         (
             "pkg:rpm/redhat/mariadb@10.3",
-            "mariadb:10.3",
+            None,
         ),
         (
             "pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14",

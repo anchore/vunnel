@@ -1,0 +1,57 @@
+{
+  "id": "ALSA-2023:5259",
+  "summary": "Moderate: mariadb:10.3 security, bug fix, and enhancement update",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "AlmaLinux:8",
+        "name": "mariadb"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "3:10.3.39-1.module_el8.8.0+3609+204d4ab0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "AlmaLinux:8",
+        "name": "mariadb-server"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "3:10.3.39-1.module_el8.8.0+3609+204d4ab0"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "related": [
+    "CVE-2022-32084",
+    "CVE-2022-32091"
+  ],
+  "published": "2023-09-19T00:00:00Z",
+  "modified": "2023-09-21T17:41:57Z",
+  "details": "MariaDB is a multi-user, multi-threaded SQL database server that is binary compatible with MySQL.",
+  "references": [
+    {
+      "url": "https://errata.almalinux.org/8/ALSA-2023-5259.html",
+      "type": "ADVISORY"
+    }
+  ]
+}

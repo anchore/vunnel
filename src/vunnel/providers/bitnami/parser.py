@@ -13,6 +13,7 @@ from .git import GitWrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -47,6 +48,13 @@ class Parser:
             checkout_dest=_checkout_dst_,
             logger=self.logger,
         )
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _load(self) -> Generator[dict[str, Any], None, None]:
         self.logger.info("loading data from git repository")

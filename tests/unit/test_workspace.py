@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import os
+import sqlite3
 
 import pytest
 
@@ -275,3 +276,72 @@ def test_validate_checksums_input_changed_ok(tmpdir, dummy_file):
         f.write("this won't change the checksums")
 
     ws.validate_checksums()
+
+
+def test_result_count_with_multiple_db_files_regression(tmpdir):
+    """
+    Regression test for fix-dates feature bug where multiple .db files in results
+    directory caused "no such table: results" error in workspace.result_count().
+
+    This test simulates the scenario where observed-fix-dates.db (with fixdates table)
+    exists alongside results.db (with results table). The result_count should only
+    query results.db and ignore other .db files.
+
+    Bug introduced in vunnel 0.39.0 when fix-dates feature was added.
+    Fixed by changing workspace.result_count() to only query files ending with "results.db"
+    instead of all ".db" files.
+    """
+    ws = workspace.Workspace(root=tmpdir, name="test_provider", create=True)
+    store_strategy = result.StoreStrategy.SQLITE
+
+    # Create some SQLite results using the normal flow
+    with result.Writer(
+        ws, result_state_policy=result.ResultStatePolicy.DELETE_BEFORE_WRITE, store_strategy=store_strategy
+    ) as writer:
+        writer.write(
+            identifier="test-result-1",
+            schema=schema.OSSchema(),
+            payload={"Vulnerability": {"id": "CVE-2023-1234"}},
+        )
+        writer.write(
+            identifier="test-result-2",
+            schema=schema.OSSchema(),
+            payload={"Vulnerability": {"id": "CVE-2023-5678"}},
+        )
+
+    # Create a fake observed-fix-dates.db file with a different table schema
+    # This simulates what the fix-dates feature creates
+    fake_fixdates_db = os.path.join(ws.results_path, "test-observed-fix-dates.db")
+    with sqlite3.connect(fake_fixdates_db) as db:
+        db.execute("CREATE TABLE fixdates (id INTEGER PRIMARY KEY, vuln_id TEXT, fix_date TEXT)")
+        db.execute("INSERT INTO fixdates (vuln_id, fix_date) VALUES ('CVE-2023-1111', '2023-01-01')")
+        db.execute("INSERT INTO fixdates (vuln_id, fix_date) VALUES ('CVE-2023-2222', '2023-02-01')")
+
+    # Record the state which will create checksums including both .db files
+    ws.record_state(
+        timestamp=datetime.datetime.now(),
+        urls=["https://example.com"],
+        store=store_strategy.value,
+        version=1,
+        distribution_version=1
+    )
+
+    state = ws.state()
+
+    # Before the fix, this would fail with "no such table: results" when trying to
+    # query the test-observed-fix-dates.db for a results table that doesn't exist
+    result_count = state.result_count(ws.path)
+
+    # Should count: 2 results from results.db + 1 for test-observed-fix-dates.db (as regular file)
+    # Before the fix, this would crash with "no such table: results"
+    # After the fix, test-observed-fix-dates.db is treated as a regular file (+1) instead of being queried
+    assert result_count == 3
+
+    # Verify both database files are tracked in the workspace
+    result_files = list(state.result_files(ws.path))
+    db_files = [f for f in result_files if f.path.endswith('.db')]
+    assert len(db_files) == 2
+
+    # Verify we can identify which is which
+    assert any("results.db" in f.path for f in db_files)
+    assert any("test-observed-fix-dates.db" in f.path for f in db_files)
