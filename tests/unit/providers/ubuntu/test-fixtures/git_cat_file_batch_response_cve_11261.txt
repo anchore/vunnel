@@ -1,0 +1,30 @@
+c0802e1af510324df0ba0ea873eae2649ded93d2 blob 740
+Candidate: CVE-2025-11261
+PublicDate: 2025-10-31
+References:
+ https://www.cve.org/CVERecord?id=CVE-2025-11261
+ https://phabricator.wikimedia.org/T406322
+ https://gerrit.wikimedia.org/r/c/mediawiki/core/+/1193414
+Description:
+ [Unknown description]
+Ubuntu-Description:
+Notes:
+Mitigation:
+Bugs:
+Priority: medium
+Discovered-by:
+Assigned-to:
+CVSS:
+
+Patches_mediawiki:
+upstream_mediawiki: released (1:1.43.5+dfsg-1)
+esm-apps/bionic_mediawiki: needs-triage
+esm-apps/focal_mediawiki: needs-triage
+jammy_mediawiki: needs-triage
+esm-apps/jammy_mediawiki: needs-triage
+noble_mediawiki: needs-triage
+esm-apps/noble_mediawiki: needs-triage
+plucky_mediawiki: needs-triage
+questing_mediawiki: needs-triage
+devel_mediawiki: not-affected (1:1.43.5+dfsg-1)
+
