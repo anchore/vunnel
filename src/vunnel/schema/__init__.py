@@ -4,6 +4,7 @@ Schema package for vunnel.
 
 from .eol import EOLSchema
 from .provider import (
+    AnnotatedOpenVEXSchema,
     EPSSSchema,
     GithubSecurityAdvisorySchema,
     KnownExploitedVulnerabilitySchema,
@@ -18,6 +19,7 @@ from .provider import (
 )
 
 __all__ = [
+    "AnnotatedOpenVEXSchema",
     "EOLSchema",
     "EPSSSchema",
     "GithubSecurityAdvisorySchema",
