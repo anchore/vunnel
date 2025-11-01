@@ -60,9 +60,9 @@ class GitCatFileBatch:
                 return
 
             self.logger.debug(f"starting git cat-file --batch process in {self.cwd}")
-            # S603 disable explanation: running git commands by design
+            # S603, S607 disable explanation: running git commands by design, git expected on PATH
             self.process = subprocess.Popen(  # noqa: S603
-                ["git", "cat-file", "--batch"],
+                ["git", "cat-file", "--batch"],  # noqa: S607
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
