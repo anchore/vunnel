@@ -13,6 +13,7 @@ import orjson
 import sqlalchemy as db
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
     from types import TracebackType
 
     from .schema import Schema
@@ -286,6 +287,14 @@ class SQLiteReader:
                 return None
 
             return orjson.loads(result.record)
+
+    def each(self) -> Generator[Envelope, None, None]:
+        conn, table = self.connection()
+        with conn.begin():
+            # query all results, returning one at a time (do not fetch all into memory)
+            results = conn.execute(table.select())
+            for r in results:
+                yield Envelope(**orjson.loads(r.record))
 
     def read_all(self) -> list[Envelope]:
         conn, table = self.connection()

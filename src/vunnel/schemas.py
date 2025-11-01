@@ -15,6 +15,7 @@ NVD_SCHEMA_VERSION = "1.0.1"
 OSV_SCHEMA_VERSION = "1.6.1"
 KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION = "1.0.0"
 EPSS_SCHEMA_VERSION = "1.0.0"
+ANNOTATED_OPENVEX_SCHEMA_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -92,6 +93,13 @@ def OSVSchema(version: str = OSV_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-{version}.json",
+    )
+
+
+def AnnotatedOpenVEXSchema(version: str = ANNOTATED_OPENVEX_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/annotated-openvex/schema-{version}.json",
     )
 
 

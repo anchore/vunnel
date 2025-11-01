@@ -31,6 +31,7 @@ from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, F
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -82,6 +83,13 @@ class Parser:
         self.logger = logger
         # this is pretty odd, but there are classmethods that need logging
         Parser.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download(self, major_version: str) -> str:
         if not os.path.exists(self.oval_dir_path):

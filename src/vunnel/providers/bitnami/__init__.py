@@ -57,7 +57,7 @@ class Provider(provider.Provider):
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         # TODO: use of last_updated as NVD provider does to avoid downloading all
         # vulnerability data from the source and make incremental updates instead
-        with self.results_writer() as writer:
+        with self.results_writer() as writer, self.parser:
             for vuln_id, vuln_schema_version, record in self.parser.get():
                 vuln_schema = self.compatible_schema(vuln_schema_version)
                 if not vuln_schema:

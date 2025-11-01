@@ -1,0 +1,65 @@
+# runs-on.com runner configuration
+
+runners:
+  # small: fast, cost-effective runners for lightweight jobs
+  # - orchestration (selecting providers, aggregating results)
+  # - static analysis (linting, type checking)
+  # - unit tests (Python test suites)
+  # disk: 40GB (default)
+  small:
+    cpu: 2
+    ram: [4, 8]
+    family:
+      - "c7*"   # compute-optimized gen 7 (* = all sizes)
+      - "m7*"   # general-purpose gen 7
+      - "c6i*"  # compute-optimized gen 6 Intel
+      - "m6i*"  # general-purpose gen 6 Intel
+    spot: price-capacity-optimized
+    extras: s3-cache
+
+  # small-ondemand: same as small but using on-demand instances for reliability
+  # disk: 40GB (default)
+  small-ondemand:
+    cpu: 2
+    ram: [4, 8]
+    family:
+      - "c7*"   # compute-optimized gen 7 (* = all sizes)
+      - "m7*"   # general-purpose gen 7
+      - "c6i*"  # compute-optimized gen 6 Intel
+      - "m6i*"  # general-purpose gen 6 Intel
+    spot: false
+    extras: s3-cache
+
+  # quality-gate: beefy runners for vulnerability data processing
+  # - downloading and processing large vulnerability databases
+  # - running provider validation against real-world data sets
+  # - 2 CPUs sufficient (Python I/O-bound workloads)
+  # disk: 40GB (default)
+  quality-gate:
+    cpu: 2
+    ram: [16, 32]
+    family:
+      - "r7*"   # memory-optimized gen 7 (* = all sizes)
+      - "r6i*"  # memory-optimized gen 6 Intel
+      - "m7*"   # general-purpose gen 7
+      - "m6i*"  # general-purpose gen 6 Intel
+    spot: false
+    extras: s3-cache
+
+  # release: reliable on-demand runners for production deployments
+  # - tagging releases
+  # - publishing to PyPI
+  # - promoting Docker images to production registries
+  # - creating GitHub releases
+  # spot: false for 100% reliability (no interruptions during releases)
+  # disk: 40GB (default)
+  release:
+    cpu: 2
+    ram: [4, 8]
+    family:
+      - "c7*"   # compute-optimized gen 7 (* = all sizes)
+      - "m7*"   # general-purpose gen 7
+      - "c6i*"  # compute-optimized gen 6 Intel
+      - "m6i*"  # general-purpose gen 6 Intel
+    spot: false
+    extras: ["s3-cache", "ephemeral-registry"]

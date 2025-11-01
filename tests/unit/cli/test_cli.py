@@ -83,6 +83,8 @@ def test_status_json(helpers, tmpdir, monkeypatch) -> None:
 
 def test_run(mocker, monkeypatch) -> None:
     populate_mock = MagicMock()
+    populate_mock.__enter__ = MagicMock(return_value=populate_mock)
+    populate_mock.__exit__ = MagicMock(return_value=None)
     create_mock = MagicMock(return_value=populate_mock)
     mocker.patch.object(providers, "create", create_mock)
 
@@ -131,7 +133,10 @@ def test_run(mocker, monkeypatch) -> None:
 )
 def test_clear(mocker, monkeypatch, args, clear, clear_input, clear_results) -> None:
     workspace_mock = MagicMock()
-    create_mock = MagicMock(return_value=MagicMock(workspace=workspace_mock))
+    provider_mock = MagicMock(workspace=workspace_mock)
+    provider_mock.__enter__ = MagicMock(return_value=provider_mock)
+    provider_mock.__exit__ = MagicMock(return_value=None)
+    create_mock = MagicMock(return_value=provider_mock)
     mocker.patch.object(providers, "create", create_mock)
 
     runner = CliRunner()
@@ -233,6 +238,24 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   chainguard:
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_download: false
+      skip_newer_archive_check: false
+  chainguard_libraries:
+    openvex_url: https://libraries.cgr.dev/openvex/v1/all.json
     request_timeout: 125
     runtime:
       existing_input: keep
