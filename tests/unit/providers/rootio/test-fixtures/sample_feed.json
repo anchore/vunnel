@@ -1,0 +1,66 @@
+{
+  "alpine": [
+    {
+      "distroversion": "3.17",
+      "packages": [
+        {
+          "pkg": {
+            "name": "libssl3",
+            "cves": {
+              "CVE-2023-0464": {
+                "fixed_versions": ["3.0.8-r4"]
+              },
+              "CVE-2023-0465": {
+                "fixed_versions": ["3.0.8-r4"]
+              }
+            }
+          }
+        },
+        {
+          "pkg": {
+            "name": "openssl",
+            "cves": {
+              "CVE-2023-0464": {
+                "fixed_versions": ["3.0.8-r4"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "debian": [
+    {
+      "distroversion": "11",
+      "packages": [
+        {
+          "pkg": {
+            "name": "libgcrypt20",
+            "cves": {
+              "CVE-2021-40528": {
+                "fixed_versions": ["1.8.7-6+deb11u1"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "ubuntu": [
+    {
+      "distroversion": "22.04",
+      "packages": [
+        {
+          "pkg": {
+            "name": "python3-pip",
+            "cves": {
+              "CVE-2023-5752": {
+                "fixed_versions": ["22.0.2+dfsg-1ubuntu0.4"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

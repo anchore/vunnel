@@ -47,6 +47,7 @@ class Provider(provider.Provider):
         return "rootio"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        count = 0
         with self.results_writer() as writer:
             for namespace, vuln_id, record in self.parser.get():
                 writer.write(
@@ -54,5 +55,6 @@ class Provider(provider.Provider):
                     schema=self.__schema__,
                     payload=record,
                 )
+                count += 1
 
-        return [self._url], len(writer)
+        return [self._url], count

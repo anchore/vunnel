@@ -20,6 +20,20 @@ if TYPE_CHECKING:
 class Parser:
     _data_dir = "rootio-data"
     _data_filename = "cve_feed.json"
+    
+    # Version format mapping for different distributions
+    # Add new OS support by adding entries here
+    _VERSION_FORMAT_MAP = {
+        "alpine": "apk",
+        "rhel": "rpm",
+        "centos": "rpm",
+        "rocky": "rpm",
+        "alma": "rpm",
+        "fedora": "rpm",
+        "suse": "rpm",
+        "opensuse": "rpm",
+        # Default is "dpkg" for debian, ubuntu, etc.
+    }
 
     def __init__(
         self,
@@ -52,7 +66,7 @@ class Parser:
             raise
 
     def _normalize(self, distro_name: str, distro_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
-        """Transform Root.io data into OS schema format"""
+        """Transform Root.io data into OS schema format with unaffected package indicators"""
         vuln_dict = {}
 
         distro_version = distro_data.get("distroversion", "unknown")
@@ -85,12 +99,12 @@ class Parser:
                 fixed_versions = cve_info.get("fixed_versions", [])
 
                 # Determine version format based on distro
-                version_format = "dpkg"  # default
-                if distro_name == "alpine":
-                    version_format = "apk"
-                elif distro_name in ["rhel", "centos", "rocky", "alma"]:
-                    version_format = "rpm"
+                version_format = self._get_version_format(distro_name)
 
+                # Add the fixed versions
+                # Note: Root.io uses different suffixes for different distros:
+                # - Debian/Ubuntu: .root.io suffix (e.g., 1.5.2-6+deb12u1.root.io.4)
+                # - Alpine: -rXX007X suffix (e.g., -r00071, -r10074)
                 for fixed_version in fixed_versions:
                     cve_record["Vulnerability"]["FixedIn"].append({
                         "Name": package_name,
@@ -111,6 +125,10 @@ class Parser:
                     })
 
         return vuln_dict
+
+    def _get_version_format(self, distro_name: str) -> str:
+        """Map distro name to version format."""
+        return self._VERSION_FORMAT_MAP.get(distro_name, "dpkg")
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
         """Download, parse and yield Root.io vulnerability records"""
