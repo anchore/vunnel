@@ -151,10 +151,15 @@ class TestStore:
         store.grype_db_store.find.assert_called_once_with("CVE-2023-0001", "test-package", "1.0.0", "debian")
         assert results == grype_db_results
 
-    def test_find_creates_new_entry_when_no_results_found(self, tmpdir):
+    @patch("vunnel.tool.fixdate.first_observed.datetime")
+    def test_find_creates_new_entry_when_no_results_found(self, mock_datetime, tmpdir):
         """test that find() creates new vunnel entry when no results found"""
         ws = workspace.Workspace(tmpdir, "test", create=True)
         store = Store(ws)
+
+        # mock datetime.now(UTC).date() to return specific date
+        test_date = date(2023, 5, 15)
+        mock_datetime.now.return_value.date.return_value = test_date
 
         # mock both stores to return empty results
         store.vunnel_store.find = Mock(return_value=[])
@@ -168,20 +173,20 @@ class TestStore:
         store.vunnel_store.find.assert_called_once_with("CVE-2023-0001", "test-package", "1.0.0", "debian")
         store.grype_db_store.find.assert_called_once_with("CVE-2023-0001", "test-package", "1.0.0", "debian")
 
-        # verify new entry was added to vunnel
+        # verify new entry was added to vunnel with mocked date
         store.vunnel_store.add.assert_called_once()
         add_call_args = store.vunnel_store.add.call_args[0]
-        assert isinstance(add_call_args[0], date)  # today's date
+        assert add_call_args[0] == test_date
         assert add_call_args[1] == "CVE-2023-0001"
         assert add_call_args[2] == "test-package"
         assert add_call_args[3] == "1.0.0"
         assert add_call_args[4] == "debian"
 
-        # verify result is returned with today's date
+        # verify result is returned with mocked date
         assert len(results) == 1
         result = results[0]
         assert isinstance(result, Result)
-        assert result.date == date.today()
+        assert result.date == test_date
         assert result.kind == "first-observed"
         assert result.version == "1.0.0"
         assert result.source == "vunnel"

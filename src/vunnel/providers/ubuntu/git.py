@@ -7,6 +7,7 @@ import shlex
 import shutil
 import subprocess  # nosec
 import tempfile
+import threading
 from dataclasses import dataclass
 
 from vunnel import utils
@@ -32,6 +33,114 @@ class UbuntuGitServer503Error(Exception):
         super().__init__(
             "The ubuntu git server is unavailable, try again later or switch to the git protocol endpoint git://git.launchpad.net/ubuntu-cve-tracker",
         )
+
+
+class GitCatFileBatch:
+    """
+    Manages a long-running `git cat-file --batch` process for efficient file content retrieval.
+
+    This class wraps a subprocess that runs `git cat-file --batch`, allowing multiple
+    file content requests to be served from a single persistent process, avoiding the
+    overhead of spawning a new subprocess for each request.
+    """
+
+    def __init__(self, cwd: str, logger: logging.Logger | None = None):
+        self.cwd = cwd
+        self.logger = logger or logging.getLogger(self.__class__.__name__)
+        self.process: subprocess.Popen | None = None
+        self._lock = threading.Lock()
+
+    def start(self):
+        """Start the git cat-file --batch process"""
+        if self.process is not None:
+            return
+
+        with self._lock:
+            if self.process is not None:
+                return
+
+            self.logger.debug(f"starting git cat-file --batch process in {self.cwd}")
+            # S603, S607 disable explanation: running git commands by design, git expected on PATH
+            self.process = subprocess.Popen(  # noqa: S603
+                ["git", "cat-file", "--batch"],  # noqa: S607
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.cwd,
+                text=False,
+            )
+
+    def get_content(self, sha: str, path: str) -> str:
+        """
+        Get the content of a file at a specific commit.
+
+        Args:
+            sha: The commit SHA
+            path: The file path relative to repo root
+
+        Returns:
+            The file content as a string
+
+        Raises:
+            RuntimeError: If the process is not started or communication fails
+        """
+        if self.process is None:
+            self.start()
+
+        with self._lock:
+            # Write request: sha:path\n
+            request = f"{sha}:{path}\n"
+            self.process.stdin.write(request.encode())
+            self.process.stdin.flush()
+
+            # Read response header: <sha> <type> <size>\n
+            header_line = self.process.stdout.readline().decode()
+            if not header_line:
+                raise RuntimeError("git cat-file process returned empty response")
+
+            parts = header_line.strip().split()
+            if len(parts) != 3:
+                # Handle "not found" or error cases
+                raise RuntimeError(f"git cat-file error: {header_line.strip()}")
+
+            obj_sha, obj_type, size_str = parts
+            size = int(size_str)
+
+            # Read exactly <size> bytes of content
+            content = self.process.stdout.read(size)
+
+            # Read the trailing newline
+            self.process.stdout.read(1)
+
+            return content.decode()
+
+    def close(self):
+        """Close the git cat-file --batch process"""
+        if self.process is None:
+            return
+
+        with self._lock:
+            if self.process is None:
+                return
+
+            self.logger.debug("closing git cat-file --batch process")
+            try:
+                self.process.stdin.close()
+                self.process.stdout.close()
+                self.process.stderr.close()
+                self.process.wait(timeout=5)
+            except Exception:
+                self.logger.exception("error closing git cat-file process")
+                self.process.kill()
+            finally:
+                self.process = None
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
 
 class GitWrapper:
@@ -70,6 +179,7 @@ class GitWrapper:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self.cve_rev_history: dict[str, list[GitRevision]] = {}
+        self._batch_process_local = threading.local()
 
         try:
             out = self._exec_cmd(self._check_cmd_)
@@ -204,14 +314,21 @@ class GitWrapper:
             self.logger.exception(f"failed to fetch the revision history for {file_path}")
             raise
 
+    def _get_batch_process(self) -> GitCatFileBatch:
+        """Get or create the thread-local git cat-file --batch process"""
+        if not hasattr(self._batch_process_local, "batch"):
+            self._batch_process_local.batch = GitCatFileBatch(self.dest, self.logger)
+            self._batch_process_local.batch.start()
+        return self._batch_process_local.batch
+
     def get_content(self, git_rev: GitRevision) -> list[str]:
         if not isinstance(git_rev, GitRevision):
             raise ValueError("Input must be a GitRevision")
 
         try:
-            cmd = self._get_rev_content_cmd_.format(sha=git_rev.sha, file=git_rev.file)
-            out = self._exec_cmd(cmd, cwd=self.dest)
-            return out.decode().splitlines()
+            batch = self._get_batch_process()
+            content = batch.get_content(git_rev.sha, git_rev.file)
+            return content.splitlines()
         except Exception:
             self.logger.exception(f"failed to get content for {git_rev.file} from git commit {git_rev.sha}")
 

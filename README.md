@@ -23,6 +23,11 @@ Supported data sources:
 - Wolfi (https://packages.wolfi.dev)
 
 
+## Prerequisites
+
+The following system tools must be available on your PATH:
+- **git** - Required by some providers that fetch data from git repositories
+
 ## Installation
 
 With pip:
