@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
@@ -55,15 +56,16 @@ class Provider(provider.Provider):
         return "sles"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer, self.parser:
-            # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for namespace, vuln_id, record in self.parser.get():
-                namespace = namespace.lower()
-                vuln_id = vuln_id.lower()
-                writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
-                    schema=self.__schema__,
-                    payload=record,
-                )
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                for namespace, vuln_id, record in self.parser.get():
+                    namespace = namespace.lower()
+                    vuln_id = vuln_id.lower()
+                    writer.write(
+                        identifier=os.path.join(namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
 
-        return self.parser.urls, len(writer)
+            return self.parser.urls, len(writer)

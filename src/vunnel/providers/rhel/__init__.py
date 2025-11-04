@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
@@ -61,15 +62,16 @@ class Provider(provider.Provider):
         return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer, self.parser:
-            for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
-                namespace = namespace.lower()
-                vuln_id = vuln_id.lower()
-                writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
-                    schema=self.__schema__,
-                    payload=record,
-                )
-        if len(writer) == 0 and self.config.runtime.skip_download:
-            raise RuntimeError("skip download used on empty workspace")
-        return self.parser.urls, len(writer)
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+                    namespace = namespace.lower()
+                    vuln_id = vuln_id.lower()
+                    writer.write(
+                        identifier=os.path.join(namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+            if len(writer) == 0 and self.config.runtime.skip_download:
+                raise RuntimeError("skip download used on empty workspace")
+            return self.parser.urls, len(writer)

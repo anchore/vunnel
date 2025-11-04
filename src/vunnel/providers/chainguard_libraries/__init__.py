@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .openvex_parser import OpenVEXParser
 
@@ -52,15 +53,16 @@ class Provider(provider.Provider):
         return "chainguard-libraries"
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer, self.parser:
-            # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for ecosystem, vuln_dict in self.parser.get():
-                for vuln_id, record in vuln_dict.items():
-                    # TODO do we need separate identifiers by parser? Or will vuln_id never overlap
-                    writer.write(
-                        identifier=os.path.join(f"{self._namespace}:{ecosystem.lower()}", vuln_id),
-                        schema=self.__schema__,
-                        payload=record,
-                    )
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                for ecosystem, vuln_dict in self.parser.get():
+                    for vuln_id, record in vuln_dict.items():
+                        # TODO do we need separate identifiers by parser? Or will vuln_id never overlap
+                        writer.write(
+                            identifier=os.path.join(f"{self._namespace}:{ecosystem.lower()}", vuln_id),
+                            schema=self.__schema__,
+                            payload=record,
+                        )
 
-        return [self.config.openvex_url], len(writer)
+            return [self.config.openvex_url], len(writer)

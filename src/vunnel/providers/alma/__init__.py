@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
@@ -55,21 +56,22 @@ class Provider(provider.Provider):
         return None
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        # TODO: use of last_updated as NVD provider does to avoid downloading all
-        # vulnerability data from the source and make incremental updates instead
-        with self.results_writer() as writer:
-            for vuln_id, vuln_schema_version, record in self.parser.get():
-                vuln_schema = self.compatible_schema(vuln_schema_version)
-                if not vuln_schema:
-                    self.logger.warning(
-                        f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
-                        f"as is incompatible with provider schema version {self.schema.version}",
+        with timer(self.name(), self.logger):
+            # TODO: use of last_updated as NVD provider does to avoid downloading all
+            # vulnerability data from the source and make incremental updates instead
+            with self.results_writer() as writer:
+                for vuln_id, vuln_schema_version, record in self.parser.get():
+                    vuln_schema = self.compatible_schema(vuln_schema_version)
+                    if not vuln_schema:
+                        self.logger.warning(
+                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
+                            f"as is incompatible with provider schema version {self.schema.version}",
+                        )
+                        continue
+                    writer.write(
+                        identifier=vuln_id.lower(),
+                        schema=vuln_schema,
+                        payload=record,
                     )
-                    continue
-                writer.write(
-                    identifier=vuln_id.lower(),
-                    schema=vuln_schema,
-                    payload=record,
-                )
 
-        return self.parser.urls, len(writer)
+            return self.parser.urls, len(writer)
