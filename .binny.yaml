@@ -38,3 +38,11 @@ tools:
     method: github-release
     with:
       repo: google/go-containerregistry
+
+  # used in quality gate to pull cached provider data
+  - name: oras
+    version:
+      want: v1.3.0
+    method: github-release
+    with:
+      repo: oras-project/oras
