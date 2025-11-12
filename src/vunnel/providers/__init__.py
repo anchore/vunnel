@@ -25,6 +25,7 @@ from vunnel.providers import (
     sles,
     ubuntu,
     wolfi,
+    zerodeb,
 )
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ _providers: dict[str, type[provider.Provider]] = {
     chainguard.Provider.name(): chainguard.Provider,
     chainguard_libraries.Provider.name(): chainguard_libraries.Provider,
     minimos.Provider.name(): minimos.Provider,
+    zerodeb.Provider.name(): zerodeb.Provider,
     # auxiliary vulnerability data (decorates vulnerability entries from providers)
     kev.Provider.name(): kev.Provider,
     epss.Provider.name(): epss.Provider,
