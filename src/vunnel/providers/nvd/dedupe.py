@@ -32,7 +32,7 @@ def deduplicate_references(references: list[dict[str, Any]]) -> list[dict[str, A
     if not references:
         return []
 
-    seen_urls: set[str] = set()
+    seen_refs: set[tuple[str, str, tuple[str, ...]]] = set()
     deduplicated: list[dict[str, Any]] = []
 
     for ref in references:
@@ -41,8 +41,15 @@ def deduplicate_references(references: list[dict[str, Any]]) -> list[dict[str, A
             # Skip references without a URL (malformed data)
             continue
 
-        if url not in seen_urls:
-            seen_urls.add(url)
+        # Create a hashable key from the entire reference
+        # References have: url (required), source (optional), tags (optional list)
+        source = ref.get("source", "")
+        tags = tuple(sorted(ref.get("tags", [])))  # Sort tags for consistent comparison
+
+        ref_key = (url, source, tags)
+
+        if ref_key not in seen_refs:
+            seen_refs.add(ref_key)
             deduplicated.append(ref)
 
     return deduplicated

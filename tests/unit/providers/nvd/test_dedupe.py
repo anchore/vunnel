@@ -29,29 +29,41 @@ class TestDeduplicateReferences:
         assert result[0] == {"url": "https://example.com", "source": "cve@mitre.org"}
         assert result[1] == {"url": "https://other.com", "source": "nvd@nist.gov"}
 
-    def test_same_url_different_metadata(self):
-        """When URLs match but other fields differ, keep only the first occurrence."""
+    def test_same_url_different_source_kept(self):
+        """When URLs match but sources differ, keep both references."""
         refs = [
             {"url": "https://example.com", "source": "cve@mitre.org", "tags": ["Vendor Advisory"]},
-            {"url": "https://example.com", "source": "different@example.com", "tags": ["Third Party"]},
+            {"url": "https://example.com", "source": "nvd@nist.gov", "tags": ["Third Party"]},
         ]
         result = deduplicate_references(refs)
-        assert len(result) == 1
+        assert len(result) == 2
         assert result[0] == {"url": "https://example.com", "source": "cve@mitre.org", "tags": ["Vendor Advisory"]}
+        assert result[1] == {"url": "https://example.com", "source": "nvd@nist.gov", "tags": ["Third Party"]}
+
+    def test_same_url_different_tags_kept(self):
+        """When URLs and sources match but tags differ, keep both references."""
+        refs = [
+            {"url": "https://example.com", "source": "cve@mitre.org", "tags": ["Vendor Advisory"]},
+            {"url": "https://example.com", "source": "cve@mitre.org", "tags": ["Third Party Advisory"]},
+        ]
+        result = deduplicate_references(refs)
+        assert len(result) == 2
+        assert result[0] == {"url": "https://example.com", "source": "cve@mitre.org", "tags": ["Vendor Advisory"]}
+        assert result[1] == {"url": "https://example.com", "source": "cve@mitre.org", "tags": ["Third Party Advisory"]}
 
     def test_preserves_order(self):
         refs = [
-            {"url": "https://aaa.com", "source": "a"},
-            {"url": "https://bbb.com", "source": "b"},
-            {"url": "https://aaa.com", "source": "a"},
-            {"url": "https://ccc.com", "source": "c"},
-            {"url": "https://bbb.com", "source": "b"},
+            {"url": "https://a.example.com", "source": "a"},
+            {"url": "https://b.example.com", "source": "b"},
+            {"url": "https://a.example.com", "source": "a"},
+            {"url": "https://c.example.com", "source": "c"},
+            {"url": "https://b.example.com", "source": "b"},
         ]
         result = deduplicate_references(refs)
         assert len(result) == 3
-        assert result[0]["url"] == "https://aaa.com"
-        assert result[1]["url"] == "https://bbb.com"
-        assert result[2]["url"] == "https://ccc.com"
+        assert result[0]["url"] == "https://a.example.com"
+        assert result[1]["url"] == "https://b.example.com"
+        assert result[2]["url"] == "https://c.example.com"
 
     def test_many_duplicates(self):
         """Test case similar to CVE-2021-44228 with extreme duplication."""
