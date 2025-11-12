@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from vunnel import result
 from vunnel.providers.nvd.api import NvdAPI
+from vunnel.providers.nvd.dedupe import deduplicate_references
 from vunnel.providers.nvd.overrides import NVDOverrides
 from vunnel.tool import fixdate
 
@@ -135,6 +136,9 @@ class Manager:
                     self.logger.warning(f"missing original data for CVE {cve_id}")
                     continue
 
+                # deduplicate references from stored records (cleans up historical duplicates)
+                original_record = self._deduplicate_vuln_references(original_record)
+
                 modified, record_with_overrides = self._apply_override(cve_id=cve_id, record=original_record)
                 if modified:
                     overrides_applied += 1
@@ -229,6 +233,17 @@ class Manager:
 
             yield from self._unwrap_records(response, writer)
 
+    def _deduplicate_vuln_references(self, vuln: dict[str, Any]) -> dict[str, Any]:
+        """Remove duplicate references from a vulnerability record.
+
+        This fixes a data quality issue where NVD API returned duplicate reference
+        URLs (up to 486 copies of the same URL). Deduplication is applied both to
+        new API data and existing stored data to ensure consistency.
+        """
+        if "cve" in vuln and "references" in vuln["cve"]:
+            vuln["cve"]["references"] = deduplicate_references(vuln["cve"]["references"])
+        return vuln
+
     def _unwrap_records(
         self,
         response: dict[str, Any],
@@ -238,12 +253,16 @@ class Manager:
 
         Takes paginated NVD API responses and processes each vulnerability:
         1. extracts individual CVE records from the response
-        2. stores raw data for future override processing
-        3. applies overrides and known fix dates to create final output records
+        2. deduplicates references (fixes NVD data quality issue)
+        3. stores raw data for future override processing
+        4. applies overrides and known fix dates to create final output records
         """
         for vuln in response["vulnerabilities"]:
             cve_id = vuln["cve"]["id"]
             record_id = cve_to_id(cve_id)
+
+            # deduplicate references before storing
+            vuln = self._deduplicate_vuln_references(vuln)
 
             # keep input for future overrides
             writer.write(record_id, self.schema, vuln)
