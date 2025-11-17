@@ -224,7 +224,7 @@ class TestStore:
         )
         assert len(results) == 1
 
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_success(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -254,7 +254,7 @@ class TestStore:
         # verify the file was moved to the correct location
         assert store.db_path.exists()
 
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_failure(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -269,7 +269,7 @@ class TestStore:
         with pytest.raises(Exception, match="Download failed"):
             store.download()
 
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_not_found(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -299,7 +299,7 @@ class TestStore:
         # ensure directory doesn't exist initially
         assert not store.db_path.parent.exists()
 
-        with patch("oras.client.OrasClient") as mock_oras_client_class:
+        with patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient") as mock_oras_client_class:
             mock_client = Mock()
             mock_oras_client_class.return_value = mock_client
 
@@ -316,7 +316,7 @@ class TestStore:
             # verify directory was created
             assert store.db_path.parent.exists()
 
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_get_after_not_found_download(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -338,7 +338,7 @@ class TestStore:
         )
         assert results == []
 
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_find_after_not_found_download(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -360,7 +360,7 @@ class TestStore:
         )
         assert results == []
 
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_get_changed_vuln_ids_since_after_not_found(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -393,7 +393,7 @@ class TestStore:
             )
 
     @patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token'})
-    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_with_github_token(self, mock_oras_client_class, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
