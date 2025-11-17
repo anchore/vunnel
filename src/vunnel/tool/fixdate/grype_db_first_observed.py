@@ -4,6 +4,7 @@ import threading
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import oras.client
 import sqlalchemy as db
@@ -13,6 +14,65 @@ from vunnel import workspace
 
 from .ecosystem import normalize_package_name
 from .finder import Result, Strategy
+
+if TYPE_CHECKING:
+    from oras.container import Container as container_type
+
+
+class _ProgressLoggingOrasClient(oras.client.OrasClient):
+    """ORAS client wrapper that logs download progress at debug level."""
+
+    def __init__(self, logger: logging.Logger | None = None, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.logger = logger or logging.getLogger(__name__)
+
+    def download_blob(self, container: "container_type", digest: str, outfile: str) -> str:
+        """Override download_blob to add progress logging."""
+        import oras.defaults
+        import oras.utils
+
+        try:
+            # Ensure output directory exists first
+            outdir = os.path.dirname(outfile)
+            if outdir and not os.path.exists(outdir):
+                oras.utils.mkdir_p(outdir)
+
+            with self.get_blob(container, digest, stream=True) as r:
+                r.raise_for_status()
+
+                # Get content length if available
+                total_size = int(r.headers.get("content-length", 0))
+                downloaded = 0
+                last_logged_percent = 0
+
+                # Calculate how often to log (every 5% of total, or every 10MB if size unknown)
+                log_interval = max(total_size * 0.05, 1024 * 1024) if total_size > 0 else 10 * 1024 * 1024
+
+                with open(outfile, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+
+                            # Log progress every 5% or at the calculated interval
+                            if total_size > 0:
+                                current_percent = int((downloaded / total_size) * 20)  # 5% increments (100/5 = 20)
+                                if current_percent > last_logged_percent:
+                                    percent = (downloaded / total_size) * 100
+                                    total_mb = total_size / (1024 * 1024)
+                                    downloaded_mb = downloaded / (1024 * 1024)
+                                    self.logger.debug(f"downloaded {downloaded_mb:.1f} MB of {total_mb:.1f} MB ({percent:.1f}%)")
+                                    last_logged_percent = current_percent
+                            elif downloaded // log_interval > (downloaded - len(chunk)) // log_interval:
+                                downloaded_mb = downloaded / (1024 * 1024)
+                                self.logger.debug(f"downloaded {downloaded_mb:.1f} MB")
+
+        # Allow an empty layer to fail and return /dev/null
+        except Exception as e:
+            if digest == oras.defaults.blank_hash:
+                return os.devnull
+            raise e
+        return outfile
 
 
 @dataclass
@@ -60,7 +120,7 @@ class Store(Strategy):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         # download the database file using ORAS
-        client = oras.client.OrasClient()
+        client = _ProgressLoggingOrasClient(logger=self.logger)
 
         # authenticate with GitHub Container Registry if token is available
         github_token = os.getenv("GITHUB_TOKEN")
@@ -79,6 +139,7 @@ class Store(Strategy):
             # pull the artifact to the target directory
             # the database file should be pulled directly as the db_path
             download_db_path = Path(self.workspace.input_path) / "fix-dates" / f"{self.provider}.db"
+            self.logger.info(f"pulling fix date database from {image_ref}")
             client.pull(target=image_ref, outdir=str(download_db_path.parent))
             self.logger.info(f"successfully fetched fix date database for {self.provider}")
 

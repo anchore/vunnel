@@ -904,7 +904,7 @@ def test_rhel_provider_supports_skip_download(mock_sync_cves, helpers, auto_fake
     assert mock_sync_cves.call_count == 0
 
 @patch("vunnel.providers.rhel.parser.http.get")
-def test_rhel_provider_supports_ignore_hydra_errors(mock_http_get, helpers):
+def test_rhel_provider_supports_ignore_hydra_errors(mock_http_get, helpers, auto_fake_fixdate_finder):
 
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
