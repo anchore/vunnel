@@ -30,22 +30,6 @@ runners:
     spot: false
     extras: s3-cache
 
-  # quality-gate: beefy runners for vulnerability data processing
-  # - downloading and processing large vulnerability databases
-  # - running provider validation against real-world data sets
-  # - 2 CPUs sufficient (Python I/O-bound workloads)
-  # disk: 40GB (default)
-  quality-gate:
-    cpu: 2
-    ram: [16, 32]
-    family:
-      - "r7*"   # memory-optimized gen 7 (* = all sizes)
-      - "r6i*"  # memory-optimized gen 6 Intel
-      - "m7*"   # general-purpose gen 7
-      - "m6i*"  # general-purpose gen 6 Intel
-    spot: false
-    extras: s3-cache
-
   # release: reliable on-demand runners for production deployments
   # - tagging releases
   # - publishing to PyPI
