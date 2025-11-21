@@ -12,7 +12,6 @@ runs:
 
     # required for magic-cache from runs-on to function with artifact upload/download (see https://runs-on.com/caching/magic-cache/#actionsupload-artifact-compatibility)
     - uses: runs-on/action@v2
-      shell: bash
 
     - name: Capture vulnerability results
       shell: bash
