@@ -1,221 +1,302 @@
 from __future__ import annotations
 
 import os
-import json
-from unittest.mock import MagicMock, patch, mock_open
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+
 from vunnel import result, workspace
 from vunnel.providers.rootio import Config, Provider, parser
 
 
 class TestRootIoProvider:
-    @pytest.fixture()
-    def mock_vulnerability_data(self):
-        """Returns sample vulnerability data that would be fetched from Root.io API"""
+    @pytest.fixture
+    def mock_root_io_feed(self):
+        """Returns sample Root.io CVE feed data matching actual API format"""
         return {
-            "CVE-2023-1234": {
-                "cve_id": "CVE-2023-1234",
-                "packages": [
-                    {
-                        "package": "curl",
-                        "distro": "alpine",
-                        "distro_version": "3.17",
-                        "fixed_version": "7.88.1-r1",
-                        "has_rootio_fix": True
-                    },
-                    {
-                        "package": "openssl",
-                        "distro": "debian",
-                        "distro_version": "11",
-                        "fixed_version": None,
-                        "has_rootio_fix": True
-                    }
-                ],
-                "severity": "HIGH",
-                "description": "Test vulnerability description",
-                "references": ["https://nvd.nist.gov/vuln/detail/CVE-2023-1234"]
-            },
-            "CVE-2023-5678": {
-                "cve_id": "CVE-2023-5678",
-                "packages": [
-                    {
-                        "package": "requests",
-                        "language": "python",
-                        "fixed_version": "2.31.0",
-                        "has_rootio_fix": True
-                    }
-                ],
-                "severity": "MEDIUM",
-                "description": "Another test vulnerability",
-                "references": ["https://nvd.nist.gov/vuln/detail/CVE-2023-5678"]
-            }
+            "alpine": [
+                {
+                    "distroversion": "3.17",
+                    "packages": [
+                        {
+                            "pkg": {
+                                "name": "libssl3",
+                                "cves": {
+                                    "CVE-2023-0464": {
+                                        "fixed_versions": ["3.0.8-r4"],
+                                    },
+                                    "CVE-2023-0465": {
+                                        "fixed_versions": ["3.0.8-r4"],
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            "pkg": {
+                                "name": "openssl",
+                                "cves": {
+                                    "CVE-2023-0464": {
+                                        "fixed_versions": ["3.0.8-r4"],
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+            "debian": [
+                {
+                    "distroversion": "11",
+                    "packages": [
+                        {
+                            "pkg": {
+                                "name": "libgcrypt20",
+                                "cves": {
+                                    "CVE-2021-40528": {
+                                        "fixed_versions": ["1.8.7-6+deb11u1"],
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            "pkg": {
+                                "name": "curl",
+                                "cves": {
+                                    "CVE-2023-9999": {
+                                        "fixed_versions": [],  # No fix available
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
         }
-
-    @pytest.fixture()
-    def workspace_dir(self, tmp_path):
-        ws = workspace.Workspace(root=str(tmp_path / "rootio"), name="rootio")
-        ws.create()
-        return ws
-
-    def test_parser_emit_unaffected_for_os_packages(self, workspace_dir, mock_vulnerability_data):
-        """Test that parser emits ROOTIO_UNAFFECTED markers for OS packages"""
-        p = parser.Parser(workspace=workspace_dir)
-        
-        # Mock the API response
-        with patch.object(parser.Parser, "_fetch_vulnerabilities", return_value=mock_vulnerability_data):
-            p._process_vulnerabilities(mock_vulnerability_data)
-            
-            # Check that results were written
-            results_path = workspace_dir.results_path
-            assert os.path.exists(results_path)
-            
-            # Verify the output contains ROOTIO_UNAFFECTED markers
-            vuln_files = list(results_path.glob("*.json"))
-            assert len(vuln_files) > 0
-            
-            # Check for CVE-2023-1234 (OS package vulnerability)
-            found_unaffected = False
-            for vuln_file in vuln_files:
-                with open(vuln_file) as f:
-                    data = json.load(f)
-                    if data.get("Vulnerability", {}).get("Name") == "CVE-2023-1234":
-                        for fixed_in in data["Vulnerability"].get("FixedIn", []):
-                            if fixed_in.get("Version") == "ROOTIO_UNAFFECTED":
-                                found_unaffected = True
-                                assert fixed_in.get("VulnerableRange") == "NOT version_contains .root.io"
-            
-            assert found_unaffected, "Should have ROOTIO_UNAFFECTED marker for OS packages"
-
-    def test_parser_emit_unaffected_for_language_packages(self, workspace_dir, mock_vulnerability_data):
-        """Test that parser emits ROOTIO_UNAFFECTED markers for language packages"""
-        p = parser.Parser(workspace=workspace_dir)
-        
-        # Mock the API response
-        with patch.object(parser.Parser, "_fetch_vulnerabilities", return_value=mock_vulnerability_data):
-            p._process_vulnerabilities(mock_vulnerability_data)
-            
-            # Check for CVE-2023-5678 (Python package vulnerability)
-            results_path = workspace_dir.results_path
-            vuln_files = list(results_path.glob("*.json"))
-            
-            found_python_unaffected = False
-            for vuln_file in vuln_files:
-                with open(vuln_file) as f:
-                    data = json.load(f)
-                    if data.get("Vulnerability", {}).get("Name") == "CVE-2023-5678":
-                        namespace = data["Vulnerability"].get("NamespaceName", "")
-                        if namespace == "rootio:language:python":
-                            for fixed_in in data["Vulnerability"].get("FixedIn", []):
-                                if fixed_in.get("Version") == "ROOTIO_UNAFFECTED":
-                                    found_python_unaffected = True
-            
-            assert found_python_unaffected, "Should have ROOTIO_UNAFFECTED marker for language packages"
-
-    def test_parser_namespace_format(self, workspace_dir):
-        """Test that parser generates correct namespace formats"""
-        p = parser.Parser(workspace=workspace_dir)
-        
-        # Test OS namespace
-        os_namespace = p._get_namespace("alpine", "3.17", None)
-        assert os_namespace == "rootio:distro:alpine:3.17"
-        
-        # Test language namespace
-        lang_namespace = p._get_namespace(None, None, "python")
-        assert lang_namespace == "rootio:language:python"
-
-    def test_parser_version_format_mapping(self, workspace_dir):
-        """Test that parser maps to correct version formats"""
-        p = parser.Parser(workspace=workspace_dir)
-        
-        # Test OS mappings
-        assert p._get_version_format("alpine") == "apk"
-        assert p._get_version_format("debian") == "dpkg"
-        assert p._get_version_format("ubuntu") == "dpkg"
-        assert p._get_version_format("centos") == "rpm"
-        
-        # Test language mappings
-        assert p._get_version_format(None, "python") == "python"
-        assert p._get_version_format(None, "javascript") == "semver"
-        assert p._get_version_format(None, "java") == "maven"
 
     def test_provider_name(self):
         """Test that provider returns correct name"""
-        p = Provider(root="/tmp", config=Config())
-        assert p.name == "rootio"
-
-    def test_provider_update(self, workspace_dir, mock_vulnerability_data):
-        """Test the provider update process"""
-        config = Config(runtime=Config.RuntimeConfig(existing_results="keep"))
-        p = Provider(root=str(workspace_dir.path), config=config)
-        
-        # Mock the API fetch
-        with patch.object(parser.Parser, "_fetch_vulnerabilities", return_value=mock_vulnerability_data):
-            # Run update
-            update_count, urls = p.update()
-            
-            # Verify results
-            assert isinstance(update_count, int)
-            assert update_count > 0
-            
-            # Check that metadata was written
-            metadata_path = workspace_dir.metadata_path
-            assert metadata_path.exists()
-            
-            with open(metadata_path) as f:
-                metadata = json.load(f)
-                assert metadata["provider"] == "rootio"
-                assert metadata["listing"]["digest"]
-                assert metadata["listing"]["algorithm"]
-
-    def test_parser_handles_empty_response(self, workspace_dir):
-        """Test that parser handles empty API responses gracefully"""
-        p = parser.Parser(workspace=workspace_dir)
-        
-        # Mock empty API response
-        with patch.object(parser.Parser, "_fetch_vulnerabilities", return_value={}):
-            p._process_vulnerabilities({})
-            
-            # Should complete without errors
-            results_path = workspace_dir.results_path
-            assert results_path.exists()
-
-    def test_parser_vulnerable_range_constraint(self, workspace_dir, mock_vulnerability_data):
-        """Test that vulnerable range constraints are properly set"""
-        p = parser.Parser(workspace=workspace_dir)
-        
-        with patch.object(parser.Parser, "_fetch_vulnerabilities", return_value=mock_vulnerability_data):
-            p._process_vulnerabilities(mock_vulnerability_data)
-            
-            # Read results and check constraints
-            results_path = workspace_dir.results_path
-            vuln_files = list(results_path.glob("*.json"))
-            
-            for vuln_file in vuln_files:
-                with open(vuln_file) as f:
-                    data = json.load(f)
-                    for fixed_in in data.get("Vulnerability", {}).get("FixedIn", []):
-                        if fixed_in.get("Version") == "ROOTIO_UNAFFECTED":
-                            # Should have the Root.io constraint
-                            assert fixed_in.get("VulnerableRange") == "NOT version_contains .root.io"
+        assert Provider.name() == "rootio"
 
     def test_config_defaults(self):
         """Test that Config has proper defaults"""
         config = Config()
-        assert config.api_url == "https://api.root.io/v1/vulnerabilities"
-        assert config.runtime.existing_results == "delete"
+        assert config.request_timeout == 125
+        assert config.runtime.result_store == result.StoreStrategy.SQLITE
+
+    def test_parser_normalize_with_fixed_versions(self, tmpdir, mock_root_io_feed):
+        """Test that parser emits actual fixed versions from Root.io"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        # Test Alpine data
+        alpine_data = mock_root_io_feed["alpine"][0]
+        vuln_records = p._normalize("alpine", alpine_data)
+
+        # Should have 2 CVEs
+        assert "CVE-2023-0464" in vuln_records
+        assert "CVE-2023-0465" in vuln_records
+
+        # Check CVE-2023-0464 structure
+        cve_2023_0464 = vuln_records["CVE-2023-0464"]
+        assert cve_2023_0464["Vulnerability"]["Name"] == "CVE-2023-0464"
+        assert cve_2023_0464["Vulnerability"]["NamespaceName"] == "rootio:distro:alpine:3.17"
+
+        # Should have FixedIn entries with actual versions (NOT sentinel values)
+        fixed_in = cve_2023_0464["Vulnerability"]["FixedIn"]
+        assert len(fixed_in) == 2  # libssl3 and openssl
+
+        # Verify actual versions are emitted
+        versions = [fi["Version"] for fi in fixed_in]
+        assert "3.0.8-r4" in versions
+        assert "ROOTIO_UNAFFECTED" not in versions  # Should NOT use sentinel
+
+        # Verify version format
+        for fi in fixed_in:
+            assert fi["VersionFormat"] == "apk"
+            assert fi["NamespaceName"] == "rootio:distro:alpine:3.17"
+
+    def test_parser_normalize_with_empty_fixed_versions(self, tmpdir, mock_root_io_feed):
+        """Test that parser handles empty fixed_versions correctly"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        # Test Debian data with empty fixed_versions
+        debian_data = mock_root_io_feed["debian"][0]
+        vuln_records = p._normalize("debian", debian_data)
+
+        # Check CVE with no fix
+        cve_no_fix = vuln_records["CVE-2023-9999"]
+        fixed_in = cve_no_fix["Vulnerability"]["FixedIn"]
+
+        # Should have entry with empty version
+        assert len(fixed_in) == 1
+        assert fixed_in[0]["Name"] == "curl"
+        assert fixed_in[0]["Version"] == ""  # Empty indicates no fix
+        assert fixed_in[0]["VersionFormat"] == "dpkg"
+
+    def test_parser_version_format_mapping(self, tmpdir):
+        """Test that parser maps distros to correct version formats"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        # Test version format mappings
+        assert p._get_version_format("alpine") == "apk"
+        assert p._get_version_format("debian") == "dpkg"
+        assert p._get_version_format("ubuntu") == "dpkg"
+        assert p._get_version_format("rhel") == "rpm"
+        assert p._get_version_format("centos") == "rpm"
+        assert p._get_version_format("rocky") == "rpm"
+        assert p._get_version_format("alma") == "rpm"
+
+    def test_parser_namespace_format(self, tmpdir, mock_root_io_feed):
+        """Test that parser generates correct rootio namespace format"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        alpine_data = mock_root_io_feed["alpine"][0]
+        vuln_records = p._normalize("alpine", alpine_data)
+
+        # All records should have rootio namespace
+        for record in vuln_records.values():
+            namespace = record["Vulnerability"]["NamespaceName"]
+            assert namespace == "rootio:distro:alpine:3.17"
+
+    def test_parser_get_generator(self, tmpdir, mock_root_io_feed):
+        """Test the parser.get() generator yields correct data"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        # Mock the download and file reading
+        import orjson
+        feed_path = Path(ws.input_path) / "rootio-data" / "cve_feed.json"
+        os.makedirs(feed_path.parent, exist_ok=True)
+        with open(feed_path, "wb") as f:
+            f.write(orjson.dumps(mock_root_io_feed))
+
+        # Mock download to avoid actual HTTP call
+        with patch.object(p, "_download"):
+            results = list(p.get())
+
+        # Should yield (namespace, vuln_id, record) tuples
+        assert len(results) > 0
+
+        # Check structure
+        for namespace, vuln_id, record in results:
+            assert namespace.startswith("rootio:distro:")
+            assert vuln_id.startswith("CVE-")
+            assert "Vulnerability" in record
+            assert record["Vulnerability"]["Name"] == vuln_id
+            assert record["Vulnerability"]["NamespaceName"] == namespace
+
+    def test_provider_update(self, tmpdir, mock_root_io_feed):
+        """Test the provider update process"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        config = Config()
+        p = Provider(root=str(tmpdir), config=config)
+
+        # Mock the download and feed data
+        import orjson
+        feed_path = Path(ws.input_path) / "rootio-data" / "cve_feed.json"
+        os.makedirs(feed_path.parent, exist_ok=True)
+        with open(feed_path, "wb") as f:
+            f.write(orjson.dumps(mock_root_io_feed))
+
+        # Mock download
+        with patch.object(p.parser, "_download"):
+            urls, count = p.update(last_updated=None)
+
+        # Should return URL and count
+        assert isinstance(urls, list)
+        assert len(urls) == 1
+        assert urls[0] == "https://api.root.io/external/cve_feed"
+        assert count > 0
+
+    def test_parser_metadata_structure(self, tmpdir, mock_root_io_feed):
+        """Test that vulnerability metadata is correctly structured"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        alpine_data = mock_root_io_feed["alpine"][0]
+        vuln_records = p._normalize("alpine", alpine_data)
+
+        for cve_id, record in vuln_records.items():
+            vuln = record["Vulnerability"]
+
+            # Check required fields
+            assert "Name" in vuln
+            assert "NamespaceName" in vuln
+            assert "FixedIn" in vuln
+            assert "Metadata" in vuln
+
+            # Check metadata structure
+            assert "CVE" in vuln["Metadata"]
+            assert len(vuln["Metadata"]["CVE"]) > 0
+            assert vuln["Metadata"]["CVE"][0]["Name"] == cve_id
+
+    def test_parser_handles_multiple_packages_same_cve(self, tmpdir, mock_root_io_feed):
+        """Test that parser correctly handles multiple packages affected by same CVE"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        alpine_data = mock_root_io_feed["alpine"][0]
+        vuln_records = p._normalize("alpine", alpine_data)
+
+        # CVE-2023-0464 affects both libssl3 and openssl
+        cve_record = vuln_records["CVE-2023-0464"]
+        fixed_in = cve_record["Vulnerability"]["FixedIn"]
+
+        # Should have 2 FixedIn entries
+        assert len(fixed_in) == 2
+
+        # Check both packages are present
+        package_names = [fi["Name"] for fi in fixed_in]
+        assert "libssl3" in package_names
+        assert "openssl" in package_names
 
 
 class TestRootIoParser:
     """Additional parser-specific tests"""
-    
-    def test_normalize_severity(self):
-        """Test severity normalization"""
-        p = parser.Parser(workspace=MagicMock())
-        
-        assert p._normalize_severity("CRITICAL") == "Critical"
-        assert p._normalize_severity("HIGH") == "High"
-        assert p._normalize_severity("MEDIUM") == "Medium"
-        assert p._normalize_severity("LOW") == "Low"
-        assert p._normalize_severity("unknown") == "Unknown"
-        assert p._normalize_severity(None) == "Unknown"
+
+    def test_version_format_default(self, tmpdir):
+        """Test that unknown distros default to dpkg format"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        # Unknown distro should default to dpkg
+        assert p._get_version_format("unknown-distro") == "dpkg"
+
+    def test_parser_init_creates_logger(self, tmpdir):
+        """Test that parser creates logger if none provided"""
+        ws = workspace.Workspace(tmpdir, "rootio", create=True)
+        p = parser.Parser(
+            workspace=ws,
+            url="https://api.root.io/external/cve_feed",
+        )
+
+        assert p.logger is not None
+        assert p.logger.name == "Parser"
