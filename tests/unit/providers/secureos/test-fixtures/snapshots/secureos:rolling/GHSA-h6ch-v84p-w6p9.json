@@ -1,0 +1,23 @@
+{
+  "identifier": "secureos:rolling/GHSA-h6ch-v84p-w6p9",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "",
+      "FixedIn": [
+        {
+          "Name": "code-server",
+          "NamespaceName": "secureos:rolling",
+          "Version": "0",
+          "VersionFormat": "apk"
+        }
+      ],
+      "Link": "https://github.com/advisories/GHSA-h6ch-v84p-w6p9",
+      "Metadata": {},
+      "Name": "GHSA-h6ch-v84p-w6p9",
+      "NamespaceName": "secureos:rolling",
+      "Severity": "Unknown"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}
