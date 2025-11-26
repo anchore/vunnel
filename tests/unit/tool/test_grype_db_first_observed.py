@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -785,3 +786,176 @@ class TestStore:
                 fix_version="2.4.42",
             )
             assert len(results) == expected_count, f"Case insensitive full_cpe test failed for '{cpe}': got {len(results)}, expected {expected_count}"
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_with_digest_caching_skips_when_unchanged(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that download is skipped when digest matches"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # setup existing database and digest file
+        store.db_path.parent.mkdir(parents=True, exist_ok=True)
+        store.db_path.write_text("existing db")
+        test_digest = "sha256:abc123def456"
+        store.digest_path.write_text(test_digest)
+
+        # mock oras resolve to return same digest
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = test_digest + "\n"
+        mock_subprocess_run.return_value = mock_result
+
+        # mock oras client (should not be called)
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # run download
+        store.download()
+
+        # verify oras resolve was called
+        mock_subprocess_run.assert_called_once()
+        assert mock_subprocess_run.call_args[0][0] == ["oras", "resolve", "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"]
+
+        # verify oras pull was NOT called (download skipped)
+        mock_client.pull.assert_not_called()
+
+        # verify database file unchanged
+        assert store.db_path.read_text() == "existing db"
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_with_digest_caching_downloads_when_changed(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that download proceeds when digest changes"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # setup existing database and digest file
+        store.db_path.parent.mkdir(parents=True, exist_ok=True)
+        store.db_path.write_text("old db")
+        old_digest = "sha256:old123"
+        store.digest_path.write_text(old_digest)
+
+        # mock oras resolve to return new digest
+        new_digest = "sha256:new456"
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = new_digest + "\n"
+        mock_subprocess_run.return_value = mock_result
+
+        # mock oras client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # create the expected download file
+        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
+        download_path.parent.mkdir(parents=True, exist_ok=True)
+        download_path.write_text("new db content")
+
+        # run download
+        store.download()
+
+        # verify oras resolve was called
+        mock_subprocess_run.assert_called_once()
+
+        # verify oras pull WAS called (download happened)
+        mock_client.pull.assert_called_once()
+
+        # verify new digest was saved
+        assert store.digest_path.read_text().strip() == new_digest
+        assert store.db_path.read_text() == "new db content"
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_without_oras_cli_proceeds_normally(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that download works when oras CLI is not available"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock shutil.which to return None (oras not found)
+        with patch("shutil.which", return_value=None):
+            # mock oras client
+            mock_client = Mock()
+            mock_oras_client_class.return_value = mock_client
+
+            # create the expected download file
+            download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
+            download_path.parent.mkdir(parents=True, exist_ok=True)
+            download_path.write_text("db content")
+
+            # run download
+            store.download()
+
+            # verify subprocess was NOT called
+            mock_subprocess_run.assert_not_called()
+
+            # verify oras pull WAS called (download proceeded without digest check)
+            mock_client.pull.assert_called_once()
+
+            # verify database file exists
+            assert store.db_path.exists()
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_with_missing_digest_file_downloads(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that download proceeds when digest file is missing"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # setup existing database but NO digest file
+        store.db_path.parent.mkdir(parents=True, exist_ok=True)
+        store.db_path.write_text("existing db")
+
+        # mock oras resolve
+        test_digest = "sha256:abc123"
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = test_digest + "\n"
+        mock_subprocess_run.return_value = mock_result
+
+        # mock oras client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # create the expected download file
+        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
+        download_path.parent.mkdir(parents=True, exist_ok=True)
+        download_path.write_text("new db content")
+
+        # run download
+        store.download()
+
+        # verify oras pull WAS called (no digest file means download)
+        mock_client.pull.assert_called_once()
+
+        # verify digest file was created
+        assert store.digest_path.exists()
+        assert store.digest_path.read_text().strip() == test_digest
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_with_oras_resolve_failure_downloads(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that download proceeds when oras resolve fails"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock oras resolve to fail
+        mock_subprocess_run.side_effect = subprocess.CalledProcessError(1, "oras", stderr="not found")
+
+        # mock oras client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # create the expected download file
+        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
+        download_path.parent.mkdir(parents=True, exist_ok=True)
+        download_path.write_text("db content")
+
+        # run download
+        store.download()
+
+        # verify oras pull WAS called (resolve failure means download)
+        mock_client.pull.assert_called_once()
+
+        # verify database file exists
+        assert store.db_path.exists()

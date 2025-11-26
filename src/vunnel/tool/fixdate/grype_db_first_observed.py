@@ -1,5 +1,7 @@
 import logging
 import os
+import shutil
+import subprocess
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -100,11 +102,45 @@ class Store(Strategy):
         self.workspace = ws
         self.provider = ws.name
         self.db_path = Path(ws.input_path) / "grype-db-observed-fix-dates.db"
+        self.digest_path = self.db_path.with_suffix(".db.digest")
         self.logger = logging.getLogger("grype-db-fixes-" + self.provider)
         self.engine: db.engine.Engine | None = None
         self._thread_local = threading.local()
         self._not_found = False
         self._downloaded = False
+
+    def _get_remote_digest(self, image_ref: str) -> str | None:
+        """Get the digest of a remote OCI artifact using oras resolve.
+
+        Args:
+            image_ref: Full image reference (e.g., "ghcr.io/org/repo:tag")
+
+        Returns:
+            Digest string (e.g., "sha256:abc123...") or None if failed
+        """
+        oras_path = shutil.which("oras")
+        if not oras_path:
+            self.logger.warning("oras command not found in PATH, cannot check for digest changes")
+            return None
+
+        try:
+            result = subprocess.run(
+                ["oras", "resolve", image_ref],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=True,
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            self.logger.debug(f"oras resolve failed: {e.stderr}")
+            return None
+        except subprocess.TimeoutExpired:
+            self.logger.warning(f"oras resolve timed out for {image_ref}")
+            return None
+        except Exception as e:
+            self.logger.debug(f"failed to get remote digest: {e}")
+            return None
 
     def download(self) -> None:
         """fetch the fix date database from the OCI registry using ORAS"""
@@ -118,6 +154,19 @@ class Store(Strategy):
 
         # ensure the parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # check if we can skip download by comparing digests
+        remote_digest = self._get_remote_digest(image_ref)
+        if remote_digest and self.db_path.exists() and self.digest_path.exists():
+            try:
+                local_digest = self.digest_path.read_text().strip()
+                if local_digest == remote_digest:
+                    self.logger.info(f"fix date database is up to date (digest: {remote_digest})")
+                    return
+                else:
+                    self.logger.debug(f"fix date database digest changed (local: {local_digest}, remote: {remote_digest})")
+            except Exception as e:
+                self.logger.debug(f"failed to read local digest: {e}")
 
         # download the database file using ORAS
         client = _ProgressLoggingOrasClient(logger=self.logger)
@@ -147,6 +196,11 @@ class Store(Strategy):
             if self.db_path.exists():
                 self.db_path.unlink()
             os.rename(download_db_path, self.db_path)
+
+            # save the digest for future comparisons
+            if remote_digest:
+                self.digest_path.write_text(remote_digest)
+                self.logger.debug(f"saved digest: {remote_digest}")
 
         except ValueError as e:
             # if this is a 404 or not found error, log a warning and continue
