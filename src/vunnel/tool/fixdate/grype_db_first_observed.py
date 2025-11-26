@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 import subprocess
 import threading
 from dataclasses import dataclass
@@ -118,14 +117,18 @@ class Store(Strategy):
         Returns:
             Digest string (e.g., "sha256:abc123...") or None if failed
         """
-        oras_path = shutil.which("oras")
-        if not oras_path:
-            self.logger.warning("oras command not found in PATH, cannot check for digest changes")
+        # use oras binary installed by binny (relative to repo root)
+        # this avoids using an arbitrary oras from PATH which could be untrusted
+        # path: grype_db_first_observed.py -> fixdate -> tool -> vunnel -> src -> repo root
+        oras_path = Path(__file__).parent.parent.parent.parent.parent / ".tool" / "oras"
+        if not oras_path.exists():
+            self.logger.warning(f"oras not found at {oras_path}, cannot check for digest changes")
             return None
 
         try:
-            result = subprocess.run(
-                ["oras", "resolve", image_ref],
+            # S603 explanation: image ref is constructed from trusted literals elsewhere in this class
+            result = subprocess.run(  # noqa: S603
+                [str(oras_path), "resolve", image_ref],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -163,8 +166,7 @@ class Store(Strategy):
                 if local_digest == remote_digest:
                     self.logger.info(f"fix date database is up to date (digest: {remote_digest})")
                     return
-                else:
-                    self.logger.debug(f"fix date database digest changed (local: {local_digest}, remote: {remote_digest})")
+                self.logger.debug(f"fix date database digest changed (local: {local_digest}, remote: {remote_digest})")
             except Exception as e:
                 self.logger.debug(f"failed to read local digest: {e}")
 
@@ -192,10 +194,9 @@ class Store(Strategy):
             client.pull(target=image_ref, outdir=str(download_db_path.parent))
             self.logger.info(f"successfully fetched fix date database for {self.provider}")
 
-            # move the downloaded file to the exact self.db_path (remove the existing file if needed)
-            if self.db_path.exists():
-                self.db_path.unlink()
-            os.rename(download_db_path, self.db_path)
+            # atomically move the downloaded file to the exact self.db_path
+            # os.replace is atomic on POSIX and replaces existing file if present
+            os.replace(download_db_path, self.db_path)
 
             # save the digest for future comparisons
             if remote_digest:

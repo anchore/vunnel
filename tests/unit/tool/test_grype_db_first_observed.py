@@ -810,12 +810,22 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # run download
-        store.download()
+        # mock oras binary exists check
+        original_exists = Path.exists
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return True
+            return original_exists(self)
 
-        # verify oras resolve was called
+        # run download
+        with patch.object(Path, "exists", mock_exists):
+            store.download()
+
+        # verify oras resolve was called with binny-installed oras
         mock_subprocess_run.assert_called_once()
-        assert mock_subprocess_run.call_args[0][0] == ["oras", "resolve", "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"]
+        call_args = mock_subprocess_run.call_args[0][0]
+        assert call_args[0].endswith("/.tool/oras")
+        assert call_args[1:] == ["resolve", "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"]
 
         # verify oras pull was NOT called (download skipped)
         mock_client.pull.assert_not_called()
@@ -852,8 +862,16 @@ class TestStore:
         download_path.parent.mkdir(parents=True, exist_ok=True)
         download_path.write_text("new db content")
 
+        # mock oras binary exists check
+        original_exists = Path.exists
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return True
+            return original_exists(self)
+
         # run download
-        store.download()
+        with patch.object(Path, "exists", mock_exists):
+            store.download()
 
         # verify oras resolve was called
         mock_subprocess_run.assert_called_once()
@@ -872,28 +890,34 @@ class TestStore:
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock shutil.which to return None (oras not found)
-        with patch("shutil.which", return_value=None):
-            # mock oras client
-            mock_client = Mock()
-            mock_oras_client_class.return_value = mock_client
+        # mock oras client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
 
-            # create the expected download file
-            download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-            download_path.parent.mkdir(parents=True, exist_ok=True)
-            download_path.write_text("db content")
+        # create the expected download file
+        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
+        download_path.parent.mkdir(parents=True, exist_ok=True)
+        download_path.write_text("db content")
 
-            # run download
+        # mock Path.exists to return False for oras binary (oras not found)
+        original_exists = Path.exists
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return False
+            return original_exists(self)
+
+        # run download
+        with patch.object(Path, "exists", mock_exists):
             store.download()
 
-            # verify subprocess was NOT called
-            mock_subprocess_run.assert_not_called()
+        # verify subprocess was NOT called
+        mock_subprocess_run.assert_not_called()
 
-            # verify oras pull WAS called (download proceeded without digest check)
-            mock_client.pull.assert_called_once()
+        # verify oras pull WAS called (download proceeded without digest check)
+        mock_client.pull.assert_called_once()
 
-            # verify database file exists
-            assert store.db_path.exists()
+        # verify database file exists
+        assert store.db_path.read_text() == "db content"
 
     @patch("subprocess.run")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
@@ -922,14 +946,21 @@ class TestStore:
         download_path.parent.mkdir(parents=True, exist_ok=True)
         download_path.write_text("new db content")
 
+        # mock oras binary exists check
+        original_exists = Path.exists
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return True
+            return original_exists(self)
+
         # run download
-        store.download()
+        with patch.object(Path, "exists", mock_exists):
+            store.download()
 
         # verify oras pull WAS called (no digest file means download)
         mock_client.pull.assert_called_once()
 
         # verify digest file was created
-        assert store.digest_path.exists()
         assert store.digest_path.read_text().strip() == test_digest
 
     @patch("subprocess.run")
