@@ -1,0 +1,9 @@
+{
+    "latest_url": "https://security.secureos.io/v1/secdb.json.gz",
+    "snapshot_url": "https://security.secureos.io/v1/secdb-20251126-224300.json.gz",
+    "sha256": "97bb492a9e78fa7bb45d1e3c87c99dadc6c368a5c88b6aef7d508399a2915ae1",
+    "published_at": 1764196980,
+    "package_count": 59,
+    "cve_count": 155,
+    "version": "v1"
+}
