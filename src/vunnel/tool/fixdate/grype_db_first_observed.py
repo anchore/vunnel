@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -100,11 +101,49 @@ class Store(Strategy):
         self.workspace = ws
         self.provider = ws.name
         self.db_path = Path(ws.input_path) / "grype-db-observed-fix-dates.db"
+        self.digest_path = self.db_path.with_suffix(".db.digest")
         self.logger = logging.getLogger("grype-db-fixes-" + self.provider)
         self.engine: db.engine.Engine | None = None
         self._thread_local = threading.local()
         self._not_found = False
         self._downloaded = False
+
+    def _get_remote_digest(self, image_ref: str) -> str | None:
+        """Get the digest of a remote OCI artifact using oras resolve.
+
+        Args:
+            image_ref: Full image reference (e.g., "ghcr.io/org/repo:tag")
+
+        Returns:
+            Digest string (e.g., "sha256:abc123...") or None if failed
+        """
+        # use oras binary installed by binny (relative to repo root)
+        # this avoids using an arbitrary oras from PATH which could be untrusted
+        # path: grype_db_first_observed.py -> fixdate -> tool -> vunnel -> src -> repo root
+        oras_path = Path(__file__).parent.parent.parent.parent.parent / ".tool" / "oras"
+        if not oras_path.exists():
+            self.logger.warning(f"oras not found at {oras_path}, cannot check for digest changes")
+            return None
+
+        try:
+            # S603 explanation: image ref is constructed from trusted literals elsewhere in this class
+            result = subprocess.run(  # noqa: S603
+                [str(oras_path), "resolve", image_ref],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=True,
+            )
+            return result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            self.logger.debug(f"oras resolve failed: {e.stderr}")
+            return None
+        except subprocess.TimeoutExpired:
+            self.logger.warning(f"oras resolve timed out for {image_ref}")
+            return None
+        except Exception as e:
+            self.logger.debug(f"failed to get remote digest: {e}")
+            return None
 
     def download(self) -> None:
         """fetch the fix date database from the OCI registry using ORAS"""
@@ -118,6 +157,18 @@ class Store(Strategy):
 
         # ensure the parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # check if we can skip download by comparing digests
+        remote_digest = self._get_remote_digest(image_ref)
+        if remote_digest and self.db_path.exists() and self.digest_path.exists():
+            try:
+                local_digest = self.digest_path.read_text().strip()
+                if local_digest == remote_digest:
+                    self.logger.info(f"fix date database is up to date (digest: {remote_digest})")
+                    return
+                self.logger.debug(f"fix date database digest changed (local: {local_digest}, remote: {remote_digest})")
+            except Exception as e:
+                self.logger.debug(f"failed to read local digest: {e}")
 
         # download the database file using ORAS
         client = _ProgressLoggingOrasClient(logger=self.logger)
@@ -143,10 +194,14 @@ class Store(Strategy):
             client.pull(target=image_ref, outdir=str(download_db_path.parent))
             self.logger.info(f"successfully fetched fix date database for {self.provider}")
 
-            # move the downloaded file to the exact self.db_path (remove the existing file if needed)
-            if self.db_path.exists():
-                self.db_path.unlink()
-            os.rename(download_db_path, self.db_path)
+            # atomically move the downloaded file to the exact self.db_path
+            # os.replace is atomic on POSIX and replaces existing file if present
+            os.replace(download_db_path, self.db_path)
+
+            # save the digest for future comparisons
+            if remote_digest:
+                self.digest_path.write_text(remote_digest)
+                self.logger.debug(f"saved digest: {remote_digest}")
 
         except ValueError as e:
             # if this is a 404 or not found error, log a warning and continue
