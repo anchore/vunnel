@@ -62,7 +62,7 @@ def test_process_changes_and_deletions(mock_workspace, mock_http_get, mock_os_re
     other_changed_rhsa_url = latest_url.replace("archive_latest.txt", "2024/rhsa-2024_0010.json")
     deleted_rhsa_path = mock_workspace.input_path / "advisories" / "2024/rhsa-2024_2106.json"
 
-    client = CSAFClient(workspace=mock_workspace, logger=MagicMock(), latest_url=latest_url)
+    client = CSAFClient(workspace=mock_workspace, logger=MagicMock(), skip_download=False, max_workers=16, latest_url=latest_url)
     # Extract only the first argument (URL) from all calls
     called_urls = [args[0] for args, _ in mock_http_get.call_args_list]
 

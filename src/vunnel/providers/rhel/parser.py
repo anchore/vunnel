@@ -61,6 +61,7 @@ class Parser:
         fixdater: fixdate.Finder | None = None,
         download_timeout=None,
         max_workers=None,
+        csaf_max_workers: int | None = None,
         full_sync_interval=None,
         skip_namespaces=None,
         rhsa_provider_type=None,
@@ -76,6 +77,7 @@ class Parser:
         self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
         self.download_timeout = download_timeout if isinstance(download_timeout, int) else 125
         self.max_workers = max_workers if isinstance(max_workers, int) else 4
+        self.csaf_max_workers = csaf_max_workers if csaf_max_workers is not None else 16
         self.full_sync_interval = full_sync_interval if isinstance(full_sync_interval, int) else 2
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
@@ -366,7 +368,13 @@ class Parser:
                 self.logger.warning("skip download requested, but OVAL RHSA provider does not support skipping download")
             self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
         elif self.rhsa_provider_type.lower() == "csaf":
-            self.rhsa_provider = CSAFRHSAProvider(self.workspace, self.download_timeout, self.logger, self.skip_download)
+            self.rhsa_provider = CSAFRHSAProvider(
+                self.workspace,
+                self.download_timeout,
+                self.logger,
+                self.skip_download,
+                self.csaf_max_workers,
+            )
 
     @staticmethod
     def _get_name_version(package):
