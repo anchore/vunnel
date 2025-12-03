@@ -13,6 +13,13 @@ runs:
     # required for magic-cache from runs-on to function with artifact upload/download (see https://runs-on.com/caching/magic-cache/#actionsupload-artifact-compatibility)
     - uses: runs-on/action@v2
 
+    - name: Login to ghcr.io
+      shell: bash
+      env:
+        GITHUB_ACTOR: ${{ github.actor }}
+      run: |
+        echo "$GITHUB_TOKEN" | .tool/oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
     - name: Capture vulnerability results
       shell: bash
       working-directory: tests/quality

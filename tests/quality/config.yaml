@@ -130,7 +130,7 @@ tests:
       - name: github
         use_cache: true
     images:
-      - ghcr.io/chainguard-images/scanner-test:python-library-chainguard@sha256:5784ff619513afd0faf0b03e3284152312ba01fb7b1f24a3e3e67551ee9a91d8
+      - ghcr.io/chainguard-images/scanner-test:python-library-aiohttp-chainguard@sha256:046b2c1b2df1e496eb3abf9e21224ffd879d92abc2bd57401456764d9aa8ddf1
     validations:
       - <<: *default-validations
         max_year: 2025
