@@ -155,57 +155,156 @@ class Parser:
             self.logger.exception(f"failed to load {self.namespace} sec db data")
             raise
 
-    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
+    @staticmethod
+    def _parse_apk_version(ver: str) -> tuple[list[int | str], int]:
         """
-        Normalize all the sec db entries into vulnerability payload records
-        :param release:
-        :param data:
-        :return:
+        Parse APK version into (version_parts, revision).
+        E.g., "9.3.2-r2" -> ([9, 3, 2], 2)
         """
+        revision = 0
+        version_str = ver
 
-        vuln_dict = {}
+        # Extract revision suffix if present (e.g., "-r2")
+        if "-r" in ver:
+            parts = ver.rsplit("-r", 1)
+            version_str = parts[0]
+            try:
+                revision = int(parts[1])
+            except ValueError:
+                revision = 0
+
+        # Parse version parts (e.g., "9.3.2" -> [9, 3, 2])
+        version_parts: list[int | str] = []
+        for part in version_str.replace("-", ".").split("."):
+            try:
+                version_parts.append(int(part))
+            except ValueError:
+                version_parts.append(part)
+
+        return version_parts, revision
+
+    @staticmethod
+    def _compare_apk_versions(ver_a: str, ver_b: str) -> int:
+        """
+        Compare APK versions. Returns -1 if ver_a < ver_b, 0 if equal, 1 if ver_a > ver_b.
+        APK versions typically follow the pattern: VERSION-rREVISION (e.g., 9.3.2-r2)
+        """
+        if ver_a == ver_b:
+            return 0
+
+        parts_a, rev_a = Parser._parse_apk_version(ver_a)
+        parts_b, rev_b = Parser._parse_apk_version(ver_b)
+
+        # Compare version parts
+        for i in range(max(len(parts_a), len(parts_b))):
+            a_part = parts_a[i] if i < len(parts_a) else 0
+            b_part = parts_b[i] if i < len(parts_b) else 0
+
+            # Handle mixed int/str comparison
+            if isinstance(a_part, int) and isinstance(b_part, int):
+                cmp_result = (a_part > b_part) - (a_part < b_part)
+            else:
+                # String comparison for non-numeric parts
+                a_str, b_str = str(a_part), str(b_part)
+                cmp_result = (a_str > b_str) - (a_str < b_str)
+
+            if cmp_result != 0:
+                return cmp_result
+
+        # Version parts are equal, compare revisions
+        return (rev_a > rev_b) - (rev_a < rev_b)
+
+    @staticmethod
+    def _get_base_version_with_r0(ver: str) -> str:
+        """
+        Get the base version with -r0 suffix.
+        E.g., "9.3.2-r2" -> "9.3.2-r0"
+        """
+        if "-r" in ver:
+            base = ver.rsplit("-r", 1)[0]
+            return f"{base}-r0"
+        return f"{ver}-r0"
+
+    def _sort_secfix_versions(self, secfixes: dict[str, list[str]]) -> list[str]:
+        """
+        Sort secfixes versions from smallest to largest, excluding special versions like "0".
+        """
+        from functools import cmp_to_key
+
+        versions = [v for v in secfixes if v not in ("0", "None", None, "")]
+        return sorted(versions, key=cmp_to_key(self._compare_apk_versions))
+
+    @staticmethod
+    def _extract_vids(raw_vids: list[str] | None) -> list[str]:
+        """Extract unique vulnerability IDs from raw secfixes entries."""
+        vids: list[str] = []
+        if raw_vids:
+            for rawvid in raw_vids:
+                for newvid in rawvid.split():
+                    if newvid not in vids:
+                        vids.append(newvid)
+        return vids
+
+    def _get_or_create_vuln_record(self, vuln_dict: dict[str, Any], vid: str, release: str) -> dict[str, Any]:
+        """Get existing or create new vulnerability record."""
+        if vid not in vuln_dict:
+            vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
+            vuln_record = vuln_dict[vid]
+            reference_links = self.build_reference_links(vid)
+
+            vuln_record["Vulnerability"]["Name"] = str(vid)
+            vuln_record["Vulnerability"]["NamespaceName"] = self.namespace + ":" + str(release)
+            vuln_record["Vulnerability"]["Severity"] = "Unknown"
+
+            if reference_links:
+                vuln_record["Vulnerability"]["Link"] = reference_links[0]
+        return vuln_dict[vid]
+
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Normalize all the sec db entries into vulnerability payload records.
+        For each package, versions are sorted smallest to largest to properly assign VulnerableRange.
+        """
+        vuln_dict: dict[str, Any] = {}
+        # Track (vid, pkg) pairs we've seen to know if current version is the smallest
+        seen_vid_pkg: set[tuple[str, str]] = set()
 
         self.logger.debug("normalizing vulnerability data")
 
         for el in data["packages"]:
             pkg_el = el["pkg"]
-
             pkg = pkg_el["name"]
-            for fix_version in pkg_el["secfixes"]:
-                vids = []
-                if pkg_el["secfixes"][fix_version]:
-                    for rawvid in pkg_el["secfixes"][fix_version]:
-                        tmp = rawvid.split()
-                        for newvid in tmp:
-                            if newvid not in vids:
-                                vids.append(newvid)
+            secfixes = pkg_el["secfixes"]
+
+            # Sort versions smallest to largest (excluding special versions like "0")
+            sorted_versions = self._sort_secfix_versions(secfixes)
+            # Process all versions (sorted first, then special versions like "0")
+            all_versions = sorted_versions + [v for v in secfixes if v not in sorted_versions]
+
+            for fix_version in all_versions:
+                vids = self._extract_vids(secfixes[fix_version])
 
                 for vid in vids:
-                    if vid not in vuln_dict:
-                        # create a new record
-                        vuln_dict[vid] = copy.deepcopy(vulnerability.vulnerability_element)
-                        vuln_record = vuln_dict[vid]
-                        reference_links = self.build_reference_links(vid)
-
-                        # populate the static information about the new vuln record
-                        vuln_record["Vulnerability"]["Name"] = str(vid)
-                        vuln_record["Vulnerability"]["NamespaceName"] = self.namespace + ":" + str(release)
-
-                        if reference_links:
-                            vuln_record["Vulnerability"]["Link"] = reference_links[0]
-
-                        vuln_record["Vulnerability"]["Severity"] = "Unknown"
-                    else:
-                        vuln_record = vuln_dict[vid]
-
-                    # SET UP fixedins
+                    vuln_record = self._get_or_create_vuln_record(vuln_dict, vid, release)
                     ecosystem = self.namespace + ":" + str(release)
-                    fixed_el = {
+
+                    fixed_el: dict[str, Any] = {
                         "Name": pkg,
                         "Version": fix_version,
                         "VersionFormat": "apk",
                         "NamespaceName": ecosystem,
                     }
+
+                    # Add VulnerableRange for non-first versions with revision > 0
+                    vid_pkg_key = (vid, pkg)
+                    is_first = vid_pkg_key not in seen_vid_pkg
+                    is_real_version = fix_version not in ("0", "None", None, "")
+                    if is_real_version:
+                        seen_vid_pkg.add(vid_pkg_key)
+                        _, revision = self._parse_apk_version(fix_version)
+                        if not is_first and revision > 0:
+                            base_r0 = self._get_base_version_with_r0(fix_version)
+                            fixed_el["VulnerableRange"] = f">={base_r0}, <{fix_version}"
 
                     result = self.fixdater.best(
                         vuln_id=str(vid),
