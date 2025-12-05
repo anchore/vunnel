@@ -42,7 +42,7 @@ class NvdAPI:
         results_per_page: (int | None) = None,  # from api docs: "it is recommended that users of the CVE API use the default resultsPerPage value"
         change_start_date: (str | datetime.datetime | None) = None,  # note: if you specify a changeStartDate, you must also specify a changeEndDate
         change_end_date: str | datetime.datetime | None = None,  # note: maximum date range is 120 days
-    ) -> Generator[dict[str, Any], Any, None]:
+    ) -> Generator[dict[str, Any], Any]:
         parameters = {}
 
         if cve_id:
@@ -73,7 +73,7 @@ class NvdAPI:
         last_mod_end_date: str | datetime.datetime | None = None,
         pub_start_date: (str | datetime.datetime | None) = None,  # note: if you specify a pubStartDate, you must also specify a pubEndDate
         pub_end_date: str | datetime.datetime | None = None,  # note: maximum date range is 120 days
-    ) -> Generator[dict[str, Any], Any, None]:
+    ) -> Generator[dict[str, Any], Any]:
         parameters = {}
 
         if cve_id:
@@ -107,7 +107,7 @@ class NvdAPI:
         url: str,
         parameters: dict[str, str],
         message: str = "fetching results",
-    ) -> Generator[dict[str, Any], Any, None]:
+    ) -> Generator[dict[str, Any], Any]:
         headers = {
             "content-type": "application/json",
         }

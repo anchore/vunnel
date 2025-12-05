@@ -85,7 +85,7 @@ class Providers:
         return None
 
     @staticmethod
-    def provider_names() -> Generator[str, None, None]:
+    def provider_names() -> Generator[str]:
         for f in fields(Providers):
             if f.name == "common":
                 continue

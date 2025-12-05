@@ -95,7 +95,7 @@ class State(DataClassDictMixin):
 
         return metadata_path
 
-    def result_files(self, root: str) -> Generator[File, File, None]:
+    def result_files(self, root: str) -> Generator[File, File]:
         if self.listing:
             full_path = os.path.join(root, self.listing.path)
             with open(full_path) as f:

@@ -77,7 +77,7 @@ class Parser:
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
-    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         """
         Loads all db json and yields it
         :return:
@@ -161,7 +161,7 @@ class Parser:
 
         return vuln_dict
 
-    def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]], None, None]:
+    def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]]]:
         """
         Download, load and normalize minimos sec db and return a dict of release - list of vulnerability records
         :return:

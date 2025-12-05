@@ -840,7 +840,7 @@ class Parser:
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             os.remove(os.path.join(self.norm_workspace, cve_id))
 
-    def _merged_cve_iterator(self) -> Generator[CVEFile, None, None]:
+    def _merged_cve_iterator(self) -> Generator[CVEFile]:
         for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
                 cve = orjson.loads(fp.read())

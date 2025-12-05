@@ -205,7 +205,7 @@ class MarinerXmlFile:
             return None
         return definition.metadata.description
 
-    def vulnerabilities(self) -> Generator[Vulnerability, None, None]:
+    def vulnerabilities(self) -> Generator[Vulnerability]:
         for d in self.definitions:
             if d.metadata is None or d.metadata.severity is None:
                 self.logger.warning("skipping definition because severity could not be found")
@@ -302,7 +302,7 @@ class Parser:
     def urls(self) -> list[str]:
         return list(self._urls)
 
-    def get(self) -> Generator[tuple[str, str, dict[str, dict[str, Any]]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, dict[str, Any]]]]:
         for oval_file_path in self._download():
             parsed_file = MarinerXmlFile(oval_file_path, self.logger, self.fixdater)
             for v in parsed_file.vulnerabilities():

@@ -370,7 +370,7 @@ class Parser:
 
         return results
 
-    def get(self) -> Generator[tuple[str, str, dict], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict]]:
         self.fixdater.download()
 
         parser_factory = OVALParserFactory(

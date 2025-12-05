@@ -109,7 +109,7 @@ class OpenVEXParser:
             for chunk in r.iter_content():
                 f.write(chunk)
 
-    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         """
         Loads all openvex json files and yields them
         :yields:
@@ -268,7 +268,7 @@ class OpenVEXParser:
     def target_url(self) -> str:
         return self.url
 
-    def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]], None, None]:
+    def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]]]:
         """
         Download, load and normalize wolfi sec db and return a dict of release - list of vulnerability records
         :return:

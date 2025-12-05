@@ -53,7 +53,7 @@ class Parser:
             logger=self.logger,
         )
 
-    def _load(self, version: str) -> Generator[dict[str, Any], None, None]:
+    def _load(self, version: str) -> Generator[dict[str, Any]]:
         self.logger.info("loading data from git repository")
 
         # TODO: almalinux8 and almalinux9 subdirectories
@@ -165,7 +165,7 @@ class Parser:
 
         return None
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()

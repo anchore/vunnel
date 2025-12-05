@@ -43,7 +43,7 @@ class Manager:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def get(self) -> Generator[tuple[str | None, dict[str, str | float]], None, None]:
+    def get(self) -> Generator[tuple[str | None, dict[str, str | float]]]:
         filepath = self._download()
         yield from self._normalize(filepath)
 
@@ -61,7 +61,7 @@ class Manager:
 
         return csv_file_path
 
-    def _normalize(self, filepath: str) -> Generator[tuple[str, dict[str, str | float]], None, None]:
+    def _normalize(self, filepath: str) -> Generator[tuple[str, dict[str, str | float]]]:
         fields: list[str] = []
         date: str | None = None
 

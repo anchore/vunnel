@@ -109,7 +109,7 @@ class Parser:
         filterer = KspliceFilterer(logger=self.logger)
         return filterer.filter(raw_results)
 
-    def get(self) -> Generator[tuple[tuple[str, str], tuple[str, dict[str, Any]]], None, None]:
+    def get(self) -> Generator[tuple[tuple[str, str], tuple[str, dict[str, Any]]]]:
         # download
         self._download()
         for (vuln_id, namespace), (version, record) in self._parse_oval_data(self.xml_file_path, self.config).items():
