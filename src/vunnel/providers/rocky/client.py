@@ -51,7 +51,7 @@ class Client:
                 with open(write_path, "wb") as f:
                     f.write(orjson.dumps(advisory))
 
-    def get(self) -> Generator[Path, None, None]:
+    def get(self) -> Generator[Path]:
         os.makedirs(self.download_path, exist_ok=True)
         if not self._skip_download:
             self._download()

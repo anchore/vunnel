@@ -149,7 +149,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
         criteria_element = xml_element.find(config.criteria_xpath_query.format(oval_ns))
         results = []
 
-        if not criteria_element:
+        if criteria_element is None or len(criteria_element) == 0:
             return results
 
         operator = criteria_element.attrib.get("operator")

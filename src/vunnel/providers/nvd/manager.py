@@ -67,7 +67,7 @@ class Manager:
         self,
         last_updated: datetime.datetime | None,
         skip_if_exists: bool = False,
-    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    ) -> Generator[tuple[str, dict[str, Any]], Any]:
         """main method to fetch and process NVD vulnerability data.
 
         This orchestrates a few concerns:
@@ -100,7 +100,7 @@ class Manager:
 
         yield from self._finalize_all_records(cves_processed)
 
-    def _finalize_all_records(self, already_processed: set[str]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def _finalize_all_records(self, already_processed: set[str]) -> Generator[tuple[str, dict[str, Any]], Any]:
         """process any CVEs in the local database that weren't processed yet.
 
         This ensures that any CVEs that might have been missed in the main download
@@ -162,7 +162,7 @@ class Manager:
         self,
         last_updated: datetime.datetime | None,
         skip_if_exists: bool = False,
-    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    ) -> Generator[tuple[str, dict[str, Any]], Any]:
         with self._nvd_input_writer() as writer:
             if skip_if_exists and self._can_update_incrementally(last_updated):
                 yield from self._download_updates(last_updated, writer)  # type: ignore  # noqa: PGH003
@@ -204,7 +204,7 @@ class Manager:
 
         return True
 
-    def _download_all(self, writer: result.Writer) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def _download_all(self, writer: result.Writer) -> Generator[tuple[str, dict[str, Any]], Any]:
         self.logger.info("downloading all CVEs")
 
         # TODO: should we delete all existing state in this case first?
@@ -216,7 +216,7 @@ class Manager:
         self,
         last_updated: datetime.datetime,
         writer: result.Writer,
-    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    ) -> Generator[tuple[str, dict[str, Any]], Any]:
         self.logger.debug(f"downloading CVEs changed since {last_updated.isoformat()}")
 
         # get the list of CVEs that have been updated since the last sync
@@ -233,7 +233,7 @@ class Manager:
         self,
         response: dict[str, Any],
         writer: result.Writer,
-    ) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    ) -> Generator[tuple[str, dict[str, Any]], Any]:
         """extract individual CVE records from NVD API response and apply processing.
 
         Takes paginated NVD API responses and processes each vulnerability:

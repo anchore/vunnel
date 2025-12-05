@@ -288,7 +288,7 @@ class SQLiteReader:
 
             return orjson.loads(result.record)
 
-    def each(self) -> Generator[Envelope, None, None]:
+    def each(self) -> Generator[Envelope]:
         conn, table = self.connection()
         with conn.begin():
             # query all results, returning one at a time (do not fetch all into memory)

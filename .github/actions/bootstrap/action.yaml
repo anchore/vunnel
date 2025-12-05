@@ -10,7 +10,7 @@ inputs:
     required: true
     # note: the caller really drives this in a matrix strategy run for unit tests.
     # this default value is used for the rest of the workflow.
-    default: "3.11"
+    default: "3.13"
   uv-version:
     description: "UV version to install"
     required: true

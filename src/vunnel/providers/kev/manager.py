@@ -23,7 +23,7 @@ class Manager:
     def urls(self) -> list[str]:
         return [self._kev_url_]
 
-    def get(self) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def get(self) -> Generator[tuple[str, dict[str, Any]], Any]:
         data = self._download()
         yield from self._parse(data)
 
@@ -35,6 +35,6 @@ class Manager:
             f.write(response.text)
         return response.json()
 
-    def _parse(self, catalog: dict[str, Any]) -> Generator[tuple[str, dict[str, Any]], Any, None]:
+    def _parse(self, catalog: dict[str, Any]) -> Generator[tuple[str, dict[str, Any]], Any]:
         for record in catalog["vulnerabilities"]:
             yield record["cveID"], record

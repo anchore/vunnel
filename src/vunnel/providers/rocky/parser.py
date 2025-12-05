@@ -48,7 +48,7 @@ class Parser:
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-    def _load(self) -> Generator[dict[str, Any], None, None]:
+    def _load(self) -> Generator[dict[str, Any]]:
         for path in self.client.get():
             with open(path, encoding="utf-8") as f:
                 yield orjson.loads(f.read())
@@ -59,7 +59,7 @@ class Parser:
         vuln_schema = vuln_entry.get("schema_version", "1.7.0")
         return vuln_id, vuln_schema, vuln_entry
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         for advisory in self._load():
             osv.patch_fix_date(advisory, self.fixdater, ecosystem_processor=normalize_ecosystem)
             yield self._normalize(advisory)

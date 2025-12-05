@@ -7,6 +7,7 @@ import logging
 import os
 import re
 from collections import namedtuple
+from datetime import UTC
 from datetime import datetime as dt
 from decimal import Decimal as D
 from typing import TYPE_CHECKING
@@ -204,7 +205,7 @@ class Parser:
         :return:
         """
 
-        now = dt.utcnow()  # noqa: DTZ003
+        now = dt.now(UTC)
 
         # setup workspace for full cves
         full_cve_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)

@@ -56,7 +56,7 @@ class Parser:
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-    def _load(self) -> Generator[dict[str, Any], None, None]:
+    def _load(self) -> Generator[dict[str, Any]]:
         self.logger.info("loading data from git repository")
 
         vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "data")
@@ -77,7 +77,7 @@ class Parser:
         vuln_schema = vuln_entry["schema_version"]
         return vuln_id, vuln_schema, vuln_entry
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()

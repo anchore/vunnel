@@ -174,17 +174,17 @@ class Branch(OmitNoneORJSONModel):
             return self.product.product_id
         return None
 
-    def product_branches(self) -> IterGenerator["Branch", None, None]:
+    def product_branches(self) -> IterGenerator["Branch"]:
         yield self
         for b in self.branches:
             yield from b.product_branches()
 
-    def product_version_branches(self) -> IterGenerator["Branch", None, None]:
+    def product_version_branches(self) -> IterGenerator["Branch"]:
         for b in self.product_branches():
             if b.category == "product_version":
                 yield b
 
-    def product_name_branches(self) -> IterGenerator["Branch", None, None]:
+    def product_name_branches(self) -> IterGenerator["Branch"]:
         for b in self.product_branches():
             if b.category == "product_name":
                 yield b
@@ -215,7 +215,7 @@ class ProductTree(OmitNoneORJSONModel):
             if purl and pid:
                 self.product_id_to_purl[pid] = purl
 
-    def product_branches(self) -> IterGenerator[Branch, None, None]:
+    def product_branches(self) -> IterGenerator[Branch]:
         for b in self.branches:
             yield from b.product_branches()
 
