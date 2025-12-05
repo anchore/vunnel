@@ -54,6 +54,7 @@ class CSAFClient:
         self,
         workspace: Workspace,
         logger: logging.Logger,
+        max_workers: int,
         latest_url: str = ADVISORIES_LATEST_URL,
         skip_download: bool = False,
     ):
@@ -63,6 +64,7 @@ class CSAFClient:
         self.latest_archive_url: str | None = None
         self.archive_date: datetime | None = None
         self.logger = logger
+        self.max_workers = max_workers
         self.advisories_path = os.path.join(self.workspace.input_path, "advisories")
         if not skip_download:
             self._download_and_update_archive()
@@ -134,7 +136,7 @@ class CSAFClient:
         # defend against year represented in "changes.csv" but not in main .tar.zst file
         for year in years:
             os.makedirs(os.path.join(self.advisories_path, year), exist_ok=True)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = {
                 executor.submit(
                     self._download_stream,
