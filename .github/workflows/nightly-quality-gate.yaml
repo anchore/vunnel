@@ -5,13 +5,12 @@ on:
 
   # run 5 AM (UTC) daily
   schedule:
-    - cron:  '0 5 * * *'
+    - cron: "0 5 * * *"
 
 permissions:
   contents: read
 
 jobs:
-
   select-providers:
     runs-on: runs-on=${{ github.run_id }}/runner=small
     outputs:
@@ -40,6 +39,9 @@ jobs:
 
       - name: Split providers by concurrency needs
         id: split-providers
+        # TODO: stop splitting providers based on a hard coded value. Maybe
+        # in the future something like `vunnel list --only-concurrent` could
+        # supply the values here. Hard code for now.
         run: |
           all_providers='${{ steps.determine-providers.outputs.providers }}'
           multicore_providers=$(echo "$all_providers" | jq -c '[.[] | select(. == "ubuntu")]')
