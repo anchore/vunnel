@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import oras.client
 import sqlalchemy as db
+import zstandard
 from sqlalchemy import event
 
 from vunnel import workspace
@@ -153,7 +154,7 @@ class Store(Strategy):
         self._downloaded = True
 
         # construct the image reference
-        image_ref = f"ghcr.io/anchore/grype-db-observed-fix-date/{self.provider}:latest"
+        image_ref = f"ghcr.io/anchore/grype-db-observed-fix-date/{self.provider}:latest-zstd"
 
         # ensure the parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,11 +189,21 @@ class Store(Strategy):
 
         try:
             # pull the artifact to the target directory
-            # the database file should be pulled directly as the db_path
-            download_db_path = Path(self.workspace.input_path) / "fix-dates" / f"{self.provider}.db"
+            # the database file is pulled as a zstd-compressed file
+            download_zst_path = Path(self.workspace.input_path) / "fix-dates" / f"{self.provider}.db.zst"
             self.logger.info(f"pulling fix date database from {image_ref}")
-            client.pull(target=image_ref, outdir=str(download_db_path.parent))
+            client.pull(target=image_ref, outdir=str(download_zst_path.parent))
             self.logger.info(f"successfully fetched fix date database for {self.provider}")
+
+            # decompress the zstd file to a .db file
+            download_db_path = download_zst_path.with_suffix("")  # removes .zst -> .db
+            self.logger.debug(f"decompressing {download_zst_path} to {download_db_path}")
+            dctx = zstandard.ZstdDecompressor()
+            with download_zst_path.open("rb") as ifh, download_db_path.open("wb") as ofh:
+                dctx.copy_stream(ifh, ofh)
+
+            # remove the compressed file
+            download_zst_path.unlink()
 
             # atomically move the downloaded file to the exact self.db_path
             # os.replace is atomic on POSIX and replaces existing file if present
