@@ -456,7 +456,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
   rhel:
-    csaf_parallelism: 4x
+    csaf_parallelism: 20x
     full_sync_interval: 2
     ignore_hydra_errors: false
     parallelism: 4
@@ -523,7 +523,7 @@ providers:
     enable_rev_history: true
     git_branch: master
     git_url: git://git.launchpad.net/ubuntu-cve-tracker
-    parallelism: 2x
+    parallelism: 8x
     request_timeout: 125
     runtime:
       existing_input: keep

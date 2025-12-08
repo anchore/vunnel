@@ -25,7 +25,7 @@ class Config:
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=dict)
     enable_rev_history: bool = True
-    parallelism: int | str = "2x"  # local I/O bound
+    parallelism: int | str = "8x"  # local I/O bound
     git_url: str = default_git_url
     git_branch: str = default_git_branch
 

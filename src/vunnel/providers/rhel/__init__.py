@@ -28,9 +28,10 @@ class Config:
     parallelism: int = 4
     # the csaf_parallelism controls the amount of concurrency used when re-downloading CSAF
     # files that have changed since the last archive. That file server seems very tolerant of
-    # highly concurrent download, so oversubscribe CPUs with 4 http requests / core
-    # for this download. Sometimes thousands of changes need to be processed.
-    csaf_parallelism: int | str = "4x"
+    # highly concurrent download, so oversubscribe CPUs with 20 http requests / core
+    # for this download. Sometimes thousands of changes need to be processed, and each
+    # concurrent process is logically.
+    csaf_parallelism: int | str = "20x"
     full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
     rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
