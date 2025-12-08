@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.utils import timer
+from vunnel.utils.concurrency import resolve_workers
 
 from .parser import Parser
 
@@ -22,7 +23,15 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    # this parallelism controls the rate at which the Hydra API is queried. That API
+    # can be a bit touchy, so it is hard coded to a pretty low value.
     parallelism: int = 4
+    # the csaf_parallelism controls the amount of concurrency used when re-downloading CSAF
+    # files that have changed since the last archive. That file server seems very tolerant of
+    # highly concurrent download, so oversubscribe CPUs with 20 http requests / core
+    # for this download. Sometimes thousands of changes need to be processed, and each
+    # concurrent process is logically.
+    csaf_parallelism: int | str = "20x"
     full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
     rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
@@ -45,6 +54,9 @@ class Provider(provider.Provider):
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
             max_workers=self.config.parallelism,
+            csaf_max_workers=resolve_workers(
+                self.config.csaf_parallelism,
+            ),
             full_sync_interval=self.config.full_sync_interval,
             rhsa_provider_type=self.config.rhsa_source,
             ignore_hydra_errors=self.config.ignore_hydra_errors,

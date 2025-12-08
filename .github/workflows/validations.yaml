@@ -37,7 +37,7 @@ jobs:
           cd tests/quality && make validate-test-tool-versions
 
   Test:
-    runs-on: runs-on=${{ github.run_id }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}-test-${{ strategy.job-index }}/runner=small
     permissions:
       contents: read
     strategy:

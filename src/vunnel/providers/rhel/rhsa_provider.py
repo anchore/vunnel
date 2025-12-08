@@ -196,17 +196,26 @@ class CSAFRHSAProvider(RHSAProvider):
     to use CSAF data as its source of RHSA data.
     """
 
-    def __init__(self, workspace: Workspace, download_timeout_seconds: int, logger: logging.Logger, skip_download: bool = False):
+    def __init__(
+        self,
+        workspace: Workspace,
+        download_timeout_seconds: int,
+        logger: logging.Logger,
+        skip_download: bool,
+        csaf_max_workers: int,
+    ):
         """
         Initialize the CSAFRHSAProvider with a workspace, configuration, and logger.
 
         :param workspace: The workspace directory.
         :param config: Configuration settings as a dictionary.
         :param logger: Logger instance for logging.
+        :param skip_download: Whether to skip downloading data.
+        :param csaf_max_workers: Maximum number of workers for CSAF operations.
         """
         super().__init__(workspace, download_timeout_seconds, logger)
         self.logger.debug("parsing RHSA data using RHEL csaf parser")
-        client = CSAFClient(workspace, logger, skip_download=skip_download)
+        client = CSAFClient(workspace, logger, skip_download=skip_download, max_workers=csaf_max_workers)
         self.csaf_parser = CSAFParser(
             workspace,
             client,
