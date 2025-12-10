@@ -146,6 +146,56 @@ class Store(Strategy):
             self.logger.debug(f"failed to get remote digest: {e}")
             return None
 
+    def _resolve_image_ref(self, image_base: str) -> tuple[str, str | None]:
+        """resolve the image reference and digest, trying latest-zstd first then falling back to latest.
+
+        Returns:
+            Tuple of (image_ref, remote_digest) where remote_digest may be None if resolution failed.
+        """
+        # try latest-zstd first
+        image_ref = f"{image_base}:latest-zstd"
+        remote_digest = self._get_remote_digest(image_ref)
+        if remote_digest:
+            return image_ref, remote_digest
+
+        # fall back to latest
+        self.logger.debug("latest-zstd tag not resolvable, trying latest")
+        image_ref = f"{image_base}:latest"
+        remote_digest = self._get_remote_digest(image_ref)
+        return image_ref, remote_digest
+
+    def _pull_with_fallback(
+        self,
+        client: _ProgressLoggingOrasClient,
+        image_base: str,
+        image_ref: str,
+        download_dir: Path,
+    ) -> None:
+        """pull the OCI artifact, falling back from latest-zstd to latest if not found."""
+        self.logger.info(f"pulling fix date database from {image_ref}")
+        try:
+            client.pull(target=image_ref, outdir=str(download_dir))
+        except ValueError as e:
+            if "not found" in str(e).lower() and image_ref.endswith(":latest-zstd"):
+                # fall back to latest tag
+                fallback_ref = f"{image_base}:latest"
+                self.logger.debug(f"latest-zstd not found, falling back to {fallback_ref}")
+                client.pull(target=fallback_ref, outdir=str(download_dir))
+            else:
+                raise
+        self.logger.info(f"successfully fetched fix date database for {self.provider}")
+
+    def _process_downloaded_file(self, download_zst_path: Path, download_db_path: Path) -> None:
+        """decompress zstd file if present, otherwise verify db file exists."""
+        if download_zst_path.exists():
+            self.logger.debug(f"decompressing {download_zst_path} to {download_db_path}")
+            dctx = zstandard.ZstdDecompressor()
+            with download_zst_path.open("rb") as ifh, download_db_path.open("wb") as ofh:
+                dctx.copy_stream(ifh, ofh)
+            download_zst_path.unlink()
+        elif not download_db_path.exists():
+            raise FileNotFoundError(f"expected {download_db_path} or {download_zst_path} after pull")
+
     def download(self) -> None:
         """fetch the fix date database from the OCI registry using ORAS"""
 
@@ -153,14 +203,16 @@ class Store(Strategy):
         # as a fallback, instead we want to ensure that we have attempted to download the DB.
         self._downloaded = True
 
-        # construct the image reference
-        image_ref = f"ghcr.io/anchore/grype-db-observed-fix-date/{self.provider}:latest-zstd"
+        # construct the image reference base
+        image_base = f"ghcr.io/anchore/grype-db-observed-fix-date/{self.provider}"
 
         # ensure the parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
+        # resolve image reference with fallback (latest-zstd -> latest)
+        image_ref, remote_digest = self._resolve_image_ref(image_base)
+
         # check if we can skip download by comparing digests
-        remote_digest = self._get_remote_digest(image_ref)
         if remote_digest and self.db_path.exists() and self.digest_path.exists():
             try:
                 local_digest = self.digest_path.read_text().strip()
@@ -187,23 +239,14 @@ class Store(Strategy):
             except Exception as e:
                 self.logger.warning(f"failed to authenticate with GitHub Container Registry: {e}")
 
+        # set up download paths
+        download_dir = Path(self.workspace.input_path) / "fix-dates"
+        download_zst_path = download_dir / f"{self.provider}.db.zst"
+        download_db_path = download_dir / f"{self.provider}.db"
+
         try:
-            # pull the artifact to the target directory
-            # the database file is pulled as a zstd-compressed file
-            download_zst_path = Path(self.workspace.input_path) / "fix-dates" / f"{self.provider}.db.zst"
-            self.logger.info(f"pulling fix date database from {image_ref}")
-            client.pull(target=image_ref, outdir=str(download_zst_path.parent))
-            self.logger.info(f"successfully fetched fix date database for {self.provider}")
-
-            # decompress the zstd file to a .db file
-            download_db_path = download_zst_path.with_suffix("")  # removes .zst -> .db
-            self.logger.debug(f"decompressing {download_zst_path} to {download_db_path}")
-            dctx = zstandard.ZstdDecompressor()
-            with download_zst_path.open("rb") as ifh, download_db_path.open("wb") as ofh:
-                dctx.copy_stream(ifh, ofh)
-
-            # remove the compressed file
-            download_zst_path.unlink()
+            self._pull_with_fallback(client, image_base, image_ref, download_dir)
+            self._process_downloaded_file(download_zst_path, download_db_path)
 
             # atomically move the downloaded file to the exact self.db_path
             # os.replace is atomic on POSIX and replaces existing file if present

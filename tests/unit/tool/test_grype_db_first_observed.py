@@ -247,10 +247,14 @@ class TestStore:
 
         # verify ORAS client was called correctly
         mock_oras_client_class.assert_called_once()
-        mock_client.pull.assert_called_once_with(
-            target="ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd",
-            outdir=str(download_zst_path.parent),
-        )
+        mock_client.pull.assert_called_once()
+        # verify pull was called with one of the expected tags (fallback may occur)
+        call_kwargs = mock_client.pull.call_args[1]
+        assert call_kwargs["target"] in [
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd",
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
+        ]
+        assert call_kwargs["outdir"] == str(download_zst_path.parent)
 
         # verify directory was created
         assert store.db_path.parent.exists()
@@ -427,11 +431,14 @@ class TestStore:
             password="test-token",
         )
 
-        # verify pull was still called
-        mock_client.pull.assert_called_once_with(
-            target="ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd",
-            outdir=str(download_zst_path.parent),
-        )
+        # verify pull was called (tag may vary due to fallback logic)
+        mock_client.pull.assert_called_once()
+        call_kwargs = mock_client.pull.call_args[1]
+        assert call_kwargs["target"] in [
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd",
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
+        ]
+        assert call_kwargs["outdir"] == str(download_zst_path.parent)
 
     def test_get_by_cpe(self, tmpdir, helpers):
         # create workspace and store
@@ -1002,3 +1009,121 @@ class TestStore:
 
         # verify database file exists
         assert store.db_path.exists()
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_fallback_to_latest_tag(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that download falls back to latest tag when latest-zstd is not found during pull"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock oras binary exists and returns digest for latest-zstd
+        original_exists = Path.exists
+
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return True
+            return original_exists(self)
+
+        # mock digest resolution to succeed for latest-zstd
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "sha256:zstd123\n"
+        mock_subprocess_run.return_value = mock_result
+
+        # mock the ORAS client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # first pull attempt (latest-zstd) should fail with not found
+        # second pull attempt (latest) should succeed
+        download_dir = Path(ws.input_path) / "fix-dates"
+
+        def pull_side_effect(target, outdir):
+            if target.endswith(":latest-zstd"):
+                raise ValueError("repository not found")
+            # for latest tag, create uncompressed db file
+            download_dir.mkdir(parents=True, exist_ok=True)
+            (download_dir / "test-db.db").write_text("uncompressed db content")
+
+        mock_client.pull.side_effect = pull_side_effect
+
+        # run download
+        with patch.object(Path, "exists", mock_exists):
+            store.download()
+
+        # verify both pulls were attempted
+        assert mock_client.pull.call_count == 2
+        calls = mock_client.pull.call_args_list
+        assert calls[0][1]["target"] == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd"
+        assert calls[1][1]["target"] == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"
+
+        # verify database file exists with correct content
+        assert store.db_path.exists()
+        assert store.db_path.read_text() == "uncompressed db content"
+
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_uncompressed_db_file(self, mock_oras_client_class, tmpdir):
+        """test that download handles uncompressed .db file (no .zst)"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock the ORAS client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # create uncompressed db file (no .zst)
+        download_dir = Path(ws.input_path) / "fix-dates"
+        download_dir.mkdir(parents=True, exist_ok=True)
+        (download_dir / "test-db.db").write_text("uncompressed db content")
+
+        # run download
+        store.download()
+
+        # verify ORAS client was called
+        mock_oras_client_class.assert_called_once()
+        mock_client.pull.assert_called_once()
+
+        # verify database file exists with correct content
+        assert store.db_path.exists()
+        assert store.db_path.read_text() == "uncompressed db content"
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_resolve_image_ref_fallback(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that _resolve_image_ref falls back from latest-zstd to latest"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock oras binary exists
+        original_exists = Path.exists
+
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return True
+            return original_exists(self)
+
+        # first call (latest-zstd) fails, second call (latest) succeeds
+        mock_result_fail = Mock()
+        mock_result_fail.returncode = 1
+        mock_result_fail.stderr = "not found"
+
+        mock_result_success = Mock()
+        mock_result_success.returncode = 0
+        mock_result_success.stdout = "sha256:latest123\n"
+
+        mock_subprocess_run.side_effect = [
+            subprocess.CalledProcessError(1, "oras", stderr="not found"),
+            mock_result_success,
+        ]
+
+        # run _resolve_image_ref
+        with patch.object(Path, "exists", mock_exists):
+            image_ref, digest = store._resolve_image_ref("ghcr.io/anchore/grype-db-observed-fix-date/test-db")
+
+        # verify it returned the latest tag
+        assert image_ref == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"
+        assert digest == "sha256:latest123"
+
+        # verify both tags were tried
+        assert mock_subprocess_run.call_count == 2
