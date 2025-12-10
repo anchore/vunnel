@@ -3,7 +3,7 @@
 ## Getting Started
 
 This project requires:
-- python (>= 3.11)
+- python (>= 3.13)
 - pip (>= 22.2)
 - uv
 - docker
