@@ -5,13 +5,13 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
-from typing import List, Tuple, Optional
 
 import pytest
+import zstandard
 
 from vunnel import workspace
-from vunnel.tool.fixdate.grype_db_first_observed import Store, normalize_package_name
 from vunnel.tool.fixdate.finder import Result
+from vunnel.tool.fixdate.grype_db_first_observed import Store
 
 
 class DatabaseFixture:
@@ -165,7 +165,7 @@ class DatabaseFixture:
             )
 
     @staticmethod
-    def insert_custom_data(db_path: Path, data: List[Tuple], vulnerability_count: Optional[int] = None) -> None:
+    def insert_custom_data(db_path: Path, data: list[tuple], vulnerability_count: int | None = None) -> None:
         """Insert custom fixdate data
 
         Args:
@@ -177,7 +177,7 @@ class DatabaseFixture:
             if vulnerability_count is not None:
                 conn.execute(
                     "UPDATE databases SET vulnerability_count = ? WHERE id = 1",
-                    (vulnerability_count,)
+                    (vulnerability_count,),
                 )
 
             conn.executemany(
@@ -235,25 +235,35 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # create the expected download file
-        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-        download_path.parent.mkdir(parents=True, exist_ok=True)
-        download_path.write_text("dummy db content")
+        # create the expected zstd-compressed download file
+        download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+        download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+        # compress "dummy db content" with zstd
+        cctx = zstandard.ZstdCompressor()
+        download_zst_path.write_bytes(cctx.compress(b"dummy db content"))
 
         # run download
         store.download()
 
         # verify ORAS client was called correctly
         mock_oras_client_class.assert_called_once()
-        mock_client.pull.assert_called_once_with(
-            target="ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
-            outdir=str(download_path.parent),
-        )
+        mock_client.pull.assert_called_once()
+        # verify pull was called with one of the expected tags (fallback may occur)
+        call_kwargs = mock_client.pull.call_args[1]
+        assert call_kwargs["target"] in [
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd",
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
+        ]
+        assert call_kwargs["outdir"] == str(download_zst_path.parent)
 
         # verify directory was created
         assert store.db_path.parent.exists()
         # verify the file was moved to the correct location
         assert store.db_path.exists()
+        # verify the decompressed content is correct
+        assert store.db_path.read_bytes() == b"dummy db content"
+        # verify the zstd file was removed
+        assert not download_zst_path.exists()
 
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_failure(self, mock_oras_client_class, tmpdir):
@@ -304,11 +314,12 @@ class TestStore:
             mock_client = Mock()
             mock_oras_client_class.return_value = mock_client
 
-            # create the expected download file after pull is called
+            # create the expected zstd-compressed download file after pull is called
             def side_effect(*args, **kwargs):
-                download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-                download_path.parent.mkdir(parents=True, exist_ok=True)
-                download_path.write_text("dummy db content")
+                download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+                download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+                cctx = zstandard.ZstdCompressor()
+                download_zst_path.write_bytes(cctx.compress(b"dummy db content"))
 
             mock_client.pull.side_effect = side_effect
 
@@ -393,7 +404,7 @@ class TestStore:
                 fix_version="1.0.0",
             )
 
-    @patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token'})
+    @patch.dict("os.environ", {"GITHUB_TOKEN": "test-token"})
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_with_github_token(self, mock_oras_client_class, tmpdir):
         # create workspace and store
@@ -404,10 +415,11 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # create the expected download file
-        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-        download_path.parent.mkdir(parents=True, exist_ok=True)
-        download_path.write_text("dummy db content")
+        # create the expected zstd-compressed download file
+        download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+        download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+        cctx = zstandard.ZstdCompressor()
+        download_zst_path.write_bytes(cctx.compress(b"dummy db content"))
 
         # run download
         store.download()
@@ -419,11 +431,14 @@ class TestStore:
             password="test-token",
         )
 
-        # verify pull was still called
-        mock_client.pull.assert_called_once_with(
-            target="ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
-            outdir=str(download_path.parent),
-        )
+        # verify pull was called (tag may vary due to fallback logic)
+        mock_client.pull.assert_called_once()
+        call_kwargs = mock_client.pull.call_args[1]
+        assert call_kwargs["target"] in [
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd",
+            "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest",
+        ]
+        assert call_kwargs["outdir"] == str(download_zst_path.parent)
 
     def test_get_by_cpe(self, tmpdir, helpers):
         # create workspace and store
@@ -825,7 +840,7 @@ class TestStore:
         mock_subprocess_run.assert_called_once()
         call_args = mock_subprocess_run.call_args[0][0]
         assert call_args[0].endswith("/.tool/oras")
-        assert call_args[1:] == ["resolve", "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"]
+        assert call_args[1:] == ["resolve", "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd"]
 
         # verify oras pull was NOT called (download skipped)
         mock_client.pull.assert_not_called()
@@ -857,10 +872,11 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # create the expected download file
-        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-        download_path.parent.mkdir(parents=True, exist_ok=True)
-        download_path.write_text("new db content")
+        # create the expected zstd-compressed download file
+        download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+        download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+        cctx = zstandard.ZstdCompressor()
+        download_zst_path.write_bytes(cctx.compress(b"new db content"))
 
         # mock oras binary exists check
         original_exists = Path.exists
@@ -881,7 +897,7 @@ class TestStore:
 
         # verify new digest was saved
         assert store.digest_path.read_text().strip() == new_digest
-        assert store.db_path.read_text() == "new db content"
+        assert store.db_path.read_bytes() == b"new db content"
 
     @patch("subprocess.run")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
@@ -894,10 +910,11 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # create the expected download file
-        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-        download_path.parent.mkdir(parents=True, exist_ok=True)
-        download_path.write_text("db content")
+        # create the expected zstd-compressed download file
+        download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+        download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+        cctx = zstandard.ZstdCompressor()
+        download_zst_path.write_bytes(cctx.compress(b"db content"))
 
         # mock Path.exists to return False for oras binary (oras not found)
         original_exists = Path.exists
@@ -917,7 +934,7 @@ class TestStore:
         mock_client.pull.assert_called_once()
 
         # verify database file exists
-        assert store.db_path.read_text() == "db content"
+        assert store.db_path.read_bytes() == b"db content"
 
     @patch("subprocess.run")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
@@ -941,10 +958,11 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # create the expected download file
-        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-        download_path.parent.mkdir(parents=True, exist_ok=True)
-        download_path.write_text("new db content")
+        # create the expected zstd-compressed download file
+        download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+        download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+        cctx = zstandard.ZstdCompressor()
+        download_zst_path.write_bytes(cctx.compress(b"new db content"))
 
         # mock oras binary exists check
         original_exists = Path.exists
@@ -977,10 +995,11 @@ class TestStore:
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
-        # create the expected download file
-        download_path = Path(ws.input_path) / "fix-dates" / "test-db.db"
-        download_path.parent.mkdir(parents=True, exist_ok=True)
-        download_path.write_text("db content")
+        # create the expected zstd-compressed download file
+        download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
+        download_zst_path.parent.mkdir(parents=True, exist_ok=True)
+        cctx = zstandard.ZstdCompressor()
+        download_zst_path.write_bytes(cctx.compress(b"db content"))
 
         # run download
         store.download()
@@ -990,3 +1009,69 @@ class TestStore:
 
         # verify database file exists
         assert store.db_path.exists()
+
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_uncompressed_db_file(self, mock_oras_client_class, tmpdir):
+        """test that download handles uncompressed .db file (no .zst)"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock the ORAS client
+        mock_client = Mock()
+        mock_oras_client_class.return_value = mock_client
+
+        # create uncompressed db file (no .zst)
+        download_dir = Path(ws.input_path) / "fix-dates"
+        download_dir.mkdir(parents=True, exist_ok=True)
+        (download_dir / "test-db.db").write_text("uncompressed db content")
+
+        # run download
+        store.download()
+
+        # verify ORAS client was called
+        mock_oras_client_class.assert_called_once()
+        mock_client.pull.assert_called_once()
+
+        # verify database file exists with correct content
+        assert store.db_path.exists()
+        assert store.db_path.read_text() == "uncompressed db content"
+
+    @patch("subprocess.run")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_resolve_image_ref_fallback(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+        """test that _resolve_image_ref falls back from latest-zstd to latest"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # mock oras binary exists
+        original_exists = Path.exists
+
+        def mock_exists(self):
+            if str(self).endswith("/.tool/oras"):
+                return True
+            return original_exists(self)
+
+        # first call (latest-zstd) fails, second call (latest) succeeds
+        mock_result_fail = Mock()
+        mock_result_fail.returncode = 1
+        mock_result_fail.stderr = "not found"
+
+        mock_result_success = Mock()
+        mock_result_success.returncode = 0
+        mock_result_success.stdout = "sha256:latest123\n"
+
+        mock_subprocess_run.side_effect = [
+            subprocess.CalledProcessError(1, "oras", stderr="not found"),
+            mock_result_success,
+        ]
+
+        # run _resolve_image_ref
+        with patch.object(Path, "exists", mock_exists):
+            image_ref, digest = store._resolve_image_ref("ghcr.io/anchore/grype-db-observed-fix-date/test-db")
+
+        # verify it returned the latest tag
+        assert image_ref == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"
+        assert digest == "sha256:latest123"
+
+        # verify both tags were tried
+        assert mock_subprocess_run.call_count == 2
