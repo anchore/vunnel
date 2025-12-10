@@ -180,6 +180,7 @@ class Store(Strategy):
         if download_zst_path.exists():
             self.logger.debug(f"decompressing {download_zst_path} to {download_db_path}")
             dctx = zstandard.ZstdDecompressor()
+            # this will truncate or create any existing DBs and archives
             with download_zst_path.open("rb") as ifh, download_db_path.open("wb") as ofh:
                 dctx.copy_stream(ifh, ofh)
             download_zst_path.unlink()
