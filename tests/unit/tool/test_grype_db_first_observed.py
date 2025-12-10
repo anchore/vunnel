@@ -1010,58 +1010,6 @@ class TestStore:
         # verify database file exists
         assert store.db_path.exists()
 
-    @patch("subprocess.run")
-    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_fallback_to_latest_tag(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
-        """test that download falls back to latest tag when latest-zstd is not found during pull"""
-        ws = workspace.Workspace(tmpdir, "test-db", create=True)
-        store = Store(ws)
-
-        # mock oras binary exists and returns digest for latest-zstd
-        original_exists = Path.exists
-
-        def mock_exists(self):
-            if str(self).endswith("/.tool/oras"):
-                return True
-            return original_exists(self)
-
-        # mock digest resolution to succeed for latest-zstd
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "sha256:zstd123\n"
-        mock_subprocess_run.return_value = mock_result
-
-        # mock the ORAS client
-        mock_client = Mock()
-        mock_oras_client_class.return_value = mock_client
-
-        # first pull attempt (latest-zstd) should fail with not found
-        # second pull attempt (latest) should succeed
-        download_dir = Path(ws.input_path) / "fix-dates"
-
-        def pull_side_effect(target, outdir):
-            if target.endswith(":latest-zstd"):
-                raise ValueError("repository not found")
-            # for latest tag, create uncompressed db file
-            download_dir.mkdir(parents=True, exist_ok=True)
-            (download_dir / "test-db.db").write_text("uncompressed db content")
-
-        mock_client.pull.side_effect = pull_side_effect
-
-        # run download
-        with patch.object(Path, "exists", mock_exists):
-            store.download()
-
-        # verify both pulls were attempted
-        assert mock_client.pull.call_count == 2
-        calls = mock_client.pull.call_args_list
-        assert calls[0][1]["target"] == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd"
-        assert calls[1][1]["target"] == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"
-
-        # verify database file exists with correct content
-        assert store.db_path.exists()
-        assert store.db_path.read_text() == "uncompressed db content"
-
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
     def test_download_uncompressed_db_file(self, mock_oras_client_class, tmpdir):
         """test that download handles uncompressed .db file (no .zst)"""

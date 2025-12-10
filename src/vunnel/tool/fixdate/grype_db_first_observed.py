@@ -164,25 +164,15 @@ class Store(Strategy):
         remote_digest = self._get_remote_digest(image_ref)
         return image_ref, remote_digest
 
-    def _pull_with_fallback(
+    def _pull(
         self,
         client: _ProgressLoggingOrasClient,
-        image_base: str,
         image_ref: str,
         download_dir: Path,
     ) -> None:
-        """pull the OCI artifact, falling back from latest-zstd to latest if not found."""
+        """pull the OCI artifact from the registry."""
         self.logger.info(f"pulling fix date database from {image_ref}")
-        try:
-            client.pull(target=image_ref, outdir=str(download_dir))
-        except ValueError as e:
-            if "not found" in str(e).lower() and image_ref.endswith(":latest-zstd"):
-                # fall back to latest tag
-                fallback_ref = f"{image_base}:latest"
-                self.logger.debug(f"latest-zstd not found, falling back to {fallback_ref}")
-                client.pull(target=fallback_ref, outdir=str(download_dir))
-            else:
-                raise
+        client.pull(target=image_ref, outdir=str(download_dir))
         self.logger.info(f"successfully fetched fix date database for {self.provider}")
 
     def _process_downloaded_file(self, download_zst_path: Path, download_db_path: Path) -> None:
@@ -245,7 +235,7 @@ class Store(Strategy):
         download_db_path = download_dir / f"{self.provider}.db"
 
         try:
-            self._pull_with_fallback(client, image_base, image_ref, download_dir)
+            self._pull(client, image_ref, download_dir)
             self._process_downloaded_file(download_zst_path, download_db_path)
 
             # atomically move the downloaded file to the exact self.db_path
