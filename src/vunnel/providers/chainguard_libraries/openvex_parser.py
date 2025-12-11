@@ -32,6 +32,7 @@ class OpenVEXParser:
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
+        user_agent: str | None = None,
     ):
         """
         :param workspace.Workspace workspace: workspace to use for downloads and storage
@@ -40,10 +41,12 @@ class OpenVEXParser:
         :param int download_timeout:
         :param logging.Logger logger:
         :type string security_reference_url: location for security information
+        :param str user_agent: User-Agent header for HTTP requests
         """
         self.download_timeout = download_timeout
         self.namespace = namespace
         self.workspace = workspace
+        self.user_agent = user_agent
 
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -104,7 +107,7 @@ class OpenVEXParser:
         self.logger.info(f"downloading {self.namespace} openvex {uri_path} to {filepath}")
 
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        r = http.get(uri_path, self.logger, stream=True, timeout=self.download_timeout)
+        r = http.get(uri_path, self.logger, stream=True, timeout=self.download_timeout, user_agent=self.user_agent)
         with open(filepath, "wb+") as f:
             for chunk in r.iter_content():
                 f.write(chunk)

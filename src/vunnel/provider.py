@@ -79,6 +79,7 @@ class RuntimeConfig:
     import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
     import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
     import_results_enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
+    user_agent: Optional[str] = None  # noqa: UP007 - breaks mashumaro
 
     def __post_init__(self) -> None:
         if not isinstance(self.existing_input, InputStatePolicy):

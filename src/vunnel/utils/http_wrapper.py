@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import random
 import time
-from importlib import metadata
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import requests
 
@@ -12,14 +11,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 DEFAULT_TIMEOUT = 30
-
-
-def _default_user_agent() -> str:
-    try:
-        version = metadata.version("vunnel")
-    except metadata.PackageNotFoundError:
-        version = "unknown"
-    return f"anchore/vunnel-{version}"
 
 
 def get(  # noqa: PLR0913
@@ -47,7 +38,7 @@ def get(  # noqa: PLR0913
             If the Callable does not raise, the response will be returned, and the caller is responsible for any
             further validation.
             If no Callable is provided, `raise_for_status` is called on the response instead.
-        user_agent: the User-Agent header value. Defaults to "anchore/vunnel-$VERSION".
+        user_agent: the User-Agent header value. If None or empty, no User-Agent header is set.
         **kwargs: additional args are passed to requests.get unchanged.
     Raises:
         If retries are exhausted, re-raises the exception from the last requests.get attempt.
@@ -57,9 +48,6 @@ def get(  # noqa: PLR0913
                  status_handler= lambda response: None if response.status_code in [200, 201, 405] else response.raise_for_status())
 
     """
-    if user_agent is None:
-        user_agent = _default_user_agent()
-
     headers = kwargs.pop("headers", {})
     if user_agent:
         headers["User-Agent"] = user_agent

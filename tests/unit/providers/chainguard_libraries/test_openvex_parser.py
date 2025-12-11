@@ -97,7 +97,8 @@ class TestOpenVEXParser:
             "https://libraries.cgr.dev/openvex/v1/test.json",
             openvex_parser.logger,
             stream=True,
-            timeout=60
+            timeout=60,
+            user_agent=None,
         )
         # oras will use this too, so we only need to make certain it was called at least once with the correct path
         mock_file.assert_called_with(openvex_parser.workspace.input_path + "/openvex/test.json", "wb+")

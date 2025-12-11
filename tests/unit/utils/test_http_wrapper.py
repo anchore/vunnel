@@ -62,14 +62,12 @@ class TestGetRequests:
         mock_sleep.assert_called_with(22.1)
         mock_logger.warning.assert_called()
         mock_logger.error.assert_not_called()
-        headers = { "User-Agent": http._default_user_agent()}
-        mock_requests.assert_called_with("http://example.com/some-path", timeout=http.DEFAULT_TIMEOUT, headers=headers)
+        mock_requests.assert_called_with("http://example.com/some-path", timeout=http.DEFAULT_TIMEOUT, headers={})
 
     @patch("requests.get")
     def test_timeout_is_passed_in(self, mock_requests, mock_logger):
         http.get("http://example.com/some-path", mock_logger, timeout=12345)
-        headers = { "User-Agent": http._default_user_agent()}
-        mock_requests.assert_called_with("http://example.com/some-path", timeout=12345, headers=headers)
+        mock_requests.assert_called_with("http://example.com/some-path", timeout=12345, headers={})
 
     @patch("requests.get")
     def test_user_agent_is_passed_in(self, mock_requests, mock_logger):
