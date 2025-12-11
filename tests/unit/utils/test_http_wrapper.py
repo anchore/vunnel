@@ -62,12 +62,23 @@ class TestGetRequests:
         mock_sleep.assert_called_with(22.1)
         mock_logger.warning.assert_called()
         mock_logger.error.assert_not_called()
-        mock_requests.assert_called_with("http://example.com/some-path", timeout=http.DEFAULT_TIMEOUT)
+        mock_requests.assert_called_with("http://example.com/some-path", timeout=http.DEFAULT_TIMEOUT, headers={})
 
     @patch("requests.get")
     def test_timeout_is_passed_in(self, mock_requests, mock_logger):
         http.get("http://example.com/some-path", mock_logger, timeout=12345)
-        mock_requests.assert_called_with("http://example.com/some-path", timeout=12345)
+        mock_requests.assert_called_with("http://example.com/some-path", timeout=12345, headers={})
+
+    @patch("requests.get")
+    def test_user_agent_is_passed_in(self, mock_requests, mock_logger):
+        http.get("http://example.com/some-path", mock_logger, timeout=12345, user_agent="test-user-agent")
+        headers = { "User-Agent": "test-user-agent"}
+        mock_requests.assert_called_with("http://example.com/some-path", timeout=12345, headers=headers)
+
+    @patch("requests.get")
+    def test_empty_user_agent_sets_no_header(self, mock_requests, mock_logger):
+        http.get("http://example.com/some-path", mock_logger, timeout=12345, user_agent="")
+        mock_requests.assert_called_with("http://example.com/some-path", timeout=12345, headers={})
 
     @patch("time.sleep")
     @patch("requests.get")

@@ -376,6 +376,7 @@ def select_providers(cfg: Config, output_json: bool):
         "tests/quality/vulnerability-match-labels/**",
         ".github/workflows/pr-quality-gate.yaml",
         ".github/workflows/nightly-quality-gate.yaml",
+        "src/vunnel/utils/http_wrapper.py",
     ]
 
     for search_glob in gate_globs:
@@ -392,10 +393,12 @@ def select_providers(cfg: Config, output_json: bool):
             if not test.provider:
                 continue
 
-            search_globs = [f"src/vunnel/providers/{test.provider}/**"]
+            provider_dir = test.provider.replace("-", "_")
+            search_globs = [f"src/vunnel/providers/{provider_dir}/**"]
 
             for additional_provider in test.additional_providers:
-                search_globs.append(f"src/vunnel/providers/{additional_provider.name}/**")
+                additional_dir = additional_provider.name.replace("-", "_")
+                search_globs.append(f"src/vunnel/providers/{additional_dir}/**")
 
             for g in test.additional_trigger_globs:
                 search_globs.append(g)

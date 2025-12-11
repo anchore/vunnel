@@ -148,6 +148,8 @@ def test_clear(mocker, monkeypatch, args, clear, clear_input, clear_results) -> 
 
 
 def test_config(monkeypatch) -> None:
+    from importlib import metadata
+
     envs = {
         "NVD_API_KEY": "secret",
         "GITHUB_TOKEN": "secret",
@@ -157,6 +159,8 @@ def test_config(monkeypatch) -> None:
     runner = CliRunner()
     res = runner.invoke(cli.cli, ["-c", "-", "config"])
     assert res.exit_code == 0
+
+    vunnel_version = metadata.version("vunnel")
     expected_output = """
 log:
   level: INFO
@@ -181,6 +185,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   alpine:
     request_timeout: 125
     runtime:
@@ -198,6 +203,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   amazon:
     max_allowed_alas_http_403: 25
     request_timeout: 125
@@ -216,6 +222,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
     security_advisories:
       '2': https://alas.aws.amazon.com/AL2/alas.rss
       '2022': https://alas.aws.amazon.com/AL2022/alas.rss
@@ -237,6 +244,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   chainguard:
     request_timeout: 125
     runtime:
@@ -254,6 +262,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   chainguard_libraries:
     openvex_url: https://libraries.cgr.dev/openvex/v1/all.json
     request_timeout: 125
@@ -272,12 +281,14 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: anchore/vunnel-$VUNNEL_VERSION
   common:
     import_results:
       enabled: false
       host: ''
       path: providers/{provider_name}/listing.json
       skip_newer_archive_check: false
+    user_agent: null
   debian:
     releases:
       bookworm: '12'
@@ -306,6 +317,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   echo:
     request_timeout: 125
     runtime:
@@ -323,6 +335,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   epss:
     dataset: current
     request_timeout: 125
@@ -341,6 +354,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
     url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
   github:
     api_url: https://api.github.com/graphql
@@ -360,6 +374,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
     token: secret
   kev:
     request_timeout: 125
@@ -378,6 +393,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
     url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
   mariner:
     allow_versions:
@@ -400,6 +416,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   minimos:
     request_timeout: 125
     runtime:
@@ -417,6 +434,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   nvd:
     api_key: secret
     overrides_enabled: false
@@ -438,6 +456,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   oracle:
     request_timeout: 125
     runtime:
@@ -455,6 +474,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   rhel:
     csaf_parallelism: 20x
     full_sync_interval: 2
@@ -477,6 +497,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
     skip_namespaces:
       - rhel:3
       - rhel:4
@@ -497,6 +518,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   sles:
     allow_versions:
       - '11'
@@ -518,6 +540,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   ubuntu:
     additional_versions: {}
     enable_rev_history: true
@@ -540,6 +563,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
   wolfi:
     request_timeout: 125
     runtime:
@@ -557,6 +581,8 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
+      user_agent: null
 root: ./data
 """
+    expected_output = expected_output.replace("$VUNNEL_VERSION", vunnel_version)
     assert expected_output.strip() in res.output

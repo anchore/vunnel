@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 import time
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import requests
 
@@ -19,8 +19,9 @@ def get(  # noqa: PLR0913
     retries: int = 5,
     backoff_in_seconds: int = 3,
     timeout: int = DEFAULT_TIMEOUT,
-    status_handler: Optional[Callable[[requests.Response], None]] = None,  # noqa: UP007 - python 3.9
+    status_handler: Callable[[requests.Response], None] | None = None,
     max_interval: int = 600,
+    user_agent: str | None = None,
     **kwargs: Any,
 ) -> requests.Response:
     """
@@ -37,6 +38,7 @@ def get(  # noqa: PLR0913
             If the Callable does not raise, the response will be returned, and the caller is responsible for any
             further validation.
             If no Callable is provided, `raise_for_status` is called on the response instead.
+        user_agent: the User-Agent header value. If None or empty, no User-Agent header is set.
         **kwargs: additional args are passed to requests.get unchanged.
     Raises:
         If retries are exhausted, re-raises the exception from the last requests.get attempt.
@@ -46,6 +48,10 @@ def get(  # noqa: PLR0913
                  status_handler= lambda response: None if response.status_code in [200, 201, 405] else response.raise_for_status())
 
     """
+    headers = kwargs.pop("headers", {})
+    if user_agent:
+        headers["User-Agent"] = user_agent
+
     last_exception: Exception | None = None
     for attempt in range(retries + 1):
         if last_exception:
@@ -55,7 +61,7 @@ def get(  # noqa: PLR0913
 
         try:
             logger.debug(f"http GET {url} timeout={timeout} retries={retries} backoff={backoff_in_seconds}")
-            response = requests.get(url, timeout=timeout, **kwargs)
+            response = requests.get(url, timeout=timeout, headers=headers, **kwargs)
             if status_handler:
                 status_handler(response)
             else:

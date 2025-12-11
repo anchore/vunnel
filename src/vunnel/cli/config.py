@@ -38,6 +38,7 @@ class ImportResults:
 @dataclass
 class CommonProviderConfig:
     import_results: ImportResults = field(default_factory=ImportResults)
+    user_agent: str | None = None
 
 
 @dataclass
@@ -77,6 +78,8 @@ class Providers:
                     runtime_cfg.import_results_host = self.common.import_results.host
                 if not runtime_cfg.import_results_path:
                     runtime_cfg.import_results_path = self.common.import_results.path
+                if runtime_cfg.user_agent is None:
+                    runtime_cfg.user_agent = self.common.user_agent
 
     def get(self, name: str) -> Any | None:
         for candidate in self.provider_names():
