@@ -376,6 +376,7 @@ def select_providers(cfg: Config, output_json: bool):
         "tests/quality/vulnerability-match-labels/**",
         ".github/workflows/pr-quality-gate.yaml",
         ".github/workflows/nightly-quality-gate.yaml",
+        "src/vunnel/utils/http_wrapper.py",
     ]
 
     for search_glob in gate_globs:
