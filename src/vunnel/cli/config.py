@@ -62,6 +62,7 @@ class Providers:
     sles: providers.sles.Config = field(default_factory=providers.sles.Config)
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
+    zerodeb: providers.zerodeb.Config = field(default_factory=providers.zerodeb.Config)
 
     common: CommonProviderConfig = field(default_factory=CommonProviderConfig)
 

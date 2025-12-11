@@ -9,6 +9,7 @@
 ![vunnel-demo](https://user-images.githubusercontent.com/590471/226942827-e19742ef-e66e-4e11-8f9b-fb74c40f1dee.gif)
 
 Supported data sources:
+- 0-Deb (https://security.0-deb.dev/feed.json)
 - Alpine (https://secdb.alpinelinux.org)
 - Amazon (https://alas.aws.amazon.com/AL2/alas.rss & https://alas.aws.amazon.com/AL2022/alas.rss)
 - Azure (https://github.com/microsoft/AzureLinuxVulnerabilityData)
@@ -61,6 +62,7 @@ List the available vulnerability data providers:
 ```
 $ vunnel list
 
+0-deb
 alpine
 amazon
 chainguard

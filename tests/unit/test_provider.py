@@ -984,6 +984,7 @@ def test_provider_versions(tmpdir):
         "sles": 1,
         "ubuntu": 3,
         "wolfi": 1,
+        "zerodeb": 1,
     }
 
     got = {}
@@ -1020,6 +1021,7 @@ def test_provider_distribution_versions(tmpdir):
         "sles": 1,
         "ubuntu": 1,
         "wolfi": 1,
+        "zerodeb": 1,
     }
 
     got = {}
