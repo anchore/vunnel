@@ -1,0 +1,23 @@
+{
+  "identifier": "secureos:rolling/GHSA-2cf5-4w76-r9qv",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "",
+      "FixedIn": [
+        {
+          "Name": "code-server",
+          "NamespaceName": "secureos:rolling",
+          "Version": "0",
+          "VersionFormat": "apk"
+        }
+      ],
+      "Link": "https://github.com/advisories/GHSA-2cf5-4w76-r9qv",
+      "Metadata": {},
+      "Name": "GHSA-2cf5-4w76-r9qv",
+      "NamespaceName": "secureos:rolling",
+      "Severity": "Unknown"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}
