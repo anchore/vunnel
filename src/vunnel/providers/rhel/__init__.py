@@ -70,6 +70,16 @@ class Provider(provider.Provider):
         return "rhel"
 
     @classmethod
+    def tags(cls) -> list[str]:
+        return [
+            "vulnerability",
+            "os",
+            # The multicore tag is critical. Providers with this tag will be run on larger runners that can utilize
+            # the increased resource usage to reduce overall runtime.
+            "multicore",
+        ]
+
+    @classmethod
     def supports_skip_download(cls) -> bool:
         return True
 

@@ -35,7 +35,6 @@ class Provider(provider.Provider):
         self.config = config
         self.logger.debug(f"config: {config}")
 
-        self.schema = self.__schema__
         self.parser = Parser(
             ws=self.workspace,
             logger=self.logger,
@@ -48,6 +47,10 @@ class Provider(provider.Provider):
     @classmethod
     def name(cls) -> str:
         return "rocky"
+
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "os"]
 
     @classmethod
     def supports_skip_download(cls) -> bool:
@@ -68,7 +71,7 @@ class Provider(provider.Provider):
                     if not vuln_schema:
                         self.logger.warning(
                             f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
-                            f"as is incompatible with provider schema version {self.schema.version}",
+                            f"as is incompatible with provider schema version {self.__schema__.version}",
                         )
                         continue
                     writer.write(

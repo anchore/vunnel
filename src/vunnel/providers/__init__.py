@@ -30,6 +30,8 @@ from vunnel.providers import (
 if TYPE_CHECKING:
     from vunnel import provider
 
+from vunnel.provider import get_provider_tags
+
 _providers: dict[str, type[provider.Provider]] = {
     # vulnerability providers
     alma.Provider.name(): alma.Provider,
@@ -92,3 +94,20 @@ def load_plugins() -> None:
         except Exception:
             # note: this should not be fatal. Log and move on.
             logging.exception(f"failed loading provider plugin {tool.name!r}")
+
+
+def provider_class(name: str) -> type[provider.Provider]:
+    """Return the provider class for a given provider name."""
+    return _providers[name]
+
+
+def providers_with_tags(required_tags: list[str]) -> list[str]:
+    """Return provider names that have ALL of the required tags (AND logic)."""
+    if not required_tags:
+        return names()
+    result = []
+    for name, cls in _providers.items():
+        provider_tags = set(get_provider_tags(cls))
+        if all(tag in provider_tags for tag in required_tags):
+            result.append(name)
+    return sorted(result)

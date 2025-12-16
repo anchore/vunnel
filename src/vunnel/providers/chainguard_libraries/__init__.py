@@ -63,6 +63,10 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "chainguard-libraries"
 
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "language"]
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
             with self.results_writer() as writer, self.parser:

@@ -1028,3 +1028,82 @@ def test_provider_distribution_versions(tmpdir):
         got[p.name()] = p.distribution_version()
 
     assert expected == got, "WARNING! CHANGES TO DISTRIBUTION VERSIONS HAVE OPERATIONAL IMPACT!"
+
+
+class ProviderWithTags(provider.Provider):
+    __schema__ = schema.OSSchema()
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def name(cls) -> str:
+        return "test-with-tags"
+
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["test-tag", "another-tag"]
+
+    def update(self, *args, **kwargs):
+        return [], 0
+
+
+class ProviderWithoutTags(provider.Provider):
+    __schema__ = schema.OSSchema()
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def name(cls) -> str:
+        return "test-without-tags"
+
+    def update(self, *args, **kwargs):
+        return [], 0
+
+
+def test_has_tags_protocol():
+    from vunnel.provider import HasTags
+
+    assert isinstance(ProviderWithTags, HasTags)
+    assert not isinstance(ProviderWithoutTags, HasTags)
+
+
+def test_get_provider_tags_with_tags():
+    from vunnel.provider import get_provider_tags
+
+    tags = get_provider_tags(ProviderWithTags)
+    assert tags == ["test-tag", "another-tag"]
+
+
+def test_get_provider_tags_without_tags():
+    from vunnel.provider import get_provider_tags
+
+    tags = get_provider_tags(ProviderWithoutTags)
+    assert tags == []
+
+
+def test_schema_classmethod():
+    # provider with schema
+    result = ProviderWithTags.schema()
+    assert result is not None
+    assert result.version == "1.1.0"
+    assert result.name == "vulnerability/os"
+
+
+def test_schema_classmethod_no_schema():
+    # provider without __schema__ attribute
+
+    class ProviderNoSchema(provider.Provider):
+        def __init__(self):
+            pass
+
+        @classmethod
+        def name(cls) -> str:
+            return "no-schema"
+
+        def update(self, *args, **kwargs):
+            return [], 0
+
+    result = ProviderNoSchema.schema()
+    assert result is None

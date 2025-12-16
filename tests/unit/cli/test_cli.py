@@ -586,3 +586,75 @@ root: ./data
 """
     expected_output = expected_output.replace("$VUNNEL_VERSION", vunnel_version)
     assert expected_output.strip() in res.output
+
+
+def test_list_json_output() -> None:
+    import json
+
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "-o", "json"])
+    assert res.exit_code == 0
+
+    output = json.loads(res.output)
+    assert "providers" in output
+    assert len(output["providers"]) > 0
+
+    # verify structure of first provider
+    first = output["providers"][0]
+    assert "name" in first
+    assert "version" in first
+    assert "schema" in first
+    assert "tags" in first
+    assert "name" in first["schema"]
+    assert "version" in first["schema"]
+    assert isinstance(first["tags"], list)
+
+
+def test_list_tag_filter() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "auxiliary"])
+    assert res.exit_code == 0
+
+    # epss and kev have "auxiliary" tag
+    lines = res.output.strip().split("\n")
+    assert "epss" in lines
+    assert "kev" in lines
+    # nvd should not be in the list (it has "vulnerability" not "auxiliary")
+    assert "nvd" not in lines
+
+
+def test_list_multiple_tag_filter() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "vulnerability", "--tag", "language"])
+    assert res.exit_code == 0
+
+    # providers with both tags
+    lines = res.output.strip().split("\n")
+    assert "bitnami" in lines
+    assert "github" in lines
+    assert "chainguard-libraries" in lines
+    # alpine has "os" not "language"
+    assert "alpine" not in lines
+
+
+def test_list_nonexistent_tag() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "nonexistent-tag-12345"])
+    assert res.exit_code == 0
+    assert res.output.strip() == ""
+
+
+def test_list_tag_filter_json_output() -> None:
+    import json
+
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "auxiliary", "-o", "json"])
+    assert res.exit_code == 0
+
+    output = json.loads(res.output)
+    assert "providers" in output
+
+    provider_names = [p["name"] for p in output["providers"]]
+    assert "epss" in provider_names
+    assert "kev" in provider_names
+    assert "nvd" not in provider_names
