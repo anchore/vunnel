@@ -162,7 +162,7 @@ class Store(Strategy):
             oras_path = Path(__file__).parent.parent.parent.parent.parent / ".tool" / "oras"
             if not oras_path.exists():
                 self.logger.warning(
-                    f"oras not found at {oras_path} and VUNNEL_ORAS_PATH not set, cannot check for digest changes"
+                    f"oras not found at {oras_path} and VUNNEL_ORAS_PATH not set, cannot check for digest changes",
                 )
                 return None
             oras_path_str = str(oras_path)
