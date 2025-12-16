@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import subprocess
 import threading
 from dataclasses import dataclass
@@ -19,6 +20,36 @@ from .finder import Result, Strategy
 
 if TYPE_CHECKING:
     from oras.container import Container as container_type
+
+
+def _check_oras_path_override() -> str | None:
+    """Check for existing oras binary via VUNNEL_ORAS_PATH environment variable.
+
+    Returns:
+        str | None: Path to oras binary if found and executable, None otherwise.
+    """
+    oras_path = os.getenv("VUNNEL_ORAS_PATH")
+    if not oras_path:
+        return None
+
+    # Handle absolute paths
+    if os.path.isabs(oras_path):
+        if os.path.isfile(oras_path) and os.access(oras_path, os.X_OK):
+            resolved = os.path.realpath(oras_path)
+            logging.info(f"Using oras from VUNNEL_ORAS_PATH: {resolved}")
+            return resolved
+        logging.warning(f"VUNNEL_ORAS_PATH not executable: {oras_path}")
+        return None
+
+    # Search PATH for relative names
+    found = shutil.which(oras_path)
+    if found:
+        resolved = os.path.realpath(found)
+        logging.info(f"Using oras from PATH via VUNNEL_ORAS_PATH: {resolved}")
+        return resolved
+
+    logging.warning(f"VUNNEL_ORAS_PATH not found on PATH: {oras_path}")
+    return None
 
 
 class _ProgressLoggingOrasClient(oras.client.OrasClient):
@@ -112,24 +143,34 @@ class Store(Strategy):
     def _get_remote_digest(self, image_ref: str) -> str | None:
         """Get the digest of a remote OCI artifact using oras resolve.
 
+        Checks for oras binary in this order:
+        1. VUNNEL_ORAS_PATH environment variable (if set)
+        2. .tool/oras (binny-installed, relative to repo root)
+
         Args:
             image_ref: Full image reference (e.g., "ghcr.io/org/repo:tag")
 
         Returns:
             Digest string (e.g., "sha256:abc123...") or None if failed
         """
-        # use oras binary installed by binny (relative to repo root)
-        # this avoids using an arbitrary oras from PATH which could be untrusted
-        # path: grype_db_first_observed.py -> fixdate -> tool -> vunnel -> src -> repo root
-        oras_path = Path(__file__).parent.parent.parent.parent.parent / ".tool" / "oras"
-        if not oras_path.exists():
-            self.logger.warning(f"oras not found at {oras_path}, cannot check for digest changes")
-            return None
+        # Check for VUNNEL_ORAS_PATH environment variable first
+        oras_path_str = _check_oras_path_override()
+
+        # Fall back to binny-installed oras if env var not set
+        if not oras_path_str:
+            # path: grype_db_first_observed.py -> fixdate -> tool -> vunnel -> src -> repo root
+            oras_path = Path(__file__).parent.parent.parent.parent.parent / ".tool" / "oras"
+            if not oras_path.exists():
+                self.logger.warning(
+                    f"oras not found at {oras_path} and VUNNEL_ORAS_PATH not set, cannot check for digest changes"
+                )
+                return None
+            oras_path_str = str(oras_path)
 
         try:
             # S603 explanation: image ref is constructed from trusted literals elsewhere in this class
             result = subprocess.run(  # noqa: S603
-                [str(oras_path), "resolve", image_ref],
+                [oras_path_str, "resolve", image_ref],
                 capture_output=True,
                 text=True,
                 timeout=30,
