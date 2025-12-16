@@ -1,5 +1,6 @@
 import abc
 import datetime
+import functools
 import logging
 from dataclasses import dataclass
 
@@ -81,9 +82,11 @@ class Strategy(abc.ABC):
 
 
 class Finder:
-    def __init__(self, strategies: list[Strategy], first_observed: Strategy):
+    def __init__(self, strategies: list[Strategy], first_observed: Strategy, cache_size: int = 10000):
         self.strategies = strategies
         self.first_observed = first_observed
+        # Create cached version of database lookups
+        self._cached_find_from_strategies = functools.lru_cache(maxsize=cache_size)(self._find_from_strategies_uncached)
 
     def __enter__(self) -> "Finder":
         for s in self.strategies:
@@ -95,6 +98,8 @@ class Finder:
         for s in self.strategies:
             s.__exit__(exc_type, exc_val, exc_tb)
         self.first_observed.__exit__(exc_type, exc_val, exc_tb)
+        # Clear cache on exit
+        self._cached_find_from_strategies.cache_clear()
 
     def download(self) -> None:
         self.first_observed.download()
@@ -108,6 +113,26 @@ class Finder:
         ecosystem = ecosystem.lower()
 
         return ecosystem_mapping.get(ecosystem, ecosystem)
+
+    def _find_from_strategies_uncached(
+        self,
+        vuln_id: str,
+        cpe_or_package: str,
+        fix_version: str,
+        ecosystem: str | None,
+    ) -> tuple[list[Result], list[Result]]:
+        """Perform database lookups - uncached version for LRU wrapper.
+
+        Returns:
+            Tuple of (strategy_results, first_observed_results)
+        """
+        results = []
+        for s in self.strategies:
+            results.extend(s.find(vuln_id, cpe_or_package, fix_version, ecosystem))
+
+        first_observed_results = self.first_observed.find(vuln_id, cpe_or_package, fix_version, ecosystem)
+
+        return (results, first_observed_results)
 
     def best(
         self,
@@ -129,15 +154,15 @@ class Finder:
         if candidates:
             results.extend([c for c in candidates if c.accurate and c.date])
 
-        # add results from finders in order of priority (set by the constructor)
-        for s in self.strategies:
-            results.extend(s.find(vuln_id, cpe_or_package, fix_version, ecosystem))
+        # Use cached database lookups
+        strategy_results, first_observed_results = self._cached_find_from_strategies(
+            vuln_id, cpe_or_package, fix_version, ecosystem
+        )
+        results.extend(strategy_results)
 
         # add low quality candidates last
         if candidates:
             results.extend([c for c in candidates if not c.accurate and c.date])
-
-        first_observed_results = self.first_observed.find(vuln_id, cpe_or_package, fix_version, ecosystem)
 
         # we should select the date from the set of finders that is the highest quality (earlier in the s
         # results list) but should never be after the first observed date. However, first observed dates are not always
