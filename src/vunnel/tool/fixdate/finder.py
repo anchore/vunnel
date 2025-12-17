@@ -156,7 +156,7 @@ class Finder:
 
         # Use cached database lookups
         strategy_results, first_observed_results = self._cached_find_from_strategies(
-            vuln_id, cpe_or_package, fix_version, ecosystem
+            vuln_id, cpe_or_package, fix_version, ecosystem,
         )
         results.extend(strategy_results)
 
