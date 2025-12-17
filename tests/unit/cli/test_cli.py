@@ -658,3 +658,53 @@ def test_list_tag_filter_json_output() -> None:
     assert "epss" in provider_names
     assert "kev" in provider_names
     assert "nvd" not in provider_names
+
+
+def test_list_tag_negation() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "!auxiliary"])
+    assert res.exit_code == 0
+
+    lines = res.output.strip().split("\n")
+    # auxiliary providers should be excluded
+    assert "epss" not in lines
+    assert "kev" not in lines
+    # vulnerability providers should be included
+    assert "nvd" in lines
+    assert "alpine" in lines
+
+
+def test_list_tag_mixed_include_exclude() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "vulnerability", "--tag", "!os"])
+    assert res.exit_code == 0
+
+    lines = res.output.strip().split("\n")
+    # providers with "vulnerability" but NOT "os"
+    assert "nvd" in lines
+    assert "github" in lines
+    # providers with "os" should be excluded
+    assert "alpine" not in lines
+    assert "debian" not in lines
+
+
+def test_list_tag_multiple_exclusions() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "!os", "--tag", "!language"])
+    assert res.exit_code == 0
+
+    lines = res.output.strip().split("\n")
+    # providers without "os" or "language" tags
+    assert "nvd" in lines
+    assert "epss" in lines
+    assert "kev" in lines
+    # providers with "os" or "language" should be excluded
+    assert "alpine" not in lines
+    assert "github" not in lines
+
+
+def test_list_tag_invalid_negation() -> None:
+    runner = CliRunner()
+    res = runner.invoke(cli.cli, ["list", "--tag", "!"])
+    assert res.exit_code != 0
+    assert "invalid tag" in res.output.lower()

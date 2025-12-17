@@ -1107,3 +1107,64 @@ def test_schema_classmethod_no_schema():
 
     result = ProviderNoSchema.schema()
     assert result is None
+
+
+class TestProvidersWithTags:
+    def test_negation_excludes_matching_providers(self):
+        from vunnel import providers
+
+        result = providers.providers_with_tags(["!auxiliary"])
+
+        # auxiliary providers should be excluded
+        assert "epss" not in result
+        assert "kev" not in result
+        # other providers should be included
+        assert "nvd" in result
+        assert "alpine" in result
+
+    def test_mixed_include_and_exclude(self):
+        from vunnel import providers
+
+        result = providers.providers_with_tags(["vulnerability", "!os"])
+
+        # providers with "vulnerability" but without "os"
+        assert "nvd" in result
+        assert "github" in result
+        # providers with "os" should be excluded
+        assert "alpine" not in result
+        assert "debian" not in result
+
+    def test_multiple_exclusions(self):
+        from vunnel import providers
+
+        result = providers.providers_with_tags(["!os", "!language"])
+
+        # providers without "os" or "language"
+        assert "nvd" in result
+        assert "epss" in result
+        assert "kev" in result
+        # providers with "os" or "language" should be excluded
+        assert "alpine" not in result
+        assert "github" not in result
+
+    def test_invalid_empty_negation_raises_error(self):
+        import pytest
+
+        from vunnel import providers
+
+        with pytest.raises(ValueError, match="invalid tag"):
+            providers.providers_with_tags(["!"])
+
+    def test_exclusion_only_returns_all_except_excluded(self):
+        from vunnel import providers
+
+        # get all provider names
+        all_names = providers.names()
+
+        # exclude only language providers
+        result = providers.providers_with_tags(["!language"])
+
+        # result should have all providers except language ones
+        language_providers = providers.providers_with_tags(["language"])
+        expected = sorted(set(all_names) - set(language_providers))
+        assert result == expected

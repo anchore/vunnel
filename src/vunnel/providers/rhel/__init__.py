@@ -74,9 +74,6 @@ class Provider(provider.Provider):
         return [
             "vulnerability",
             "os",
-            # The multicore tag is critical. Providers with this tag will be run on larger runners that can utilize
-            # the increased resource usage to reduce overall runtime.
-            "multicore",
         ]
 
     @classmethod

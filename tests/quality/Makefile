@@ -45,7 +45,7 @@ all-providers: ## Select all providers for testing
 
 .PHONY: select-providers
 select-providers: ## Determine the provider(s) to use for testing based on the file changeset
-	@uv run python ./configure.py select-providers --json 2>/dev/null
+	@uv run python ./configure.py select-providers --json $(if $(TAG),-t $(TAG)) 2>/dev/null
 
 .PHONY: validate-test-tool-versions
 validate-test-tool-versions: ## Pass/Fail to determine if we're using the production versions of grype and grype-db

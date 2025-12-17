@@ -267,7 +267,7 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
     "-t",
     "tags",
     multiple=True,
-    help="filter by tag (can repeat, providers must have ALL specified tags)",
+    help="filter by tag (can repeat). Prefix with '!' to exclude (e.g., -t !auxiliary)",
 )
 @click.option(
     "--output",
@@ -279,7 +279,10 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
 )
 @click.pass_obj
 def list_providers(cfg: config.Application, tags: tuple[str, ...], output_format: str) -> None:
-    provider_names = providers.providers_with_tags(list(tags)) if tags else providers.names()
+    try:
+        provider_names = providers.providers_with_tags(list(tags)) if tags else providers.names()
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
 
     if output_format == "json":
         output: dict[str, list[dict[str, Any]]] = {"providers": []}
