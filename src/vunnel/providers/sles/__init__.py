@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
+from .csaf_parser import CSAFParser
 from .parser import Parser
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ class Config:
     )
     request_timeout: int = 125
     allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15])  # corresponds to major versions
+    source: str = "CSAF"  # "OVAL" or "CSAF"
 
     def __post_init__(self) -> None:
         self.allow_versions = [str(v).lower() for v in self.allow_versions]
@@ -31,6 +33,9 @@ class Config:
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
+
+    parser: Parser | CSAFParser
+    _active_schema: schema.Schema
 
     def __init__(self, root: str, config: Config | None = None):
         if not config:
@@ -41,15 +46,24 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
-            workspace=self.workspace,
-            allow_versions=self.config.allow_versions,
-            download_timeout=self.config.request_timeout,
-            logger=self.logger,
-        )
-
-        # this provider requires the previous state from former runs
-        provider.disallow_existing_input_policy(config.runtime)
+        if self.config.source.upper() == "CSAF":
+            self.parser = CSAFParser(
+                workspace=self.workspace,
+                allow_versions=self.config.allow_versions,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
+            self._active_schema = schema.CsafVexSchema()
+        else:
+            self.parser = Parser(
+                workspace=self.workspace,
+                allow_versions=self.config.allow_versions,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
+            self._active_schema = schema.OSSchema()
+            # this provider requires the previous state from former runs (OVAL mode only)
+            provider.disallow_existing_input_policy(config.runtime)
 
     @classmethod
     def name(cls) -> str:
@@ -64,7 +78,7 @@ class Provider(provider.Provider):
                     vuln_id = vuln_id.lower()
                     writer.write(
                         identifier=os.path.join(namespace, vuln_id),
-                        schema=self.__schema__,
+                        schema=self._active_schema,
                         payload=record,
                     )
 
