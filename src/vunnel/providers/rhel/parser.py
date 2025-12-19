@@ -805,7 +805,7 @@ class Parser:
                                 version="None",
                                 module=artifact.module,
                                 advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
-                            )
+                            ),
                         )
 
             for base_platform, records in inferred_base_records.items():
