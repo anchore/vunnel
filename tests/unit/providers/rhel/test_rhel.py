@@ -931,3 +931,103 @@ def test_rhel_provider_supports_ignore_hydra_errors(mock_http_get, helpers, auto
     # API failures result in sync failure
     with pytest.raises(RuntimeError) as e:
         p.parser._sync_cves()
+
+
+class TestExtendedSupportInference:
+    """
+    Tests for inferring that a package is affected in regular RHEL when it's
+    only explicitly listed as fixed in an Extended Support edition.
+
+    See: https://access.redhat.com/security/cve/cve-2021-25220
+    The Hydra API only shows "Red Hat Enterprise Linux 6 Extended Lifecycle Support - EXTENSION"
+    but if they're fixing it in extended support for RHEL 6, it must have been vulnerable
+    in regular RHEL 6 too. Currently this causes false negatives.
+    """
+
+    @pytest.fixture
+    def extended_support_cve(self):
+        """
+        CVE-2021-25220 Hydra API response - only shows extended support edition,
+        not regular RHEL 6.
+        """
+        import orjson
+        from pathlib import Path
+        fixture_path = Path(__file__).parent / "test-fixtures" / "csaf" / "hydra" / "cve-2021-25220.json"
+        with open(fixture_path, "rb") as f:
+            return orjson.loads(f.read())
+
+    @pytest.fixture
+    def extended_support_csaf_doc(self):
+        """RHSA-2025:23414 CSAF document that fixes CVE-2021-25220 in RHEL 6 ELS Extension."""
+        from pathlib import Path
+        from vunnel.utils.csaf_types import from_path
+        fixture_path = Path(__file__).parent / "test-fixtures" / "csaf" / "advisories" / "2025" / "rhsa-2025_23414.json"
+        return from_path(fixture_path)
+
+    def test_extended_support_implies_base_rhel_affected(self, extended_support_cve, extended_support_csaf_doc, tmpdir, auto_fake_fixdate_finder):
+        """
+        When a CVE is fixed in RHEL Extended Support (e.g., RHEL 6 ELS Extension),
+        we should infer that the base RHEL version (RHEL 6) is also affected.
+
+        This test currently fails because the CSAF parser doesn't infer this.
+        The Hydra API response for CVE-2021-25220 only shows:
+        - "Red Hat Enterprise Linux 6 Extended Lifecycle Support - EXTENSION"
+
+        But we should also emit a vulnerability for rhel:6 showing bind is affected.
+        """
+        from unittest.mock import Mock
+        from vunnel.providers.rhel.parser import Parser
+        from vunnel.providers.rhel.csaf_parser import CSAFParser
+        from vunnel.providers.rhel.csaf_client import CSAFClient
+        from vunnel.providers.rhel.rhsa_provider import CSAFRHSAProvider
+
+        # Create a mock CSAF client that returns our test document
+        mock_client = Mock(spec=CSAFClient)
+        mock_client.csaf_doc_for_rhsa.return_value = extended_support_csaf_doc
+
+        # Create the parser with mocked workspace
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        driver = Parser(workspace=ws, skip_namespaces=[])
+
+        # Create a CSAF parser with our mock client
+        csaf_parser = CSAFParser(
+            workspace=ws,
+            client=mock_client,
+            logger=Mock(),
+            download_timeout=125,
+        )
+
+        # Create a mock CSAF RHSA provider that uses our csaf_parser
+        mock_rhsa_provider = Mock(spec=CSAFRHSAProvider)
+        mock_rhsa_provider.get_fixed_version_and_module.side_effect = lambda cve_id, ar, override_pkg: \
+            csaf_parser.get_fix_info(cve_id, ar.as_dict(), override_pkg or ar.name)
+
+        driver.rhsa_provider = mock_rhsa_provider
+
+        # Parse the CVE
+        cve_id = extended_support_cve.get("name")
+        results = driver._parse_cve(cve_id, extended_support_cve)
+
+        # Extract namespaces from results
+        namespaces = sorted([r.namespace for r in results])
+
+        # Currently this will likely only have extended support namespaces.
+        # We want it to ALSO include rhel:6 (the base RHEL version).
+        # This assertion should FAIL until we implement the fix.
+        assert "rhel:6" in namespaces, (
+            f"Expected rhel:6 in namespaces but got {namespaces}. "
+            "When a CVE is fixed in RHEL 6 Extended Support, we should infer "
+            "that regular RHEL 6 is also affected."
+        )
+
+        # Additionally verify that we have a bind package entry for rhel:6
+        rhel6_results = [r for r in results if r.namespace == "rhel:6"]
+        assert len(rhel6_results) > 0, "Expected at least one result for rhel:6"
+
+        rhel6_payload = rhel6_results[0].payload
+        fixed_in = rhel6_payload.get("Vulnerability", {}).get("FixedIn", [])
+        bind_entries = [f for f in fixed_in if f.get("Name") == "bind"]
+        assert len(bind_entries) > 0, (
+            "Expected bind package in rhel:6 FixedIn list. "
+            "The package is fixed in RHEL 6 ELS Extension, so it should be marked as affected in regular RHEL 6."
+        )
