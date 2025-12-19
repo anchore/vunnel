@@ -39,13 +39,11 @@ jobs:
 
       - name: Split providers by concurrency needs
         id: split-providers
-        # TODO: stop splitting providers based on a hard coded value. Maybe
-        # in the future something like `vunnel list --only-concurrent` could
-        # supply the values here. Hard code for now.
         run: |
-          all_providers='${{ steps.determine-providers.outputs.providers }}'
-          multicore_providers=$(echo "$all_providers" | jq -c '[.[] | select(. == "ubuntu")]')
-          other_providers=$(echo "$all_providers" | jq -c '[.[] | select(. != "ubuntu")]')
+          cd tests/quality
+          # use vunnel's tag system to split providers by concurrency needs
+          multicore_providers=$(make all-providers TAG=multicore)
+          other_providers=$(make all-providers TAG='!multicore')
           echo "multicore-providers=$multicore_providers" >> $GITHUB_OUTPUT
           echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 
@@ -131,7 +129,16 @@ jobs:
         run: |
           echo "Validations Status: $VALIDATION_STATUS"
           echo "Validations Multicore Status: $VALIDATION_MULTICORE_STATUS"
-          if [ "$VALIDATION_STATUS" != "success" ] || [ "$VALIDATION_MULTICORE_STATUS" != "success" ]; then
+          # allow "skipped" status since empty matrices result in skipped jobs
+          case "$VALIDATION_STATUS" in
+            success|skipped) ;;
+            *) fail=1 ;;
+          esac
+          case "$VALIDATION_MULTICORE_STATUS" in
+            success|skipped) ;;
+            *) fail=1 ;;
+          esac
+          if [ "$fail" = 1 ]; then
             echo "🔴 Quality gate FAILED! 😭"
             exit 1
           fi

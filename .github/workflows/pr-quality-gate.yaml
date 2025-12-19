@@ -148,7 +148,16 @@ jobs:
             echo "🟢 Quality gate passed! (no providers changed)"
             exit 0
           fi
-          if [ "$VALIDATION_STATUS" != "success" ] || [ "$VALIDATION_MULTICORE_STATUS" != "success" ]; then
+          # allow "skipped" status since empty matrices result in skipped jobs
+          case "$VALIDATION_STATUS" in
+            success|skipped) ;;
+            *) fail=1 ;;
+          esac
+          case "$VALIDATION_MULTICORE_STATUS" in
+            success|skipped) ;;
+            *) fail=1 ;;
+          esac
+          if [ "$fail" = 1 ]; then
             echo "🔴 Quality gate FAILED! 😭"
             echo
             echo "This could happen for a couple of reasons:"
