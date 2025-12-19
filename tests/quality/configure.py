@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import dataclasses
 import enum
 import fnmatch
@@ -19,13 +20,15 @@ import mergedeep
 import requests
 import yaml
 from mashumaro.mixins.dict import DataClassDictMixin
+from yardstick.cli.config import Application as YardstickApplication
 from yardstick.cli.config import (
     ResultSet,
     ScanMatrix,
     Tool,
     Validation,
 )
-from yardstick.cli.config import Application as YardstickApplication
+
+from vunnel import providers as vunnel_providers
 
 BIN_DIR = "./bin"
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
@@ -363,11 +366,12 @@ def yardstick_version_changed():
 
 @cli.command(name="select-providers", help="determine the providers to test from a file changeset")
 @click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
+@click.option("--tag", "-t", "tag", help="filter by vunnel tag (prefix with ! to exclude)", default=None)
 @click.pass_obj
-def select_providers(cfg: Config, output_json: bool):
+def select_providers(cfg: Config, output_json: bool, tag: str | None):
     changed_files = changes()
 
-    selected_providers = set()
+    selected_providers: set[str] = set()
 
     # look for gate changes, if any, then run all providers
     gate_globs = [
@@ -382,10 +386,10 @@ def select_providers(cfg: Config, output_json: bool):
     for search_glob in gate_globs:
         for changed_file in changed_files:
             if fnmatch.fnmatch(changed_file, search_glob):
-                selected_providers = {test.provider for test in cfg.tests}
+                selected_providers = {test.provider for test in cfg.tests if test.provider}
 
     if yardstick_version_changed():
-        selected_providers = {test.provider for test in cfg.tests}
+        selected_providers = {test.provider for test in cfg.tests if test.provider}
 
     if not selected_providers:
         # there are no gate changes, so look for provider-specific changes
@@ -409,6 +413,11 @@ def select_providers(cfg: Config, output_json: bool):
                         logging.debug(f"provider {test.provider} is affected by file change {changed_file}")
                         selected_providers.add(test.provider)
                         break
+
+    # filter by vunnel tag if specified
+    if tag:
+        tagged = set(vunnel_providers.providers_with_tags([tag]))
+        selected_providers = selected_providers & tagged
 
     sorted_providers = sorted(selected_providers)
 

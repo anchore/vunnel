@@ -70,6 +70,13 @@ class Provider(provider.Provider):
         return "rhel"
 
     @classmethod
+    def tags(cls) -> list[str]:
+        return [
+            "vulnerability",
+            "os",
+        ]
+
+    @classmethod
     def supports_skip_download(cls) -> bool:
         return True
 

@@ -12,7 +12,7 @@ import click
 import yaml
 
 from vunnel import __name__ as package_name
-from vunnel import providers
+from vunnel import provider, providers
 from vunnel.cli import config
 
 
@@ -262,7 +262,45 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
 
 
 @cli.command(name="list", help="list available providers")
+@click.option(
+    "--tag",
+    "-t",
+    "tags",
+    multiple=True,
+    help="filter by tag (can repeat). Prefix with '!' to exclude (e.g., -t !auxiliary)",
+)
+@click.option(
+    "--output",
+    "-o",
+    "output_format",
+    type=click.Choice(["list", "json"]),
+    default="list",
+    help="output format",
+)
 @click.pass_obj
-def list_providers(cfg: config.Application) -> None:
-    for p in providers.names():
-        print(p)
+def list_providers(cfg: config.Application, tags: tuple[str, ...], output_format: str) -> None:
+    try:
+        provider_names = providers.providers_with_tags(list(tags)) if tags else providers.names()
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+
+    if output_format == "json":
+        output: dict[str, list[dict[str, Any]]] = {"providers": []}
+        for name in provider_names:
+            cls = providers.provider_class(name)
+            schema = cls.schema()
+            output["providers"].append(
+                {
+                    "name": name,
+                    "version": cls.version(),
+                    "schema": {
+                        "name": schema.name if schema else "",
+                        "version": schema.version if schema else "",
+                    },
+                    "tags": provider.get_provider_tags(cls),
+                },
+            )
+        print(json.dumps(output, indent=2))  # noqa: TID251
+    else:
+        for p in provider_names:
+            print(p)

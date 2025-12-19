@@ -61,6 +61,17 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "ubuntu"
 
+    @classmethod
+    def tags(cls) -> list[str]:
+        return [
+            "vulnerability",
+            "os",
+            # The multicore tag is critical. Providers with this tag will be run on larger runners that can utilize
+            # the increased resource usage to reduce overall runtime.
+            # This is particularly important for the ubuntu provider (which can take hours to run).
+            "multicore",
+        ]
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
             with self.results_writer() as writer, self.parser:

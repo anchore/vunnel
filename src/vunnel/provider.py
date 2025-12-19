@@ -8,7 +8,7 @@ import os
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 from vunnel.utils import archive, hasher
@@ -160,6 +160,11 @@ class Provider(abc.ABC):
         provider itself (which is valid during processing, but not strictly interpreting results)."""
         workspace_version = int(schema_def.ProviderStateSchema().major_version)
         return (workspace_version - 1) + cls.__distribution_version__
+
+    @classmethod
+    def schema(cls) -> schema_def.Schema | None:
+        """Return the schema object for this provider, or None if not defined."""
+        return getattr(cls, "__schema__", None)
 
     @classmethod
     @abc.abstractmethod
@@ -371,3 +376,23 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
     archive.extract(archive_path, unarchive_path)
 
     return unarchive_path
+
+
+@runtime_checkable
+class HasTags(Protocol):
+    """Protocol for providers that support tags/labels."""
+
+    @classmethod
+    def tags(cls) -> list[str]:
+        """Return a list of tag names for this provider."""
+        ...
+
+
+def get_provider_tags(provider_cls: type[Provider]) -> list[str]:
+    """Safely retrieve tags from a provider class.
+
+    Returns an empty list if the provider doesn't implement tags.
+    """
+    if isinstance(provider_cls, HasTags):
+        return provider_cls.tags()
+    return []

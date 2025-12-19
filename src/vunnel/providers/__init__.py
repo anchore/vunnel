@@ -30,6 +30,8 @@ from vunnel.providers import (
 if TYPE_CHECKING:
     from vunnel import provider
 
+from vunnel.provider import get_provider_tags
+
 _providers: dict[str, type[provider.Provider]] = {
     # vulnerability providers
     alma.Provider.name(): alma.Provider,
@@ -92,3 +94,44 @@ def load_plugins() -> None:
         except Exception:
             # note: this should not be fatal. Log and move on.
             logging.exception(f"failed loading provider plugin {tool.name!r}")
+
+
+def provider_class(name: str) -> type[provider.Provider]:
+    """Return the provider class for a given provider name."""
+    return _providers[name]
+
+
+def providers_with_tags(required_tags: list[str]) -> list[str]:
+    """Return provider names that match tag criteria.
+
+    Tags prefixed with '!' are exclusion filters.
+    Providers must have ALL non-negated tags AND NONE of the negated tags.
+
+    Raises:
+        ValueError: If a tag is empty or just '!' with no tag name.
+    """
+    if not required_tags:
+        return names()
+
+    include_tags = set()
+    exclude_tags = set()
+    for tag in required_tags:
+        if tag.startswith("!"):
+            tag_name = tag[1:]
+            if not tag_name:
+                raise ValueError("invalid tag: '!' requires a tag name (e.g., '!os')")
+            exclude_tags.add(tag_name)
+        else:
+            include_tags.add(tag)
+
+    result = []
+    for name, cls in _providers.items():
+        provider_tags = set(get_provider_tags(cls))
+        # must have ALL include tags
+        if include_tags and not include_tags.issubset(provider_tags):
+            continue
+        # must have NONE of the exclude tags
+        if exclude_tags and exclude_tags.intersection(provider_tags):
+            continue
+        result.append(name)
+    return sorted(result)
