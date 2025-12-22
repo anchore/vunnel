@@ -139,22 +139,41 @@ jobs:
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
           VALIDATION_MULTICORE_STATUS: ${{ needs.validate-provider-multicore.result }}
           PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.providers }}
+          MULTICORE_PROVIDERS: ${{ needs.select-providers.outputs.multicore-providers }}
+          OTHER_PROVIDERS: ${{ needs.select-providers.outputs.other-providers }}
         run: |
           echo "Validations Status: $VALIDATION_STATUS"
           echo "Validations Multicore Status: $VALIDATION_MULTICORE_STATUS"
           echo "Providers that require testing: $PROVIDERS_TO_TEST"
+          echo "  - Multicore providers: $MULTICORE_PROVIDERS"
+          echo "  - Other providers: $OTHER_PROVIDERS"
           echo
           if [ "$PROVIDERS_TO_TEST" == '[]' ]; then
             echo "🟢 Quality gate passed! (no providers changed)"
             exit 0
           fi
-          # allow "skipped" status since empty matrices result in skipped jobs
+          # Check other-providers validation
+          # "skipped" is only OK if the provider list is empty (nothing to test)
+          # "skipped" with providers in the list means the label is missing
           case "$VALIDATION_STATUS" in
-            success|skipped) ;;
+            success) ;;
+            skipped)
+              if [ "$OTHER_PROVIDERS" != '[]' ]; then
+                echo "❌ Other providers need testing but job was skipped (missing label?)"
+                fail=1
+              fi
+              ;;
             *) fail=1 ;;
           esac
+          # Check multicore-providers validation
           case "$VALIDATION_MULTICORE_STATUS" in
-            success|skipped) ;;
+            success) ;;
+            skipped)
+              if [ "$MULTICORE_PROVIDERS" != '[]' ]; then
+                echo "❌ Multicore providers need testing but job was skipped (missing label?)"
+                fail=1
+              fi
+              ;;
             *) fail=1 ;;
           esac
           if [ "$fail" = 1 ]; then
