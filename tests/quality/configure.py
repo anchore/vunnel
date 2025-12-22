@@ -430,9 +430,15 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
 
 @cli.command(name="all-providers", help="show all providers available to test")
 @click.option("--json", "-j", "output_json", help="output result as json list (useful for CI)", is_flag=True)
+@click.option("--tag", "-t", "tag", help="filter by vunnel tag (prefix with ! to exclude)", default=None)
 @click.pass_obj
-def all_providers(cfg: Config, output_json: bool):
+def all_providers(cfg: Config, output_json: bool, tag: str | None):
     selected_providers = {test.provider for test in cfg.tests}
+
+    if tag:
+        tagged = set(vunnel_providers.providers_with_tags([tag]))
+        selected_providers = selected_providers & tagged
+
     sorted_providers = sorted(selected_providers)
 
     if output_json:

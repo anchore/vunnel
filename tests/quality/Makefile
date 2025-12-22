@@ -41,7 +41,7 @@ show-changes: ## Show the current file changeset
 
 .PHONY: all-providers
 all-providers: ## Select all providers for testing
-	@uv run python ./configure.py all-providers --json 2>/dev/null
+	@uv run python ./configure.py all-providers --json $(if $(TAG),-t $(TAG)) 2>/dev/null
 
 .PHONY: select-providers
 select-providers: ## Determine the provider(s) to use for testing based on the file changeset
