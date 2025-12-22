@@ -794,19 +794,22 @@ class Parser:
             inferred_base_records: dict[str, list[FixedIn]] = {}
             for platform, artifacts in platform_artifacts.items():
                 base_platform = self._get_base_platform(platform)
-                if base_platform and base_platform not in platform_artifacts:
-                    if base_platform not in inferred_base_records:
-                        inferred_base_records[base_platform] = []
-                    for artifact in artifacts:
-                        inferred_base_records[base_platform].append(
-                            FixedIn(
-                                platform=base_platform,
-                                package=artifact.package,
-                                version="None",
-                                module=artifact.module,
-                                advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
-                            ),
-                        )
+                if not base_platform or base_platform in platform_artifacts:
+                    continue
+                if f"{namespace}:{base_platform}" in self.skip_namespaces:
+                    continue
+                if base_platform not in inferred_base_records:
+                    inferred_base_records[base_platform] = []
+                for artifact in artifacts:
+                    inferred_base_records[base_platform].append(
+                        FixedIn(
+                            platform=base_platform,
+                            package=artifact.package,
+                            version="None",
+                            module=artifact.module,
+                            advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
+                        ),
+                    )
 
             for base_platform, records in inferred_base_records.items():
                 platform_artifacts[base_platform] = records
