@@ -1,4 +1,6 @@
 from __future__ import annotations
+import os
+import tempfile
 
 import sqlite3
 import subprocess
@@ -1075,3 +1077,52 @@ class TestStore:
 
         # verify both tags were tried
         assert mock_subprocess_run.call_count == 2
+
+    def test_vunnel_oras_path_absolute(self, mocker):
+        """test VUNNEL_ORAS_PATH with absolute path"""
+        # Create a fake oras binary
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='oras') as f:
+            fake_oras = f.name
+        os.chmod(fake_oras, 0o755)
+        
+        try:
+            mocker.patch.dict(os.environ, {"VUNNEL_ORAS_PATH": fake_oras})
+            from vunnel.tool.fixdate.grype_db_first_observed import _check_oras_path_override
+            result = _check_oras_path_override()
+            assert result is not None
+            assert os.path.samefile(result, fake_oras)
+        finally:
+            os.unlink(fake_oras)
+
+    def test_vunnel_oras_path_in_path(self, mocker):
+        """test VUNNEL_ORAS_PATH with command name in PATH"""
+        mocker.patch.dict(os.environ, {"VUNNEL_ORAS_PATH": "ls"})  # ls is always in PATH
+        from vunnel.tool.fixdate.grype_db_first_observed import _check_oras_path_override
+        result = _check_oras_path_override()
+        assert result is not None
+        assert result.endswith("ls")
+
+    def test_vunnel_oras_path_not_executable(self, mocker, tmpdir):
+        """test VUNNEL_ORAS_PATH with non-executable file"""
+        fake_oras = tmpdir.join("oras")
+        fake_oras.write("")
+        # Don't make it executable
+        
+        mocker.patch.dict(os.environ, {"VUNNEL_ORAS_PATH": str(fake_oras)})
+        from vunnel.tool.fixdate.grype_db_first_observed import _check_oras_path_override
+        result = _check_oras_path_override()
+        assert result is None
+
+    def test_vunnel_oras_path_not_found(self, mocker):
+        """test VUNNEL_ORAS_PATH with nonexistent path"""
+        mocker.patch.dict(os.environ, {"VUNNEL_ORAS_PATH": "/nonexistent/oras"})
+        from vunnel.tool.fixdate.grype_db_first_observed import _check_oras_path_override
+        result = _check_oras_path_override()
+        assert result is None
+
+    def test_vunnel_oras_path_not_set(self, mocker):
+        """test that None is returned when VUNNEL_ORAS_PATH is not set"""
+        mocker.patch.dict(os.environ, {}, clear=True)
+        from vunnel.tool.fixdate.grype_db_first_observed import _check_oras_path_override
+        result = _check_oras_path_override()
+        assert result is None
