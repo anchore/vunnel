@@ -43,6 +43,7 @@ class Parser:
     __cve_rhel_product_name_base__ = "Red Hat Enterprise Linux"
     __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
     __rhel_eus_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+\.\d+) Extended Update Support")
+    __rhel_els_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+) Extended Lifecycle Support")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
     __last_synced_filename__ = "last_synced"
     __cve_download_error_filename__ = "failed_cves"
@@ -663,6 +664,7 @@ class Parser:
 
     def _parse_platform(self, product_name: str | None) -> str | None:
         is_eus = False
+        is_els = False
         match = re.match(
             self.__rhel_release_pattern__,
             product_name,
@@ -672,14 +674,38 @@ class Parser:
                 self.__rhel_eus_pattern__,
                 product_name,
             )
-            if not match:
-                return None
-            is_eus = True
+            if match:
+                is_eus = True
+            else:
+                match = re.match(
+                    self.__rhel_els_pattern__,
+                    product_name,
+                )
+                if match:
+                    is_els = True
+                else:
+                    return None
 
         platform = match.group(1)
         if platform and is_eus:
             platform = f"{platform}+eus"
+        elif platform and is_els:
+            platform = f"{platform}+els"
         return platform
+
+    def _get_base_platform(self, platform: str) -> str | None:
+        """Extract base major version from extended support platform.
+
+        Examples:
+            "8.6+eus" -> "8"
+            "6+els" -> "6"
+            "8" -> None (already base)
+        """
+        if "+eus" in platform:
+            return platform.split(".")[0]
+        if "+els" in platform:
+            return platform.replace("+els", "")
+        return None
 
     def _parse_cvss3(self, cvss3: dict | None) -> RHELCVSS3 | None:
         if not cvss3:
@@ -763,6 +789,30 @@ class Parser:
                     platform_artifacts[item.platform] = []
 
                 platform_artifacts[item.platform].append(item)
+
+            # Infer base platform records when only extended support channels have data
+            inferred_base_records: dict[str, list[FixedIn]] = {}
+            for platform, artifacts in platform_artifacts.items():
+                base_platform = self._get_base_platform(platform)
+                if not base_platform or base_platform in platform_artifacts:
+                    continue
+                if f"{namespace}:{base_platform}" in self.skip_namespaces:
+                    continue
+                if base_platform not in inferred_base_records:
+                    inferred_base_records[base_platform] = []
+                for artifact in artifacts:
+                    inferred_base_records[base_platform].append(
+                        FixedIn(
+                            platform=base_platform,
+                            package=artifact.package,
+                            version="None",
+                            module=artifact.module,
+                            advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
+                        ),
+                    )
+
+            for base_platform, records in inferred_base_records.items():
+                platform_artifacts[base_platform] = records
 
             for platform, artifacts in platform_artifacts.items():
                 ns = f"{namespace}:{platform}"

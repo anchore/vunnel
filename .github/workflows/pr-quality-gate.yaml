@@ -57,7 +57,7 @@ jobs:
     runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=32/volume=80gb:gp3/family=r8+m8+r7+r6i+r6a+m7+m6i+m6a
     timeout-minutes: 480
     needs: select-providers
-    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate')
+    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.multicore-providers != '[]'
 
     strategy:
       matrix:
@@ -94,7 +94,7 @@ jobs:
     runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/runner=quality-gate
     timeout-minutes: 480
     needs: select-providers
-    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate')
+    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.other-providers != '[]'
 
     strategy:
       matrix:
