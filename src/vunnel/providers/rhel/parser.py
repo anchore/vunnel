@@ -815,6 +815,8 @@ class Parser:
                 platform_artifacts[base_platform] = records
 
             for platform, artifacts in platform_artifacts.items():
+                if "+els" in platform:
+                    continue
                 ns = f"{namespace}:{platform}"
 
                 # if len(artifacts) == 1 and artifacts[0].advisory.severity and artifacts[0].advisory.severity != sev:
