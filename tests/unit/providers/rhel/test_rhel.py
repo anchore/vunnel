@@ -1031,3 +1031,11 @@ class TestExtendedSupportInference:
             "Expected bind package in rhel:6 FixedIn list. "
             "The package is fixed in RHEL 6 ELS Extension, so it should be marked as affected in regular RHEL 6."
         )
+
+        # Verify that ELS namespaces are NOT emitted (they cause unique constraint
+        # violations in older clients that strip the +els suffix)
+        els_results = [r for r in results if "+els" in r.namespace]
+        assert len(els_results) == 0, (
+            f"ELS namespaces should not be emitted, but found: {[r.namespace for r in els_results]}. "
+            "Old clients strip +els and get unique constraint violations with the base namespace."
+        )
