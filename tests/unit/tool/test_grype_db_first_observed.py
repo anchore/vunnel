@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sqlite3
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -225,13 +224,22 @@ class TestStore:
         )
         assert len(results) == 1
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_success(self, mock_oras_client_class, tmpdir):
+    def test_download_success(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock the ORAS client
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
+
+        # mock the ORAS client for pull
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
@@ -265,11 +273,20 @@ class TestStore:
         # verify the zstd file was removed
         assert not download_zst_path.exists()
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_failure(self, mock_oras_client_class, tmpdir):
+    def test_download_failure(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
+
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
 
         # mock the ORAS client to raise an exception
         mock_client = Mock()
@@ -280,11 +297,20 @@ class TestStore:
         with pytest.raises(Exception, match="Download failed"):
             store.download()
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_not_found(self, mock_oras_client_class, tmpdir):
+    def test_download_not_found(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
+
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -310,7 +336,18 @@ class TestStore:
         # ensure directory doesn't exist initially
         assert not store.db_path.parent.exists()
 
-        with patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient") as mock_oras_client_class:
+        with (
+            patch("oras.client.OrasClient") as mock_oras_client_constructor,
+            patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient") as mock_oras_client_class,
+        ):
+            # mock oras client for _get_remote_digest
+            mock_digest_client = Mock()
+            mock_oras_client_constructor.return_value = mock_digest_client
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+            mock_digest_client.do_request.return_value = mock_response
+
             mock_client = Mock()
             mock_oras_client_class.return_value = mock_client
 
@@ -328,11 +365,20 @@ class TestStore:
             # verify directory was created
             assert store.db_path.parent.exists()
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_get_after_not_found_download(self, mock_oras_client_class, tmpdir):
+    def test_get_after_not_found_download(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
+
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -350,11 +396,20 @@ class TestStore:
         )
         assert results == []
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_find_after_not_found_download(self, mock_oras_client_class, tmpdir):
+    def test_find_after_not_found_download(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
+
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -372,11 +427,20 @@ class TestStore:
         )
         assert results == []
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_get_changed_vuln_ids_since_after_not_found(self, mock_oras_client_class, tmpdir):
+    def test_get_changed_vuln_ids_since_after_not_found(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
+
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
 
         # mock the ORAS client to raise a "not found" ValueError
         mock_client = Mock()
@@ -404,14 +468,23 @@ class TestStore:
                 fix_version="1.0.0",
             )
 
+    @patch("oras.client.OrasClient")
     @patch.dict("os.environ", {"GITHUB_TOKEN": "test-token"})
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_with_github_token(self, mock_oras_client_class, tmpdir):
+    def test_download_with_github_token(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock the ORAS client
+        # mock oras client for _get_remote_digest (returns a digest so download proceeds)
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
+
+        # mock the ORAS client for pull
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
@@ -424,7 +497,14 @@ class TestStore:
         # run download
         store.download()
 
-        # verify login was called with GitHub token
+        # verify login was called with GitHub token on the digest client
+        mock_digest_client.login.assert_called_with(
+            hostname="ghcr.io",
+            username="token",
+            password="test-token",
+        )
+
+        # verify login was called with GitHub token on the pull client
         mock_client.login.assert_called_once_with(
             hostname="ghcr.io",
             username="token",
@@ -802,9 +882,9 @@ class TestStore:
             )
             assert len(results) == expected_count, f"Case insensitive full_cpe test failed for '{cpe}': got {len(results)}, expected {expected_count}"
 
-    @patch("subprocess.run")
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_with_digest_caching_skips_when_unchanged(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+    def test_download_with_digest_caching_skips_when_unchanged(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         """test that download is skipped when digest matches"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
@@ -815,42 +895,33 @@ class TestStore:
         test_digest = "sha256:abc123def456"
         store.digest_path.write_text(test_digest)
 
-        # mock oras resolve to return same digest
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = test_digest + "\n"
-        mock_subprocess_run.return_value = mock_result
+        # mock oras client for _get_remote_digest (returns same digest)
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": test_digest}
+        mock_digest_client.do_request.return_value = mock_response
 
-        # mock oras client (should not be called)
-        mock_client = Mock()
-        mock_oras_client_class.return_value = mock_client
-
-        # mock oras binary exists check
-        original_exists = Path.exists
-        def mock_exists(self):
-            if str(self).endswith("/.tool/oras"):
-                return True
-            return original_exists(self)
+        # mock oras client for pull (should not be called)
+        mock_pull_client = Mock()
+        mock_oras_client_class.return_value = mock_pull_client
 
         # run download
-        with patch.object(Path, "exists", mock_exists):
-            store.download()
+        store.download()
 
-        # verify oras resolve was called with binny-installed oras
-        mock_subprocess_run.assert_called_once()
-        call_args = mock_subprocess_run.call_args[0][0]
-        assert call_args[0].endswith("/.tool/oras")
-        assert call_args[1:] == ["resolve", "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest-zstd"]
+        # verify do_request was called for digest resolution
+        mock_digest_client.do_request.assert_called_once()
 
         # verify oras pull was NOT called (download skipped)
-        mock_client.pull.assert_not_called()
+        mock_pull_client.pull.assert_not_called()
 
         # verify database file unchanged
         assert store.db_path.read_text() == "existing db"
 
-    @patch("subprocess.run")
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_with_digest_caching_downloads_when_changed(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+    def test_download_with_digest_caching_downloads_when_changed(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         """test that download proceeds when digest changes"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
@@ -861,16 +932,18 @@ class TestStore:
         old_digest = "sha256:old123"
         store.digest_path.write_text(old_digest)
 
-        # mock oras resolve to return new digest
+        # mock oras client for _get_remote_digest (returns new digest)
         new_digest = "sha256:new456"
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = new_digest + "\n"
-        mock_subprocess_run.return_value = mock_result
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": new_digest}
+        mock_digest_client.do_request.return_value = mock_response
 
-        # mock oras client
-        mock_client = Mock()
-        mock_oras_client_class.return_value = mock_client
+        # mock oras client for pull
+        mock_pull_client = Mock()
+        mock_oras_client_class.return_value = mock_pull_client
 
         # create the expected zstd-compressed download file
         download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
@@ -878,37 +951,37 @@ class TestStore:
         cctx = zstandard.ZstdCompressor()
         download_zst_path.write_bytes(cctx.compress(b"new db content"))
 
-        # mock oras binary exists check
-        original_exists = Path.exists
-        def mock_exists(self):
-            if str(self).endswith("/.tool/oras"):
-                return True
-            return original_exists(self)
-
         # run download
-        with patch.object(Path, "exists", mock_exists):
-            store.download()
+        store.download()
 
-        # verify oras resolve was called
-        mock_subprocess_run.assert_called_once()
+        # verify do_request was called for digest resolution
+        mock_digest_client.do_request.assert_called_once()
 
         # verify oras pull WAS called (download happened)
-        mock_client.pull.assert_called_once()
+        mock_pull_client.pull.assert_called_once()
 
         # verify new digest was saved
         assert store.digest_path.read_text().strip() == new_digest
         assert store.db_path.read_bytes() == b"new db content"
 
-    @patch("subprocess.run")
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_without_oras_cli_proceeds_normally(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
-        """test that download works when oras CLI is not available"""
+    def test_download_with_digest_resolution_failure_proceeds_normally(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
+        """test that download works when digest resolution fails"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock oras client
-        mock_client = Mock()
-        mock_oras_client_class.return_value = mock_client
+        # mock oras client for _get_remote_digest (returns 404)
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_response.headers = {}
+        mock_digest_client.do_request.return_value = mock_response
+
+        # mock oras client for pull
+        mock_pull_client = Mock()
+        mock_oras_client_class.return_value = mock_pull_client
 
         # create the expected zstd-compressed download file
         download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
@@ -916,29 +989,18 @@ class TestStore:
         cctx = zstandard.ZstdCompressor()
         download_zst_path.write_bytes(cctx.compress(b"db content"))
 
-        # mock Path.exists to return False for oras binary (oras not found)
-        original_exists = Path.exists
-        def mock_exists(self):
-            if str(self).endswith("/.tool/oras"):
-                return False
-            return original_exists(self)
-
         # run download
-        with patch.object(Path, "exists", mock_exists):
-            store.download()
-
-        # verify subprocess was NOT called
-        mock_subprocess_run.assert_not_called()
+        store.download()
 
         # verify oras pull WAS called (download proceeded without digest check)
-        mock_client.pull.assert_called_once()
+        mock_pull_client.pull.assert_called_once()
 
         # verify database file exists
         assert store.db_path.read_bytes() == b"db content"
 
-    @patch("subprocess.run")
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_with_missing_digest_file_downloads(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+    def test_download_with_missing_digest_file_downloads(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         """test that download proceeds when digest file is missing"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
@@ -947,16 +1009,18 @@ class TestStore:
         store.db_path.parent.mkdir(parents=True, exist_ok=True)
         store.db_path.write_text("existing db")
 
-        # mock oras resolve
+        # mock oras client for _get_remote_digest
         test_digest = "sha256:abc123"
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = test_digest + "\n"
-        mock_subprocess_run.return_value = mock_result
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": test_digest}
+        mock_digest_client.do_request.return_value = mock_response
 
-        # mock oras client
-        mock_client = Mock()
-        mock_oras_client_class.return_value = mock_client
+        # mock oras client for pull
+        mock_pull_client = Mock()
+        mock_oras_client_class.return_value = mock_pull_client
 
         # create the expected zstd-compressed download file
         download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
@@ -964,36 +1028,30 @@ class TestStore:
         cctx = zstandard.ZstdCompressor()
         download_zst_path.write_bytes(cctx.compress(b"new db content"))
 
-        # mock oras binary exists check
-        original_exists = Path.exists
-        def mock_exists(self):
-            if str(self).endswith("/.tool/oras"):
-                return True
-            return original_exists(self)
-
         # run download
-        with patch.object(Path, "exists", mock_exists):
-            store.download()
+        store.download()
 
         # verify oras pull WAS called (no digest file means download)
-        mock_client.pull.assert_called_once()
+        mock_pull_client.pull.assert_called_once()
 
         # verify digest file was created
         assert store.digest_path.read_text().strip() == test_digest
 
-    @patch("subprocess.run")
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_with_oras_resolve_failure_downloads(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
-        """test that download proceeds when oras resolve fails"""
+    def test_download_with_oras_resolve_exception_downloads(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
+        """test that download proceeds when oras resolve raises exception"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock oras resolve to fail
-        mock_subprocess_run.side_effect = subprocess.CalledProcessError(1, "oras", stderr="not found")
+        # mock oras client for _get_remote_digest to raise exception
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_digest_client.do_request.side_effect = Exception("connection error")
 
-        # mock oras client
-        mock_client = Mock()
-        mock_oras_client_class.return_value = mock_client
+        # mock oras client for pull
+        mock_pull_client = Mock()
+        mock_oras_client_class.return_value = mock_pull_client
 
         # create the expected zstd-compressed download file
         download_zst_path = Path(ws.input_path) / "fix-dates" / "test-db.db.zst"
@@ -1005,18 +1063,27 @@ class TestStore:
         store.download()
 
         # verify oras pull WAS called (resolve failure means download)
-        mock_client.pull.assert_called_once()
+        mock_pull_client.pull.assert_called_once()
 
         # verify database file exists
         assert store.db_path.exists()
 
+    @patch("oras.client.OrasClient")
     @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_download_uncompressed_db_file(self, mock_oras_client_class, tmpdir):
+    def test_download_uncompressed_db_file(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
         """test that download handles uncompressed .db file (no .zst)"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock the ORAS client
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Docker-Content-Digest": "sha256:test123"}
+        mock_digest_client.do_request.return_value = mock_response
+
+        # mock the ORAS client for pull
         mock_client = Mock()
         mock_oras_client_class.return_value = mock_client
 
@@ -1036,42 +1103,36 @@ class TestStore:
         assert store.db_path.exists()
         assert store.db_path.read_text() == "uncompressed db content"
 
-    @patch("subprocess.run")
-    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
-    def test_resolve_image_ref_fallback(self, mock_oras_client_class, mock_subprocess_run, tmpdir):
+    @patch("oras.client.OrasClient")
+    def test_resolve_image_ref_fallback(self, mock_oras_client_constructor, tmpdir):
         """test that _resolve_image_ref falls back from latest-zstd to latest"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
-        # mock oras binary exists
-        original_exists = Path.exists
+        # mock oras client for _get_remote_digest
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
 
-        def mock_exists(self):
-            if str(self).endswith("/.tool/oras"):
-                return True
-            return original_exists(self)
+        # first call (latest-zstd) fails with non-200, second call (latest) succeeds
+        mock_response_fail = Mock()
+        mock_response_fail.status_code = 404
+        mock_response_fail.headers = {}
 
-        # first call (latest-zstd) fails, second call (latest) succeeds
-        mock_result_fail = Mock()
-        mock_result_fail.returncode = 1
-        mock_result_fail.stderr = "not found"
+        mock_response_success = Mock()
+        mock_response_success.status_code = 200
+        mock_response_success.headers = {"Docker-Content-Digest": "sha256:latest123"}
 
-        mock_result_success = Mock()
-        mock_result_success.returncode = 0
-        mock_result_success.stdout = "sha256:latest123\n"
-
-        mock_subprocess_run.side_effect = [
-            subprocess.CalledProcessError(1, "oras", stderr="not found"),
-            mock_result_success,
+        mock_digest_client.do_request.side_effect = [
+            mock_response_fail,
+            mock_response_success,
         ]
 
         # run _resolve_image_ref
-        with patch.object(Path, "exists", mock_exists):
-            image_ref, digest = store._resolve_image_ref("ghcr.io/anchore/grype-db-observed-fix-date/test-db")
+        image_ref, digest = store._resolve_image_ref("ghcr.io/anchore/grype-db-observed-fix-date/test-db")
 
         # verify it returned the latest tag
         assert image_ref == "ghcr.io/anchore/grype-db-observed-fix-date/test-db:latest"
         assert digest == "sha256:latest123"
 
         # verify both tags were tried
-        assert mock_subprocess_run.call_count == 2
+        assert mock_digest_client.do_request.call_count == 2
