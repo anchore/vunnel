@@ -1,6 +1,5 @@
 import logging
 import os
-import subprocess
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -110,7 +109,7 @@ class Store(Strategy):
         self._downloaded = False
 
     def _get_remote_digest(self, image_ref: str) -> str | None:
-        """Get the digest of a remote OCI artifact using oras resolve.
+        """Get the digest of a remote OCI artifact using oras client.
 
         Args:
             image_ref: Full image reference (e.g., "ghcr.io/org/repo:tag")
@@ -118,30 +117,34 @@ class Store(Strategy):
         Returns:
             Digest string (e.g., "sha256:abc123...") or None if failed
         """
-        # use oras binary installed by binny (relative to repo root)
-        # this avoids using an arbitrary oras from PATH which could be untrusted
-        # path: grype_db_first_observed.py -> fixdate -> tool -> vunnel -> src -> repo root
-        oras_path = Path(__file__).parent.parent.parent.parent.parent / ".tool" / "oras"
-        if not oras_path.exists():
-            self.logger.warning(f"oras not found at {oras_path}, cannot check for digest changes")
-            return None
+        import oras.defaults
 
         try:
-            # S603 explanation: image ref is constructed from trusted literals elsewhere in this class
-            result = subprocess.run(  # noqa: S603
-                [str(oras_path), "resolve", image_ref],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=True,
-            )
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            self.logger.debug(f"oras resolve failed: {e.stderr}")
+            client = oras.client.OrasClient()
+
+            # authenticate if token is available
+            github_token = os.getenv("GITHUB_TOKEN")
+            if github_token:
+                client.login(
+                    hostname="ghcr.io",
+                    username="token",
+                    password=github_token,
+                )
+
+            # parse the image reference and get manifest URL
+            container = client.get_container(image_ref)
+            manifest_url = f"{client.prefix}://{container.manifest_url()}"
+
+            # HEAD request to get digest from Docker-Content-Digest header
+            headers = {"Accept": oras.defaults.default_manifest_media_type}
+            response = client.do_request(manifest_url, "HEAD", headers=headers)
+
+            if response.status_code == 200:
+                return response.headers.get("Docker-Content-Digest")
+
+            self.logger.debug(f"manifest HEAD request returned status {response.status_code}")
             return None
-        except subprocess.TimeoutExpired:
-            self.logger.warning(f"oras resolve timed out for {image_ref}")
-            return None
+
         except Exception as e:
             self.logger.debug(f"failed to get remote digest: {e}")
             return None
