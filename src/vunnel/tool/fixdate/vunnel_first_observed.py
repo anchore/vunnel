@@ -31,13 +31,15 @@ class FixDate:
 
 
 class Store:
-    def __init__(self, ws: workspace.Workspace) -> None:
+    def __init__(self, ws: workspace.Workspace, batch_size: int = 2000) -> None:
         self.workspace = ws
         self.provider = ws.name
         self.db_path = Path(ws.results_path) / "observed-fix-dates.db"
         self.logger = logging.getLogger("fixes-" + self.provider)
         self.engine: db.engine.Engine | None = None
         self._thread_local = threading.local()
+        self.batch_size = batch_size
+        self._pending_operations = 0
 
     def add(
         self,
@@ -73,7 +75,19 @@ class Store:
         )
 
         conn.execute(insert_stmt)
-        conn.commit()
+        self._pending_operations += 1
+
+        # Auto-flush every batch_size operations to limit memory usage
+        if self._pending_operations >= self.batch_size:
+            self.flush()
+
+    def flush(self) -> None:
+        """Commit any pending database operations."""
+        if self._pending_operations > 0:
+            conn, _ = self._get_connection()
+            conn.commit()
+            self.logger.debug(f"flushed {self._pending_operations} operations to database")
+            self._pending_operations = 0
 
     def get(
         self,
@@ -246,4 +260,6 @@ class Store:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        # Flush any remaining operations before cleanup
+        self.flush()
         self.cleanup_thread_connections()
