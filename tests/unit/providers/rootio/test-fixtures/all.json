@@ -1,0 +1,22 @@
+[
+    {
+        "id": "ROOT-OS-ALPINE-318-CVE-2000-0548",
+        "modified": "2024-11-20T16:00:00Z"
+    },
+    {
+        "id": "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014",
+        "modified": "2024-12-01T10:30:00Z"
+    },
+    {
+        "id": "ROOT-OS-UBUNTU-2004-CVE-2024-12345",
+        "modified": "2024-12-10T08:15:00Z"
+    },
+    {
+        "id": "ROOT-APP-NPM-CVE-2022-25883",
+        "modified": "2024-11-22T14:20:00Z"
+    },
+    {
+        "id": "ROOT-APP-PYPI-CVE-2025-30473",
+        "modified": "2024-12-05T09:45:00Z"
+    }
+]
