@@ -227,6 +227,25 @@ providers:
       '2': https://alas.aws.amazon.com/AL2/alas.rss
       '2022': https://alas.aws.amazon.com/AL2022/alas.rss
       '2023': https://alas.aws.amazon.com/AL2023/alas.rss
+  arch:
+    api_url: https://security.archlinux.org/all.json
+    request_timeout: 30
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_download: false
+      skip_newer_archive_check: false
+      user_agent: null
   bitnami:
     request_timeout: 125
     runtime:

@@ -46,6 +46,7 @@ class Providers:
     alma: providers.alma.Config = field(default_factory=providers.alma.Config)
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
+    arch: providers.arch.Config = field(default_factory=providers.arch.Config)
     bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     chainguard_libraries: providers.chainguard_libraries.Config = field(default_factory=providers.chainguard_libraries.Config)
