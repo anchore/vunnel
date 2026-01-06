@@ -392,14 +392,14 @@ class TestSLESParser:
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    c = Config(allow_versions=["15"])
+    c = Config(allow_versions=["15"], source="OVAL")
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
     mock_data_path = helpers.local_dir("test-fixtures/suse_truncated.xml")
     shutil.copy(mock_data_path, workspace.input_dir / "suse-linux-enterprise-server-15.xml")
 
-    def mock_download(self, *args, **kwargs):
+    def mock_download(*args, **kwargs):
         return mock_data_path
 
     monkeypatch.setattr(p.parser, "_download", mock_download)
@@ -413,7 +413,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
 def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    c = Config()
+    c = Config(source="OVAL")
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(
@@ -424,7 +424,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     mock_data_path = helpers.local_dir("test-fixtures/suse_truncated.xml")
     shutil.copy(mock_data_path, workspace.input_dir / "suse-linux-enterprise-server-15.xml")
 
-    def mock_download(self, *args, **kwargs):
+    def mock_download(*args, **kwargs):
         return mock_data_path
 
     monkeypatch.setattr(p.parser, "_download", mock_download)

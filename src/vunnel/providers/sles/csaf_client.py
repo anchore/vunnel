@@ -1,11 +1,11 @@
-from datetime import datetime
-from dateutil.parser import parse
-
 import re
+from datetime import UTC, datetime
+
+from dateutil.parser import parse
 
 
 class CSAFClient:
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_url = "https://ftp.suse.com/pub/projects/security/"
 
     def archive_date(self, dir_resp_body: str) -> datetime:
@@ -14,4 +14,4 @@ class CSAFClient:
                 match = re.search(r"\s+(?P<date>\d\d-[A-Z][a-z][a-z]-\d\d\d\d \d\d:\d\d)\s", line)
                 if match:
                     return parse(match.group("date"))
-        return datetime.strptime("12-12-12", "%y-%m-%d")
+        return datetime(2012, 12, 12, tzinfo=UTC)

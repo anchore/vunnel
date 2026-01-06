@@ -5,7 +5,7 @@ import copy
 import logging
 import os
 import tarfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from vunnel.utils import http_wrapper as http
 
@@ -44,7 +44,7 @@ def is_sles_cpe(cpe: str) -> bool:
     return len(parts) <= 6
 
 
-def _collect_sles_platform_ids(branches: list[dict]) -> set[str]:
+def _collect_sles_platform_ids(branches: list[dict[str, Any]]) -> set[str]:
     """Recursively find all SLES platform branches (by CPE) and return their product_ids."""
     result: set[str] = set()
     for branch in branches:
@@ -60,7 +60,95 @@ def _collect_sles_platform_ids(branches: list[dict]) -> set[str]:
     return result
 
 
-def subset_csaf_for_sles(doc: dict) -> dict | None:
+def _collect_relationship_ids(
+    product_tree: dict[str, Any],
+    sles_platform_ids: set[str],
+) -> tuple[set[str], set[str]]:
+    """Collect product and package IDs from relationships that reference SLES platforms.
+
+    Returns:
+        A tuple of (kept_relationship_product_ids, sles_package_branch_ids)
+    """
+    kept_relationship_product_ids: set[str] = set()
+    sles_package_branch_ids: set[str] = set()
+
+    for rel in product_tree.get("relationships", []):
+        if rel.get("relates_to_product_reference") in sles_platform_ids:
+            full_product_name = rel.get("full_product_name", {})
+            product_id = full_product_name.get("product_id", "")
+            if product_id:
+                kept_relationship_product_ids.add(product_id)
+            product_reference = rel.get("product_reference", "")
+            if product_reference:
+                sles_package_branch_ids.add(product_reference)
+
+    return kept_relationship_product_ids, sles_package_branch_ids
+
+
+def _has_actionable_status(doc: dict[str, Any], kept_product_ids: set[str]) -> bool:
+    """Check if any vulnerability has actionable statuses for SLES products."""
+    actionable_types = ("fixed", "known_affected", "under_investigation", "recommended")
+
+    for vuln in doc.get("vulnerabilities", []):
+        product_status = vuln.get("product_status", {})
+        for status_type in actionable_types:
+            for product_id in product_status.get(status_type, []):
+                if product_id in kept_product_ids:
+                    return True
+    return False
+
+
+def _filter_product_tree(result: dict[str, Any], kept_product_ids: set[str], platform_ids: set[str], package_ids: set[str]) -> None:
+    """Filter product_tree relationships and branches in place."""
+    if "product_tree" not in result:
+        return
+
+    if "relationships" in result["product_tree"]:
+        result["product_tree"]["relationships"] = [
+            rel for rel in result["product_tree"]["relationships"] if rel.get("full_product_name", {}).get("product_id", "") in kept_product_ids
+        ]
+
+    if "branches" in result["product_tree"]:
+        result["product_tree"]["branches"] = _filter_branches(
+            result["product_tree"]["branches"],
+            platform_ids,
+            package_ids,
+        )
+
+
+def _filter_vulnerability_field(items: list[dict[str, Any]], key: str, kept_product_ids: set[str]) -> list[dict[str, Any]]:
+    """Filter a list of vulnerability field items (remediations, threats, flags, etc.)."""
+    for item in items:
+        if key in item:
+            item[key] = [pid for pid in item[key] if pid in kept_product_ids]
+    return [item for item in items if item.get(key)]
+
+
+def _filter_vulnerability(vuln: dict[str, Any], kept_product_ids: set[str]) -> None:
+    """Filter a single vulnerability's product references in place."""
+    status_types = ("fixed", "known_affected", "known_not_affected", "under_investigation", "recommended")
+
+    if "product_status" in vuln:
+        for status_type in status_types:
+            if status_type in vuln["product_status"]:
+                vuln["product_status"][status_type] = [pid for pid in vuln["product_status"][status_type] if pid in kept_product_ids]
+                if not vuln["product_status"][status_type]:
+                    del vuln["product_status"][status_type]
+
+    if "remediations" in vuln:
+        vuln["remediations"] = _filter_vulnerability_field(vuln["remediations"], "product_ids", kept_product_ids)
+
+    if "scores" in vuln:
+        vuln["scores"] = _filter_vulnerability_field(vuln["scores"], "products", kept_product_ids)
+
+    if "threats" in vuln:
+        vuln["threats"] = _filter_vulnerability_field(vuln["threats"], "product_ids", kept_product_ids)
+
+    if "flags" in vuln:
+        vuln["flags"] = _filter_vulnerability_field(vuln["flags"], "product_ids", kept_product_ids)
+
+
+def subset_csaf_for_sles(doc: dict[str, Any]) -> dict[str, Any] | None:
     """Subset a CSAF document to only include SUSE Linux Enterprise Server products.
 
     This filters all product-related fields to only include SLES products,
@@ -77,115 +165,28 @@ def subset_csaf_for_sles(doc: dict) -> dict | None:
     """
     product_tree = doc.get("product_tree", {})
 
-    # Step 1: Find all SLES platform IDs from branches (by CPE)
     sles_platform_ids = _collect_sles_platform_ids(product_tree.get("branches", []))
-
     if not sles_platform_ids:
         return None
 
-    # Step 2: Filter relationships to those where the platform is SLES
-    # Collect:
-    #   - kept_relationship_product_ids: the composite IDs (e.g., "SLES 15 SP6:kernel-1.0") used in product_status
-    #   - sles_package_branch_ids: the package branch IDs (e.g., "kernel-1.0") to keep in branch tree
-    kept_relationship_product_ids: set[str] = set()
-    sles_package_branch_ids: set[str] = set()
-    for rel in product_tree.get("relationships", []):
-        if rel.get("relates_to_product_reference") in sles_platform_ids:
-            full_product_name = rel.get("full_product_name", {})
-            product_id = full_product_name.get("product_id", "")
-            if product_id:
-                kept_relationship_product_ids.add(product_id)
-            # product_reference points to the package branch (which has the PURL)
-            product_reference = rel.get("product_reference", "")
-            if product_reference:
-                sles_package_branch_ids.add(product_reference)
-
+    kept_relationship_product_ids, sles_package_branch_ids = _collect_relationship_ids(product_tree, sles_platform_ids)
     if not kept_relationship_product_ids:
         return None
 
-    # Step 3: Check if there are any actionable statuses (not just known_not_affected)
-    has_actionable = False
-    for vuln in doc.get("vulnerabilities", []):
-        product_status = vuln.get("product_status", {})
-        for status_type in ["fixed", "known_affected", "under_investigation", "recommended"]:
-            for product_id in product_status.get(status_type, []):
-                if product_id in kept_relationship_product_ids:
-                    has_actionable = True
-                    break
-            if has_actionable:
-                break
-        if has_actionable:
-            break
-
-    if not has_actionable:
+    if not _has_actionable_status(doc, kept_relationship_product_ids):
         return None
 
-    # Step 4: Create a deep copy and filter it
     result = copy.deepcopy(doc)
+    _filter_product_tree(result, kept_relationship_product_ids, sles_platform_ids, sles_package_branch_ids)
 
-    # Filter product_tree relationships
-    if "product_tree" in result:
-        if "relationships" in result["product_tree"]:
-            result["product_tree"]["relationships"] = [
-                rel
-                for rel in result["product_tree"]["relationships"]
-                if rel.get("full_product_name", {}).get("product_id", "") in kept_relationship_product_ids
-            ]
-
-        # Filter branches to only include SLES platforms and their packages
-        if "branches" in result["product_tree"]:
-            result["product_tree"]["branches"] = _filter_branches(
-                result["product_tree"]["branches"],
-                sles_platform_ids,
-                sles_package_branch_ids,
-            )
-
-    # Filter vulnerabilities - use kept_relationship_product_ids (the composite IDs)
     if "vulnerabilities" in result:
         for vuln in result["vulnerabilities"]:
-            # Filter product_status
-            if "product_status" in vuln:
-                for status_type in ["fixed", "known_affected", "known_not_affected", "under_investigation", "recommended"]:
-                    if status_type in vuln["product_status"]:
-                        vuln["product_status"][status_type] = [
-                            pid for pid in vuln["product_status"][status_type] if pid in kept_relationship_product_ids
-                        ]
-                        # Remove empty lists
-                        if not vuln["product_status"][status_type]:
-                            del vuln["product_status"][status_type]
-
-            # Filter remediations
-            if "remediations" in vuln:
-                for remediation in vuln["remediations"]:
-                    if "product_ids" in remediation:
-                        remediation["product_ids"] = [pid for pid in remediation["product_ids"] if pid in kept_relationship_product_ids]
-                vuln["remediations"] = [r for r in vuln["remediations"] if r.get("product_ids")]
-
-            # Filter scores
-            if "scores" in vuln:
-                for score in vuln["scores"]:
-                    if "products" in score:
-                        score["products"] = [pid for pid in score["products"] if pid in kept_relationship_product_ids]
-                vuln["scores"] = [s for s in vuln["scores"] if s.get("products")]
-
-            # Filter threats
-            if "threats" in vuln:
-                for threat in vuln["threats"]:
-                    if "product_ids" in threat:
-                        threat["product_ids"] = [pid for pid in threat["product_ids"] if pid in kept_relationship_product_ids]
-                vuln["threats"] = [t for t in vuln["threats"] if t.get("product_ids")]
-
-            # Filter flags
-            if "flags" in vuln:
-                for flag in vuln["flags"]:
-                    if "product_ids" in flag:
-                        flag["product_ids"] = [pid for pid in flag["product_ids"] if pid in kept_relationship_product_ids]
-                vuln["flags"] = [f for f in vuln["flags"] if f.get("product_ids")]
+            _filter_vulnerability(vuln, kept_relationship_product_ids)
 
     return result
 
 
-def _strip_non_platform_cpe(branch: dict) -> dict:
+def _strip_non_platform_cpe(branch: dict[str, Any]) -> dict[str, Any]:
     """Strip CPE from a branch if it's not a valid SLES platform CPE.
 
     Package branches may have application CPEs (cpe:2.3:a:...) that can have
@@ -213,10 +214,10 @@ def _strip_non_platform_cpe(branch: dict) -> dict:
 
 
 def _filter_branches(
-    branches: list[dict],
+    branches: list[dict[str, Any]],
     sles_platform_ids: set[str],
     sles_package_ids: set[str],
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Recursively filter branches to only include SLES platforms and their packages.
 
     Args:
@@ -303,9 +304,8 @@ class CSAFParser:
         # Stream: HTTP response -> bz2 decompressor -> tar extractor
         # r.raw is the urllib3 HTTPResponse (file-like), BZ2File wraps it for decompression,
         # tarfile reads from that in streaming mode ("r|")
-        with bz2.BZ2File(r.raw) as decompressor:
-            with tarfile.open(fileobj=decompressor, mode="r|") as tar:
-                tar.extractall(path=self.input_dir, filter="data")
+        with bz2.BZ2File(r.raw) as decompressor, tarfile.open(fileobj=decompressor, mode="r|") as tar:
+            tar.extractall(path=self.input_dir, filter="data")
 
         return self.input_dir
 
@@ -316,6 +316,7 @@ class CSAFParser:
             Tuples of (namespace, vulnerability_id, record_payload)
         """
         import glob
+
         import orjson
 
         self._download()
