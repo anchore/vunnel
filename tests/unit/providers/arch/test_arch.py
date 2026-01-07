@@ -252,6 +252,47 @@ class TestArchParser:
             assert payload["Vulnerability"]["FixedIn"][0]["Name"] == "curl"
             assert payload["Vulnerability"]["FixedIn"][0]["Version"] == "8.5.0-1"
 
+    def test_parse_continues_on_record_error(self):
+        """Test that parsing continues when a single record causes an error."""
+        data = [
+            {
+                "name": "AVG-1111",
+                "packages": ["good-pkg"],
+                "fixed": "1.0.0",
+                "severity": "Low",
+                "type": "test",
+                "issues": [],
+                "advisories": [],
+            },
+            {
+                "name": "AVG-BAD",
+                "packages": None,  # This will cause an error when iterating
+                "fixed": "1.0.0",
+                "severity": "Low",
+                "type": "test",
+                "issues": [],
+                "advisories": [],
+            },
+            {
+                "name": "AVG-2222",
+                "packages": ["another-pkg"],
+                "fixed": "2.0.0",
+                "severity": "High",
+                "type": "test",
+                "issues": [],
+                "advisories": [],
+            },
+        ]
+
+        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+
+        with patch.object(parser, "_fetch", return_value=data):
+            records = list(parser.parse())
+            # Should have 2 records (bad one skipped)
+            assert len(records) == 2
+            assert records[0][0] == "avg-1111"
+            assert records[1][0] == "avg-2222"
+
 
 class TestArchProvider:
     def test_provider_initialization(self):
