@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import copy
 import logging
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any
 
 from vunnel.utils import http_wrapper
-from vunnel.utils.vulnerability import vulnerability_element
+from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Generator
 
 SEVERITY_MAPPING = {
     "Critical": "Critical",
@@ -26,7 +25,7 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def _fetch(self) -> list[dict]:
+    def _fetch(self) -> list[dict[str, Any]]:
         """Fetch the all.json data from Arch Linux security tracker with retry logic."""
         self.logger.info(f"Fetching Arch Linux vulnerability data from {self.url}")
 
@@ -42,7 +41,7 @@ class Parser:
         self.logger.debug(f"Successfully fetched data from {self.url}")
         return response.json()
 
-    def parse(self) -> Generator[tuple[str, dict], None, None]:
+    def parse(self) -> Generator[tuple[str, dict[str, Any]]]:
         """Parse the Arch Linux security data and yield normalized vulnerability records."""
         data = self._fetch()
 
@@ -65,7 +64,6 @@ class Parser:
                 fixed_version = record.get("fixed") or ""
                 fixed_version = fixed_version.strip() if fixed_version else ""
                 severity = record.get("severity", "").strip()
-                status = record.get("status", "").strip()
                 vuln_type = record.get("type", "").strip()
                 issues = record.get("issues", [])
                 advisories = record.get("advisories", [])
@@ -73,48 +71,47 @@ class Parser:
                 # Normalize severity
                 mapped_severity = SEVERITY_MAPPING.get(severity, "Unknown")
 
-                # Build the vulnerability payload
-                payload = copy.deepcopy(vulnerability_element)
-
-                vuln = payload["Vulnerability"]
-                vuln["Name"] = group_id
-                vuln["NamespaceName"] = "arch:rolling"
-                vuln["Description"] = vuln_type or f"Arch vulnerability {group_id}"
-                vuln["Severity"] = mapped_severity
-                vuln["Link"] = f"https://security.archlinux.org/{group_id}"
-
-                # Add FixedIn entry for each affected package
+                # Build FixedIn entries for each affected package
                 # Use "None" as version for unfixed vulnerabilities
+                fixed_in_list: list[FixedIn] = []
                 for package_name in packages:
                     if package_name:
-                        fixed_in = {
-                            "Name": package_name,
-                            "Version": fixed_version if fixed_version else "None",
-                            "VersionFormat": "pacman",
-                            "NamespaceName": "arch:rolling",
-                        }
-                        vuln["FixedIn"].append(fixed_in)
+                        fixed_in_list.append(
+                            FixedIn(
+                                Name=package_name,
+                                NamespaceName="arch:rolling",
+                                VersionFormat="pacman",
+                                Version=fixed_version if fixed_version else "None",
+                                Module=None,
+                                VendorAdvisory=None,
+                            ),
+                        )
 
-                # Add metadata with CVEs and advisories
-                # CVE format must be array of {Name, Link} objects for grype-db
-                metadata = {}
+                # Build metadata with CVEs and advisories
+                metadata: dict[str, Any] = {}
                 if issues:
                     metadata["CVE"] = [{"Name": cve, "Link": f"https://nvd.nist.gov/vuln/detail/{cve}"} for cve in issues]
                 if advisories:
                     metadata["Advisories"] = advisories
 
-                if metadata:
-                    vuln["Metadata"] = metadata
-                else:
-                    # Remove empty Metadata if there's no content
-                    del vuln["Metadata"]
+                # Build the Vulnerability object
+                vuln = Vulnerability(
+                    Name=group_id,
+                    NamespaceName="arch:rolling",
+                    Description=vuln_type or f"Arch vulnerability {group_id}",
+                    Severity=mapped_severity,
+                    Link=f"https://security.archlinux.org/{group_id}",
+                    CVSS=[],
+                    FixedIn=fixed_in_list,
+                    Metadata=metadata,
+                )
 
                 self.logger.debug(f"Processed vulnerability {group_id}")
 
                 # Yield the normalized record with group_id as the identifier
-                yield group_id.lower(), payload
+                yield group_id.lower(), vuln.to_payload()
 
-            except Exception as e:
-                self.logger.error(f"Error processing vulnerability record: {e}", exc_info=True)
+            except Exception:
+                self.logger.exception("Error processing vulnerability record")
                 # Continue processing other records on error
                 continue

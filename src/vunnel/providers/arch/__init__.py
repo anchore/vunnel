@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -52,16 +51,15 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         self.logger.info("Starting Arch Linux provider update")
-        with timer(self.name(), self.logger):
-            with self.results_writer() as writer:
-                count = 0
-                for identifier, payload in self.parser.parse():
-                    writer.write(
-                        identifier=identifier,
-                        schema=self.__schema__,
-                        payload=payload,
-                    )
-                    count += 1
+        with timer(self.name(), self.logger), self.results_writer() as writer:
+            count = 0
+            for identifier, payload in self.parser.parse():
+                writer.write(
+                    identifier=identifier,
+                    schema=self.__schema__,
+                    payload=payload,
+                )
+                count += 1
 
-                self.logger.info(f"Update complete. Wrote {count} records")
-                return [self.parser.url], count
+            self.logger.info(f"Update complete. Wrote {count} records")
+            return [self.parser.url], count

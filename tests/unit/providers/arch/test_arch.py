@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import json
 from unittest.mock import MagicMock, patch
 
@@ -9,7 +8,6 @@ import pytest
 from vunnel import result, workspace
 from vunnel.providers.arch import Config, Provider
 from vunnel.providers.arch.parser import Parser
-from vunnel.utils.vulnerability import vulnerability_element
 
 
 class TestArchParser:
@@ -89,7 +87,8 @@ class TestArchParser:
             # Check third record (no issues/advisories)
             group_id_3, payload_3 = records[2]
             assert group_id_3 == "avg-9999"
-            assert "Metadata" not in payload_3["Vulnerability"]
+            # With dataclass output, Metadata is always present (empty dict when no CVEs/advisories)
+            assert payload_3["Vulnerability"]["Metadata"] == {}
 
     def test_parse_with_metadata(self, mock_raw_data):
         """Test that metadata is properly populated."""
