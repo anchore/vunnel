@@ -403,25 +403,26 @@ class TestStore:
         # verify thread-local storage is cleared
         assert not hasattr(store._thread_local, "conn")
         assert not hasattr(store._thread_local, "table")
+
     def test_batch_commit_performance(self, tmpdir, mocker):
         """test that commits are batched for performance"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
-        
+
         # Use small batch size for testing
         store = Store(ws, batch_size=5)
         db = DatabaseFixture(store.db_path)
-        
+
         # Mock commit to count calls
         conn, _ = store._get_connection()
         original_commit = conn.commit
         commit_count = [0]
-        
+
         def tracked_commit():
             commit_count[0] += 1
             return original_commit()
-        
+
         conn.commit = tracked_commit
-        
+
         # Add 12 entries (should trigger 2 auto-flushes at 5 and 10, plus final flush)
         for i in range(12):
             store.add(
@@ -430,17 +431,16 @@ class TestStore:
                 cpe_or_package=f"cpe:2.3:a:vendor:product:{i}:*:*:*:*:*:*:*",
                 fix_version="1.0.0",
             )
-        
+
         # Flush remaining
         store.flush()
-        
+
         # Should have committed 3 times: at 5, at 10, and final flush
         assert commit_count[0] == 3, f"Expected 3 commits but got {commit_count[0]}"
-        
+
         # Verify all records were saved
         results = store.find("CVE-2023-0000", "cpe:2.3:a:vendor:product:0:*:*:*:*:*:*:*", "1.0.0")
         assert len(results) == 1
-        
+
         results = store.find("CVE-2023-0011", "cpe:2.3:a:vendor:product:11:*:*:*:*:*:*:*", "1.0.0")
         assert len(results) == 1
-

@@ -39,7 +39,16 @@ class Store:
         self.engine: db.engine.Engine | None = None
         self._thread_local = threading.local()
         self.batch_size = batch_size
-        self._pending_operations = 0
+
+    @property
+    def _pending_operations(self) -> int:
+        """Get pending operation count for the current thread."""
+        return getattr(self._thread_local, "pending_operations", 0)
+
+    @_pending_operations.setter
+    def _pending_operations(self, value: int) -> None:
+        """Set pending operation count for the current thread."""
+        self._thread_local.pending_operations = value
 
     def add(
         self,
@@ -77,12 +86,12 @@ class Store:
         conn.execute(insert_stmt)
         self._pending_operations += 1
 
-        # Auto-flush every batch_size operations to limit memory usage
+        # auto-flush every batch_size operations to limit memory usage
         if self._pending_operations >= self.batch_size:
             self.flush()
 
     def flush(self) -> None:
-        """Commit any pending database operations."""
+        """Commit any pending database operations for the current thread."""
         if self._pending_operations > 0:
             conn, _ = self._get_connection()
             conn.commit()
