@@ -59,6 +59,12 @@ class Parser:
                     self.logger.warning("Skipping record with missing name field")
                     continue
 
+                # Skip "Not affected" entries - these are tracked but don't represent actual vulnerabilities
+                status = record.get("status", "").strip()
+                if status == "Not affected":
+                    self.logger.debug(f"Skipping {group_id}: status is 'Not affected'")
+                    continue
+
                 # Extract fields from the record
                 packages = record.get("packages", [])
                 fixed_version = record.get("fixed") or ""
