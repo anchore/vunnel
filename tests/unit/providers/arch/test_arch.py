@@ -180,6 +180,43 @@ class TestArchParser:
             assert payload["Vulnerability"]["FixedIn"][0]["Version"] == "None"
             assert payload["Vulnerability"]["FixedIn"][0]["VersionFormat"] == "pacman"
 
+    def test_parse_skips_not_affected(self):
+        """Test that 'Not affected' status entries are filtered out."""
+        data = [
+            {
+                "name": "AVG-1324",
+                "packages": ["glibc", "lib32-glibc"],
+                "affected": "2.32-5",
+                "fixed": None,
+                "severity": "Medium",
+                "status": "Not affected",
+                "type": "arbitrary code execution",
+                "issues": ["CVE-2020-29573"],
+                "advisories": [],
+            },
+            {
+                "name": "AVG-1234",
+                "packages": ["curl"],
+                "affected": "8.4.0-1",
+                "fixed": "8.5.0-1",
+                "severity": "High",
+                "status": "Fixed",
+                "type": "arbitrary code execution",
+                "issues": ["CVE-2024-1234"],
+                "advisories": [],
+            },
+        ]
+
+        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+
+        with patch.object(parser, "_fetch", return_value=data):
+            records = list(parser.parse())
+            # Only AVG-1234 should be included, AVG-1324 should be filtered out
+            assert len(records) == 1
+            group_id, payload = records[0]
+            assert group_id == "avg-1234"
+            assert payload["Vulnerability"]["Name"] == "AVG-1234"
+
     def test_severity_mapping(self):
         """Test that severity values are properly mapped."""
         data = [
