@@ -111,6 +111,18 @@ tests:
       - amazon:distro:amazonlinux:2022
       - amazon:distro:amazonlinux:2023
 
+  - provider: arch
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - docker.io/anchore/test_images@sha256:a933b27534e5c911e2c660f7090aa497dee763fbbcb214a37207c2320cfedd98
+    expected_namespaces:
+      - arch:distro:arch:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2023
+
   - provider: chainguard
     additional_providers:
       - name: nvd
