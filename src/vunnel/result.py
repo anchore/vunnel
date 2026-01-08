@@ -5,6 +5,7 @@ import enum
 import logging
 import os
 import shutil
+import threading
 import time
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
@@ -114,12 +115,16 @@ class SQLiteStore(Store):
     temp_filename = "results.db.tmp"
     table_name = "results"
 
-    def __init__(self, *args: Any, write_location: str | None = None, **kwargs: Any):
+    def __init__(self, *args: Any, write_location: str | None = None, batch_size: int = 2000, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.conn: db.engine.Connection | None = None
         self.engine: db.engine.Engine | None = None
         self.table: db.Table | None = None
         self.write_location = write_location
+        self.batch_size = batch_size
+        self._pending_operations = 0
+        self._transaction: Any = None  # Active transaction context
+        self._lock = threading.Lock()  # Protects transaction state for thread safety
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
             self.temp_filename = f"{self.filename}.tmp"
@@ -171,7 +176,11 @@ class SQLiteStore(Store):
         record_str = orjson.dumps(asdict(record))
         conn, table = self.connection()
 
-        with conn.begin():
+        with self._lock:
+            # Start a transaction if we don't have one active
+            if self._transaction is None:
+                self._transaction = conn.begin()
+
             # upsert the record conditionally based on the skip_duplicates configuration
             existing = conn.execute(table.select().where(table.c.id == identifier)).first()
             if existing:
@@ -185,6 +194,24 @@ class SQLiteStore(Store):
                 statement = db.insert(table).values(id=identifier, record=record_str)  # type: ignore[assignment]
 
             conn.execute(statement)
+            self._pending_operations += 1
+
+            # Auto-flush every batch_size operations to limit memory usage
+            if self._pending_operations >= self.batch_size:
+                self._flush_unlocked()
+
+    def flush(self) -> None:
+        """Commit any pending database operations (thread-safe)."""
+        with self._lock:
+            self._flush_unlocked()
+
+    def _flush_unlocked(self) -> None:
+        """Internal flush helper - caller must hold lock."""
+        if self._pending_operations > 0 and self._transaction is not None:
+            self._transaction.commit()
+            self.logger.debug(f"flushed {self._pending_operations} operations to database")
+            self._transaction = None
+            self._pending_operations = 0
 
     def read(self, identifier: str) -> Envelope:
         conn, table = self.connection()
@@ -204,6 +231,9 @@ class SQLiteStore(Store):
             shutil.copy2(self.db_file_path, self.temp_db_file_path)
 
     def close(self, successful: bool) -> None:
+        # Flush any remaining operations before closing
+        self.flush()
+
         if self.conn:
             self.conn.close()
             if self.engine:
