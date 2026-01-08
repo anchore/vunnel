@@ -152,6 +152,45 @@ class TestArchParser:
             group_id, payload = records[0]
             assert len(payload["Vulnerability"]["FixedIn"]) == 0
 
+    def test_parse_multi_package_vulnerability(self):
+        """Test that AVGs affecting multiple packages create FixedIn entries for each."""
+        data = [
+            {
+                "name": "AVG-1324",
+                "packages": ["glibc", "lib32-glibc"],
+                "affected": "2.38-1",
+                "fixed": "2.38-2",
+                "severity": "High",
+                "status": "Fixed",
+                "type": "arbitrary code execution",
+                "issues": ["CVE-2023-4911"],
+                "advisories": ["ASA-202310-01"],
+            }
+        ]
+
+        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+
+        with patch.object(parser, "_fetch", return_value=data):
+            records = list(parser.parse())
+            assert len(records) == 1
+            group_id, payload = records[0]
+            assert group_id == "avg-1324"
+
+            # Should have FixedIn entries for both packages
+            fixed_in = payload["Vulnerability"]["FixedIn"]
+            assert len(fixed_in) == 2
+
+            # Verify both packages are present with correct attributes
+            package_names = [f["Name"] for f in fixed_in]
+            assert "glibc" in package_names
+            assert "lib32-glibc" in package_names
+
+            # All should have same version and format
+            for entry in fixed_in:
+                assert entry["Version"] == "2.38-2"
+                assert entry["VersionFormat"] == "pacman"
+                assert entry["NamespaceName"] == "arch:rolling"
+
     def test_parse_unfixed_vulnerability(self):
         """Test that unfixed vulnerabilities emit FixedIn with Version 'None'."""
         data = [
