@@ -25,7 +25,6 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      # TEMPORARY: using branch for testing
       version: feat-archlinux+import-db=build/vulnerability.db
       takes: SBOM
 
@@ -37,7 +36,6 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      # TEMPORARY: branch for testing
       version: feat-archlinux+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
       takes: SBOM
       label: reference
@@ -49,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
+  version: feat-archlinux
 
 tests:
 
