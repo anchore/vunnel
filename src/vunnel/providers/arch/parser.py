@@ -85,7 +85,7 @@ class Parser:
                         fixed_in_list.append(
                             FixedIn(
                                 Name=package_name,
-                                NamespaceName="arch:rolling",
+                                NamespaceName="archlinux:rolling",
                                 VersionFormat="pacman",
                                 Version=fixed_version if fixed_version else "None",
                                 Module=None,
@@ -103,7 +103,7 @@ class Parser:
                 # Build the Vulnerability object
                 vuln = Vulnerability(
                     Name=group_id,
-                    NamespaceName="arch:rolling",
+                    NamespaceName="archlinux:rolling",
                     Description=vuln_type or f"Arch vulnerability {group_id}",
                     Severity=mapped_severity,
                     Link=f"https://security.archlinux.org/{group_id}",
