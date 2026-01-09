@@ -1,0 +1,44 @@
+{
+  "identifier": "avg-5678",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "cryptographic issue",
+      "FixedIn": [
+        {
+          "Available": null,
+          "Module": "",
+          "Name": "openssl",
+          "NamespaceName": "archlinux:rolling",
+          "VendorAdvisory": {
+            "AdvisorySummary": [],
+            "NoAdvisory": false
+          },
+          "Version": "3.2.0-1",
+          "VersionFormat": "pacman",
+          "VulnerableRange": null
+        }
+      ],
+      "Link": "https://security.archlinux.org/AVG-5678",
+      "Metadata": {
+        "Advisories": [
+          "ASA-202401-02"
+        ],
+        "CVE": [
+          {
+            "Link": "https://nvd.nist.gov/vuln/detail/CVE-2024-5678",
+            "Name": "CVE-2024-5678"
+          },
+          {
+            "Link": "https://nvd.nist.gov/vuln/detail/CVE-2024-5679",
+            "Name": "CVE-2024-5679"
+          }
+        ]
+      },
+      "Name": "AVG-5678",
+      "NamespaceName": "archlinux:rolling",
+      "Severity": "Critical"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}

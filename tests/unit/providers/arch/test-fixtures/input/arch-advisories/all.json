@@ -1,0 +1,57 @@
+[
+    {
+        "name": "AVG-1234",
+        "packages": ["curl"],
+        "affected": "8.4.0-1",
+        "fixed": "8.5.0-1",
+        "severity": "High",
+        "status": "Fixed",
+        "type": "arbitrary code execution",
+        "issues": ["CVE-2024-1234"],
+        "advisories": ["ASA-202401-01"]
+    },
+    {
+        "name": "AVG-5678",
+        "packages": ["openssl"],
+        "affected": "3.1.0-1",
+        "fixed": "3.2.0-1",
+        "severity": "Critical",
+        "status": "Fixed",
+        "type": "cryptographic issue",
+        "issues": ["CVE-2024-5678", "CVE-2024-5679"],
+        "advisories": ["ASA-202401-02"]
+    },
+    {
+        "name": "AVG-9999",
+        "packages": ["pam"],
+        "affected": "1.7.0-2",
+        "fixed": null,
+        "severity": "Medium",
+        "status": "Vulnerable",
+        "type": "arbitrary filesystem access",
+        "issues": ["CVE-2025-6020"],
+        "advisories": []
+    },
+    {
+        "name": "AVG-1324",
+        "packages": ["glibc", "lib32-glibc"],
+        "affected": "2.38-1",
+        "fixed": "2.38-2",
+        "severity": "High",
+        "status": "Fixed",
+        "type": "arbitrary code execution",
+        "issues": ["CVE-2023-4911"],
+        "advisories": ["ASA-202310-01"]
+    },
+    {
+        "name": "AVG-2222",
+        "packages": ["test-pkg"],
+        "affected": "0.9.0-1",
+        "fixed": "1.0.0-1",
+        "severity": "Low",
+        "status": "Fixed",
+        "type": "information disclosure",
+        "issues": [],
+        "advisories": []
+    }
+]
