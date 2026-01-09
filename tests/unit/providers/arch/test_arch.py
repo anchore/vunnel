@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,6 +9,16 @@ import pytest
 from vunnel import result, workspace
 from vunnel.providers.arch import Config, Provider
 from vunnel.providers.arch.parser import Parser
+
+
+def _load_test_fixture():
+    """Load the test fixture data for mocking _fetch."""
+    fixture_path = os.path.join(
+        os.path.dirname(__file__),
+        "test-fixtures/input/arch-advisories/all.json",
+    )
+    with open(fixture_path) as f:
+        return json.load(f)
 
 
 class TestArchParser:
@@ -424,3 +435,42 @@ class TestArchProvider:
             mock_tmpdir.return_value = "/tmp/test"
             provider = Provider(root="/tmp/test", config=config)
             assert provider.parser is not None
+
+
+def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+    """Test that provider output conforms to the expected schema."""
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+    )
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    # Mock _fetch to return test fixture data
+    test_data = _load_test_fixture()
+    monkeypatch.setattr(p.parser, "_fetch", lambda: test_data)
+
+    p.update(None)
+
+    assert workspace.num_result_entries() == 5
+    assert workspace.result_schemas_valid(require_entries=True)
+
+
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+    """Test provider output against expected snapshots."""
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+    )
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    # Mock _fetch to return test fixture data
+    test_data = _load_test_fixture()
+    monkeypatch.setattr(p.parser, "_fetch", lambda: test_data)
+
+    p.update(None)
+
+    workspace.assert_result_snapshots()
