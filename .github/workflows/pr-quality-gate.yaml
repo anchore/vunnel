@@ -93,7 +93,7 @@ jobs:
   validate-provider:
     # I/O-bound workload (download JSON → transform → write SQLite), so use storage-optimized
     # instances with local NVMe for better IOPS
-    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=4/ram=16/family=i7ie+i7i
+    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=2+4/ram=16+32/family=i7ie+i7i
     timeout-minutes: 480
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.other-providers != '[]'
