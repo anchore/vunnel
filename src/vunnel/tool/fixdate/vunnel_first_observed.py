@@ -127,6 +127,13 @@ class Store:
 
         results = conn.execute(query).fetchall()
 
+        # Commit to release any locks from the implicit transaction.
+        # This prevents "database is locked" errors when multiple threads
+        # read concurrently (e.g., RHEL provider's ThreadPoolExecutor).
+        # Note: this also commits any pending writes, which is safe since
+        # writes happen during download() before concurrent reads begin.
+        conn.commit()
+
         if not results:
             return []
 
