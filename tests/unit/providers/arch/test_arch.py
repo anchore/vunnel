@@ -72,7 +72,7 @@ class TestArchParser:
             group_id_1, payload_1 = records[0]
             assert group_id_1 == "avg-1234"
             assert payload_1["Vulnerability"]["Name"] == "AVG-1234"
-            assert payload_1["Vulnerability"]["NamespaceName"] == "arch:rolling"
+            assert payload_1["Vulnerability"]["NamespaceName"] == "archlinux:rolling"
             assert payload_1["Vulnerability"]["Severity"] == "High"
             assert len(payload_1["Vulnerability"]["FixedIn"]) == 1
             assert payload_1["Vulnerability"]["FixedIn"][0]["Name"] == "curl"
@@ -189,7 +189,7 @@ class TestArchParser:
             for entry in fixed_in:
                 assert entry["Version"] == "2.38-2"
                 assert entry["VersionFormat"] == "pacman"
-                assert entry["NamespaceName"] == "arch:rolling"
+                assert entry["NamespaceName"] == "archlinux:rolling"
 
     def test_parse_unfixed_vulnerability(self):
         """Test that unfixed vulnerabilities emit FixedIn with Version 'None'."""
@@ -408,7 +408,7 @@ class TestArchProvider:
                 {
                     "Vulnerability": {
                         "Name": "AVG-1234",
-                        "NamespaceName": "arch:rolling",
+                        "NamespaceName": "archlinux:rolling",
                         "Severity": "High",
                         "FixedIn": [],
                     }
