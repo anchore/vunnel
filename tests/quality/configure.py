@@ -380,6 +380,10 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
         "tests/quality/vulnerability-match-labels/**",
         ".github/workflows/pr-quality-gate.yaml",
         ".github/workflows/nightly-quality-gate.yaml",
+        # shared code that affects all providers
+        "src/vunnel/result.py",
+        "src/vunnel/provider.py",
+        "src/vunnel/tool/fixdate/**",
         "src/vunnel/utils/http_wrapper.py",
     ]
 
