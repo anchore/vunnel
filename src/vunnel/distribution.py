@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import iso8601
 from mashumaro.mixins.dict import DataClassDictMixin
 
-from vunnel import schema as schema_def
+from vunnel.schemas import ProviderListingSchema, Schema
 
 DB_SUFFIXES = {".tar.gz", ".tar.zst"}
 
@@ -55,7 +55,7 @@ class ListingDocument(DataClassDictMixin):
     provider: str
 
     # the schema information for this document
-    schema: schema_def.Schema = field(default_factory=schema_def.ProviderListingSchema)
+    schema: Schema = field(default_factory=ProviderListingSchema)
 
     @classmethod
     def new(cls, provider: str) -> ListingDocument:
