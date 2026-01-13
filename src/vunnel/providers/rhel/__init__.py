@@ -74,6 +74,7 @@ class Provider(provider.Provider):
         return [
             "vulnerability",
             "os",
+            "incremental",
         ]
 
     @classmethod
