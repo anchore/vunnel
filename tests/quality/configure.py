@@ -610,6 +610,10 @@ def _build_grype_db(bin_dir: str, install_version: str, clone_dir: str):
     subprocess.run(shlex.split(cmd), cwd=clone_dir, env=os.environ, check=True)
 
 
+def cache_file_path(provider: str) -> str:
+    return f".cache/vunnel/{provider}/grype-db-cache.tar.gz"
+
+
 @cli.command(name="build-db", help="build a DB consisting of one or more providers")
 @click.pass_obj
 def build_db(cfg: Config):
@@ -621,7 +625,6 @@ def build_db(cfg: Config):
 
     logging.info(f"preparing data directory for uncached={state.uncached_providers!r} cached={state.cached_providers!r}")
 
-    cache_file = "grype-db-cache.tar.gz"
     data_dir = "data"
     build_dir = "build"
     db_archive = f"{build_dir}/grype-db.tar.zst"
@@ -634,6 +637,7 @@ def build_db(cfg: Config):
     # fetch cache for other providers
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
+        cache_file = cache_file_path(provider)
         subprocess.run([ORAS, "pull", f"ghcr.io/anchore/grype-db/data/{provider}:latest"], check=True)
         subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
