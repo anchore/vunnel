@@ -9,7 +9,7 @@
           "Available": null,
           "Module": "",
           "Name": "test-pkg",
-          "NamespaceName": "archlinux:rolling",
+          "NamespaceName": "arch:rolling",
           "VendorAdvisory": {
             "AdvisorySummary": [],
             "NoAdvisory": false
@@ -22,7 +22,7 @@
       "Link": "https://security.archlinux.org/AVG-2222",
       "Metadata": {},
       "Name": "AVG-2222",
-      "NamespaceName": "archlinux:rolling",
+      "NamespaceName": "arch:rolling",
       "Severity": "Low"
     }
   },

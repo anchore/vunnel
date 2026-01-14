@@ -9,7 +9,7 @@
           "Available": null,
           "Module": "",
           "Name": "pam",
-          "NamespaceName": "archlinux:rolling",
+          "NamespaceName": "arch:rolling",
           "VendorAdvisory": {
             "AdvisorySummary": [],
             "NoAdvisory": false
@@ -29,7 +29,7 @@
         ]
       },
       "Name": "AVG-9999",
-      "NamespaceName": "archlinux:rolling",
+      "NamespaceName": "arch:rolling",
       "Severity": "Medium"
     }
   },

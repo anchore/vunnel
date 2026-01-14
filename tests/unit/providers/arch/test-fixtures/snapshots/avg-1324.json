@@ -9,7 +9,7 @@
           "Available": null,
           "Module": "",
           "Name": "glibc",
-          "NamespaceName": "archlinux:rolling",
+          "NamespaceName": "arch:rolling",
           "VendorAdvisory": {
             "AdvisorySummary": [],
             "NoAdvisory": false
@@ -22,7 +22,7 @@
           "Available": null,
           "Module": "",
           "Name": "lib32-glibc",
-          "NamespaceName": "archlinux:rolling",
+          "NamespaceName": "arch:rolling",
           "VendorAdvisory": {
             "AdvisorySummary": [],
             "NoAdvisory": false
@@ -45,7 +45,7 @@
         ]
       },
       "Name": "AVG-1324",
-      "NamespaceName": "archlinux:rolling",
+      "NamespaceName": "arch:rolling",
       "Severity": "High"
     }
   },

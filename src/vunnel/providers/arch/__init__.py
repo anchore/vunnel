@@ -36,6 +36,7 @@ class Provider(provider.Provider):
         self.logger.debug(f"config: {self.config}")
 
         self.parser = Parser(
+            ws=self.workspace,
             url=self.config.api_url,
             timeout=self.config.request_timeout,
             logger=self.logger,

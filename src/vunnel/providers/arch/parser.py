@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING, Any
+
+import orjson
 
 from vunnel.utils import http_wrapper
 from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from vunnel import workspace
 
 SEVERITY_MAPPING = {
     "Critical": "Critical",
@@ -18,16 +23,20 @@ SEVERITY_MAPPING = {
 
 
 class Parser:
-    def __init__(self, url: str, timeout: int, logger: logging.Logger | None = None):
+    _input_file_ = "all.json"
+
+    def __init__(self, ws: workspace.Workspace, url: str, timeout: int, logger: logging.Logger | None = None):
+        self.workspace = ws
         self.url = url
         self.timeout = timeout
         if logger is None:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+        self.input_file_path = os.path.join(self.workspace.input_path, self._input_file_)
 
-    def _fetch(self) -> list[dict[str, Any]]:
-        """Fetch the all.json data from Arch Linux security tracker with retry logic."""
-        self.logger.info(f"Fetching Arch Linux vulnerability data from {self.url}")
+    def _download(self) -> None:
+        """Download the all.json data from Arch Linux security tracker and save to disk."""
+        self.logger.info(f"Downloading Arch Linux vulnerability data from {self.url}")
 
         response = http_wrapper.get(
             self.url,
@@ -38,12 +47,23 @@ class Parser:
             user_agent="vunnel/1.0 (archlinux-provider)",
         )
 
-        self.logger.debug(f"Successfully fetched data from {self.url}")
-        return response.json()
+        os.makedirs(self.workspace.input_path, exist_ok=True)
+
+        with open(self.input_file_path, "wb") as f:
+            f.write(orjson.dumps(response.json(), option=orjson.OPT_INDENT_2))
+
+        self.logger.debug(f"Saved input data to {self.input_file_path}")
+
+    def _load(self) -> list[dict[str, Any]]:
+        """Load the all.json data from disk."""
+        self.logger.debug(f"Loading data from {self.input_file_path}")
+        with open(self.input_file_path, "rb") as f:
+            return orjson.loads(f.read())
 
     def parse(self) -> Generator[tuple[str, dict[str, Any]]]:
         """Parse the Arch Linux security data and yield normalized vulnerability records."""
-        data = self._fetch()
+        self._download()
+        data = self._load()
 
         if not isinstance(data, list):
             self.logger.error(f"Expected list from all.json, got {type(data)}")
@@ -85,7 +105,7 @@ class Parser:
                         fixed_in_list.append(
                             FixedIn(
                                 Name=package_name,
-                                NamespaceName="archlinux:rolling",
+                                NamespaceName="arch:rolling",
                                 VersionFormat="pacman",
                                 Version=fixed_version if fixed_version else "None",
                                 Module=None,
@@ -103,7 +123,7 @@ class Parser:
                 # Build the Vulnerability object
                 vuln = Vulnerability(
                     Name=group_id,
-                    NamespaceName="archlinux:rolling",
+                    NamespaceName="arch:rolling",
                     Description=vuln_type or f"Arch vulnerability {group_id}",
                     Severity=mapped_severity,
                     Link=f"https://security.archlinux.org/{group_id}",

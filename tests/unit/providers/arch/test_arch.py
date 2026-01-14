@@ -12,13 +12,22 @@ from vunnel.providers.arch.parser import Parser
 
 
 def _load_test_fixture():
-    """Load the test fixture data for mocking _fetch."""
+    """Load the test fixture data for mocking _load."""
     fixture_path = os.path.join(
         os.path.dirname(__file__),
         "test-fixtures/input/arch-advisories/all.json",
     )
     with open(fixture_path) as f:
         return json.load(f)
+
+
+@pytest.fixture()
+def mock_workspace(tmp_path):
+    """Create a mock workspace for testing."""
+    ws = MagicMock()
+    ws.input_path = str(tmp_path / "input")
+    os.makedirs(ws.input_path, exist_ok=True)
+    return ws
 
 
 class TestArchParser:
@@ -61,21 +70,22 @@ class TestArchParser:
             },
         ]
 
-    def test_parser_initialization(self):
+    def test_parser_initialization(self, mock_workspace):
         """Test that Parser initializes correctly."""
         url = "https://security.archlinux.org/all.json"
         timeout = 30
-        parser = Parser(url=url, timeout=timeout)
+        parser = Parser(ws=mock_workspace, url=url, timeout=timeout)
 
         assert parser.url == url
         assert parser.timeout == timeout
         assert parser.logger is not None
+        assert parser.workspace == mock_workspace
 
-    def test_parse_with_valid_data(self, mock_raw_data):
+    def test_parse_with_valid_data(self, mock_workspace, mock_raw_data):
         """Test parsing valid Arch Linux security data."""
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=mock_raw_data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=mock_raw_data):
             records = list(parser.parse())
 
             assert len(records) == 3
@@ -83,7 +93,7 @@ class TestArchParser:
             group_id_1, payload_1 = records[0]
             assert group_id_1 == "avg-1234"
             assert payload_1["Vulnerability"]["Name"] == "AVG-1234"
-            assert payload_1["Vulnerability"]["NamespaceName"] == "archlinux:rolling"
+            assert payload_1["Vulnerability"]["NamespaceName"] == "arch:rolling"
             assert payload_1["Vulnerability"]["Severity"] == "High"
             assert len(payload_1["Vulnerability"]["FixedIn"]) == 1
             assert payload_1["Vulnerability"]["FixedIn"][0]["Name"] == "curl"
@@ -101,11 +111,11 @@ class TestArchParser:
             # With dataclass output, Metadata is always present (empty dict when no CVEs/advisories)
             assert payload_3["Vulnerability"]["Metadata"] == {}
 
-    def test_parse_with_metadata(self, mock_raw_data):
+    def test_parse_with_metadata(self, mock_workspace, mock_raw_data):
         """Test that metadata is properly populated."""
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=mock_raw_data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=mock_raw_data):
             records = list(parser.parse())
             group_id, payload = records[0]
 
@@ -115,15 +125,15 @@ class TestArchParser:
             ]
             assert payload["Vulnerability"]["Metadata"]["Advisories"] == ["ASA-202401-01"]
 
-    def test_parse_with_invalid_data_format(self):
+    def test_parse_with_invalid_data_format(self, mock_workspace):
         """Test parsing with invalid data format (not a list)."""
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value={"invalid": "data"}):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value={"invalid": "data"}):
             with pytest.raises(ValueError, match="Invalid data format from all.json: expected list"):
                 list(parser.parse())
 
-    def test_parse_with_missing_name_field(self):
+    def test_parse_with_missing_name_field(self, mock_workspace):
         """Test that records without name field are skipped."""
         bad_data = [
             {
@@ -133,13 +143,13 @@ class TestArchParser:
             }
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=bad_data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=bad_data):
             records = list(parser.parse())
             assert len(records) == 0
 
-    def test_parse_with_empty_packages(self):
+    def test_parse_with_empty_packages(self, mock_workspace):
         """Test that records without packages don't have FixedIn."""
         data = [
             {
@@ -155,15 +165,15 @@ class TestArchParser:
             }
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             assert len(records) == 1
             group_id, payload = records[0]
             assert len(payload["Vulnerability"]["FixedIn"]) == 0
 
-    def test_parse_multi_package_vulnerability(self):
+    def test_parse_multi_package_vulnerability(self, mock_workspace):
         """Test that AVGs affecting multiple packages create FixedIn entries for each."""
         data = [
             {
@@ -179,9 +189,9 @@ class TestArchParser:
             }
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             assert len(records) == 1
             group_id, payload = records[0]
@@ -200,9 +210,9 @@ class TestArchParser:
             for entry in fixed_in:
                 assert entry["Version"] == "2.38-2"
                 assert entry["VersionFormat"] == "pacman"
-                assert entry["NamespaceName"] == "archlinux:rolling"
+                assert entry["NamespaceName"] == "arch:rolling"
 
-    def test_parse_unfixed_vulnerability(self):
+    def test_parse_unfixed_vulnerability(self, mock_workspace):
         """Test that unfixed vulnerabilities emit FixedIn with Version 'None'."""
         data = [
             {
@@ -218,9 +228,9 @@ class TestArchParser:
             }
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             assert len(records) == 1
             group_id, payload = records[0]
@@ -230,7 +240,7 @@ class TestArchParser:
             assert payload["Vulnerability"]["FixedIn"][0]["Version"] == "None"
             assert payload["Vulnerability"]["FixedIn"][0]["VersionFormat"] == "pacman"
 
-    def test_parse_skips_not_affected(self):
+    def test_parse_skips_not_affected(self, mock_workspace):
         """Test that 'Not affected' status entries are filtered out."""
         data = [
             {
@@ -257,9 +267,9 @@ class TestArchParser:
             },
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             # Only AVG-1234 should be included, AVG-1324 should be filtered out
             assert len(records) == 1
@@ -267,7 +277,7 @@ class TestArchParser:
             assert group_id == "avg-1234"
             assert payload["Vulnerability"]["Name"] == "AVG-1234"
 
-    def test_severity_mapping(self):
+    def test_severity_mapping(self, mock_workspace):
         """Test that severity values are properly mapped."""
         data = [
             {
@@ -305,15 +315,15 @@ class TestArchParser:
             },
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             assert records[0][1]["Vulnerability"]["Severity"] == "Critical"
             assert records[1][1]["Vulnerability"]["Severity"] == "Low"
             assert records[2][1]["Vulnerability"]["Severity"] == "Unknown"
 
-    def test_parse_with_whitespace(self):
+    def test_parse_with_whitespace(self, mock_workspace):
         """Test that whitespace in fields is properly stripped."""
         data = [
             {
@@ -329,9 +339,9 @@ class TestArchParser:
             }
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             group_id, payload = records[0]
             assert group_id == "avg-1234"
@@ -339,7 +349,7 @@ class TestArchParser:
             assert payload["Vulnerability"]["FixedIn"][0]["Name"] == "curl"
             assert payload["Vulnerability"]["FixedIn"][0]["Version"] == "8.5.0-1"
 
-    def test_parse_continues_on_record_error(self):
+    def test_parse_continues_on_record_error(self, mock_workspace):
         """Test that parsing continues when a single record causes an error."""
         data = [
             {
@@ -371,9 +381,9 @@ class TestArchParser:
             },
         ]
 
-        parser = Parser(url="https://security.archlinux.org/all.json", timeout=30)
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_fetch", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
             records = list(parser.parse())
             # Should have 2 records (bad one skipped)
             assert len(records) == 2
@@ -419,7 +429,7 @@ class TestArchProvider:
                 {
                     "Vulnerability": {
                         "Name": "AVG-1234",
-                        "NamespaceName": "archlinux:rolling",
+                        "NamespaceName": "arch:rolling",
                         "Severity": "High",
                         "FixedIn": [],
                     }
@@ -447,9 +457,10 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
-    # Mock _fetch to return test fixture data
+    # Mock _download and _load to return test fixture data
     test_data = _load_test_fixture()
-    monkeypatch.setattr(p.parser, "_fetch", lambda: test_data)
+    monkeypatch.setattr(p.parser, "_download", lambda: None)
+    monkeypatch.setattr(p.parser, "_load", lambda: test_data)
 
     p.update(None)
 
@@ -467,9 +478,10 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
-    # Mock _fetch to return test fixture data
+    # Mock _download and _load to return test fixture data
     test_data = _load_test_fixture()
-    monkeypatch.setattr(p.parser, "_fetch", lambda: test_data)
+    monkeypatch.setattr(p.parser, "_download", lambda: None)
+    monkeypatch.setattr(p.parser, "_load", lambda: test_data)
 
     p.update(None)
 

@@ -9,7 +9,7 @@
           "Available": null,
           "Module": "",
           "Name": "curl",
-          "NamespaceName": "archlinux:rolling",
+          "NamespaceName": "arch:rolling",
           "VendorAdvisory": {
             "AdvisorySummary": [],
             "NoAdvisory": false
@@ -32,7 +32,7 @@
         ]
       },
       "Name": "AVG-1234",
-      "NamespaceName": "archlinux:rolling",
+      "NamespaceName": "arch:rolling",
       "Severity": "High"
     }
   },

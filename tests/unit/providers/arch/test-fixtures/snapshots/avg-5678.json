@@ -9,7 +9,7 @@
           "Available": null,
           "Module": "",
           "Name": "openssl",
-          "NamespaceName": "archlinux:rolling",
+          "NamespaceName": "arch:rolling",
           "VendorAdvisory": {
             "AdvisorySummary": [],
             "NoAdvisory": false
@@ -36,7 +36,7 @@
         ]
       },
       "Name": "AVG-5678",
-      "NamespaceName": "archlinux:rolling",
+      "NamespaceName": "arch:rolling",
       "Severity": "Critical"
     }
   },
