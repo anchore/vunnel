@@ -55,7 +55,7 @@ class Provider(provider.Provider):
 
     @classmethod
     def tags(cls) -> list[str]:
-        return ["vulnerability", "os"]
+        return ["vulnerability", "os", "incremental"]
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
