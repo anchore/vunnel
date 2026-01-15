@@ -147,6 +147,38 @@ def test_parser_normalize_with_unaffected_records(helpers, auto_fake_fixdate_fin
     assert normalized_record["database_specific"]["anchore"]["record_type"] == "advisory"
 
 
+def test_parser_validates_osv_ids(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):
+    """Test that parser validates and filters out malformed OSV IDs."""
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    # Mock all.json with valid and invalid IDs
+    mock_ids = [
+        {"id": "ROOT-OS-ALPINE-318-CVE-2000-0548", "modified": "2024-01-15T00:00:00Z"},
+        {"id": "ROOT-APP-NPM-", "modified": "2024-01-15T00:00:00Z"},  # Invalid: trailing dash
+        {"id": "", "modified": "2024-01-15T00:00:00Z"},  # Invalid: empty
+        {"id": "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014", "modified": "2025-01-10T00:00:00Z"},
+        {"id": "ROOT-APP-PYPI-", "modified": "2024-01-15T00:00:00Z"},  # Invalid: trailing dash
+    ]
+
+    def mock_http_get(url, logger, **kwargs):
+        mock_response = mocker.Mock()
+        mock_response.json.return_value = mock_ids
+        return mock_response
+
+    mocker.patch("vunnel.utils.http_wrapper.get", side_effect=mock_http_get)
+
+    parser = Parser(ws=workspace, logger=None)
+    valid_ids = parser._fetch_osv_ids()
+
+    # Should only return the 2 valid IDs
+    assert len(valid_ids) == 2
+    assert "ROOT-OS-ALPINE-318-CVE-2000-0548" in valid_ids
+    assert "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014" in valid_ids
+    assert "ROOT-APP-NPM-" not in valid_ids
+    assert "ROOT-APP-PYPI-" not in valid_ids
+    assert "" not in valid_ids
+
+
 @pytest.mark.parametrize(
     "schema_version,expected",
     [

@@ -22,6 +22,7 @@ class Config:
     )
     request_timeout: int = 125
     api_base_url: str = "https://api.root.io/external/osv"
+    parallelism: int = 10  # concurrent downloads for improved performance
 
 
 class Provider(provider.Provider):
@@ -40,6 +41,7 @@ class Provider(provider.Provider):
             ws=self.workspace,
             api_base_url=config.api_base_url,
             download_timeout=config.request_timeout,
+            parallelism=config.parallelism,
             logger=self.logger,
         )
 
