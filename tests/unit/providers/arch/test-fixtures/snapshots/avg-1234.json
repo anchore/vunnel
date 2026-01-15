@@ -1,0 +1,40 @@
+{
+  "identifier": "avg-1234",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "arbitrary code execution",
+      "FixedIn": [
+        {
+          "Available": null,
+          "Module": "",
+          "Name": "curl",
+          "NamespaceName": "arch:rolling",
+          "VendorAdvisory": {
+            "AdvisorySummary": [],
+            "NoAdvisory": false
+          },
+          "Version": "8.5.0-1",
+          "VersionFormat": "pacman",
+          "VulnerableRange": null
+        }
+      ],
+      "Link": "https://security.archlinux.org/AVG-1234",
+      "Metadata": {
+        "Advisories": [
+          "ASA-202401-01"
+        ],
+        "CVE": [
+          {
+            "Link": "https://nvd.nist.gov/vuln/detail/CVE-2024-1234",
+            "Name": "CVE-2024-1234"
+          }
+        ]
+      },
+      "Name": "AVG-1234",
+      "NamespaceName": "arch:rolling",
+      "Severity": "High"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}
