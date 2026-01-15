@@ -104,6 +104,14 @@ class Parser:
                 package["ecosystem"] = ecosystem[5:]  # Strip "Root:" prefix
                 self.logger.debug(f"normalized ecosystem: {ecosystem} -> {package['ecosystem']}")
 
+        # Set database_specific metadata to mark as advisory for grype-db
+        # This is critical for grype-db to emit unaffectedPackageHandles for the NAK pattern
+        if "database_specific" not in vuln_entry:
+            vuln_entry["database_specific"] = {}
+        if "anchore" not in vuln_entry["database_specific"]:
+            vuln_entry["database_specific"]["anchore"] = {}
+        vuln_entry["database_specific"]["anchore"]["record_type"] = "advisory"
+
         return vuln_id, vuln_schema, vuln_entry
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
