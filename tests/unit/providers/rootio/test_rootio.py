@@ -82,7 +82,7 @@ def test_parser(helpers, disable_get_requests, auto_fake_fixdate_finder, mocker)
 
 
 def test_parser_normalize_with_root_prefix(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):
-    """Test that parser strips 'Root:' prefix from ecosystem field."""
+    """Test that parser strips 'Root:' prefix from ecosystem field and sets advisory metadata."""
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     # Create a mock OSV record with "Root:" prefix (as returned by actual API)
@@ -109,6 +109,42 @@ def test_parser_normalize_with_root_prefix(helpers, auto_fake_fixdate_finder, di
     assert vuln_id == "ROOT-OS-ALPINE-318-CVE-2000-0548"
     assert schema_version == "1.6.0"
     assert normalized_record["affected"][0]["package"]["ecosystem"] == "Alpine:3.18"  # Should be stripped
+
+    # Verify database_specific metadata is set for advisory type
+    # This is critical for grype-db to emit unaffectedPackageHandles for NAK pattern
+    assert "database_specific" in normalized_record
+    assert "anchore" in normalized_record["database_specific"]
+    assert normalized_record["database_specific"]["anchore"]["record_type"] == "advisory"
+
+
+def test_parser_normalize_with_unaffected_records(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):
+    """Test that parser adds database_specific.anchore.record_type = advisory for unaffected packages."""
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    # Create a mock OSV record WITHOUT database_specific field
+    mock_record = {
+        "schema_version": "1.6.0",
+        "id": "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014",
+        "modified": "2025-01-10T10:00:00Z",
+        "published": "2025-01-05T08:00:00Z",
+        "affected": [
+            {
+                "package": {
+                    "ecosystem": "Debian:bookworm",
+                    "name": "rootio-openssl"
+                }
+            }
+        ]
+        # No database_specific field initially
+    }
+
+    parser = Parser(ws=workspace, logger=None)
+    vuln_id, schema_version, normalized_record = parser._normalize(mock_record)
+
+    # Verify database_specific metadata is added
+    assert "database_specific" in normalized_record
+    assert "anchore" in normalized_record["database_specific"]
+    assert normalized_record["database_specific"]["anchore"]["record_type"] == "advisory"
 
 
 @pytest.mark.parametrize(
