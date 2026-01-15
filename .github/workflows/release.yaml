@@ -164,6 +164,24 @@ jobs:
           echo "$GITHUB_TOKEN" | crane auth login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
+      - name: Wait for preprod image to be published
+        uses: fountainhead/action-wait-for-check@5a908a24814494009c4bb27c242ea38c93c593be #v1.1.1
+        id: wait-for-preprod
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # This check name is defined as the github action job name (in .github/workflows/validations.yaml)
+          checkName: "Publish-PreProd"
+          ref: ${{ github.sha }}
+
+      - name: Verify preprod publish succeeded
+        if: steps.wait-for-preprod.outputs.conclusion != 'success'
+        env:
+          PREPROD_STATUS: ${{ steps.wait-for-preprod.outputs.conclusion }}
+        run: |
+          echo "Publish-PreProd status: $PREPROD_STATUS"
+          echo "Cannot promote to release without a successful preprod image"
+          exit 1
+
       - name: Promote commit image to release
         run: |
           make ci-promote-release
