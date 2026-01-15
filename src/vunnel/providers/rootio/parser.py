@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import os
 from typing import TYPE_CHECKING, Any
@@ -8,6 +9,7 @@ import orjson
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
+from vunnel.utils import osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -22,11 +24,12 @@ namespace = "rootio"
 class Parser:
     _api_base_url_ = "https://api.root.io/external/osv"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         ws: Workspace,
         api_base_url: str | None = None,
         download_timeout: int = 125,
+        parallelism: int = 10,
         fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
     ):
@@ -36,6 +39,7 @@ class Parser:
         self.workspace = ws
         self.api_base_url = api_base_url or self._api_base_url_
         self.download_timeout = download_timeout
+        self.parallelism = parallelism
         self.urls = [self.api_base_url]
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -48,6 +52,17 @@ class Parser:
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
+    def _is_valid_osv_id(self, osv_id: str) -> bool:
+        """
+        Validate OSV ID format.
+
+        Valid IDs should not be empty or end with a trailing dash.
+        Examples of invalid IDs: "ROOT-APP-NPM-", "", " "
+        """
+        if not osv_id or not osv_id.strip():
+            return False
+        return not osv_id.endswith("-")
+
     def _fetch_osv_ids(self) -> list[str]:
         """Fetch the list of OSV record IDs from the Root IO API."""
         self.logger.info("fetching list of OSV IDs from Root IO")
@@ -57,8 +72,13 @@ class Parser:
         # Parse the response - it's an array of objects with "id" and "modified" fields
         id_objects = response.json()
 
-        # Extract just the ID strings from each object
-        id_list = [obj["id"] for obj in id_objects]
+        # Extract and validate ID strings from each object
+        all_ids = [obj["id"] for obj in id_objects]
+        valid_ids = [osv_id for osv_id in all_ids if self._is_valid_osv_id(osv_id)]
+
+        invalid_count = len(all_ids) - len(valid_ids)
+        if invalid_count > 0:
+            self.logger.warning(f"skipping {invalid_count} invalid OSV IDs")
 
         # Save the full response to workspace for debugging/reproducibility
         os.makedirs(self.workspace.input_path, exist_ok=True)
@@ -66,8 +86,8 @@ class Parser:
         with open(ids_file, "wb") as f:
             f.write(orjson.dumps(id_objects))
 
-        self.logger.info(f"found {len(id_list)} OSV records")
-        return id_list
+        self.logger.info(f"found {len(valid_ids)} valid OSV records")
+        return valid_ids
 
     def _fetch_osv_record(self, osv_id: str) -> dict[str, Any]:
         """Fetch an individual OSV record from the Root IO API."""
@@ -118,24 +138,54 @@ class Parser:
         """
         Fetch and yield OSV records from Root IO API.
 
+        Downloads records concurrently for performance, then processes them sequentially.
+
         Yields:
             Tuples of (vulnerability_id, schema_version, record_dict)
         """
         # Fetch the list of OSV IDs
         osv_ids = self._fetch_osv_ids()
 
-        # Download fixdate information if needed
-        # TEMPORARILY DISABLED: self.fixdater.download()
-        # Fix date patching is optional and requires authentication
+        # TEMPORARILY DISABLED: Download fixdate information for precise fix dates
+        # Note: Requires ghcr.io/anchore/grype-db-observed-fix-date/rootio to exist
+        # FIXME: Enable once Anchore creates the fixdate database for rootio
+        # self.fixdater.download()
 
-        # Fetch and process each OSV record
+        # Download all OSV records concurrently
+        self.logger.info(f"downloading {len(osv_ids)} OSV records with parallelism={self.parallelism}")
+        records = {}
+        failed_ids = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.parallelism) as executor:
+            # Submit all download tasks
+            future_to_id = {executor.submit(self._fetch_osv_record, osv_id): osv_id for osv_id in osv_ids}
+
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_id):
+                osv_id = future_to_id[future]
+                try:
+                    record = future.result()
+                    records[osv_id] = record
+                except Exception as e:
+                    self.logger.error(f"failed to download OSV record {osv_id}: {e}")
+                    failed_ids.append(osv_id)
+
+        if failed_ids:
+            self.logger.warning(f"failed to download {len(failed_ids)} records")
+
+        self.logger.info(f"successfully downloaded {len(records)} OSV records")
+
+        # Process downloaded records sequentially
         for osv_id in osv_ids:
-            try:
-                vuln_entry = self._fetch_osv_record(osv_id)
+            if osv_id not in records:
+                continue  # Skip failed downloads
 
-                # Apply fix date patching for published/modified dates
-                # TEMPORARILY DISABLED: osv.patch_fix_date(vuln_entry, self.fixdater)
-                # Fix date patching is optional and requires authentication
+            try:
+                vuln_entry = records[osv_id]
+
+                # TEMPORARILY DISABLED: Apply fix date patching to add precise fix dates to ranges
+                # FIXME: Enable once Anchore creates the fixdate database for rootio
+                # osv.patch_fix_date(vuln_entry, self.fixdater)
 
                 # Normalize and yield the record
                 yield self._normalize(vuln_entry)
