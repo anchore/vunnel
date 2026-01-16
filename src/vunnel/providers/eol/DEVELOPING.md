@@ -24,8 +24,10 @@ If the upstream API schema changes, regenerate the JSON schema:
 
 ```bash
 cd src/vunnel/providers/eol
-python generate_schema.py
+uv run python generate_schema.py
 ```
+
+Note: The script requires the `requests` and `pyyaml` packages (included in vunnel's dependencies).
 
 This will:
 1. Fetch the OpenAPI spec from https://endoflife.date/docs/api/v1/openapi.yml
@@ -38,8 +40,7 @@ This will:
 
 1. Re-run `./generate_schema.py`
 2. Review the diff to understand what changed
-3. Update the schema version in `generate_schema.py` if it's a breaking change
-4. Update `src/vunnel/schema/provider.py` if the version changes
+3. Update the schema version in `src/vunnel/schema/eol.py` if it's a breaking change
 
 ## Data Format
 

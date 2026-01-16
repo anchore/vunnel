@@ -31,16 +31,14 @@ class Manager:
     def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
         """Get EOL data for all products and cycles."""
         self.logger.info(f"downloading EOL data from {self.url}")
+
+        response = requests.get(self.url, timeout=self.download_timeout)
+        response.raise_for_status()
+
         self.urls.append(self.url)
 
-        try:
-            response = requests.get(self.url, timeout=self.download_timeout)
-            response.raise_for_status()
-            data = response.json()
-            products = data.get("result", [])
-        except requests.RequestException as e:
-            self.logger.error(f"failed to download EOL data: {e}")
-            return
+        data = response.json()
+        products = data.get("result", [])
 
         for product in products:
             product_name = product["name"]

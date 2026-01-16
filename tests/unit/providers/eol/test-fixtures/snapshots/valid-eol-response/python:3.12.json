@@ -9,6 +9,7 @@
         "type": "cpe"
       }
     ],
+    "isEol": false,
     "isLts": false,
     "isMaintained": true,
     "label": "3.12 (Stable)",

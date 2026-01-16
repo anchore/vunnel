@@ -10,6 +10,8 @@
         "type": "cpe"
       }
     ],
+    "isEoas": false,
+    "isEol": false,
     "isLts": true,
     "isMaintained": true,
     "label": "22.04 LTS (Jammy Jellyfish)",

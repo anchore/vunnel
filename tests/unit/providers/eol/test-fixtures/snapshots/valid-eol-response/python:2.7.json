@@ -1,21 +1,21 @@
 {
-  "identifier": "python:3.11",
+  "identifier": "python:2.7",
   "item": {
-    "codename": "Feature Complete",
-    "eolFrom": "2027-10-24",
+    "codename": "Legacy",
+    "eolFrom": "2020-01-01",
     "identifiers": [
       {
         "id": "cpe:2.3:a:python:python:*:*:*:*:*:*:*:*",
         "type": "cpe"
       }
     ],
-    "isEol": false,
+    "isEol": true,
     "isLts": false,
-    "isMaintained": true,
-    "label": "3.11 (Feature Complete)",
-    "name": "3.11",
+    "isMaintained": false,
+    "label": "2.7 (Legacy)",
+    "name": "2.7",
     "product": "python",
-    "releaseDate": "2022-10-24"
+    "releaseDate": "2010-07-03"
   },
   "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
 }

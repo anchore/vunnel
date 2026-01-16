@@ -10,7 +10,7 @@ from vunnel.providers import eol
 @pytest.mark.parametrize(
     ("mock_data_path", "expected_written_entries"),
     [
-        ("test-fixtures/valid-eol-response.json", 4),
+        ("test-fixtures/valid-eol-response.json", 6),
     ],
 )
 def test_provider_schema(helpers, mock_data_path, expected_written_entries, disable_get_requests, mocker):

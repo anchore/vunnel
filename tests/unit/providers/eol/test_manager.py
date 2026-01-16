@@ -140,9 +140,8 @@ def test_manager_get_request_error():
             logger=logger,
         )
 
-        records = list(manager.get())
-        assert len(records) == 0
-        logger.error.assert_called_once()
+        with pytest.raises(requests.RequestException):
+            list(manager.get())
 
 
  

@@ -15,14 +15,14 @@ The output is written to: schema/eol/schema-1.0.0.json
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import requests
 import yaml
 
+from vunnel.schema.eol import EOL_SCHEMA_VERSION
+
 OPENAPI_URL = "https://endoflife.date/docs/api/v1/openapi.yml"
-SCHEMA_VERSION = "1.0.0"
 
 
 def fetch_openapi_spec() -> dict:
@@ -87,7 +87,7 @@ def extract_release_schema(openapi_spec: dict) -> dict:
     # Convert to JSON Schema
     json_schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-{SCHEMA_VERSION}.json",
+        "$id": f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-{EOL_SCHEMA_VERSION}.json",
         "type": "object",
         "title": "EOL Record",
         "description": "End-of-life data from endoflife.date API (ProductRelease schema)",
@@ -144,7 +144,7 @@ def main() -> None:
     # Determine output path relative to repo root
     script_dir = Path(__file__).parent
     repo_root = script_dir.parent.parent.parent.parent  # src/vunnel/providers/eol -> repo root
-    output_path = repo_root / "schema" / "eol" / f"schema-{SCHEMA_VERSION}.json"
+    output_path = repo_root / "schema" / "eol" / f"schema-{EOL_SCHEMA_VERSION}.json"
 
     # Fetch and convert
     openapi_spec = fetch_openapi_spec()
