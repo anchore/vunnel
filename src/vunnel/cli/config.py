@@ -52,6 +52,7 @@ class Providers:
     chainguard_libraries: providers.chainguard_libraries.Config = field(default_factory=providers.chainguard_libraries.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
     echo: providers.echo.Config = field(default_factory=providers.echo.Config)
+    eol: providers.eol.Config = field(default_factory=providers.eol.Config)
     epss: providers.epss.Config = field(default_factory=providers.epss.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
     kev: providers.kev.Config = field(default_factory=providers.kev.Config)

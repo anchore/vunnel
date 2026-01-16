@@ -16,6 +16,7 @@ OSV_SCHEMA_VERSION = "1.6.1"
 KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION = "1.0.0"
 EPSS_SCHEMA_VERSION = "1.0.0"
 ANNOTATED_OPENVEX_SCHEMA_VERSION = "1.0.0"
+EOL_SCHEMA_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -107,4 +108,11 @@ def KnownExploitedVulnerabilitySchema(version: str = KNOWN_EXPLOITED_VULNERABILI
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/known-exploited/schema-{version}.json",
+    )
+
+
+def EOLSchema(version: str = EOL_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-{version}.json",
     )
