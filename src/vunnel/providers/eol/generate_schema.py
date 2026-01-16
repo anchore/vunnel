@@ -65,9 +65,7 @@ def openapi_type_to_jsonschema(openapi_type: dict) -> dict:
     # Handle objects
     if openapi_type.get("type") == "object":
         if "properties" in openapi_type:
-            result["properties"] = {
-                k: openapi_type_to_jsonschema(v) for k, v in openapi_type["properties"].items()
-            }
+            result["properties"] = {k: openapi_type_to_jsonschema(v) for k, v in openapi_type["properties"].items()}
         if "additionalProperties" in openapi_type:
             result["additionalProperties"] = openapi_type["additionalProperties"]
 
