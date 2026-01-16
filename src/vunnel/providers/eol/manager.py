@@ -28,7 +28,7 @@ class Manager:
         self.logger = logger
         self.urls: list[str] = []
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         """Get EOL data for all products and cycles."""
         self.logger.info(f"downloading EOL data from {self.url}")
 

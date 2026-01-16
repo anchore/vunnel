@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Generate JSON Schema for EOL provider from the endoflife.date OpenAPI specification.
 
@@ -14,9 +13,10 @@ The output is written to: schema/eol/schema-1.0.0.json
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
+from typing import Any
 
+import orjson
 import requests
 import yaml
 
@@ -25,7 +25,7 @@ from vunnel.schema.eol import EOL_SCHEMA_VERSION
 OPENAPI_URL = "https://endoflife.date/docs/api/v1/openapi.yml"
 
 
-def fetch_openapi_spec() -> dict:
+def fetch_openapi_spec() -> dict[str, Any]:
     """Fetch the OpenAPI specification from endoflife.date."""
     print(f"Fetching OpenAPI spec from {OPENAPI_URL}")
     response = requests.get(OPENAPI_URL, timeout=30)
@@ -33,34 +33,43 @@ def fetch_openapi_spec() -> dict:
     return yaml.safe_load(response.text)
 
 
-def openapi_type_to_jsonschema(openapi_type: dict) -> dict:
-    """Convert an OpenAPI type definition to JSON Schema format."""
-    result = {}
-
-    # Handle anyOf (nullable types in OpenAPI 3.1)
-    if "anyOf" in openapi_type:
-        types = []
-        for option in openapi_type["anyOf"]:
-            if option.get("type") == "null":
-                types.append("null")
-            elif "type" in option:
-                types.append(option["type"])
-                if "format" in option:
-                    result["format"] = option["format"]
-        result["type"] = types if len(types) > 1 else types[0]
-        if "description" in openapi_type:
-            result["description"] = openapi_type["description"]
-        return result
-
-    # Handle simple types
-    if "type" in openapi_type:
-        result["type"] = openapi_type["type"]
-
-    if "format" in openapi_type:
-        result["format"] = openapi_type["format"]
-
+def _convert_anyof_type(openapi_type: dict[str, Any]) -> dict[str, Any]:
+    """Convert an OpenAPI anyOf type definition to JSON Schema format."""
+    result: dict[str, Any] = {}
+    types = []
+    for option in openapi_type["anyOf"]:
+        if option.get("type") == "null":
+            types.append("null")
+        elif "type" in option:
+            types.append(option["type"])
+            if "format" in option:
+                result["format"] = option["format"]
+    result["type"] = types if len(types) > 1 else types[0]
     if "description" in openapi_type:
         result["description"] = openapi_type["description"]
+    return result
+
+
+def _convert_simple_type(openapi_type: dict[str, Any]) -> dict[str, Any]:
+    """Convert basic type, format, and description fields."""
+    result: dict[str, Any] = {}
+    if "type" in openapi_type:
+        result["type"] = openapi_type["type"]
+    if "format" in openapi_type:
+        result["format"] = openapi_type["format"]
+    if "description" in openapi_type:
+        result["description"] = openapi_type["description"]
+    return result
+
+
+def openapi_type_to_jsonschema(openapi_type: dict[str, Any]) -> dict[str, Any]:
+    """Convert an OpenAPI type definition to JSON Schema format."""
+    # Handle anyOf (nullable types in OpenAPI 3.1)
+    if "anyOf" in openapi_type:
+        return _convert_anyof_type(openapi_type)
+
+    # Handle simple types, format, and description
+    result = _convert_simple_type(openapi_type)
 
     # Handle objects
     if openapi_type.get("type") == "object":
@@ -76,7 +85,7 @@ def openapi_type_to_jsonschema(openapi_type: dict) -> dict:
     return result
 
 
-def extract_release_schema(openapi_spec: dict) -> dict:
+def extract_release_schema(openapi_spec: dict[str, Any]) -> dict[str, Any]:
     """Extract and convert the ProductRelease schema from OpenAPI spec."""
     schemas = openapi_spec.get("components", {}).get("schemas", {})
     product_release = schemas.get("ProductRelease", {})
@@ -85,7 +94,7 @@ def extract_release_schema(openapi_spec: dict) -> dict:
         raise ValueError("ProductRelease schema not found in OpenAPI spec")
 
     # Convert to JSON Schema
-    json_schema = {
+    json_schema: dict[str, Any] = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-{EOL_SCHEMA_VERSION}.json",
         "type": "object",
@@ -97,7 +106,7 @@ def extract_release_schema(openapi_spec: dict) -> dict:
     json_schema["required"] = ["product", "name"]
 
     # Convert properties
-    properties = {}
+    properties: dict[str, Any] = {}
 
     # Add our custom 'product' field (not in upstream API, we add it)
     properties["product"] = {
@@ -131,12 +140,12 @@ def extract_release_schema(openapi_spec: dict) -> dict:
     return json_schema
 
 
-def write_schema(schema: dict, output_path: Path) -> None:
+def write_schema(schema: dict[str, Any], output_path: Path) -> None:
     """Write the JSON schema to file."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(schema, f, indent=2)
-        f.write("\n")
+    with open(output_path, "wb") as f:
+        f.write(orjson.dumps(schema, option=orjson.OPT_INDENT_2))
+        f.write(b"\n")
     print(f"Schema written to {output_path}")
 
 
