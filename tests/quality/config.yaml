@@ -383,3 +383,35 @@ tests:
       - <<: *default-validations
         max_year: 2022
         candidate_tool_label: custom-db
+
+  - provider: rootio
+    # Root IO provides patched packages for multiple ecosystems
+    # Test images contain Root IO patched versions (rootio- prefix, _rootio_ version suffix)
+    additional_providers:
+      - name: nvd
+        use_cache: true
+      - name: alpine
+        use_cache: true
+      - name: debian
+        use_cache: true
+      - name: ubuntu
+        use_cache: true
+      - name: github
+        use_cache: true
+    images:
+      - docker.io/rootpublic/cassandra:latest@sha256:02272b14efbe14e70ee5512ce707c4e300d3c1813f0e5df9562512c1b96be835
+    expected_namespaces:
+      # Root IO namespaces (per grype-db implementation)
+      - rootio:distro:ubuntu:22.04
+      # Upstream provider namespaces (for NAK pattern verification)
+      - ubuntu:distro:ubuntu:22.04
+      - github:language:java
+      - github:language:go
+      - nvd:cpe
+    validations:
+      - <<: *default-validations
+        max_year: 2021  # Root IO is a new provider - limiting to older CVEs for initial validation
+        max_new_false_negatives: 5  # Allow some FNs for initial provider PR
+        max_unlabeled_percent: 90  # Relaxed for initial PR with limited test image
+        max_f1_regression: 0.30  # Allow F1 score up to 0.70 (vs 1.00 reference)
+        candidate_tool_label: custom-db
