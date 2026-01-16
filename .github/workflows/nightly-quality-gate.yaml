@@ -148,11 +148,21 @@ jobs:
           fi
           echo "🟢 Quality gate passed!"
 
-      - uses: 8398a7/action-slack@77eaa4f1c608a7d68b38af4e3f739dcd8cba273e #v3.19.0
+      - name: Notify Slack on failure
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
         if: ${{ failure() }}
         with:
-          status: ${{ job.status }}
-          fields: repo,workflow,action,eventName
-          text: "Vunnel nightly quality gate has failed: https://github.com/anchore/vunnel/actions/workflows/nightly-quality-gate.yaml"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_TOOLBOX_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_TOOLBOX_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "Vunnel nightly quality gate has failed"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: |
+                    *Vunnel nightly quality gate has failed*
+                    • Repo: `${{ github.repository }}`
+                    • Workflow: `${{ github.workflow }}`
+                    • Event: `${{ github.event_name }}`
+                    • <https://github.com/anchore/vunnel/actions/workflows/nightly-quality-gate.yaml|View Workflow>
