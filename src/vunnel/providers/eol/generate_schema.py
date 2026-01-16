@@ -20,7 +20,7 @@ import orjson
 import requests
 import yaml
 
-from vunnel.schema.eol import EOL_SCHEMA_VERSION
+from vunnel.schema import EOL_SCHEMA_VERSION
 
 OPENAPI_URL = "https://endoflife.date/docs/api/v1/openapi.yml"
 

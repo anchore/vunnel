@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import zstandard
 
-from vunnel import provider, result, schema, workspace, distribution, schemas
+from vunnel import provider, result, schema, workspace, distribution
 from vunnel.utils import hasher, archive
 
 
@@ -904,7 +904,7 @@ def assert_dummy_workspace_state(ws):
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="f7b0d70b6cc6d09f", algorithm="xxh64", path="checksums"),
         timestamp=None,
-        schema=schemas.ProviderStateSchema(),
+        schema=schema.ProviderStateSchema(),
     )
     expected_state.processor = None  # also zero out auto-populated value
 

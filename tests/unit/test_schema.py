@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from vunnel import schemas as schema_mod
-from vunnel.schemas import ProviderStateSchema, ProviderListingSchema, Schema
+from vunnel import schema as schema_mod
+from vunnel.schema import ProviderStateSchema, ProviderListingSchema, Schema
 
 
 def test_provider_workspace_schema_v1():
