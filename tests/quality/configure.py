@@ -17,6 +17,7 @@ from typing import Any
 
 import click
 import mergedeep
+import oras.client
 import requests
 import yaml
 from mashumaro.mixins.dict import DataClassDictMixin
@@ -33,7 +34,6 @@ from vunnel import providers as vunnel_providers
 BIN_DIR = "./bin"
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
 GRYPE_DB = f"{BIN_DIR}/grype-db"
-ORAS = "../../.tool/oras"  # installed by binny at repo root
 
 
 class Application(YardstickApplication, DataClassDictMixin):
@@ -610,6 +610,10 @@ def _build_grype_db(bin_dir: str, install_version: str, clone_dir: str):
     subprocess.run(shlex.split(cmd), cwd=clone_dir, env=os.environ, check=True)
 
 
+def cache_file_path(provider: str) -> str:
+    return f".cache/vunnel/{provider}/grype-db-cache.tar.gz"
+
+
 @cli.command(name="build-db", help="build a DB consisting of one or more providers")
 @click.pass_obj
 def build_db(cfg: Config):
@@ -621,7 +625,6 @@ def build_db(cfg: Config):
 
     logging.info(f"preparing data directory for uncached={state.uncached_providers!r} cached={state.cached_providers!r}")
 
-    cache_file = "grype-db-cache.tar.gz"
     data_dir = "data"
     build_dir = "build"
     db_archive = f"{build_dir}/grype-db.tar.zst"
@@ -632,9 +635,15 @@ def build_db(cfg: Config):
     shutil.rmtree(build_dir, ignore_errors=True)
 
     # fetch cache for other providers
+    oras_client = oras.client.OrasClient()
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token:
+        oras_client.login(hostname="ghcr.io", username="token", password=github_token)
+
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
-        subprocess.run([ORAS, "pull", f"ghcr.io/anchore/grype-db/data/{provider}:latest"], check=True)
+        cache_file = cache_file_path(provider)
+        oras_client.pull(target=f"ghcr.io/anchore/grype-db/data/{provider}:latest", outdir=".")
         subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
 

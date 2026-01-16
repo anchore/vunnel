@@ -70,6 +70,7 @@ class Provider(provider.Provider):
             # the increased resource usage to reduce overall runtime.
             # This is particularly important for the ubuntu provider (which can take hours to run).
             "multicore",
+            "incremental",
         ]
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:

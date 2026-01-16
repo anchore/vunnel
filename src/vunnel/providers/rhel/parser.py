@@ -5,7 +5,9 @@ import contextlib
 import copy
 import logging
 import os
+import queue
 import re
+import threading
 from collections import namedtuple
 from datetime import UTC
 from datetime import datetime as dt
@@ -880,13 +882,48 @@ class Parser:
 
         return results
 
-    def _process_full_cve(self, cve_id, cve_file_path):
+    def _read_cve_file(self, cve_id: str, cve_file_path: str) -> tuple[str, dict]:
+        """Read CVE file from disk. This runs in parallel in the producer threads."""
         with open(cve_file_path, encoding="utf-8") as fp:
             content = orjson.loads(fp.read())
+        return cve_id, content
 
-        return self._parse_cve(cve_id, content)
+    def _start_cve_reader_producer(
+        self,
+        full_dir: str,
+        cve_queue: queue.Queue[tuple[str, dict] | None],
+        read_errors: list[tuple[str, Exception]],
+    ) -> threading.Thread:
+        """Start a background thread that reads CVE files in parallel and enqueues them."""
+
+        def producer() -> None:
+            try:
+                cve_ids = sorted(os.listdir(full_dir))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    future_to_cve = {executor.submit(self._read_cve_file, cve_id, os.path.join(full_dir, cve_id)): cve_id for cve_id in cve_ids}
+                    for future in concurrent.futures.as_completed(future_to_cve):
+                        cve_id = future_to_cve[future]
+                        try:
+                            result = future.result()
+                            cve_queue.put(result)  # blocks if queue is full
+                        except Exception as e:
+                            self.logger.exception(f"error reading CVE file {cve_id}")
+                            read_errors.append((cve_id, e))
+            finally:
+                cve_queue.put(None)  # sentinel signals end of data
+
+        producer_thread = threading.Thread(target=producer, daemon=True)
+        producer_thread.start()
+        return producer_thread
 
     def get(self, skip_if_exists=False):
+        """
+        Process CVE files using a multi-producer single-consumer pattern.
+
+        Producer threads read CVE files from disk in parallel and enqueue them.
+        The consumer (main thread) processes them sequentially, which serializes
+        all fixdater.best() calls to avoid SQLite "database is locked" errors.
+        """
         try:
             # initialize rhsa data
             self._init_rhsa_data(skip_if_exists=skip_if_exists)
@@ -899,24 +936,33 @@ class Parser:
             # normalize cve files
             self.logger.debug(f"normalizing CVEs from {full_dir}")
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_cve_dict = {
-                    executor.submit(
-                        self._process_full_cve,
-                        cve_id=cve_id,
-                        cve_file_path=os.path.join(full_dir, cve_id),
-                    ): cve_id
-                    for cve_id in sorted(os.listdir(full_dir))
-                }
+            # MPSC pattern: parallel file reads, sequential processing
+            # The queue holds (cve_id, content) tuples; None signals completion
+            cve_queue: queue.Queue[tuple[str, dict] | None] = queue.Queue(maxsize=100)
+            read_errors: list[tuple[str, Exception]] = []
 
-                for future in concurrent.futures.as_completed(future_cve_dict):
-                    cve_id = future_cve_dict[future]
-                    try:
-                        results = future.result()
-                        for item in results:
-                            yield item.namespace, cve_id, item.payload
-                    except Exception:
-                        self.logger.exception(f"ignoring error processing {cve_id}. May retry on next iteration")
+            # Start producer in background thread
+            producer_thread = self._start_cve_reader_producer(full_dir, cve_queue, read_errors)
+
+            # Consumer: drain queue and process sequentially (single-threaded)
+            # This includes fixdater.best() calls which write to the database
+            while True:
+                item = cve_queue.get()
+                if item is None:
+                    break
+                cve_id, content = item
+                try:
+                    results = self._parse_cve(cve_id, content)
+                    for result in results:
+                        yield result.namespace, cve_id, result.payload
+                except Exception:
+                    self.logger.exception(f"ignoring error processing {cve_id}. May retry on next iteration")
+
+            producer_thread.join()
+
+            if read_errors:
+                self.logger.warning(f"encountered {len(read_errors)} errors during CVE file reading")
+
         finally:
             # clear memory for rhsa dict
             if self.rhsa_dict:
