@@ -1,0 +1,20 @@
+{
+  "identifier": "python:3.12",
+  "item": {
+    "codename": "Stable",
+    "eolFrom": "2028-10-01",
+    "identifiers": [
+      {
+        "id": "cpe:2.3:a:python:python:*:*:*:*:*:*:*:*",
+        "type": "cpe"
+      }
+    ],
+    "isLts": false,
+    "isMaintained": true,
+    "label": "3.12 (Stable)",
+    "name": "3.12",
+    "product": "python",
+    "releaseDate": "2023-10-02"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
+}

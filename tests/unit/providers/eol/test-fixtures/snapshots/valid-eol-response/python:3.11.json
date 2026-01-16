@@ -1,0 +1,20 @@
+{
+  "identifier": "python:3.11",
+  "item": {
+    "codename": "Feature Complete",
+    "eolFrom": "2027-10-24",
+    "identifiers": [
+      {
+        "id": "cpe:2.3:a:python:python:*:*:*:*:*:*:*:*",
+        "type": "cpe"
+      }
+    ],
+    "isLts": false,
+    "isMaintained": true,
+    "label": "3.11 (Feature Complete)",
+    "name": "3.11",
+    "product": "python",
+    "releaseDate": "2022-10-24"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
+}

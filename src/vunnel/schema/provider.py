@@ -16,6 +16,7 @@ KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION = "1.0.0"
 EPSS_SCHEMA_VERSION = "1.0.0"
 ANNOTATED_OPENVEX_SCHEMA_VERSION = "1.0.0"
 
+
 @dataclass(frozen=True)
 class Schema:
     version: str
@@ -30,11 +31,13 @@ class Schema:
         name = self.url.removeprefix("https://raw.githubusercontent.com/anchore/vunnel/main/schema/")
         return os.path.dirname(name)
 
+
 def ProviderListingSchema(version: str = PROVIDER_ARCHIVE_LISTING_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-archive-listing/schema-{version}.json",
     )
+
 
 def EPSSSchema(version: str = EPSS_SCHEMA_VERSION) -> Schema:
     return Schema(
@@ -42,11 +45,13 @@ def EPSSSchema(version: str = EPSS_SCHEMA_VERSION) -> Schema:
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/epss/schema-{version}.json",
     )
 
+
 def ProviderStateSchema(version: str = PROVIDER_WORKSPACE_STATE_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-workspace-state/schema-{version}.json",
     )
+
 
 def MatchExclusionSchema(version: str = MATCH_EXCLUSION_SCHEMA_VERSION) -> Schema:
     return Schema(
@@ -54,11 +59,13 @@ def MatchExclusionSchema(version: str = MATCH_EXCLUSION_SCHEMA_VERSION) -> Schem
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/match-exclusion/schema-{version}.json",
     )
 
+
 def GithubSecurityAdvisorySchema(version: str = GITHUB_SECURITY_ADVISORY_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-{version}.json",
     )
+
 
 def MSRCSchema(version: str = MSRC_SCHEMA_VERSION) -> Schema:
     return Schema(
@@ -66,11 +73,13 @@ def MSRCSchema(version: str = MSRC_SCHEMA_VERSION) -> Schema:
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/msrc/schema-{version}.json",
     )
 
+
 def OSSchema(version: str = OS_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-{version}.json",
     )
+
 
 def NVDSchema(version: str = NVD_SCHEMA_VERSION) -> Schema:
     return Schema(
@@ -78,17 +87,20 @@ def NVDSchema(version: str = NVD_SCHEMA_VERSION) -> Schema:
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/nvd/schema-{version}.json",
     )
 
+
 def OSVSchema(version: str = OSV_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-{version}.json",
     )
 
+
 def KnownExploitedVulnerabilitySchema(version: str = KNOWN_EXPLOITED_VULNERABILITY_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/known-exploited/schema-{version}.json",
     )
+
 
 def AnnotatedOpenVEXSchema(version: str = ANNOTATED_OPENVEX_SCHEMA_VERSION) -> Schema:
     return Schema(

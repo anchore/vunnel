@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import zstandard
 
-from vunnel import provider, result, schema, workspace, distribution
+from vunnel import provider, result, schema, workspace, distribution, schemas
 from vunnel.utils import hasher, archive
 
 
@@ -895,14 +895,18 @@ def assert_dummy_workspace_state(ws):
     assert current_state.timestamp is not None
     current_state.timestamp = None
 
+    # ignore processor (it's auto-populated with the vunnel version)
+    current_state.processor = None
+
     expected_state = workspace.State(
         store=result.StoreStrategy.FLAT_FILE.value,
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
         listing=workspace.File(digest="f7b0d70b6cc6d09f", algorithm="xxh64", path="checksums"),
         timestamp=None,
-        schema=schema.ProviderStateSchema(),
+        schema=schemas.ProviderStateSchema(),
     )
+    expected_state.processor = None  # also zero out auto-populated value
 
     assert current_state == expected_state
 
@@ -972,6 +976,7 @@ def test_provider_versions(tmpdir):
         "chainguard-libraries": 1,
         "debian": 1,
         "echo": 1,
+        "eol": 1,
         "epss": 1,
         "github": 1,
         "kev": 1,
@@ -1008,6 +1013,7 @@ def test_provider_distribution_versions(tmpdir):
         "chainguard-libraries": 1,
         "debian": 1,
         "echo": 1,
+        "eol": 1,
         "epss": 1,
         "github": 1,
         "kev": 1,

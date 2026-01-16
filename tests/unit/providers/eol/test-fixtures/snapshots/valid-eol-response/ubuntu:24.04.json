@@ -1,0 +1,21 @@
+{
+  "identifier": "ubuntu:24.04",
+  "item": {
+    "codename": "Noble Numbat",
+    "eoasFrom": "2034-04-25",
+    "eolFrom": "2029-04-25",
+    "identifiers": [
+      {
+        "id": "cpe:2.3:o:canonical:ubuntu_linux:*:*:*:*:*:*:*:*",
+        "type": "cpe"
+      }
+    ],
+    "isLts": true,
+    "isMaintained": true,
+    "label": "24.04 LTS (Noble Numbat)",
+    "name": "24.04",
+    "product": "ubuntu",
+    "releaseDate": "2024-04-25"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
+}

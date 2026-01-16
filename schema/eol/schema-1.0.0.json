@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json",
+  "type": "object",
+  "title": "EOL Record",
+  "description": "End-of-life data from endoflife.date API",
+  "required": ["product", "name"],
+  "properties": {
+    "product": {
+      "type": "string",
+      "description": "Product name"
+    },
+    "name": {
+      "type": "string",
+      "description": "Release/cycle name"
+    },
+    "codename": {
+      "type": ["string", "null"],
+      "description": "Release codename"
+    },
+    "label": {
+      "type": ["string", "null"],
+      "description": "Human-readable label"
+    },
+    "releaseDate": {
+      "type": ["string", "null"],
+      "description": "Release date (ISO 8601)"
+    },
+    "isLts": {
+      "type": ["boolean", "null"],
+      "description": "Whether this is an LTS release"
+    },
+    "ltsFrom": {
+      "type": ["string", "null"],
+      "description": "LTS start date"
+    },
+    "isEoas": {
+      "type": ["boolean", "null"],
+      "description": "Whether active support has ended"
+    },
+    "eoasFrom": {
+      "type": ["string", "null"],
+      "description": "End of active support date"
+    },
+    "isEol": {
+      "type": ["boolean", "null"],
+      "description": "Whether end-of-life has been reached"
+    },
+    "eolFrom": {
+      "type": ["string", "null"],
+      "description": "End-of-life date"
+    },
+    "isMaintained": {
+      "type": ["boolean", "null"],
+      "description": "Whether the release is maintained"
+    },
+    "identifiers": {
+      "type": "array",
+      "description": "Product identifiers (CPEs, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string"},
+          "id": {"type": "string"}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

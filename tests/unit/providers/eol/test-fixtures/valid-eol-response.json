@@ -1,0 +1,58 @@
+{
+  "result": [
+    {
+      "name": "python",
+      "identifiers": [
+        {"type": "cpe", "id": "cpe:2.3:a:python:python:*:*:*:*:*:*:*:*"}
+      ],
+      "releases": [
+        {
+          "name": "3.12",
+          "codename": "Stable",
+          "label": "3.12 (Stable)",
+          "releaseDate": "2023-10-02",
+          "isLts": false,
+          "eolFrom": "2028-10-01",
+          "isMaintained": true
+        },
+        {
+          "name": "3.11",
+          "codename": "Feature Complete",
+          "label": "3.11 (Feature Complete)",
+          "releaseDate": "2022-10-24",
+          "isLts": false,
+          "eolFrom": "2027-10-24",
+          "isMaintained": true
+        }
+      ]
+    },
+    {
+      "name": "ubuntu",
+      "identifiers": [
+        {"type": "cpe", "id": "cpe:2.3:o:canonical:ubuntu_linux:*:*:*:*:*:*:*:*"}
+      ],
+      "releases": [
+        {
+          "name": "24.04",
+          "codename": "Noble Numbat",
+          "label": "24.04 LTS (Noble Numbat)",
+          "releaseDate": "2024-04-25",
+          "isLts": true,
+          "eolFrom": "2029-04-25",
+          "eoasFrom": "2034-04-25",
+          "isMaintained": true
+        },
+        {
+          "name": "22.04",
+          "codename": "Jammy Jellyfish",
+          "label": "22.04 LTS (Jammy Jellyfish)",
+          "releaseDate": "2022-04-21",
+          "isLts": true,
+          "eolFrom": "2027-04-21",
+          "eoasFrom": "2032-04-21",
+          "isMaintained": true
+        }
+      ]
+    }
+  ]
+}
