@@ -11,7 +11,7 @@ runs:
     # assume we have python and uv installed
 
     # required for magic-cache from runs-on to function with artifact upload/download (see https://runs-on.com/caching/magic-cache/#actionsupload-artifact-compatibility)
-    - uses: runs-on/action@v2
+    - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e # v2.0.3
 
     - name: Login to ghcr.io
       shell: bash
