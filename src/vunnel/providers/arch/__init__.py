@@ -52,7 +52,7 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         self.logger.info("Starting Arch Linux provider update")
-        with timer(self.name(), self.logger), self.results_writer() as writer:
+        with timer(self.name(), self.logger), self.results_writer() as writer, self.parser:
             count = 0
             for identifier, payload in self.parser.parse():
                 writer.write(

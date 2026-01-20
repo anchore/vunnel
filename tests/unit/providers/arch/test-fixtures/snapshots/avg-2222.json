@@ -6,7 +6,10 @@
       "Description": "information disclosure",
       "FixedIn": [
         {
-          "Available": null,
+          "Available": {
+            "Date": "2024-01-01",
+            "Kind": "first-observed"
+          },
           "Module": "",
           "Name": "test-pkg",
           "NamespaceName": "arch:rolling",

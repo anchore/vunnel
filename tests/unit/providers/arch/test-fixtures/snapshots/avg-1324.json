@@ -6,7 +6,10 @@
       "Description": "arbitrary code execution",
       "FixedIn": [
         {
-          "Available": null,
+          "Available": {
+            "Date": "2024-01-01",
+            "Kind": "first-observed"
+          },
           "Module": "",
           "Name": "glibc",
           "NamespaceName": "arch:rolling",
@@ -19,7 +22,10 @@
           "VulnerableRange": null
         },
         {
-          "Available": null,
+          "Available": {
+            "Date": "2024-01-01",
+            "Kind": "first-observed"
+          },
           "Module": "",
           "Name": "lib32-glibc",
           "NamespaceName": "arch:rolling",

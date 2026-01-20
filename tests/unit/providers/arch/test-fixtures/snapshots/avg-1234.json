@@ -6,7 +6,10 @@
       "Description": "arbitrary code execution",
       "FixedIn": [
         {
-          "Available": null,
+          "Available": {
+            "Date": "2024-01-01",
+            "Kind": "first-observed"
+          },
           "Module": "",
           "Name": "curl",
           "NamespaceName": "arch:rolling",

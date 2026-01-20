@@ -30,6 +30,7 @@ def mock_workspace(tmp_path):
     return ws
 
 
+@pytest.mark.usefixtures("auto_fake_fixdate_finder")
 class TestArchParser:
     @pytest.fixture()
     def mock_raw_data(self):
@@ -447,7 +448,7 @@ class TestArchProvider:
             assert provider.parser is not None
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     """Test that provider output conforms to the expected schema."""
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
@@ -468,7 +469,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     """Test provider output against expected snapshots."""
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
