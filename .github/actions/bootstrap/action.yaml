@@ -60,10 +60,6 @@ runs:
       shell: bash
       run: make bootstrap
 
-    - name: Add tools dir to PATH
-      shell: bash
-      run: echo "$(pwd)/.tool" >> $GITHUB_PATH
-
     - name: Install apt packages
       if: inputs.bootstrap-apt-packages != ''
       shell: bash
