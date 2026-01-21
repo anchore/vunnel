@@ -7,8 +7,8 @@
       "FixedIn": [
         {
           "Available": {
-            "Date": "2024-01-01",
-            "Kind": "first-observed"
+            "Date": "2023-10-05",
+            "Kind": "advisory"
           },
           "Module": "",
           "Name": "glibc",
@@ -23,8 +23,8 @@
         },
         {
           "Available": {
-            "Date": "2024-01-01",
-            "Kind": "first-observed"
+            "Date": "2023-10-05",
+            "Kind": "advisory"
           },
           "Module": "",
           "Name": "lib32-glibc",

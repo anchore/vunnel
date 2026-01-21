@@ -514,7 +514,7 @@ def _get_tar_zst_writer_obj(tarfile_path):
         ("results.tar.gz", "sha256:1234567890abcdef", ValueError),
     ),
 )
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, archive_name, archive_checksum, raises_type):
     port = 8080
 
@@ -586,7 +586,7 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
     assert dir_checksums == tar_checksums, "Directory and TAR file contents differ"
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
@@ -611,7 +611,7 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     assert args == ("http://localhost/dummy/listing.json",)
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider):
     provider = dummy_provider(populate=False)
     tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
@@ -644,7 +644,7 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
     # 4. it overlays it's current workspace with the temp workspace
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
@@ -697,7 +697,7 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     assert start == datetime.datetime(2021, 1, 1, 0, 0, 0)
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_results_keeps_original_metadata(mock_requests, tmpdir, dummy_provider):
     port = 8080
 

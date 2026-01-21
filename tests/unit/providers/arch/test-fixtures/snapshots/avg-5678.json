@@ -7,8 +7,8 @@
       "FixedIn": [
         {
           "Available": {
-            "Date": "2024-01-01",
-            "Kind": "first-observed"
+            "Date": "2024-01-20",
+            "Kind": "advisory"
           },
           "Module": "",
           "Name": "openssl",
