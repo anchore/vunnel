@@ -617,15 +617,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/b7/37/41f883fd5ca0606a4
 
 [[package]]
 name = "oras"
-version = "0.2.37"
+version = "0.2.38"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonschema" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/55/92/54a143712bb4d3fdc42ab488a1ea55df70e1c43684dccf096975d5e32cdd/oras-0.2.37.tar.gz", hash = "sha256:7e48f6b8cda08c11f612c16e2bdafc346b884be3a83b924495b5e43d34af0e1f", size = 44409, upload-time = "2025-06-13T16:21:30.442Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/78/16f3847ef31a3b1410c401712336a9c5d90fa97c3cc1f4bacd9dcfced9b7/oras-0.2.38.tar.gz", hash = "sha256:58482f78275cb5cc9fdf135248ca878a19204428a51bd3a1ca24c32714d35341", size = 44755, upload-time = "2025-09-08T13:45:29.372Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/f3/c1fd2053ff7301938f72ea8447190695f9a29d7398a8dd720129ccf6ac78/oras-0.2.37-py3-none-any.whl", hash = "sha256:5973f52287887813dad6affede51d7a699f443dacad1e98e5f50634ec80c9f37", size = 50243, upload-time = "2025-06-13T16:21:29.205Z" },
+    { url = "https://files.pythonhosted.org/packages/92/a4/f98db9c8498b11d8e82fccb343f189880a8fc33d496e7f8f9c0bbcbfbf64/oras-0.2.38-py3-none-any.whl", hash = "sha256:a97658086cea1e1ebb412a5b504005480c70de5d2e81a160d33e60fc187d42f4", size = 50249, upload-time = "2025-09-08T13:45:27.785Z" },
 ]
 
 [[package]]
