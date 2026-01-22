@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import datetime
 import logging
 import os
 import re
@@ -192,7 +193,7 @@ class Parser:
                 if asa_date:
                     candidates = [
                         fixdate.Result(
-                            date=asa_date,
+                            date=datetime.date.fromisoformat(asa_date),
                             kind="advisory",
                             accurate=True,
                         ),
