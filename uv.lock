@@ -948,15 +948,6 @@ wheels = [
 ]
 
 [[package]]
-name = "rfc3339"
-version = "6.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/91/fb/2835a62f2de226796fce76411daec6b9831eaf6d2fd04994ac1de055dc13/rfc3339-6.2.tar.gz", hash = "sha256:d53c3b5eefaef892b7240ba2a91fef012e86faa4d0a0ca782359c490e00ad4d0", size = 4144, upload-time = "2019-09-24T16:46:18.176Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0f/2e/48d6cf57dec789c90a7b1cb59a21c3cad509f0ec1284632152f33bb1d88d/rfc3339-6.2-py3-none-any.whl", hash = "sha256:f44316b21b21db90a625cde04ebb0d46268f153e6093021fa5893e92a96f58a3", size = 5515, upload-time = "2019-09-24T16:46:16.63Z" },
-]
-
-[[package]]
 name = "rich"
 version = "14.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1408,7 +1399,7 @@ wheels = [
 
 [[package]]
 name = "yardstick"
-version = "0.14.1"
+version = "0.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1422,14 +1413,13 @@ dependencies = [
     { name = "pygments" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "rfc3339" },
     { name = "tabulate" },
     { name = "xxhash" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/8d/37c2e01f4a21bb13c5404eb5f24666a5f5fdee9b7807f1d047ad21ba084c/yardstick-0.14.1.tar.gz", hash = "sha256:0e59dfebc1ff1657c4f8d8083ba08d48b07b43c899c0d3159da50398a75f1efd", size = 143174, upload-time = "2025-08-07T11:17:53.451Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/6b/3c3884d01e0c5a8c288e2effe840967ce38668ae30b30e8c9d97a75b5a30/yardstick-0.15.0.tar.gz", hash = "sha256:980e205f93a495db6f233062491eb974b3d0d3d0a766e9a70c15abd99db12192", size = 149600, upload-time = "2025-10-23T20:51:57.365Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/44/af5538e687fb94b83c3ad1120ec0bd920fe269b6888ecb6bd73fd188a9e2/yardstick-0.14.1-py3-none-any.whl", hash = "sha256:09b444f33e39bb87581ead14079b8b7d7daeb793dee33ea692e2ce938ebee83d", size = 93724, upload-time = "2025-08-07T11:17:52.171Z" },
+    { url = "https://files.pythonhosted.org/packages/27/f0/82c2ba7953eb72f82a91aa6db35cccd35fdcdedc1529a4d754bc63cfd909/yardstick-0.15.0-py3-none-any.whl", hash = "sha256:b60433e9cba8f0a82d8b533a42d6e63bf822899561c7e974e23ba44fd7d10457", size = 94886, upload-time = "2025-10-23T20:51:55.93Z" },
 ]
 
 [[package]]
