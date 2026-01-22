@@ -17,13 +17,11 @@ class GitMockState:
     This allows tests to inject:
     - changed_files: list of files returned by `git diff --name-only`
     - base_file_contents: dict mapping file paths to their content in the base branch
-    - diff_output: raw output for `git diff` (for yardstick_version_changed)
     - local_file_contents: dict mapping local file paths to their content
     """
 
     changed_files: list[str] = field(default_factory=list)
     base_file_contents: dict[str, str] = field(default_factory=dict)
-    diff_output: str = ""
     local_file_contents: dict[str, str] = field(default_factory=dict)
 
 
@@ -39,7 +37,6 @@ def mock_git_operations(monkeypatch, git_mock_state: GitMockState):
 
     This fixture intercepts:
     - `git diff --name-only <ref>` -> returns git_mock_state.changed_files
-    - `git diff <ref>` -> returns git_mock_state.diff_output
     - `git show <ref>:<path>` -> returns content from git_mock_state.base_file_contents
 
     Usage:
@@ -62,10 +59,6 @@ def mock_git_operations(monkeypatch, git_mock_state: GitMockState):
         # git diff --name-only <ref>
         if cmd[1] == "diff" and "--name-only" in cmd:
             return "\n".join(git_mock_state.changed_files).encode("utf-8")
-
-        # git diff <ref> (for yardstick version detection)
-        if cmd[1] == "diff" and "--name-only" not in cmd:
-            return git_mock_state.diff_output.encode("utf-8")
 
         # git show <ref>:<path>
         if cmd[1] == "show" and len(cmd) >= 3:

@@ -349,24 +349,6 @@ def changes():
     return changed_files
 
 
-def yardstick_version_changed():
-    logging.info("determining whether yardstick version changed")
-
-    base_ref = get_base_ref()
-
-    # get list of files changed with git diff
-    changes = subprocess.check_output(["git", "diff", base_ref]).decode("utf-8").splitlines()
-    for line in changes:
-        if not line.strip().startswith(("-", "+")):
-            # this line is in the output of `git diff`, but is just context, not a change
-            continue
-
-        if 'git = "https://github.com/anchore/yardstick"' in line:
-            return True
-
-    return False
-
-
 def config_yaml_changes(changed_files: list[str]) -> tuple[bool, set[str]]:
     """
     Analyze config.yaml changes to determine which providers are affected.
@@ -483,10 +465,6 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
                 break
         if select_all:
             break
-
-    if not select_all and yardstick_version_changed():
-        logging.info("yardstick version changed, all providers affected")
-        select_all = True
 
     # Handle config.yaml changes specially - only trigger all providers if global settings changed
     if not select_all:
