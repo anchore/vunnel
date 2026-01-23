@@ -100,7 +100,7 @@ class Parser:
         Arch Linux security tracker and caches it for later lookup.
         """
         # Validate ASA ID format before constructing URL (defensive check)
-        if not re.match(r"^ASA-\d{6}-\d+$", asa_id):
+        if not re.match(r"^ASA-\d{1,9}-\d{1,10}$", asa_id):
             self.logger.warning(f"Unexpected ASA ID format: {asa_id}")
             self._asa_date_cache[asa_id] = None
             return

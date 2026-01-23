@@ -525,7 +525,8 @@ class TestArchParser:
         with patch("vunnel.utils.http_wrapper.get") as mock_get:
             # Invalid formats should not trigger HTTP requests
             parser._fetch_and_cache_asa_date("invalid-id")  # noqa: SLF001
-            parser._fetch_and_cache_asa_date("ASA-12345-1")  # noqa: SLF001 (wrong digit count)
+            parser._fetch_and_cache_asa_date("ASA-1234567890-1")  # noqa: SLF001 (first part too long - 10 digits)
+            parser._fetch_and_cache_asa_date("ASA-202401-12345678901")  # noqa: SLF001 (second part too long - 11 digits)
             parser._fetch_and_cache_asa_date("asa-202401-01")  # noqa: SLF001 (lowercase)
             parser._fetch_and_cache_asa_date("ASA-202401-01; rm -rf /")  # noqa: SLF001 (injection attempt)
 
@@ -534,23 +535,25 @@ class TestArchParser:
 
             # All invalid IDs should be cached as None
             assert parser._asa_date_cache.get("invalid-id") is None  # noqa: SLF001
-            assert parser._asa_date_cache.get("ASA-12345-1") is None  # noqa: SLF001
+            assert parser._asa_date_cache.get("ASA-1234567890-1") is None  # noqa: SLF001
+            assert parser._asa_date_cache.get("ASA-202401-12345678901") is None  # noqa: SLF001
             assert parser._asa_date_cache.get("asa-202401-01") is None  # noqa: SLF001
 
     def test_fetch_asa_date_accepts_valid_id_format(self, mock_workspace):
-        """Test that valid ASA ID formats are accepted."""
+        """Test that valid ASA ID formats are accepted (1-9 digits allowed)."""
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
         mock_response = MagicMock()
         mock_response.text = "Date    : 2024-01-15"
 
         with patch("vunnel.utils.http_wrapper.get", return_value=mock_response) as mock_get:
-            # Valid format: ASA-YYYYMM-NN
-            parser._fetch_and_cache_asa_date("ASA-202401-01")  # noqa: SLF001
-            parser._fetch_and_cache_asa_date("ASA-202312-99")  # noqa: SLF001
+            # Valid formats: ASA-{1-9 digits}-NN
+            parser._fetch_and_cache_asa_date("ASA-1-01")  # noqa: SLF001 (1 digit)
+            parser._fetch_and_cache_asa_date("ASA-202401-01")  # noqa: SLF001 (6 digits - typical)
+            parser._fetch_and_cache_asa_date("ASA-123456789-01")  # noqa: SLF001 (9 digits)
 
             # HTTP requests should have been made for valid IDs
-            assert mock_get.call_count == 2
+            assert mock_get.call_count == 3
 
     def test_get_best_asa_date_returns_earliest(self, mock_workspace):
         """Test that _get_best_asa_date returns the earliest date from multiple advisories."""
