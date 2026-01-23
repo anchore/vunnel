@@ -724,7 +724,16 @@ def build_db(cfg: Config):
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
         cache_file = cache_file_path(provider)
-        oras_client.pull(target=f"ghcr.io/anchore/grype-db/data/{provider}:latest", outdir=".")
+        target = f"ghcr.io/anchore/grype-db/data/{provider}:latest"
+        for attempt in range(2):
+            try:
+                oras_client.pull(target=target, outdir=".")
+                break
+            except Exception as e:
+                if attempt == 0:
+                    logging.warning(f"failed to fetch cache for {provider!r}, retrying: {e}")
+                else:
+                    raise
         subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
 
