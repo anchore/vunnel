@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 DEFAULT_TIMEOUT = 30
 
 # Default wait time when Retry-After header is missing or unparseable
-DEFAULT_RATE_LIMIT_WAIT = 60.0
+# NVD uses a 30-second rolling window, so this is tuned for that use case
+DEFAULT_RATE_LIMIT_WAIT = 30.0
 # Maximum wait time for rate limiting to prevent DoS via malicious Retry-After header
 MAX_RATE_LIMIT_WAIT = 300.0  # 5 minutes
 
@@ -54,7 +55,8 @@ def parse_retry_after(header_value: str | None) -> float | None:
     # Try parsing as integer (seconds)
     try:
         seconds = int(header_value)
-        return max(0.0, float(seconds))
+        # Return None for zero/negative values - caller should use default
+        return float(seconds) if seconds > 0 else None
     except ValueError:
         pass
 
@@ -62,7 +64,8 @@ def parse_retry_after(header_value: str | None) -> float | None:
     try:
         dt = parsedate_to_datetime(header_value)
         delay = dt.timestamp() - time.time()
-        return max(0.0, delay)
+        # Return None if the time has already passed - caller should use default
+        return delay if delay > 0 else None
     except (ValueError, TypeError):
         pass
 

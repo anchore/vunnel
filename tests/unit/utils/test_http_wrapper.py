@@ -280,6 +280,30 @@ class TestRateLimiting:
         assert http.parse_retry_after("") is None
         assert http.parse_retry_after("invalid") is None
 
+    def test_retry_after_zero_or_negative_returns_none(self):
+        """Test that zero or negative Retry-After values return None.
+
+        This ensures callers fall back to a reasonable default wait time
+        instead of retrying immediately (which would burn through retries).
+        """
+        # Zero seconds should return None
+        assert http.parse_retry_after("0") is None
+        # Negative values should return None
+        assert http.parse_retry_after("-5") is None
+
+    def test_retry_after_past_http_date_returns_none(self):
+        """Test that past HTTP-date returns None.
+
+        When the Retry-After date has already passed (due to clock skew or
+        delayed processing), we should return None so callers use a default.
+        """
+        from email.utils import formatdate
+
+        # A date 60 seconds in the past
+        past_time = time.time() - 60
+        http_date = formatdate(past_time, usegmt=True)
+        assert http.parse_retry_after(http_date) is None
+
     @patch("time.sleep")
     @patch("requests.Session.get")
     def test_rate_limit_exhausts_retries(self, mock_session_get, mock_sleep, mock_logger):
