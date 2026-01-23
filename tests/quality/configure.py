@@ -320,16 +320,24 @@ def show_changes(_: Config):
     changes()
 
 
-def changes():
-    logging.info("determining providers affected by the current file changeset")
+def get_base_ref() -> str:
+    """Get the git base reference for comparing changes.
 
-    # TODO: refactor for forking workflow
+    Uses GITHUB_BASE_REF environment variable if set (in CI), otherwise defaults to origin/main.
+    Ensures the ref includes the remote prefix (origin/).
+    """
     base_ref = os.environ.get("GITHUB_BASE_REF", "origin/main")
     if not base_ref:
         base_ref = "origin/main"
-
     if "/" not in base_ref:
         base_ref = f"origin/{base_ref}"
+    return base_ref
+
+
+def changes():
+    logging.info("determining providers affected by the current file changeset")
+
+    base_ref = get_base_ref()
 
     # get list of files changed with git diff
     changed_files = subprocess.check_output(["git", "diff", "--name-only", base_ref]).decode("utf-8").splitlines()
@@ -341,27 +349,87 @@ def changes():
     return changed_files
 
 
-def yardstick_version_changed():
-    logging.info("determining whether yardstick version changed")
+def config_yaml_changes(changed_files: list[str]) -> tuple[bool, set[str]]:
+    """
+    Analyze config.yaml changes to determine which providers are affected.
 
-    base_ref = os.environ.get("GITHUB_BASE_REF", "origin/main")
-    if not base_ref:
-        base_ref = "origin/main"
+    Returns:
+        (global_change, provider_set)
+        - global_change: True if global settings changed (affects all providers)
+        - provider_set: Set of provider names with config changes (only meaningful if global_change is False)
 
-    if "/" not in base_ref:
-        base_ref = f"origin/{base_ref}"
+    Note:
+        - config_path uses repo-relative path for git operations and changed_files matching
+        - local_config_path uses CWD-relative path since this script runs from tests/quality/
+    """
+    # Repo-relative path (for git operations and changed_files matching)
+    config_path = "tests/quality/config.yaml"
+    # CWD-relative path (script runs from tests/quality/)
+    local_config_path = os.path.basename(config_path)
 
-    # get list of files changed with git diff
-    changes = subprocess.check_output(["git", "diff", base_ref]).decode("utf-8").splitlines()
-    for line in changes:
-        if not line.strip().startswith(("-", "+")):
-            # this line is in the output of `git diff`, but is just context, not a change
-            continue
+    if config_path not in changed_files:
+        return False, set()
 
-        if 'git = "https://github.com/anchore/yardstick"' in line:
-            return True
+    logging.info("analyzing config.yaml changes to determine affected providers")
 
-    return False
+    base_ref = get_base_ref()
+
+    # Get the old config.yaml content from the base branch
+    try:
+        old_content = subprocess.check_output(
+            ["git", "show", f"{base_ref}:{config_path}"],
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8")
+        old_config = yaml.safe_load(old_content) or {}
+    except subprocess.CalledProcessError:
+        # config.yaml doesn't exist in base branch (new file)
+        logging.info("config.yaml is new, treating as global change")
+        return True, set()
+
+    # Load current config from working directory
+    try:
+        with open(local_config_path) as f:
+            new_config = yaml.safe_load(f.read()) or {}
+    except FileNotFoundError:
+        logging.warning(f"{local_config_path!r} not found locally, treating as global change")
+        return True, set()
+
+    # Check if global settings changed - these affect all providers
+    # x-ref contains YAML anchors that can be referenced by any provider
+    # yardstick contains tool versions (syft, grype) used for all tests
+    # grype_db contains the grype-db version used for building test DBs
+    global_keys = ["x-ref", "yardstick", "grype_db"]
+    for key in global_keys:
+        old_val = old_config.get(key)
+        new_val = new_config.get(key)
+        if old_val != new_val:
+            logging.info(f"global config key {key!r} changed, all providers affected")
+            return True, set()
+
+    # Compare provider-specific test configurations
+    old_tests = {t.get("provider"): t for t in old_config.get("tests", []) if t.get("provider")}
+    new_tests = {t.get("provider"): t for t in new_config.get("tests", []) if t.get("provider")}
+
+    changed_providers: set[str] = set()
+
+    # Check for new or modified providers
+    for provider, new_test in new_tests.items():
+        old_test = old_tests.get(provider)
+        if old_test != new_test:
+            if old_test is None:
+                logging.info(f"new provider {provider!r} added to config.yaml")
+            else:
+                logging.info(f"provider {provider!r} config changed in config.yaml")
+            changed_providers.add(provider)
+
+    # Removed providers don't need testing
+
+    if changed_providers:
+        logging.info(f"config.yaml changes affect only these providers: {sorted(changed_providers)}")
+    else:
+        logging.info("config.yaml changed but no provider configs were affected")
+
+    return False, changed_providers
 
 
 @cli.command(name="select-providers", help="determine the providers to test from a file changeset")
@@ -372,11 +440,13 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
     changed_files = changes()
 
     selected_providers: set[str] = set()
+    all_providers = {test.provider for test in cfg.tests if test.provider}
+    select_all = False
 
-    # look for gate changes, if any, then run all providers
+    # look for gate changes that affect all providers
+    # note: config.yaml is handled specially below to allow provider-specific changes
     gate_globs = [
         "tests/quality/*.py",
-        "tests/quality/*.yaml",
         "tests/quality/vulnerability-match-labels/**",
         ".github/workflows/pr-quality-gate.yaml",
         ".github/workflows/nightly-quality-gate.yaml",
@@ -390,13 +460,24 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
     for search_glob in gate_globs:
         for changed_file in changed_files:
             if fnmatch.fnmatch(changed_file, search_glob):
-                selected_providers = {test.provider for test in cfg.tests if test.provider}
+                logging.info(f"gate file {changed_file!r} changed, all providers affected")
+                select_all = True
+                break
+        if select_all:
+            break
 
-    if yardstick_version_changed():
-        selected_providers = {test.provider for test in cfg.tests if test.provider}
+    # Handle config.yaml changes specially - only trigger all providers if global settings changed
+    if not select_all:
+        global_change, config_providers = config_yaml_changes(changed_files)
+        if global_change:
+            select_all = True
+        else:
+            selected_providers.update(config_providers)
 
-    if not selected_providers:
-        # there are no gate changes, so look for provider-specific changes
+    if select_all:
+        selected_providers = all_providers
+    else:
+        # check for provider-specific source file changes
         for test in cfg.tests:
             if not test.provider:
                 continue
@@ -643,7 +724,16 @@ def build_db(cfg: Config):
     for provider in state.cached_providers:
         logging.info(f"fetching cache for {provider!r}")
         cache_file = cache_file_path(provider)
-        oras_client.pull(target=f"ghcr.io/anchore/grype-db/data/{provider}:latest", outdir=".")
+        target = f"ghcr.io/anchore/grype-db/data/{provider}:latest"
+        for attempt in range(2):
+            try:
+                oras_client.pull(target=target, outdir=".")
+                break
+            except Exception as e:
+                if attempt == 0:
+                    logging.warning(f"failed to fetch cache for {provider!r}, retrying: {e}")
+                else:
+                    raise
         subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
         os.remove(cache_file)
 
