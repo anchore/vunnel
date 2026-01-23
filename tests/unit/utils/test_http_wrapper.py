@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import threading
 import time
 from unittest.mock import MagicMock, call, patch
 
@@ -11,13 +10,21 @@ import requests
 from vunnel.utils import http_wrapper as http
 
 
+@pytest.fixture(autouse=True)
+def reset_registry():
+    """Reset the global registry before each test."""
+    http._reset_for_testing()
+    yield
+    http._reset_for_testing()
+
+
 class TestGetRequests:
-    @pytest.fixture()
+    @pytest.fixture
     def mock_logger(self):
         logger = logging.getLogger("test-http-utils")
         return MagicMock(logger, autospec=True)
 
-    @pytest.fixture()
+    @pytest.fixture
     def error_response(self):
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
@@ -26,7 +33,7 @@ class TestGetRequests:
         mock_response.headers = {}
         return mock_response
 
-    @pytest.fixture()
+    @pytest.fixture
     def success_response(self):
         response = MagicMock()
         response.raise_for_status = MagicMock()
@@ -61,7 +68,13 @@ class TestGetRequests:
     @patch("requests.Session.get")
     @patch("random.uniform")
     def test_succeeds_if_retries_succeed(
-        self, mock_uniform_random, mock_session_get, mock_sleep, mock_logger, error_response, success_response
+        self,
+        mock_uniform_random,
+        mock_session_get,
+        mock_sleep,
+        mock_logger,
+        error_response,
+        success_response,
     ):
         mock_uniform_random.side_effect = [0.1]
         mock_session_get.side_effect = [error_response, success_response]
@@ -94,7 +107,13 @@ class TestGetRequests:
     @patch("requests.Session.get")
     @patch("random.uniform")
     def test_exponential_backoff_and_jitter(
-        self, mock_uniform_random, mock_session_get, mock_sleep, mock_logger, error_response, success_response
+        self,
+        mock_uniform_random,
+        mock_session_get,
+        mock_sleep,
+        mock_logger,
+        error_response,
+        success_response,
     ):
         mock_session_get.side_effect = [error_response, error_response, error_response, success_response]
         mock_uniform_random.side_effect = [0.5, 0.4, 0.1]
@@ -126,28 +145,31 @@ class TestGetRequests:
 
     @patch("time.sleep")
     @patch("requests.Session.get")
-    def test_it_calls_status_handler(self, mock_session_get, mock_sleep, mock_logger, error_response, success_response):
-        # error_response with status_code 500 will be classified as RETRY_WITH_BACKOFF
-        # Use a 2xx response so it's classified as SUCCESS
-        error_response.status_code = 200
-        mock_session_get.side_effect = [error_response]
+    def test_it_calls_status_handler(self, mock_session_get, mock_sleep, mock_logger, success_response):
+        mock_session_get.side_effect = [success_response]
         status_handler = MagicMock()
         result = http.get(
             "http://example.com/some-path", mock_logger, status_handler=status_handler, retries=1, backoff_in_seconds=33
         )
         mock_sleep.assert_not_called()
         status_handler.assert_called_once()
-        assert status_handler.call_args.args[0] == error_response
-        assert result == error_response
+        assert status_handler.call_args.args[0] == success_response
+        assert result == success_response
 
     @patch("time.sleep")
     @patch("requests.Session.get")
     @patch("random.uniform")
     def test_it_retries_when_status_handler_raises(
-        self, mock_uniform_random, mock_session_get, mock_sleep, mock_logger, error_response, success_response
+        self,
+        mock_uniform_random,
+        mock_session_get,
+        mock_sleep,
+        mock_logger,
+        error_response,
+        success_response,
     ):
         mock_uniform_random.side_effect = [0.25]
-        # Both responses need status_code 200 to be classified as SUCCESS
+        # Both responses are 200 OK
         success_response.status_code = 200
         error_response.status_code = 200
         mock_session_get.side_effect = [success_response, error_response]
@@ -161,9 +183,52 @@ class TestGetRequests:
         # so we expect the second mock response to be returned overall
         assert result == error_response
 
+    @patch("time.sleep")
+    @patch("requests.Session.get")
+    def test_status_handler_can_accept_error_codes(self, mock_session_get, mock_sleep, mock_logger):
+        """Test that status_handler can accept non-2xx responses without retry."""
+        error_403 = MagicMock()
+        error_403.status_code = 403
+        error_403.headers = {}
+
+        mock_session_get.return_value = error_403
+
+        # status_handler that accepts 403
+        def accept_403(response):
+            if response.status_code not in [200, 403]:
+                response.raise_for_status()
+
+        result = http.get("http://example.com/api", mock_logger, status_handler=accept_403, retries=2)
+
+        # Should return the 403 response without retrying
+        assert result == error_403
+        assert mock_session_get.call_count == 1
+        mock_sleep.assert_not_called()
+
+    @patch("time.sleep")
+    @patch("requests.Session.get")
+    def test_keeps_trying_after_multiple_failures(self, mock_session_get, mock_sleep, mock_logger):
+        """Test that we keep retrying even after many failures (no circuit breaker)."""
+        error_response = MagicMock()
+        error_response.status_code = 500
+        error_response.headers = {}
+        error_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+
+        success_response = MagicMock()
+        success_response.status_code = 200
+        success_response.headers = {}
+
+        # Fail 9 times, then succeed on the 10th
+        mock_session_get.side_effect = [error_response] * 9 + [success_response]
+
+        result = http.get("http://example.com/api", mock_logger, retries=9)
+
+        assert result == success_response
+        assert mock_session_get.call_count == 10
+
 
 class TestRateLimiting:
-    @pytest.fixture()
+    @pytest.fixture
     def mock_logger(self):
         logger = logging.getLogger("test-rate-limit")
         return MagicMock(logger, autospec=True)
@@ -201,6 +266,7 @@ class TestRateLimiting:
         """Test parsing Retry-After header with HTTP-date format."""
         # Use a future date
         from email.utils import formatdate
+
         future_time = time.time() + 60
         http_date = formatdate(future_time, usegmt=True)
         result = http.parse_retry_after(http_date)
@@ -229,7 +295,7 @@ class TestRateLimiting:
         with pytest.raises(requests.HTTPError) as exc_info:
             http.get("http://example.com/api", mock_logger, retries=2)
 
-        # Should raise HTTPError, not internal _RateLimitRetry
+        # Should raise HTTPError
         assert "429" in str(exc_info.value)
         # Should have tried 3 times (initial + 2 retries)
         assert mock_session_get.call_count == 3
@@ -258,131 +324,54 @@ class TestRateLimiting:
         # Should show the capped value (300.0), not 9999
         assert "300.0s" in rate_limit_log
 
-
-class TestCircuitBreaker:
-    @pytest.fixture()
-    def mock_logger(self):
-        logger = logging.getLogger("test-circuit-breaker")
-        return MagicMock(logger, autospec=True)
-
     @patch("time.sleep")
     @patch("requests.Session.get")
-    def test_circuit_breaker_trips(self, mock_session_get, mock_sleep, mock_logger):
-        """Test that circuit breaker trips after threshold failures."""
-        http.configure(http.HttpConfig(circuit_breaker_threshold=3, circuit_breaker_recovery=60.0))
-
-        error_response = MagicMock()
-        error_response.status_code = 500
-        error_response.headers = {}
-        error_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
-
-        mock_session_get.return_value = error_response
-
-        # Make enough requests to trip the circuit breaker
-        for _ in range(3):
-            with pytest.raises(requests.HTTPError):
-                http.get("http://example.com/api", mock_logger, retries=0)
-
-        # Next request should raise CircuitOpenError
-        with pytest.raises(http.CircuitOpenError):
-            http.get("http://example.com/api", mock_logger, retries=0)
-
-    @patch("time.sleep")
-    @patch("requests.Session.get")
-    def test_circuit_breaker_recovers(self, mock_session_get, mock_sleep, mock_logger):
-        """Test that circuit breaker recovers after recovery period."""
-        http.configure(http.HttpConfig(circuit_breaker_threshold=2, circuit_breaker_recovery=60.0))
-
-        error_response = MagicMock()
-        error_response.status_code = 500
-        error_response.headers = {}
-        error_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+    def test_503_with_retry_after_is_rate_limited(self, mock_session_get, mock_sleep, mock_logger):
+        """Test that 503 with Retry-After is treated as rate limiting."""
+        rate_limited_response = MagicMock()
+        rate_limited_response.status_code = 503
+        rate_limited_response.headers = {"Retry-After": "5"}
+        rate_limited_response.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable")
 
         success_response = MagicMock()
         success_response.status_code = 200
         success_response.headers = {}
 
-        mock_session_get.return_value = error_response
+        mock_session_get.side_effect = [rate_limited_response, success_response]
 
-        # Use mocked time to control circuit breaker timing
-        mock_time = MagicMock()
-        mock_time.return_value = 1000.0  # Starting time
+        result = http.get("http://example.com/api", mock_logger, retries=2)
 
-        with patch("vunnel.utils.http_wrapper.time.time", mock_time):
-            # Trip the circuit
-            for _ in range(2):
-                with pytest.raises(requests.HTTPError):
-                    http.get("http://example.com/api", mock_logger, retries=0)
-
-            # Verify circuit is open
-            with pytest.raises(http.CircuitOpenError):
-                http.get("http://example.com/api", mock_logger, retries=0)
-
-            # Advance time past recovery period (60s recovery + buffer)
-            mock_time.return_value = 1100.0
-
-            # Circuit should allow a probe request (half-open)
-            mock_session_get.return_value = success_response
-            result = http.get("http://example.com/api", mock_logger, retries=0)
-            assert result == success_response
-
-
-class TestSmartRetry:
-    @pytest.fixture()
-    def mock_logger(self):
-        logger = logging.getLogger("test-smart-retry")
-        return MagicMock(logger, autospec=True)
+        assert result == success_response
+        logged_warnings = [call.args[0] for call in mock_logger.warning.call_args_list]
+        assert any("Rate limited" in msg for msg in logged_warnings)
 
     @patch("time.sleep")
     @patch("requests.Session.get")
-    def test_client_error_retried_once(self, mock_session_get, mock_sleep, mock_logger):
-        """Test that client errors (404, etc) are retried once then raise."""
-        error_404 = MagicMock()
-        error_404.status_code = 404
-        error_404.headers = {}
-        error_404.raise_for_status.side_effect = requests.HTTPError("404 Not Found")
+    def test_503_without_retry_after_is_not_rate_limited(self, mock_session_get, mock_sleep, mock_logger):
+        """Test that 503 without Retry-After is treated as server error (backoff retry)."""
+        error_503 = MagicMock()
+        error_503.status_code = 503
+        error_503.headers = {}  # No Retry-After
+        error_503.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable")
 
-        mock_session_get.return_value = error_404
+        success_response = MagicMock()
+        success_response.status_code = 200
+        success_response.headers = {}
 
-        with pytest.raises(requests.HTTPError):
-            http.get("http://example.com/api", mock_logger, retries=5)
+        mock_session_get.side_effect = [error_503, success_response]
 
-        # Should have been called exactly twice (initial + one retry)
-        assert mock_session_get.call_count == 2
+        result = http.get("http://example.com/api", mock_logger, retries=2, backoff_in_seconds=1)
 
-    @patch("time.sleep")
-    @patch("requests.Session.get")
-    def test_client_error_retry_disabled(self, mock_session_get, mock_sleep, mock_logger):
-        """Test that client error retry can be disabled."""
-        http.configure(http.HttpConfig(retry_once_on_client_error=False))
-
-        error_404 = MagicMock()
-        error_404.status_code = 404
-        error_404.headers = {}
-        error_404.raise_for_status.side_effect = requests.HTTPError("404 Not Found")
-
-        mock_session_get.return_value = error_404
-
-        with pytest.raises(requests.HTTPError):
-            http.get("http://example.com/api", mock_logger, retries=5)
-
-        # Should have been called only once (no retry)
-        assert mock_session_get.call_count == 1
-
-    def test_classify_status_code(self):
-        """Test status code classification."""
-        assert http.classify_status_code(200) == http.RetryStrategy.SUCCESS
-        assert http.classify_status_code(201) == http.RetryStrategy.SUCCESS
-        assert http.classify_status_code(404) == http.RetryStrategy.RETRY_ONCE
-        assert http.classify_status_code(429) == http.RetryStrategy.RATE_LIMITED
-        assert http.classify_status_code(503) == http.RetryStrategy.RATE_LIMITED
-        assert http.classify_status_code(500) == http.RetryStrategy.RETRY_WITH_BACKOFF
-        assert http.classify_status_code(502) == http.RetryStrategy.RETRY_WITH_BACKOFF
-        assert http.classify_status_code(422) == http.RetryStrategy.NO_RETRY
+        assert result == success_response
+        # Should have done backoff retry, not rate limit handling
+        logged_warnings = [call.args[0] for call in mock_logger.warning.call_args_list]
+        # Should see "will retry" from backoff, not "Rate limited"
+        assert any("will retry" in msg for msg in logged_warnings)
+        assert not any("Rate limited" in msg for msg in logged_warnings)
 
 
 class TestConnectionPooling:
-    @pytest.fixture()
+    @pytest.fixture
     def mock_logger(self):
         logger = logging.getLogger("test-connection-pooling")
         return MagicMock(logger, autospec=True)
@@ -432,7 +421,6 @@ class TestHostRegistry:
         registry = http.HostRegistry()
         state = registry.get_state("example.com")
         assert state.hostname == "example.com"
-        assert state.consecutive_failures == 0
 
     def test_get_state_returns_existing(self):
         """Test that get_state returns existing state."""
@@ -440,21 +428,6 @@ class TestHostRegistry:
         state1 = registry.get_state("example.com")
         state2 = registry.get_state("example.com")
         assert state1 is state2
-
-    def test_record_success_resets_failures(self):
-        """Test that record_success resets failure count."""
-        registry = http.HostRegistry()
-        state = registry.get_state("example.com")
-        state.consecutive_failures = 3
-        registry.record_success("example.com")
-        assert state.consecutive_failures == 0
-
-    def test_record_failure_increments(self):
-        """Test that record_failure increments failure count."""
-        registry = http.HostRegistry()
-        registry.record_failure("example.com")
-        state = registry.get_state("example.com")
-        assert state.consecutive_failures == 1
 
     def test_record_rate_limit_sets_blocked_until(self):
         """Test that record_rate_limit sets blocked_until."""
@@ -487,31 +460,52 @@ class TestExtractHostname:
         assert http._extract_hostname("/path/to/file") == "unknown"
 
 
-class TestHttpConfig:
-    def test_default_config(self):
-        """Test default HttpConfig values."""
-        config = http.HttpConfig()
-        assert config.circuit_breaker_threshold == 5
-        assert config.circuit_breaker_recovery == 60.0
-        assert config.respect_retry_after is True
-        assert config.retry_once_on_client_error is True
+class TestIsRateLimited:
+    def test_429_is_rate_limited(self):
+        """Test that 429 is always rate limited."""
+        response = MagicMock()
+        response.status_code = 429
+        response.headers = {}
+        assert http._is_rate_limited(response) is True
 
-    def test_configure_updates_registry(self):
-        """Test that configure() updates the registry."""
-        http.configure(http.HttpConfig(circuit_breaker_threshold=10))
-        registry = http._get_registry()
-        assert registry.circuit_breaker_threshold == 10
+    def test_429_with_header_is_rate_limited(self):
+        """Test that 429 with Retry-After is rate limited."""
+        response = MagicMock()
+        response.status_code = 429
+        response.headers = {"Retry-After": "60"}
+        assert http._is_rate_limited(response) is True
 
-    def test_configure_none_resets(self):
-        """Test that configure(None) resets to defaults."""
-        http.configure(http.HttpConfig(circuit_breaker_threshold=10))
-        http.configure(None)
-        config = http._get_config()
-        assert config.circuit_breaker_threshold == 5
+    def test_503_with_header_is_rate_limited(self):
+        """Test that 503 with Retry-After is rate limited."""
+        response = MagicMock()
+        response.status_code = 503
+        response.headers = {"Retry-After": "60"}
+        assert http._is_rate_limited(response) is True
+
+    def test_503_without_header_is_not_rate_limited(self):
+        """Test that 503 without Retry-After is not rate limited."""
+        response = MagicMock()
+        response.status_code = 503
+        response.headers = {}
+        assert http._is_rate_limited(response) is False
+
+    def test_200_is_not_rate_limited(self):
+        """Test that 200 is not rate limited."""
+        response = MagicMock()
+        response.status_code = 200
+        response.headers = {}
+        assert http._is_rate_limited(response) is False
+
+    def test_500_is_not_rate_limited(self):
+        """Test that 500 is not rate limited."""
+        response = MagicMock()
+        response.status_code = 500
+        response.headers = {}
+        assert http._is_rate_limited(response) is False
 
 
 @pytest.mark.parametrize(
-    "interval, jitter, max_value, expected",
+    ("interval", "jitter", "max_value", "expected"),
     [
         (
             30,  # interval
@@ -529,11 +523,12 @@ class TestHttpConfig:
 )
 def test_backoff_sleep_interval(interval, jitter, max_value, expected):
     actual = [
-        http.backoff_sleep_interval(interval, attempt, jitter=jitter, max_value=max_value) for attempt in range(len(expected))
+        http.backoff_sleep_interval(interval, attempt, jitter=jitter, max_value=max_value)
+        for attempt in range(len(expected))
     ]
 
     if not jitter:
         assert actual == expected
     else:
-        for i, (a, e) in enumerate(zip(actual, expected)):
+        for i, (a, e) in enumerate(zip(actual, expected, strict=True)):
             assert a >= e and a <= e + 1, f"Jittered value out of bounds at attempt {i}: {a} (expected ~{e})"

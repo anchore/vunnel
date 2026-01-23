@@ -119,7 +119,7 @@ class Parser:
             text = response.text
             match = re.search(r"^Date\s*:\s*(\d{4}-\d{2}-\d{2})", text, re.MULTILINE)
             self._asa_date_cache[asa_id] = match.group(1) if match else None
-        except (requests.RequestException, http_wrapper.CircuitOpenError):
+        except requests.RequestException:
             self.logger.debug(f"Failed to fetch ASA {asa_id}, will use first-observed fallback")
             self._asa_date_cache[asa_id] = None
 
