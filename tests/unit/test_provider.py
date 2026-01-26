@@ -895,6 +895,9 @@ def assert_dummy_workspace_state(ws):
     assert current_state.timestamp is not None
     current_state.timestamp = None
 
+    # ignore processor (it's auto-populated with the vunnel version)
+    current_state.processor = None
+
     expected_state = workspace.State(
         store=result.StoreStrategy.FLAT_FILE.value,
         provider="dummy",
@@ -903,6 +906,7 @@ def assert_dummy_workspace_state(ws):
         timestamp=None,
         schema=schema.ProviderStateSchema(),
     )
+    expected_state.processor = None  # also zero out auto-populated value
 
     assert current_state == expected_state
 
@@ -973,6 +977,7 @@ def test_provider_versions(tmpdir):
         "chainguard-libraries": 1,
         "debian": 1,
         "echo": 1,
+        "eol": 1,
         "epss": 1,
         "github": 1,
         "kev": 1,
@@ -1010,6 +1015,7 @@ def test_provider_distribution_versions(tmpdir):
         "chainguard-libraries": 1,
         "debian": 1,
         "echo": 1,
+        "eol": 1,
         "epss": 1,
         "github": 1,
         "kev": 1,

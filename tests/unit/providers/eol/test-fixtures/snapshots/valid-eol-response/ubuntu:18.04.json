@@ -1,0 +1,23 @@
+{
+  "identifier": "ubuntu:18.04",
+  "item": {
+    "codename": "Bionic Beaver",
+    "eoasFrom": "2028-04-26",
+    "eolFrom": "2023-04-26",
+    "identifiers": [
+      {
+        "id": "cpe:2.3:o:canonical:ubuntu_linux:*:*:*:*:*:*:*:*",
+        "type": "cpe"
+      }
+    ],
+    "isEoas": true,
+    "isEol": true,
+    "isLts": true,
+    "isMaintained": false,
+    "label": "18.04 LTS (Bionic Beaver)",
+    "name": "18.04",
+    "product": "ubuntu",
+    "releaseDate": "2018-04-26"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
+}

@@ -1,0 +1,23 @@
+{
+  "identifier": "ubuntu:22.04",
+  "item": {
+    "codename": "Jammy Jellyfish",
+    "eoasFrom": "2032-04-21",
+    "eolFrom": "2027-04-21",
+    "identifiers": [
+      {
+        "id": "cpe:2.3:o:canonical:ubuntu_linux:*:*:*:*:*:*:*:*",
+        "type": "cpe"
+      }
+    ],
+    "isEoas": false,
+    "isEol": false,
+    "isLts": true,
+    "isMaintained": true,
+    "label": "22.04 LTS (Jammy Jellyfish)",
+    "name": "22.04",
+    "product": "ubuntu",
+    "releaseDate": "2022-04-21"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
+}
