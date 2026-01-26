@@ -47,6 +47,10 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "eol"
 
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["auxiliary"]
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
             for product, cycle, record in self.manager.get():

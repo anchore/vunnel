@@ -1,7 +1,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-import requests
 
 from vunnel.providers.eol.manager import Manager
 
@@ -73,9 +72,8 @@ def test_manager_get(mock_products_response):
     workspace = Mock()
     logger = Mock()
 
-    with patch("requests.get") as mock_get:
+    with patch("vunnel.utils.http_wrapper.get") as mock_get:
         mock_get.return_value.json.return_value = {"result": mock_products_response}
-        mock_get.return_value.raise_for_status = Mock()
 
         manager = Manager(
             url="https://endoflife.date/api/v1/products/full",
@@ -130,8 +128,8 @@ def test_manager_get_request_error():
     workspace = Mock()
     logger = Mock()
 
-    with patch("requests.get") as mock_get:
-        mock_get.side_effect = requests.RequestException("Failed to connect")
+    with patch("vunnel.utils.http_wrapper.get") as mock_get:
+        mock_get.side_effect = Exception("Failed to connect")
 
         manager = Manager(
             url="https://endoflife.date/api/v1/products/full",
@@ -140,7 +138,7 @@ def test_manager_get_request_error():
             logger=logger,
         )
 
-        with pytest.raises(requests.RequestException):
+        with pytest.raises(Exception, match="Failed to connect"):
             list(manager.get())
 
 

@@ -10,6 +10,10 @@ def test_provider_name():
     assert Provider.name() == "eol"
 
 
+def test_provider_tags():
+    assert Provider.tags() == ["auxiliary"]
+
+
 def test_provider_update():
     provider = Provider(root="/tmp/vunnel")
     # Patch the manager attribute directly

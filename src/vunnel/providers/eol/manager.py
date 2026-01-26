@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from vunnel.workspace import Workspace
 
 
-import requests
+from vunnel.utils import http_wrapper as http
 
 
 class Manager:
@@ -32,8 +32,7 @@ class Manager:
         """Get EOL data for all products and cycles."""
         self.logger.info(f"downloading EOL data from {self.url}")
 
-        response = requests.get(self.url, timeout=self.download_timeout)
-        response.raise_for_status()
+        response = http.get(self.url, self.logger, timeout=self.download_timeout)
 
         self.urls.append(self.url)
 
