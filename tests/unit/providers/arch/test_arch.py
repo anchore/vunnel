@@ -1,14 +1,21 @@
 from __future__ import annotations
 
-import json
 import os
 from unittest.mock import MagicMock, patch
 
+import orjson
 import pytest
 
-from vunnel import result, workspace
+from vunnel import result
 from vunnel.providers.arch import Config, Provider
 from vunnel.providers.arch.parser import Parser
+
+# ASA mock data for tests
+ASA_MOCK_DATES = {
+    "ASA-202401-01": "2024-01-15",
+    "ASA-202401-02": "2024-01-20",
+    "ASA-202310-01": "2023-10-05",
+}
 
 
 def _load_test_fixture():
@@ -17,11 +24,11 @@ def _load_test_fixture():
         os.path.dirname(__file__),
         "test-fixtures/input/arch-advisories/all.json",
     )
-    with open(fixture_path) as f:
-        return json.load(f)
+    with open(fixture_path, "rb") as f:
+        return orjson.loads(f.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_workspace(tmp_path):
     """Create a mock workspace for testing."""
     ws = MagicMock()
@@ -30,8 +37,9 @@ def mock_workspace(tmp_path):
     return ws
 
 
+@pytest.mark.usefixtures("auto_fake_fixdate_finder")
 class TestArchParser:
-    @pytest.fixture()
+    @pytest.fixture
     def mock_raw_data(self):
         """Return sample Arch Linux security tracker JSON data."""
         return [
@@ -121,7 +129,7 @@ class TestArchParser:
 
             assert "Metadata" in payload["Vulnerability"]
             assert payload["Vulnerability"]["Metadata"]["CVE"] == [
-                {"Name": "CVE-2024-1234", "Link": "https://nvd.nist.gov/vuln/detail/CVE-2024-1234"}
+                {"Name": "CVE-2024-1234", "Link": "https://nvd.nist.gov/vuln/detail/CVE-2024-1234"},
             ]
             assert payload["Vulnerability"]["Metadata"]["Advisories"] == ["ASA-202401-01"]
 
@@ -129,9 +137,12 @@ class TestArchParser:
         """Test parsing with invalid data format (not a list)."""
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value={"invalid": "data"}):
-            with pytest.raises(ValueError, match="Invalid data format from all.json: expected list"):
-                list(parser.parse())
+        with (
+            patch.object(parser, "_download"),
+            patch.object(parser, "_load", return_value={"invalid": "data"}),
+            pytest.raises(ValueError, match="Invalid data format from all.json: expected list"),
+        ):
+            list(parser.parse())
 
     def test_parse_with_missing_name_field(self, mock_workspace):
         """Test that records without name field are skipped."""
@@ -140,7 +151,7 @@ class TestArchParser:
                 "packages": ["curl"],
                 "fixed": "8.5.0-1",
                 # missing "name" field (AVG ID)
-            }
+            },
         ]
 
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
@@ -162,7 +173,7 @@ class TestArchParser:
                 "type": "test",
                 "issues": ["CVE-2024-1111"],
                 "advisories": [],
-            }
+            },
         ]
 
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
@@ -186,7 +197,7 @@ class TestArchParser:
                 "type": "arbitrary code execution",
                 "issues": ["CVE-2023-4911"],
                 "advisories": ["ASA-202310-01"],
-            }
+            },
         ]
 
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
@@ -225,7 +236,7 @@ class TestArchParser:
                 "type": "arbitrary filesystem access",
                 "issues": ["CVE-2025-6020"],
                 "advisories": [],
-            }
+            },
         ]
 
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
@@ -336,7 +347,7 @@ class TestArchParser:
                 "type": "test",
                 "issues": [],
                 "advisories": [],
-            }
+            },
         ]
 
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
@@ -390,6 +401,292 @@ class TestArchParser:
             assert records[0][0] == "avg-1111"
             assert records[1][0] == "avg-2222"
 
+    def test_parse_uses_asa_date_when_available(self, mock_workspace):
+        """Test that ASA advisory dates are used when available."""
+        data = [
+            {
+                "name": "AVG-1234",
+                "packages": ["curl"],
+                "affected": "8.4.0-1",
+                "fixed": "8.5.0-1",
+                "severity": "High",
+                "status": "Fixed",
+                "type": "arbitrary code execution",
+                "issues": ["CVE-2024-1234"],
+                "advisories": ["ASA-202401-01"],
+            },
+        ]
+
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        def mock_fetch_and_cache(asa_id):
+            parser._asa_date_cache[asa_id] = ASA_MOCK_DATES.get(asa_id)  # noqa: SLF001
+
+        with (
+            patch.object(parser, "_download"),
+            patch.object(parser, "_load", return_value=data),
+            patch.object(parser, "_fetch_and_cache_asa_date", side_effect=mock_fetch_and_cache),
+        ):
+            records = list(parser.parse())
+            assert len(records) == 1
+            group_id, payload = records[0]
+            assert group_id == "avg-1234"
+
+            # Verify the fixed in entry uses advisory date
+            fixed_in = payload["Vulnerability"]["FixedIn"][0]
+            assert fixed_in["Available"]["Date"] == "2024-01-15"
+            assert fixed_in["Available"]["Kind"] == "advisory"
+
+    def test_parse_fallback_when_asa_unavailable(self, mock_workspace):
+        """Test that first-observed date is used when ASA fetch fails."""
+        data = [
+            {
+                "name": "AVG-1234",
+                "packages": ["curl"],
+                "affected": "8.4.0-1",
+                "fixed": "8.5.0-1",
+                "severity": "High",
+                "status": "Fixed",
+                "type": "arbitrary code execution",
+                "issues": ["CVE-2024-1234"],
+                "advisories": ["ASA-202401-MISSING"],  # ASA that doesn't exist
+            },
+        ]
+
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        def mock_fetch_and_cache(asa_id):
+            # Simulate fetch failure by caching None
+            parser._asa_date_cache[asa_id] = None  # noqa: SLF001
+
+        with (
+            patch.object(parser, "_download"),
+            patch.object(parser, "_load", return_value=data),
+            patch.object(parser, "_fetch_and_cache_asa_date", side_effect=mock_fetch_and_cache),
+        ):
+            records = list(parser.parse())
+            assert len(records) == 1
+            group_id, payload = records[0]
+
+            # Verify the fixed in entry uses first-observed fallback
+            fixed_in = payload["Vulnerability"]["FixedIn"][0]
+            assert fixed_in["Available"]["Date"] == "2024-01-01"
+            assert fixed_in["Available"]["Kind"] == "first-observed"
+
+    def test_parse_with_empty_advisories_list(self, mock_workspace):
+        """Test that empty advisories list falls back to first-observed."""
+        data = [
+            {
+                "name": "AVG-9999",
+                "packages": ["test-pkg"],
+                "affected": "0.9.0-1",
+                "fixed": "1.0.0-1",
+                "severity": "Medium",
+                "status": "Fixed",
+                "type": "information disclosure",
+                "issues": [],
+                "advisories": [],  # No advisories
+            },
+        ]
+
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
+            records = list(parser.parse())
+            assert len(records) == 1
+            group_id, payload = records[0]
+
+            # Verify the fixed in entry uses first-observed
+            fixed_in = payload["Vulnerability"]["FixedIn"][0]
+            assert fixed_in["Available"]["Date"] == "2024-01-01"
+            assert fixed_in["Available"]["Kind"] == "first-observed"
+
+    def test_prefetch_populates_cache(self, mock_workspace):
+        """Test that prefetch populates the cache for later lookup."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        mock_response = MagicMock()
+        mock_response.text = "Arch Linux Security Advisory ASA-202401-01\nDate    : 2024-01-15\nSeverity: High"
+
+        with patch("vunnel.utils.http_wrapper.get", return_value=mock_response) as mock_get:
+            # Prefetch should make HTTP request and populate cache
+            parser._fetch_and_cache_asa_date("ASA-202401-01")  # noqa: SLF001
+            assert mock_get.call_count == 1
+
+            # Cache lookup should return the prefetched value
+            result = parser._get_cached_asa_date("ASA-202401-01")  # noqa: SLF001
+            assert result == "2024-01-15"
+            assert mock_get.call_count == 1  # No additional HTTP call
+
+    def test_fetch_asa_date_validates_id_format(self, mock_workspace):
+        """Test that invalid ASA ID formats are rejected without making HTTP requests."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        with patch("vunnel.utils.http_wrapper.get") as mock_get:
+            # Invalid formats should not trigger HTTP requests
+            parser._fetch_and_cache_asa_date("invalid-id")  # noqa: SLF001
+            parser._fetch_and_cache_asa_date("ASA-1234567890-1")  # noqa: SLF001 (first part too long - 10 digits)
+            parser._fetch_and_cache_asa_date("ASA-202401-12345678901")  # noqa: SLF001 (second part too long - 11 digits)
+            parser._fetch_and_cache_asa_date("asa-202401-01")  # noqa: SLF001 (lowercase)
+            parser._fetch_and_cache_asa_date("ASA-202401-01; rm -rf /")  # noqa: SLF001 (injection attempt)
+
+            # No HTTP requests should have been made
+            assert mock_get.call_count == 0
+
+            # All invalid IDs should be cached as None
+            assert parser._asa_date_cache.get("invalid-id") is None  # noqa: SLF001
+            assert parser._asa_date_cache.get("ASA-1234567890-1") is None  # noqa: SLF001
+            assert parser._asa_date_cache.get("ASA-202401-12345678901") is None  # noqa: SLF001
+            assert parser._asa_date_cache.get("asa-202401-01") is None  # noqa: SLF001
+
+    def test_fetch_asa_date_accepts_valid_id_format(self, mock_workspace):
+        """Test that valid ASA ID formats are accepted (1-9 digits allowed)."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        mock_response = MagicMock()
+        mock_response.text = "Date    : 2024-01-15"
+
+        with patch("vunnel.utils.http_wrapper.get", return_value=mock_response) as mock_get:
+            # Valid formats: ASA-{1-9 digits}-NN
+            parser._fetch_and_cache_asa_date("ASA-1-01")  # noqa: SLF001 (1 digit)
+            parser._fetch_and_cache_asa_date("ASA-202401-01")  # noqa: SLF001 (6 digits - typical)
+            parser._fetch_and_cache_asa_date("ASA-123456789-01")  # noqa: SLF001 (9 digits)
+
+            # HTTP requests should have been made for valid IDs
+            assert mock_get.call_count == 3
+
+    def test_get_best_asa_date_returns_earliest(self, mock_workspace):
+        """Test that _get_best_asa_date returns the earliest date from multiple advisories."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        # Pre-populate cache (simulating completed prefetch)
+        parser._asa_date_cache["ASA-202401-02"] = "2024-01-20"  # noqa: SLF001
+        parser._asa_date_cache["ASA-202401-01"] = "2024-01-15"  # noqa: SLF001
+
+        result = parser._get_best_asa_date(["ASA-202401-02", "ASA-202401-01"])  # noqa: SLF001
+        assert result == "2024-01-15"  # Should return earliest
+
+    def test_prefetch_asa_dates_populates_cache_for_batch(self, mock_workspace):
+        """Test that _prefetch_asa_dates populates cache for all ASAs in data."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        # Test data with multiple fixed vulnerabilities having advisories
+        test_data = [
+            {"fixed": "1.0", "status": "Fixed", "advisories": ["ASA-202401-01", "ASA-202401-02"]},
+            {"fixed": "2.0", "status": "Fixed", "advisories": ["ASA-202401-03"]},
+            {"fixed": None, "status": "Not affected", "advisories": ["ASA-202401-04"]},  # Should be skipped
+        ]
+
+        def mock_get(url, **kwargs):
+            response = MagicMock()
+            if "ASA-202401-01" in url:
+                response.text = "Date    : 2024-01-15"
+            elif "ASA-202401-02" in url:
+                response.text = "Date    : 2024-01-20"
+            elif "ASA-202401-03" in url:
+                response.text = "Date    : 2024-01-25"
+            else:
+                response.text = "No date"
+            return response
+
+        with patch("vunnel.utils.http_wrapper.get", side_effect=mock_get):
+            with patch("time.sleep"):  # Don't actually sleep in tests
+                parser._prefetch_asa_dates(test_data, max_workers=2, batch_size=10)  # noqa: SLF001
+
+        # Verify cache was populated for fixed vulnerabilities only
+        assert parser._asa_date_cache.get("ASA-202401-01") == "2024-01-15"  # noqa: SLF001
+        assert parser._asa_date_cache.get("ASA-202401-02") == "2024-01-20"  # noqa: SLF001
+        assert parser._asa_date_cache.get("ASA-202401-03") == "2024-01-25"  # noqa: SLF001
+        assert "ASA-202401-04" not in parser._asa_date_cache  # noqa: SLF001
+
+    def test_prefetch_asa_dates_handles_partial_failures(self, mock_workspace):
+        """Test that prefetch continues when some fetches fail."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        test_data = [
+            {"fixed": "1.0", "status": "Fixed", "advisories": ["ASA-202401-01", "ASA-202401-02", "ASA-202401-03"]},
+        ]
+
+        call_count = 0
+
+        def mock_get(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if "ASA-202401-02" in url:
+                # Simulate network failure for one ASA
+                import requests
+                raise requests.RequestException("Connection failed")
+            response = MagicMock()
+            if "ASA-202401-01" in url:
+                response.text = "Date    : 2024-01-15"
+            elif "ASA-202401-03" in url:
+                response.text = "Date    : 2024-01-25"
+            return response
+
+        with patch("vunnel.utils.http_wrapper.get", side_effect=mock_get):
+            with patch("time.sleep"):
+                # Should not raise despite one failure
+                parser._prefetch_asa_dates(test_data, max_workers=2, batch_size=10)  # noqa: SLF001
+
+        # Successful fetches should be cached
+        assert parser._asa_date_cache.get("ASA-202401-01") == "2024-01-15"  # noqa: SLF001
+        assert parser._asa_date_cache.get("ASA-202401-03") == "2024-01-25"  # noqa: SLF001
+        # Failed fetch should have None in cache
+        assert parser._asa_date_cache.get("ASA-202401-02") is None  # noqa: SLF001
+        # All three should have been attempted
+        assert call_count == 3
+
+    def test_prefetch_asa_dates_rate_limits_between_batches(self, mock_workspace):
+        """Test that prefetch pauses between batches to respect rate limits."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        # Create enough ASAs to span multiple batches (batch_size=2 for testing)
+        test_data = [
+            {"fixed": "1.0", "status": "Fixed", "advisories": ["ASA-202401-01", "ASA-202401-02", "ASA-202401-03", "ASA-202401-04", "ASA-202401-05"]},
+        ]
+
+        def mock_get(url, **kwargs):
+            response = MagicMock()
+            response.text = "Date    : 2024-01-15"
+            return response
+
+        with patch("vunnel.utils.http_wrapper.get", side_effect=mock_get):
+            with patch("time.sleep") as mock_sleep:
+                parser._prefetch_asa_dates(test_data, max_workers=2, batch_size=2)  # noqa: SLF001
+
+                # With 5 ASAs and batch_size=2, we have 3 batches: [2, 2, 1]
+                # Sleep should be called between batches (not after the last one)
+                assert mock_sleep.call_count == 2
+                # Each sleep should be 1.0 second
+                for call in mock_sleep.call_args_list:
+                    assert call[0][0] == 1.0
+
+    def test_prefetch_asa_dates_executes_all_fetches_in_batch(self, mock_workspace):
+        """Test that prefetch executes all fetches within a batch using thread pool."""
+        parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
+
+        test_data = [
+            {"fixed": "1.0", "status": "Fixed", "advisories": ["ASA-202401-01", "ASA-202401-02", "ASA-202401-03"]},
+        ]
+
+        fetched_urls = []
+
+        def mock_get(url, **kwargs):
+            fetched_urls.append(url)
+            response = MagicMock()
+            response.text = "Date    : 2024-01-15"
+            return response
+
+        with patch("vunnel.utils.http_wrapper.get", side_effect=mock_get):
+            with patch("time.sleep"):
+                parser._prefetch_asa_dates(test_data, max_workers=3, batch_size=10)  # noqa: SLF001
+
+        # Verify all ASAs were fetched
+        assert len(fetched_urls) == 3
+        assert any("ASA-202401-01" in url for url in fetched_urls)
+        assert any("ASA-202401-02" in url for url in fetched_urls)
+        assert any("ASA-202401-03" in url for url in fetched_urls)
+
 
 class TestArchProvider:
     def test_provider_initialization(self):
@@ -432,9 +729,9 @@ class TestArchProvider:
                         "NamespaceName": "arch:rolling",
                         "Severity": "High",
                         "FixedIn": [],
-                    }
+                    },
                 },
-            )
+            ),
         ]
         mock_parse.return_value = iter(mock_records)
 
@@ -447,7 +744,7 @@ class TestArchProvider:
             assert provider.parser is not None
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     """Test that provider output conforms to the expected schema."""
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
@@ -462,13 +759,19 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     monkeypatch.setattr(p.parser, "_download", lambda: None)
     monkeypatch.setattr(p.parser, "_load", lambda: test_data)
 
+    # Mock ASA date fetching - populate cache like real prefetch does
+    def mock_fetch_and_cache(asa_id):
+        p.parser._asa_date_cache[asa_id] = ASA_MOCK_DATES.get(asa_id)
+
+    monkeypatch.setattr(p.parser, "_fetch_and_cache_asa_date", mock_fetch_and_cache)
+
     p.update(None)
 
     assert workspace.num_result_entries() == 5
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     """Test provider output against expected snapshots."""
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
@@ -482,6 +785,12 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
     test_data = _load_test_fixture()
     monkeypatch.setattr(p.parser, "_download", lambda: None)
     monkeypatch.setattr(p.parser, "_load", lambda: test_data)
+
+    # Mock ASA date fetching - populate cache like real prefetch does
+    def mock_fetch_and_cache(asa_id):
+        p.parser._asa_date_cache[asa_id] = ASA_MOCK_DATES.get(asa_id)
+
+    monkeypatch.setattr(p.parser, "_fetch_and_cache_asa_date", mock_fetch_and_cache)
 
     p.update(None)
 

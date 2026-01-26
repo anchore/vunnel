@@ -6,7 +6,10 @@
       "Description": "cryptographic issue",
       "FixedIn": [
         {
-          "Available": null,
+          "Available": {
+            "Date": "2024-01-20",
+            "Kind": "advisory"
+          },
           "Module": "",
           "Name": "openssl",
           "NamespaceName": "arch:rolling",

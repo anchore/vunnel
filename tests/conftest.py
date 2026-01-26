@@ -14,6 +14,15 @@ import pytest
 
 from vunnel.tool import fixdate
 from vunnel.tool.fixdate.finder import Finder, Result
+from vunnel.utils import http_wrapper
+
+
+@pytest.fixture(autouse=True)
+def reset_http_wrapper():
+    """Reset http_wrapper state before and after each test."""
+    http_wrapper._reset_for_testing()
+    yield
+    http_wrapper._reset_for_testing()
 
 
 class MockFixDateFinder(Finder):
