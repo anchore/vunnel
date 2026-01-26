@@ -391,6 +391,7 @@ tests:
         use_cache: true
     images:
       - docker.io/rootpublic/cassandra:latest@sha256:02272b14efbe14e70ee5512ce707c4e300d3c1813f0e5df9562512c1b96be835
+      - docker.io/rootpublic/ubuntu:22.04@sha256:1390a26823a5a761dfbb7f591ae74a71afd8e23583a2f0c58dca6943b606f6d5
     expected_namespaces:
       # Root IO namespaces (per grype-db implementation)
       - rootio:distro:ubuntu:22.04
