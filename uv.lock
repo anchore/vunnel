@@ -1214,7 +1214,7 @@ wheels = [
 
 [[package]]
 name = "uv-dynamic-versioning"
-version = "0.12.0"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dunamai" },
@@ -1222,9 +1222,9 @@ dependencies = [
     { name = "jinja2" },
     { name = "tomlkit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ac/ae/66c95eca70db2a0d01212f05c6cb589e0668532daad10bbbf434f82ccfe7/uv_dynamic_versioning-0.12.0.tar.gz", hash = "sha256:e853e0c5b2425a68005580325d4975a8c37b66015589ca45ef96e660fe0f8f16", size = 41499, upload-time = "2025-12-14T00:47:40.774Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/b7/46e3106071b85016237f6de589e99f614565d10a16af17b374d003272076/uv_dynamic_versioning-0.13.0.tar.gz", hash = "sha256:3220cbf10987d862d78e9931957782a274fa438d33efb1fa26b8155353749e06", size = 38797, upload-time = "2026-01-19T09:45:33.366Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/8b/1dace94e7786f40e5cbcebb3a43365832798e497bbbb7281557cef72cb4c/uv_dynamic_versioning-0.12.0-py3-none-any.whl", hash = "sha256:2d2f1fb806c2e351d0d0a3840aaf7b3c6ce73757080b1ada4ac5dc44f7dd4c9e", size = 11477, upload-time = "2025-12-14T00:47:39.305Z" },
+    { url = "https://files.pythonhosted.org/packages/28/4f/15d9ec8aaed4a78aca1b8f0368f0cdd3cca8a04a81edbf03bc9e12c1a188/uv_dynamic_versioning-0.13.0-py3-none-any.whl", hash = "sha256:86d37b89fa2b6836a515301f74ea2d56a1bc59a46a74d66a24c869d1fc8f7585", size = 11480, upload-time = "2026-01-19T09:45:32.002Z" },
 ]
 
 [[package]]
