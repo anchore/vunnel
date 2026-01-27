@@ -1338,7 +1338,7 @@ dev = [
     { name = "types-pyyaml", specifier = ">=6.0.12.5,<7.0.0.0" },
     { name = "types-requests", specifier = ">=2.28.11.7,<3.0.0.0" },
     { name = "uv-dynamic-versioning", specifier = ">=0.6.0" },
-    { name = "yardstick", specifier = ">=0.14.1" },
+    { name = "yardstick", specifier = ">=0.16.0" },
 ]
 
 [[package]]
@@ -1399,7 +1399,7 @@ wheels = [
 
 [[package]]
 name = "yardstick"
-version = "0.15.0"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1417,9 +1417,9 @@ dependencies = [
     { name = "xxhash" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/6b/3c3884d01e0c5a8c288e2effe840967ce38668ae30b30e8c9d97a75b5a30/yardstick-0.15.0.tar.gz", hash = "sha256:980e205f93a495db6f233062491eb974b3d0d3d0a766e9a70c15abd99db12192", size = 149600, upload-time = "2025-10-23T20:51:57.365Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/48/cf4e4e9ccc2d6195e5a5b9ff218de8694ce39b5844aadc8e97fb94e24634/yardstick-0.16.0.tar.gz", hash = "sha256:ffa894be5f39a5c746f7c3fe1bf86186f00e03565b3734b9cbd6b6a32f276018", size = 181740, upload-time = "2026-01-26T21:22:52.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/f0/82c2ba7953eb72f82a91aa6db35cccd35fdcdedc1529a4d754bc63cfd909/yardstick-0.15.0-py3-none-any.whl", hash = "sha256:b60433e9cba8f0a82d8b533a42d6e63bf822899561c7e974e23ba44fd7d10457", size = 94886, upload-time = "2025-10-23T20:51:55.93Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/f4/14a0f44365050169f3100e19ca4a17f0aa0ef03b5a6458b580ad57001f7e/yardstick-0.16.0-py3-none-any.whl", hash = "sha256:2fffeb11af224f95ea39736931158317bb34ec4e72903749c6568f17b26d731f", size = 105772, upload-time = "2026-01-26T21:22:53.852Z" },
 ]
 
 [[package]]
