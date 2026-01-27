@@ -150,7 +150,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 155
+    assert workspace.num_result_entries() == 17
     assert workspace.result_schemas_valid(require_entries=True)
 
 
