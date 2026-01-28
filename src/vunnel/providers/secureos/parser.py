@@ -139,7 +139,7 @@ class Parser:
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
-    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         """
         Loads the secdb json and yields it
         :return:
@@ -328,7 +328,7 @@ class Parser:
     def target_url(self) -> str:
         return self.url
 
-    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, dict[str, Any]]]:
         """
         Download, load and normalize secureos sec db and return a dict of release - list of vulnerability records
         :return:
