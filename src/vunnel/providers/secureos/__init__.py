@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from importlib import metadata
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
@@ -13,12 +14,21 @@ if TYPE_CHECKING:
     import datetime
 
 
+def _default_user_agent() -> str:
+    try:
+        version = metadata.version("vunnel")
+    except metadata.PackageNotFoundError:
+        version = "unknown"
+    return f"anchore/vunnel-{version}"
+
+
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            user_agent=_default_user_agent(),
         ),
     )
     request_timeout: int = 125
@@ -45,6 +55,7 @@ class Provider(provider.Provider):
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
+            user_agent=self.runtime_cfg.user_agent,
         )
 
         # this provider requires the previous state from former runs

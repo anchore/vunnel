@@ -35,6 +35,7 @@ class Parser:
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
+        user_agent: str | None = None,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -48,6 +49,7 @@ class Parser:
         self.urls: list[str] = []
         # Default filename for secdb (same as fixture filename)
         self._db_filename = "secdb.json"
+        self.user_agent = user_agent
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -95,7 +97,7 @@ class Parser:
         try:
             # First, fetch the latest.json metadata
             self.logger.info(f"downloading {self.namespace} metadata from {self.url}")
-            r = http.get(self.url, self.logger, timeout=self.download_timeout)
+            r = http.get(self.url, self.logger, timeout=self.download_timeout, user_agent=self.user_agent)
             self.urls.append(self.url)
 
             metadata = orjson.loads(r.content)
@@ -109,7 +111,7 @@ class Parser:
             self.urls.append(latest_url)
 
             # Download the gzipped secdb file
-            r = http.get(latest_url, self.logger, stream=True, timeout=self.download_timeout)
+            r = http.get(latest_url, self.logger, stream=True, timeout=self.download_timeout, user_agent=self.user_agent)
 
             gz_filename = self._extract_filename_from_url(latest_url)
             gz_file_path = os.path.join(self.secdb_dir_path, gz_filename)
