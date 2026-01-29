@@ -38,6 +38,11 @@ class SecurityRejections:
         self.logger = logger
         self._rejections_dir = os.path.join(workspace.input_path, "security-rejections")
         self._data: dict[str, dict[str, list[str]]] = {}  # {db_type: {package: [cve_ids]}}
+        self._urls: set[str] = set()
+
+    @property
+    def urls(self) -> list[str]:
+        return list(self._urls)
 
     def download(self) -> None:
         """Download main.yaml and community.yaml from the security-rejections GitLab repo."""
@@ -49,6 +54,7 @@ class SecurityRejections:
             file_path = os.path.join(self._rejections_dir, file_name)
 
             try:
+                self._urls.add(download_url)
                 self.logger.info(f"downloading security-rejections {db_type} from: {download_url}")
                 r = http.get(download_url, self.logger, stream=True, timeout=self.download_timeout)
 

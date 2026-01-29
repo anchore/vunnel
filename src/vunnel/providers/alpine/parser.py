@@ -102,7 +102,7 @@ class Parser:
 
     @property
     def urls(self) -> list[str]:
-        return list(self._urls)
+        return [*self._urls, *self.rejections.urls]
 
     def build_reference_links(self, vulnerability_id: str) -> list[str]:
         urls = []
