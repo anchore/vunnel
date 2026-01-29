@@ -5,7 +5,7 @@ import shutil
 
 import pytest
 from vunnel import result, workspace
-from vunnel.providers.alpine import Config, Provider, parser
+from vunnel.providers.alpine import Config, Provider
 from vunnel.providers.alpine.parser import Parser, SecdbLandingParser
 
 
@@ -238,3 +238,150 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     p.update(None)
 
     workspace.assert_result_snapshots()
+
+
+class TestSecurityRejectionsIntegration:
+    """Integration tests for security-rejections functionality."""
+
+    @pytest.fixture()
+    def mock_secdb_data(self):
+        """Sample secdb data with a package."""
+        return {
+            "main": {
+                "distroversion": "v3.15",
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "nginx",
+                            "secfixes": {
+                                "1.20.0-r0": ["CVE-2021-23017"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+    @pytest.fixture()
+    def mock_rejections_yaml(self):
+        """Sample security-rejections YAML content."""
+        return """dnsmasq:
+  - CVE-2021-45951
+  - CVE-2021-45952
+nginx:
+  - CVE-2020-12345
+"""
+
+    def test_normalize_includes_rejections_with_version_zero(
+        self, tmpdir, mock_secdb_data, mock_rejections_yaml, auto_fake_fixdate_finder,
+    ):
+        """Test that _normalize emits rejection CVEs with Version: '0'."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        p = Parser(workspace=ws)
+
+        # Set up rejections data manually
+        rejections_dir = os.path.join(ws.input_path, "security-rejections")
+        os.makedirs(rejections_dir, exist_ok=True)
+        with open(os.path.join(rejections_dir, "main.yaml"), "w") as fp:
+            fp.write(mock_rejections_yaml)
+
+        vuln_records = p._normalize("3.15", mock_secdb_data)
+
+        # Check that regular CVE from secdb is present with proper version
+        assert "CVE-2021-23017" in vuln_records
+        nginx_fix = vuln_records["CVE-2021-23017"]["Vulnerability"]["FixedIn"][0]
+        assert nginx_fix["Name"] == "nginx"
+        assert nginx_fix["Version"] == "1.20.0-r0"
+
+        # Check that rejection CVEs are present with Version: "0"
+        assert "CVE-2021-45951" in vuln_records
+        dnsmasq_fix = vuln_records["CVE-2021-45951"]["Vulnerability"]["FixedIn"][0]
+        assert dnsmasq_fix["Name"] == "dnsmasq"
+        assert dnsmasq_fix["Version"] == "0"
+        assert dnsmasq_fix["VersionFormat"] == "apk"
+        assert dnsmasq_fix["NamespaceName"] == "alpine:3.15"
+
+        assert "CVE-2021-45952" in vuln_records
+        assert vuln_records["CVE-2021-45952"]["Vulnerability"]["FixedIn"][0]["Version"] == "0"
+
+        # Check nginx rejection CVE (different from secdb nginx CVE)
+        assert "CVE-2020-12345" in vuln_records
+        nginx_rejection_fix = vuln_records["CVE-2020-12345"]["Vulnerability"]["FixedIn"][0]
+        assert nginx_rejection_fix["Name"] == "nginx"
+        assert nginx_rejection_fix["Version"] == "0"
+
+    def test_normalize_skips_non_cve_rejections(
+        self, tmpdir, mock_secdb_data, auto_fake_fixdate_finder,
+    ):
+        """Test that non-CVE identifiers in rejections are skipped."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        p = Parser(workspace=ws)
+
+        # Set up rejections with non-CVE IDs
+        rejections_yaml = """somepackage:
+  - CVE-2021-45951
+  - GHSA-1234-abcd-5678
+  - XSA-123
+"""
+        rejections_dir = os.path.join(ws.input_path, "security-rejections")
+        os.makedirs(rejections_dir, exist_ok=True)
+        with open(os.path.join(rejections_dir, "main.yaml"), "w") as fp:
+            fp.write(rejections_yaml)
+
+        vuln_records = p._normalize("3.15", mock_secdb_data)
+
+        # Only CVE should be present
+        assert "CVE-2021-45951" in vuln_records
+        assert "GHSA-1234-abcd-5678" not in vuln_records
+        assert "XSA-123" not in vuln_records
+
+    def test_normalize_merges_rejection_with_existing_cve(
+        self, tmpdir, auto_fake_fixdate_finder,
+    ):
+        """Test that rejections add FixedIn entries to existing CVE records."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        p = Parser(workspace=ws)
+
+        # secdb has nginx with CVE-2021-23017
+        secdb_data = {
+            "main": {
+                "distroversion": "v3.15",
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "nginx",
+                            "secfixes": {
+                                "1.20.0-r0": ["CVE-2021-23017"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        # rejections also has dnsmasq with CVE-2021-23017
+        # (same CVE affects both packages, but dnsmasq rejects it)
+        rejections_yaml = """dnsmasq:
+  - CVE-2021-23017
+"""
+        rejections_dir = os.path.join(ws.input_path, "security-rejections")
+        os.makedirs(rejections_dir, exist_ok=True)
+        with open(os.path.join(rejections_dir, "main.yaml"), "w") as fp:
+            fp.write(rejections_yaml)
+
+        vuln_records = p._normalize("3.15", secdb_data)
+
+        # The CVE should have two FixedIn entries
+        assert "CVE-2021-23017" in vuln_records
+        fixed_in_list = vuln_records["CVE-2021-23017"]["Vulnerability"]["FixedIn"]
+        assert len(fixed_in_list) == 2
+
+        # Find nginx entry (from secdb)
+        nginx_entry = next((f for f in fixed_in_list if f["Name"] == "nginx"), None)
+        assert nginx_entry is not None
+        assert nginx_entry["Version"] == "1.20.0-r0"
+
+        # Find dnsmasq entry (from rejection)
+        dnsmasq_entry = next((f for f in fixed_in_list if f["Name"] == "dnsmasq"), None)
+        assert dnsmasq_entry is not None
+        assert dnsmasq_entry["Version"] == "0"
