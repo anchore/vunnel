@@ -1,0 +1,32 @@
+# Anchore Vunnel
+
+Vunnel is a tool for fetching, transforming, and storing vulnerability data from a variety of sources.
+
+## What it does
+
+Vunnel aggregates vulnerability data from multiple security databases including:
+- Alpine, Amazon, Azure, Debian, Oracle, RedHat, SLES, Ubuntu, Wolfi
+- GitHub Security Advisories
+- National Vulnerability Database (NVD)
+
+## How to use it
+
+Install: `pip install vunnel`
+List providers: `vunnel list`
+Run a provider: `vunnel run <provider-name>`
+Clear data: `vunnel clear <provider-name>`
+
+## Project structure
+
+- `/src/vunnel/` - Core application code
+- `/src/vunnel/providers/` - Individual vulnerability data source implementations
+- `/tests/` - Test suite
+- Configuration via `.vunnel.yaml` file
+
+## Key concepts
+
+- **Providers**: Modules that fetch and process vulnerability data from specific sources
+- **Workspace**: Local storage for downloaded and processed vulnerability data
+- **Schema**: Standardized format for vulnerability data across all providers
+
+Written in Python 3.11+, uses SQLAlchemy for data handling, supports Docker deployment.

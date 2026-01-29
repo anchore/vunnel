@@ -8,7 +8,8 @@ from pytest_unordered import unordered
 from vunnel import result, workspace, utils
 from vunnel.providers.mariner import Config, Provider, parser
 from vunnel.providers.mariner.parser import MarinerXmlFile
-from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
+from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory, FixAvailability
+from datetime import datetime, timezone
 
 
 @pytest.mark.parametrize(
@@ -33,6 +34,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="> 0:1.19.0.cm2, < 0:1.20.7-1.cm2",
+                            Available=FixAvailability(
+                                Date=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+                                Kind="first-observed"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -53,6 +58,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:8.0.33-1.cm2",
                             Module=None,
                             VendorAdvisory=None,
+                            Available=FixAvailability(
+                                Date=datetime(2023, 5, 3, 16, 24, 32, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -73,6 +82,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="< 0:8.0.33-1.cm2",
+                            Available=FixAvailability(
+                                Date=datetime(2023, 5, 3, 16, 24, 32, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -93,6 +106,7 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             Module=None,
                             VendorAdvisory=None,
                             VulnerableRange="<= 0:9.16.33-1.cm2",
+                            Available=None,
                         ),
                     ],
                 ),
@@ -117,6 +131,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            Available=FixAvailability(
+                                Date=datetime(2024, 4, 17, 22, 2, 46, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -137,6 +155,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:3.4.0-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            Available=FixAvailability(
+                                Date=datetime(2024, 4, 17, 22, 2, 46, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -157,6 +179,10 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
                             VulnerableRange="< 0:18.2.1-1.azl3",
                             Module="",
                             VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
+                            Available=FixAvailability(
+                                Date=datetime(2024, 4, 17, 22, 2, 46, tzinfo=timezone.utc),
+                                Kind="advisory"
+                            ),
                         )
                     ],
                     Metadata={},
@@ -165,16 +191,16 @@ from vunnel.utils.vulnerability import Vulnerability, FixedIn, VendorAdvisory
         ),
     ],
 )
-def test_parse(tmpdir, helpers, input_file, expected):
+def test_parse(tmpdir, helpers, input_file, expected, auto_fake_fixdate_finder):
     mock_data_path = helpers.local_dir(input_file)
-    subject = MarinerXmlFile(mock_data_path, logger=logging.getLogger("test_pariner"))
+    subject = MarinerXmlFile(mock_data_path, logger=logging.getLogger("test_pariner"), fixdater=auto_fake_fixdate_finder)
 
     vulnerabilities = [v for v in subject.vulnerabilities()]
     assert len(vulnerabilities) == len(expected)
     assert vulnerabilities == expected
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config(allow_versions=["2.0"])
@@ -195,7 +221,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config(allow_versions=["2.0"])

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser, debian_distro_map
 
@@ -28,7 +29,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -56,15 +56,20 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "debian"
 
-    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for relno, vuln_id, record in self.parser.get():
-                vuln_id = vuln_id.lower()
-                writer.write(
-                    identifier=os.path.join(f"debian:{relno}", vuln_id),
-                    schema=self.__schema__,
-                    payload=record,
-                )
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "os"]
 
-        return self.parser.urls, len(writer)
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                for relno, vuln_id, record in self.parser.get():
+                    vuln_id = vuln_id.lower()
+                    writer.write(
+                        identifier=os.path.join(f"debian:{relno}", vuln_id),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+
+            return self.parser.urls, len(writer)

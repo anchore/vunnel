@@ -1,0 +1,240 @@
+version: "3"
+
+vars:
+  OWNER: anchore
+  PROJECT: vunnel
+
+  TEMP_DIR: .tmp
+  TOOL_DIR: .tool
+  IMAGE_NAME: ghcr.io/{{ .OWNER }}/{{ .PROJECT }}
+
+  COMMIT:
+    sh: git rev-parse HEAD
+  COMMIT_TAG: git-{{ .COMMIT }}
+
+  PROJECT_ROOT:
+    sh: echo $PWD
+
+  CHANGELOG: CHANGELOG.md
+  NEXT_VERSION: VERSION
+
+  # tools
+  CHRONICLE: "{{ .TOOL_DIR }}/chronicle"
+  CRANE: "{{ .TOOL_DIR }}/crane"
+  GLOW: "{{ .TOOL_DIR }}/glow"
+  BINNY: "{{ .TOOL_DIR }}/binny"
+
+  # development paths
+  GRYPE_PATH:
+    sh: echo ${GRYPE_PATH:-../grype}
+  GRYPE_DB_PATH:
+    sh: echo ${GRYPE_DB_PATH:-../grype-db}
+  ABS_TOOL_DIR:
+    sh: "realpath {{ .TOOL_DIR }}"
+
+env:
+  GNUMAKEFLAGS: '--no-print-directory'
+
+tasks:
+
+  ## High-level tasks #################################
+
+  default:
+    desc: Run all validation tasks
+    aliases:
+      - pr-validations
+      - validations
+    cmds:
+      - task: static-analysis
+      - task: test
+
+  static-analysis:
+    desc: Run all static analysis tasks
+    cmds:
+      - task: lint
+      - task: check-types
+
+  test:
+    desc: Run all levels of tests
+    cmds:
+      - task: unit
+      - task: unit-matrix
+
+  ## Bootstrap tasks #################################
+
+  tools:
+    desc: Install all tools needed for CI and local development
+    aliases:
+      - bootstrap
+    generates:
+      - ".binny.yaml"
+      - "{{ .TOOL_DIR }}/*"
+    status:
+      - "{{ .BINNY }} check -v"
+    cmd: "{{ .BINNY }} install -v"
+    silent: true
+
+  update-tools:
+    desc: Update pinned versions of all tools to their latest available versions
+    deps: [tools]
+    generates:
+      - ".binny.yaml"
+      - "{{ .TOOL_DIR }}/*"
+    cmd: "{{ .BINNY }} update -v"
+    silent: true
+
+  list-tools:
+    desc: List all tools needed for CI and local development
+    deps: [tools]
+    cmd: "{{ .BINNY }} list"
+    silent: true
+
+  tmpdir:
+    silent: true
+    generates:
+      - "{{ .TEMP_DIR }}"
+    cmd: "mkdir -p {{ .TEMP_DIR }}"
+
+  ## Development targets #################################
+
+  dev:
+    desc: Get a development shell with locally editable grype, grype-db, and vunnel repos
+    env:
+      DEV_VUNNEL_BIN_DIR: "{{.ABS_TOOL_DIR}}"
+    cmds:
+      - ".github/scripts/dev-shell.sh {{.provider | default \"\" }} {{.providers | default \"\" }}"
+
+  build-grype:
+    desc: Build grype for local development
+    generates:
+      - "{{.BIN_DIR}}/grype"
+    cmds:
+      - "cd {{.GRYPE_PATH}} && go build -o {{.ABS_TOOL_DIR}}/grype ./cmd/grype"
+
+  build-grype-db:
+    desc: Build grype-db for local development
+    generates:
+      - "{{.BIN_DIR}}/grype-db"
+    cmds:
+      - "cd {{.GRYPE_DB_PATH}} && go build -o {{.ABS_TOOL_DIR}}/grype-db ./cmd/grype-db"
+
+  update-db:
+    desc: Build and import a grype database based off of the current configuration
+    deps: [check-dev-shell]
+    cmds:
+      - ".github/scripts/update-dev-db.sh"
+
+  check-dev-shell:
+    internal: true
+    silent: true
+    cmds:
+      - |
+        if [ -z "$DEV_VUNNEL_SHELL" ]; then
+          echo "DEV_VUNNEL_SHELL is not set. Run 'make dev -- provider=\"...\"' first" && exit 1
+        fi
+
+  ## Static analysis tasks #################################
+
+  lint:
+    desc: Run ruff for linting
+    deps: [tools]
+    cmds:
+      - "uv run ruff check ."
+
+  lint-fix:
+    desc: Fix linting issues
+    deps: [tools]
+    cmds:
+      - "uv run ruff check . --fix"
+
+  format:
+    desc: Format all code
+    deps: [tools]
+    cmds:
+      - "uv run ruff format src tests"
+      - "uv run python scripts/format-json-snapshots.py"
+
+  check-types:
+    desc: Run mypy for type checks
+    deps: [tools]
+    cmds:
+      - "uv run mypy --config-file ./pyproject.toml src/vunnel"
+
+  ## Testing tasks #################################
+
+  unit:
+    desc: Run unit tests
+    deps: [tools, tmpdir]
+    cmds:
+      - "uv run pytest --cov-report html --cov vunnel -v tests/unit/"
+
+  unit-matrix:
+    desc: Run unit tests across multiple Python versions
+    deps: [tools, tmpdir]
+    cmds:
+      - "uv run tox"
+
+  ## Build-related targets #################################
+
+  build:
+    desc: Build Vunnel package and container
+    deps: [tools, clean-dist]
+    cmds:
+      - "git fetch --tags"
+      - "uv build"
+      - "docker build -t {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }} ."
+
+  ## CI Tasks #################################
+
+  ci-check:
+    desc: "[CI only] Check if running in CI"
+    internal: true
+    silent: true
+    preconditions:
+      - sh: test -n "$CI"
+        msg: "This script should ONLY be run in CI. Exiting..."
+
+  ci-publish-commit:
+    desc: "[CI only] Publish Docker image"
+    deps: [ci-check]
+    cmds:
+      - "docker push {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }}"
+
+  ci-promote-release:
+    desc: "[CI only] Promote release"
+    deps: [ci-check]
+    vars:
+      PACKAGE_VERSION:
+        sh: uv run dunamai from git --style semver --dirty --no-metadata
+    cmds:
+      - "{{ .CRANE }} tag {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }} v{{ .PACKAGE_VERSION }}"
+      - "{{ .CRANE }} tag {{ .IMAGE_NAME }}:{{ .COMMIT_TAG }} latest"
+
+  ci-publish-pypi:
+    desc: "[CI only] Publish package to PyPI"
+    deps: [ci-check, clean-dist, build]
+    cmds:
+      - "uv publish"
+
+  ## Changelog and Release #################################
+
+  changelog:
+    desc: Generate changelog
+    deps: [tools]
+    cmds:
+      - "{{ .CHRONICLE }} -vvv -n . --version-file {{ .NEXT_VERSION }} > {{ .CHANGELOG }}"
+      - "{{ .GLOW }} -w 0 {{ .CHANGELOG }}"
+
+  release:
+    desc: Create a release
+    deps: [tools]
+    cmds:
+      - cmd: ".github/scripts/trigger-release.sh"
+        silent: true
+
+  ## Cleanup #################################
+
+  clean-dist:
+    desc: Remove distribution artifacts
+    cmds:
+      - "rm -rf dist"

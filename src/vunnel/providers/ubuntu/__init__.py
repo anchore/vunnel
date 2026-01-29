@@ -5,8 +5,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
+from vunnel.utils.concurrency import resolve_workers
 
-from .parser import Parser, default_git_branch, default_git_url, default_max_workers
+from .parser import Parser, default_git_branch, default_git_url
 
 if TYPE_CHECKING:
     import datetime
@@ -23,7 +25,7 @@ class Config:
     request_timeout: int = 125
     additional_versions: dict[str, str] = field(default_factory=dict)
     enable_rev_history: bool = True
-    parallelism: int = default_max_workers
+    parallelism: int | str = "8x"  # local I/O bound
     git_url: str = default_git_url
     git_branch: str = default_git_branch
 
@@ -48,7 +50,9 @@ class Provider(provider.Provider):
             logger=self.logger,
             additional_versions=self.config.additional_versions,
             enable_rev_history=self.config.enable_rev_history,
-            max_workers=self.config.parallelism,
+            max_workers=resolve_workers(
+                self.config.parallelism,
+            ),
             git_url=self.config.git_url,
             git_branch=self.config.git_branch,
         )
@@ -57,15 +61,28 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "ubuntu"
 
-    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
-                namespace = namespace.lower()
-                vuln_id = vuln_id.lower()
-                writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
-                    schema=self.__schema__,
-                    payload={"Vulnerability": record},
-                )
+    @classmethod
+    def tags(cls) -> list[str]:
+        return [
+            "vulnerability",
+            "os",
+            # The multicore tag is critical. Providers with this tag will be run on larger runners that can utilize
+            # the increased resource usage to reduce overall runtime.
+            # This is particularly important for the ubuntu provider (which can take hours to run).
+            "multicore",
+            "incremental",
+        ]
 
-        return self.parser.urls, len(writer)
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+                    namespace = namespace.lower()
+                    vuln_id = vuln_id.lower()
+                    writer.write(
+                        identifier=os.path.join(namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload={"Vulnerability": record},
+                    )
+
+            return self.parser.urls, len(writer)

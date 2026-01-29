@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as ET
 
+from vunnel.utils import date
 from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
@@ -26,31 +27,31 @@ class Config:
     """
 
     # regexes
-    tag_pattern = None
-    ns_pattern = None
-    is_installed_pattern = None
-    pkg_version_pattern = None
-    pkg_module_pattern = None
-    signed_with_pattern = None
-    platform_version_pattern = None
+    tag_pattern: re.Pattern | None = None
+    ns_pattern: re.Pattern | None = None
+    is_installed_pattern: re.Pattern | None = None
+    pkg_version_pattern: re.Pattern | None = None
+    pkg_module_pattern: re.Pattern | None = None
+    signed_with_pattern: re.Pattern | None = None
+    platform_version_pattern: re.Pattern | None = None
 
     # xpath queries
-    title_xpath_query = None
-    severity_xpath_query = None
-    platform_xpath_query = None
-    date_issued_xpath_query = None
-    date_updated_xpath_query = None
-    description_xpath_query = None
-    sa_ref_xpath_query = None
-    cve_xpath_query = None
-    criteria_xpath_query = None
-    criterion_xpath_query = None
+    title_xpath_query: str | None = None
+    severity_xpath_query: str | None = None
+    platform_xpath_query: str | None = None
+    date_issued_xpath_query: str | None = None
+    date_updated_xpath_query: str | None = None
+    description_xpath_query: str | None = None
+    sa_ref_xpath_query: str | None = None
+    cve_xpath_query: str | None = None
+    criteria_xpath_query: str | None = None
+    criterion_xpath_query: str | None = None
 
     # maps
-    severity_dict = None
+    severity_dict: dict[str, str] | None = None
 
     # string formats
-    ns_format = None
+    ns_format: str | None = None
 
 
 def get_opener(filename: str) -> Callable:
@@ -126,7 +127,7 @@ def _parse_severity(def_element, oval_ns, vuln_id: str, config: Config) -> str:
     return severity
 
 
-def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912
+def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912, C901
     oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
 
     def_version = def_element.attrib["version"]
@@ -165,9 +166,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
 
         v["Vulnerability"]["NamespaceName"] = ns_name
         v["Vulnerability"]["Severity"] = severity or ""
-        v["Vulnerability"]["Metadata"] = (
-            {"Issued": issued, "Updated": updated, "RefId": ref_id} if updated else {"Issued": issued, "RefId": ref_id}
-        )
+        v["Vulnerability"]["Metadata"] = {"Issued": issued, "Updated": updated, "RefId": ref_id} if updated else {"Issued": issued, "RefId": ref_id}
         v["Vulnerability"]["Name"] = name
         v["Vulnerability"]["Link"] = link
         v["Vulnerability"]["Description"] = description
@@ -176,16 +175,20 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
             v["Vulnerability"]["Metadata"]["CVE"] = cves
 
         if ns_pkgs_dict and ns_name in ns_pkgs_dict:
-            v["Vulnerability"]["FixedIn"] = [
-                {
+            fixed_in_list = []
+            for x in ns_pkgs_dict[ns_name]:
+                fixed_el = {
                     "Name": x[0],
                     "Version": x[1],
                     "Module": x[2],
                     "VersionFormat": "rpm",  # hard code version format for now
                     "NamespaceName": ns_name,
                 }
-                for x in ns_pkgs_dict[ns_name]
-            ]
+                # add Available object if fix version exists and issued date is available
+                if x[1] != "None" and issued:
+                    fixed_el["Available"] = {"Date": date.normalize_date(issued), "Kind": "advisory"}
+                fixed_in_list.append(fixed_el)
+            v["Vulnerability"]["FixedIn"] = fixed_in_list
         else:
             logger.warning(f"No affected packages found for {name}, this is unusual")
 

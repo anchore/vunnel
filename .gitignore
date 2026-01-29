@@ -1,5 +1,8 @@
+# tools
 .mise.toml
+.tool/
 
+# development config and assets
 .vunnel.yaml
 .grype-db.yaml
 .grype.yaml
@@ -7,15 +10,19 @@
 .grype-db
 *.tar.gz
 *.zip
+contents
 
+# common data directories
 /bin
 /data/
 /backup/
 .pytype/
 .wily/
 .cache/
-
 /.tmp/
+data/
+
+# release related
 CHANGELOG.md
 VERSION
 
@@ -23,8 +30,6 @@ VERSION
 __pycache__/
 *.py[cod]
 *$py.class
-
-data/
 
 # C extensions
 *.so
@@ -47,6 +52,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MagicMock/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

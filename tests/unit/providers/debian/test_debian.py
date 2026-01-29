@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.debian import Config, Provider, parser
+from vunnel.tool import fixdate
 
 
 @pytest.fixture()
@@ -18,7 +19,18 @@ def mock_legacy_db(mocker):
             "Vulnerability": {
                 "Severity": "Negligible",
                 "NamespaceName": "debian:10",
-                "FixedIn": [],
+                "FixedIn": [
+                    {
+                        "Name": "389_directory_server",
+                        "NamespaceName": "debian:10",
+                        "VersionFormat": "dpkg",
+                        "Version": "1.2.1",
+                        "VendorAdvisory": {
+                            "NoAdvisory": False,
+                            "AdvisorySummary": []
+                        },
+                    }
+                ],
                 "Link": "https://security-tracker.debian.org/tracker/CVE-2012-0833",
                 "Description": "The acllas__handle_group_entry function in servers/plugins/acl/acllas.c in 389 Directory Server before 1.2.10 does not properly handled access control instructions (ACIs) that use certificate groups, which allows remote authenticated LDAP users with a certificate group to cause a denial of service (infinite loop and CPU consumption) by binding to the server.",
                 "Metadata": {},
@@ -80,9 +92,9 @@ class TestParser:
         no_cve_dsas = [dsa for dsa in no_cves if dsa["fixed_in"]]
         # print("")
         # print("Number of DSAs with fixes and no CVEs: {}".format(len(no_cve_dsas)))
-        assert len(no_cve_dsas) == 1
+        assert len(no_cve_dsas) == 2
 
-    def test_normalize_json(self, tmpdir, helpers, disable_get_requests):
+    def test_normalize_json(self, tmpdir, helpers, disable_get_requests, auto_fake_fixdate_finder):
         subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         subject.logger = MagicMock()
 
@@ -107,8 +119,9 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
         assert not subject.logger.exception.called, "no exceptions should be logged"
 
-    def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests, mock_legacy_db):
-        subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+    def test_get_legacy_records(self, tmpdir, helpers, disable_get_requests, mock_legacy_db, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        subject = parser.Parser(workspace=ws)
 
         mock_data_path = helpers.local_dir("test-fixtures/input")
         shutil.copytree(mock_data_path, subject.workspace.input_path, dirs_exist_ok=True)
@@ -130,6 +143,9 @@ class TestParser:
         assert "CVE-2012-0833" in legacy_records["10"].keys()
         assert len(legacy_records["10"]["CVE-2012-0833"]) > 0
 
+        # ensure the DB record has a fixed in date added by the mock fixdate finder
+        assert legacy_records["10"]["CVE-2012-0833"]["Vulnerability"]["FixedIn"][0]["Available"]["Date"] == "2024-01-01"
+
         for _rel, vuln_dict in legacy_records.items():
             assert isinstance(vuln_dict, dict)
             assert len(vuln_dict) > 0
@@ -140,7 +156,8 @@ class TestParser:
             assert all(x.get("Vulnerability", {}).get("Description") is not None for x in vuln_dict.values())
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch, mock_legacy_db):
+
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, mock_legacy_db, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",
@@ -162,13 +179,13 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, mock_legacy
 
     p.update(None)
 
-    # 18 entries from the legacy FS records, 1 from legacy DB record, 21 from the mock json data
-    expected = 39
+    # 18 entries from the legacy FS records, 1 from legacy DB record, 24 from the mock json data
+    expected = 43
     assert workspace.num_result_entries() == expected
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, mock_legacy_db):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, mock_legacy_db, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",

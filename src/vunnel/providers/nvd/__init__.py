@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
+from vunnel.utils import timer
 
 if TYPE_CHECKING:
     import datetime
@@ -54,8 +55,7 @@ class Provider(provider.Provider):
 
         if self.config.runtime.skip_if_exists and config.runtime.existing_results != result.ResultStatePolicy.KEEP:
             raise ValueError(
-                "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' "
-                "(otherwise incremental updates will fail)",
+                "if 'skip_if_exists' is set then 'runtime.existing_results' must be 'keep' (otherwise incremental updates will fail)",
             )
 
         if self.config.runtime.result_store != result.StoreStrategy.SQLITE:
@@ -83,16 +83,21 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "nvd"
 
-    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            for identifier, record in self.manager.get(
-                skip_if_exists=self.config.runtime.skip_if_exists,
-                last_updated=last_updated,
-            ):
-                writer.write(
-                    identifier=identifier.lower(),
-                    schema=self.__schema__,
-                    payload=record,
-                )
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "incremental"]
 
-        return self.manager.urls, len(writer)
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.manager:
+                for identifier, record in self.manager.get(
+                    skip_if_exists=self.config.runtime.skip_if_exists,
+                    last_updated=last_updated,
+                ):
+                    writer.write(
+                        identifier=identifier.lower(),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+
+            return self.manager.urls, len(writer)

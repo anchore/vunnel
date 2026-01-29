@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser, amazon_security_advisories
 
@@ -29,7 +30,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -53,17 +53,22 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "amazon"
 
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "os", "incremental"]
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-            for vuln in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
-                namespace = vuln.NamespaceName.lower()
-                vuln_id = vuln.Name.lower()
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                for vuln in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+                    namespace = vuln.NamespaceName.lower()
+                    vuln_id = vuln.Name.lower()
 
-                writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
-                    schema=self.__schema__,
-                    payload={"Vulnerability": vuln.json()},
-                )
+                    writer.write(
+                        identifier=os.path.join(namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload={"Vulnerability": vuln.json()},
+                    )
 
-        return self.parser.urls, len(writer)
+            return self.parser.urls, len(writer)

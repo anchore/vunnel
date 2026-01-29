@@ -6,10 +6,11 @@ import os
 import random
 import shutil
 import time
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 
 def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callable[[Any], Any]:
@@ -32,7 +33,7 @@ def retry_with_backoff(retries: int = 5, backoff_in_seconds: int = 3) -> Callabl
 
                 # explanation of S311 disable: random number is not used for cryptography
                 sleep = backoff_in_seconds * 2**attempt + random.uniform(0, 1)  # noqa: S311
-                logger.warning(f"{f} failed with {err}. Retrying in {int(sleep)} seconds (attempt {attempt+1} of {retries})")
+                logger.warning(f"{f} failed with {err}. Retrying in {int(sleep)} seconds (attempt {attempt + 1} of {retries})")
                 time.sleep(sleep)
                 attempt += 1
 
@@ -53,3 +54,22 @@ def silent_remove(path: str, tree: bool = False) -> None:
         # note: errno.ENOENT = no such file or directory
         if e.errno != errno.ENOENT:
             raise
+
+
+def move_dir(src: str, dst: str) -> None:
+    """Move a directory from src to dst, ensuring the destination directory is empty."""
+    if os.path.exists(dst):
+        silent_remove(dst, tree=True)
+    shutil.move(src, dst)
+
+
+@contextmanager
+def timer(name: str, logger: logging.Logger) -> Iterator[None]:
+    # Iterator[None] because @contextmanager transforms a generator into a context manager,
+    # but type checkers see the raw generator function
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        elapsed_time = time.time() - start_time
+        logger.info(f"updating {name} took {elapsed_time:.2f} seconds")

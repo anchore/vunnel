@@ -1,0 +1,33 @@
+{
+  "identifier": "avg-2222",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "information disclosure",
+      "FixedIn": [
+        {
+          "Available": {
+            "Date": "2024-01-01",
+            "Kind": "first-observed"
+          },
+          "Module": "",
+          "Name": "test-pkg",
+          "NamespaceName": "arch:rolling",
+          "VendorAdvisory": {
+            "AdvisorySummary": [],
+            "NoAdvisory": false
+          },
+          "Version": "1.0.0-1",
+          "VersionFormat": "pacman",
+          "VulnerableRange": null
+        }
+      ],
+      "Link": "https://security.archlinux.org/AVG-2222",
+      "Metadata": {},
+      "Name": "AVG-2222",
+      "NamespaceName": "arch:rolling",
+      "Severity": "Low"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}

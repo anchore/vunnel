@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/grype-db.tar.gz
+      version: main+import-db=build/vulnerability.db
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main
+      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
       takes: SBOM
       label: reference
 
@@ -79,8 +79,20 @@ tests:
       - alpine:distro:alpine:3.19
       - alpine:distro:alpine:3.20
       - alpine:distro:alpine:3.21
+      - alpine:distro:alpine:3.22
       - alpine:distro:alpine:edge
       - nvd:cpe # alpine lists fixes to NVD entries, so NVD entries are also expected
+    validations:
+      - *default-validations
+
+  - provider: echo
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - ghcr.io/buildecho/scanner-test:latest@sha256:60557350ad6976dad3b88d891de8f090b20b3271c660272d30d44b5d07b23edc
+    expected_namespaces:
+      - echo:distro:echo:rolling
     validations:
       - *default-validations
 
@@ -99,6 +111,15 @@ tests:
       - amazon:distro:amazonlinux:2022
       - amazon:distro:amazonlinux:2023
 
+  - provider: arch
+    images:
+      - docker.io/anchore/test_images@sha256:a933b27534e5c911e2c660f7090aa497dee763fbbcb214a37207c2320cfedd98
+    expected_namespaces:
+      - arch:distro:archlinux:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2023
+
   - provider: chainguard
     additional_providers:
       - name: nvd
@@ -113,6 +134,16 @@ tests:
     validations:
       - *default-validations
 
+  - provider: chainguard-libraries
+    additional_providers:
+      - name: github
+        use_cache: true
+    images:
+      - ghcr.io/chainguard-images/scanner-test:python-library-aiohttp-chainguard@sha256:046b2c1b2df1e496eb3abf9e21224ffd879d92abc2bd57401456764d9aa8ddf1
+    validations:
+      - <<: *default-validations
+        max_year: 2025
+
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
     # of legacy information that is in the debian data cache (for debian 7, 8, and 9) we must test with
@@ -120,7 +151,7 @@ tests:
     use_cache: true
     images:
       - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
-      - docker.io/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
+      - ghcr.io/anchore/test-images/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
     expected_namespaces:
       - debian:distro:debian:7
       - debian:distro:debian:8
@@ -129,6 +160,7 @@ tests:
       - debian:distro:debian:11
       - debian:distro:debian:12
       - debian:distro:debian:13
+      - debian:distro:debian:14
       - debian:distro:debian:unstable
 
   - provider: github
@@ -180,6 +212,23 @@ tests:
         max_year: 2022 # important - Azure Linux 3 doesn't have much to match on going back to 2021
         candidate_tool_label: custom-db
 
+  - provider: minimos
+    additional_providers:
+      - name: nvd
+        use_cache: true
+      - name: github
+        use_cache: true
+    images:
+      - docker.io/dimastopelmini/forgrype@sha256:ebe0c6ca122deef072c29be2f915130e5c8b4c277ad5ef551385f6496dae4dfa
+      - docker.io/dimastopelmini/forgrype@sha256:653c8980c63a9ac403a3b9f56a08f43f929432ece69894423c165b4d61d3dcdb
+    expected_namespaces:
+      - nvd:cpe
+      - minimos:distro:minimos:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2024 # important - minimOS is a new distro and older years don't find enough
+        candidate_tool_label: custom-db
+
   - provider: nvd
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
@@ -200,6 +249,7 @@ tests:
       - oracle:distro:oraclelinux:7
       - oracle:distro:oraclelinux:8
       - oracle:distro:oraclelinux:9
+      - oracle:distro:oraclelinux:10
     validations:
       - <<: *default-validations
         # TODO: docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728
@@ -231,6 +281,7 @@ tests:
       - redhat:distro:redhat:7
       - redhat:distro:redhat:8
       - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
 
   - provider: sles
     additional_trigger_globs:
@@ -259,6 +310,7 @@ tests:
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
+      - sles:distro:sles:15.7
     validations:
       - *default-validations
 
@@ -298,6 +350,7 @@ tests:
       - ubuntu:distro:ubuntu:23.10
       - ubuntu:distro:ubuntu:24.04
       - ubuntu:distro:ubuntu:24.10
+      - ubuntu:distro:ubuntu:25.04
     validations:
       - *default-validations
 
@@ -309,5 +362,36 @@ tests:
       - cgr.dev/chainguard/wolfi-base:latest-20221001@sha256:be3834598c3c4b76ace6a866edcbbe1fa18086f9ee238b57769e4d230cd7d507
     expected_namespaces:
       - wolfi:distro:wolfi:rolling
+    validations:
+      - *default-validations
+
+  - provider: alma
+    additional_providers:
+      - name: rhel
+        use_cache: true
+    images:
+      - docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+      - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
+    expected_namespaces:
+      - almalinux:distro:almalinux:8
+      - almalinux:distro:almalinux:9
+      - almalinux:distro:almalinux:10
+      - redhat:distro:redhat:8
+      - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
+    validations:
+      - <<: *default-validations
+        max_year: 2022
+        candidate_tool_label: custom-db
+
+  - provider: secureos
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - registry.replicated.com/library/grype-test:20250106@sha256:3339bcd874d21fa3ca5bd20636e793c0c33bd71ace3a18a9a3b3d147b91dd000
+    expected_namespaces:
+      - secureos:distro:secureos:rolling
+      - nvd:cpe
     validations:
       - *default-validations

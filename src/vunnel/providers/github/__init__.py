@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
@@ -15,7 +16,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
-    token: str = "env:GITHUB_TOKEN"
+    # S105 is disabled for this line because the hard coded value is the name of an env var, not the value of the token
+    token: str = "env:GITHUB_TOKEN"  # noqa: S105
     api_url: str = "https://api.github.com/graphql"
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
@@ -39,7 +41,6 @@ class Config:
 
 
 class Provider(provider.Provider):
-
     __schema__ = schema.GithubSecurityAdvisorySchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -63,27 +64,32 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "github"
 
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "language", "incremental"]
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        namespace = "github"
-        with self.results_writer() as writer:
-            for advisory in self.parser.get():
-                all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
-                for ecosystem in advisory.ecosystems:
-                    advisory["namespace"] = f"{namespace}:{ecosystem}"
+        with timer(self.name(), self.logger):
+            namespace = "github"
+            with self.results_writer() as writer, self.parser:
+                for advisory in self.parser.get():
+                    all_fixes = copy.deepcopy(advisory.get("FixedIn")) if isinstance(advisory.get("FixedIn"), list) else []
+                    for ecosystem in advisory.ecosystems:
+                        advisory["namespace"] = f"{namespace}:{ecosystem}"
 
-                    # filter the list of fixes for this ecosystem
-                    advisory["FixedIn"] = [item for item in all_fixes if item.get("ecosystem") == ecosystem]
+                        # filter the list of fixes for this ecosystem
+                        advisory["FixedIn"] = [item for item in all_fixes if item.get("ecosystem") == ecosystem]
 
-                    vuln_id = advisory["ghsaId"]
+                        vuln_id = advisory["ghsaId"]
 
-                    namespace = namespace.lower()
-                    ecosystem = ecosystem.lower()
-                    vuln_id = vuln_id.lower()
+                        namespace = namespace.lower()
+                        ecosystem = ecosystem.lower()
+                        vuln_id = vuln_id.lower()
 
-                    writer.write(
-                        identifier=os.path.join(f"{namespace}:{ecosystem}", vuln_id),
-                        schema=self.__schema__,
-                        payload={"Vulnerability": {}, "Advisory": dict(advisory)},
-                    )
+                        writer.write(
+                            identifier=os.path.join(f"{namespace}:{ecosystem}", vuln_id),
+                            schema=self.__schema__,
+                            payload={"Vulnerability": {}, "Advisory": dict(advisory)},
+                        )
 
-        return [self.parser.api_url], len(writer)
+            return [self.parser.api_url], len(writer)

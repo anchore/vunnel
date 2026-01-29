@@ -12,10 +12,13 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
+
 from .git import GitWrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -86,6 +89,8 @@ ubuntu_version_names = {
     "mantic": "23.10",
     "noble": "24.04",
     "oracular": "24.10",
+    "plucky": "25.04",
+    "questing": "25.10",
 }
 
 # driver workspace
@@ -151,6 +156,13 @@ class FixedIn(JsonifierMixin):
         self.VersionFormat = None
         self.Version = None
         self.VendorAdvisory = None
+        self.Available = None
+
+
+class FixAvailability(JsonifierMixin):
+    def __init__(self):
+        self.Date = None
+        self.Kind = None
 
 
 class Severity(enum.IntEnum):
@@ -470,7 +482,7 @@ def parse_severity_from_priority(cve: CVEFile) -> Severity:
     return getattr(Severity, severity)
 
 
-def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # noqa: C901, PLR0912
+def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Logger | None = None):  # noqa: C901, PLR0912, PLR0915
     """
     Maps a parsed CVE dict into a Vulnerability object.
 
@@ -544,6 +556,18 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
                     )
                     continue
                     # Strange condition where a release was done but no version found. In this case, we'll omit the FixedIn record.
+
+                result = fixdater.best(
+                    vuln_id=r.Name,
+                    cpe_or_package=pkg.Name,
+                    fix_version=pkg.Version,
+                    ecosystem=r.NamespaceName,
+                )
+                if result:
+                    fa = FixAvailability()
+                    fa.Date = result.date.isoformat()
+                    fa.Kind = result.kind
+                    pkg.Available = fa
 
             else:
                 pkg.Version = "None"
@@ -629,6 +653,7 @@ class Parser:
     def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
+        fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
         additional_versions: dict[str, str] | None = None,
         enable_rev_history: bool = True,
@@ -636,6 +661,9 @@ class Parser:
         git_url: str = default_git_url,
         git_branch: str = default_git_branch,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.vc_workspace = os.path.join(workspace.input_path, self._vc_working_dir)
         # TODO: tech debt: this should use the results workspace with the correct schema-aware envelope
         self.norm_workspace = os.path.join(workspace.input_path, self._normalized_cve_dir)
@@ -652,7 +680,16 @@ class Parser:
         self.enable_rev_history = enable_rev_history
         self._max_workers = max_workers
 
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
     def fetch(self, skip_if_exists=False):
+        self.fixdater.download()
+
         # setup merged workspace
         if not os.path.exists(self.norm_workspace):
             os.makedirs(self.norm_workspace)
@@ -672,7 +709,7 @@ class Parser:
         # load merged state and map it to vulnerabilities
         self.logger.info("begin loading processed CVE content and transforming into vulnerabilities")
         for merged_cve in self._merged_cve_iterator():
-            yield from map_parsed(merged_cve, self.logger)
+            yield from map_parsed(merged_cve, self.fixdater, self.logger)
         self.logger.info("finish loading processed CVE content and transforming into vulnerabilities")
 
     def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):  # noqa: C901
@@ -803,7 +840,7 @@ class Parser:
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             os.remove(os.path.join(self.norm_workspace, cve_id))
 
-    def _merged_cve_iterator(self) -> Generator[CVEFile, None, None]:
+    def _merged_cve_iterator(self) -> Generator[CVEFile]:
         for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
                 cve = orjson.loads(fp.read())
@@ -850,7 +887,7 @@ class Parser:
                     merged_patches.extend(resolved_patches)
                     if pending_dpt_list:
                         self.logger.debug(
-                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: UP032, G001
+                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: G001, UP032
                                 cve_rel_path,
                                 [to_be_merged_map[x] for x in pending_dpt_list],
                             ),
@@ -1007,9 +1044,7 @@ class Parser:
         pending_dpt_list: list[DistroPkg] = copy.deepcopy(to_be_merged_dpt_list)
 
         # last processed commit
-        saved_cve_last_processed_rev = (
-            saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
-        )
+        saved_cve_last_processed_rev = saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
 
         # fetch log of revision history for this file, its in the most recent - least recent order
         since_revs = self.git_wrapper.get_revision_history(cve_id, cve_rel_path, saved_cve_last_processed_rev)

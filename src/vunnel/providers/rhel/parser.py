@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import copy
 import logging
 import os
+import queue
 import re
+import threading
 from collections import namedtuple
+from datetime import UTC
 from datetime import datetime as dt
 from decimal import Decimal as D
 from typing import TYPE_CHECKING
@@ -15,14 +19,18 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
-from vunnel.utils import http, rpm
-from vunnel.utils.oval_parser import Config
+from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
+from vunnel.tool import fixdate
+from vunnel.utils import http_wrapper as http
+from vunnel.utils import rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
-from .oval_parser import Parser as RHELOvalParser
-
 if TYPE_CHECKING:
+    from types import TracebackType
+
     import requests
+
+    from .rhsa_provider import RHSAProvider
 
 namespace = "rhel"
 
@@ -36,8 +44,9 @@ NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
 class Parser:
     __cve_rhel_product_name_base__ = "Red Hat Enterprise Linux"
     __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
+    __rhel_eus_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+\.\d+) Extended Update Support")
+    __rhel_els_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+) Extended Lifecycle Support")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
-    __rhsa_url__ = "https://access.redhat.com/hydra/rest/securitydata/oval/{}.json"
     __last_synced_filename__ = "last_synced"
     __cve_download_error_filename__ = "failed_cves"
     __cve_filename_regex__ = re.compile("CVE-[0-9]+-[0-9]+")
@@ -52,26 +61,46 @@ class Parser:
     def __init__(  # noqa: PLR0913
         self,
         workspace,
+        fixdater: fixdate.Finder | None = None,
         download_timeout=None,
         max_workers=None,
+        csaf_max_workers: int | None = None,
         full_sync_interval=None,
         skip_namespaces=None,
+        rhsa_provider_type=None,
+        ignore_hydra_errors: bool = False,
         logger=None,
+        skip_download: bool = False,
     ):
         self.workspace = workspace
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
         self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
         self.download_timeout = download_timeout if isinstance(download_timeout, int) else 125
         self.max_workers = max_workers if isinstance(max_workers, int) else 4
+        self.csaf_max_workers = csaf_max_workers if csaf_max_workers is not None else 16
         self.full_sync_interval = full_sync_interval if isinstance(full_sync_interval, int) else 2
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
+        self.rhsa_provider: RHSAProvider | None = None
+        self.rhsa_provider_type: str | None = rhsa_provider_type
+        self.ignore_hydra_errors = ignore_hydra_errors
+        self.skip_download = skip_download
 
         self.urls = [self.__summary_url__]
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download_minimal_cves(self, page, limit=1000):
         path_params = {"per_page": str(limit), "page": page, "product": self.__cve_rhel_product_name_base__}
@@ -92,10 +121,10 @@ class Parser:
         """
         worker that checks if a download is necessary and then does it
 
-        :param min_cve_api:
-        :param do_full_sync:
-        :param min_cve_dir:
-        :param full_cve_dir:
+        :param min_cve_api: api result describing a CVE, including the URLfor a full download
+        :param do_full_sync: bool: assume cache is stale and re-download everything
+        :param min_cve_dir: directory to save minimal cve API results
+        :param full_cve_dir: directory to save full cve data
         :return:
         """
         cve_id = min_cve_api.get("CVE")
@@ -138,28 +167,27 @@ class Parser:
 
     def _download_minimal_cve_pages(self) -> int:
         dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__)
+        backup_dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__ + "_backup")
 
-        # clear all existing records
-        utils.silent_remove(dir_path, tree=True)
-        os.makedirs(dir_path)
+        # use context manager to enforce cleanup of backup dir and # restore it if necessary
+        with handle_hydra_data(self.ignore_hydra_errors, dir_path, backup_dir_path, self.logger):
+            page = 0
+            count = 0
+            while True:
+                page += 1
+                results = self._download_minimal_cves(page)
 
-        page = 0
-        count = 0
-        while True:
-            page += 1
-            results = self._download_minimal_cves(page)
+                if not isinstance(results, list) or not results:
+                    break
 
-            if not isinstance(results, list) or not results:
-                break
+                min_cve_file = os.path.join(dir_path, f"{page}.json")
 
-            min_cve_file = os.path.join(dir_path, f"{page}.json")
+                count += len(results)
 
-            count += len(results)
+                with open(min_cve_file, "wb") as fp:
+                    fp.write(orjson.dumps(results))
 
-            with open(min_cve_file, "wb") as fp:
-                fp.write(orjson.dumps(results))
-
-        return count
+            return count
 
     def enumerate_minimal_cve_pages(self):
         dir_path = os.path.join(self.cve_dir_path, self.__min_pages_dir_name__)
@@ -182,7 +210,7 @@ class Parser:
         :return:
         """
 
-        now = dt.utcnow()  # noqa: DTZ003
+        now = dt.now(UTC)
 
         # setup workspace for full cves
         full_cve_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)
@@ -220,6 +248,11 @@ class Parser:
         )
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
+
+        if self.skip_download:
+            self.logger.warning("skip download requested, but fix date finder does not support skipping download")
+        else:
+            self.fixdater.download()
 
         count = self._download_minimal_cve_pages()
 
@@ -316,22 +349,13 @@ class Parser:
         elif r.status_code == 404:
             self.logger.warning(f"GET {url} returned 404 not found error")
 
-    def _fetch_rhsa_fix_version(self, rhsa_id, platform, package):
-        fixed_ver = None
-        module_name = None
-        try:
-            p = self._fetch_rhsa(rhsa_id, platform)
-            if p:
-                fixed_ver, module_name = next(
-                    ([item["Version"], item.get("Module")] for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package),
-                    [None, None],
-                )
-            else:
-                self.logger.debug(f"{rhsa_id} not found for platform {platform}")
-        except Exception:
-            self.logger.exception(f"error looking up {package} in {rhsa_id} for {platform}")
+    def _fetch_rhsa_fix_version(self, cve_id: str, ar_obj: AffectedRelease, override_package_name: str | None = None):
+        """Fetch RHSA information, either from OVAL parsing or CSAF parsing depending
+        on configuration."""
+        # TODO: this needs to call one of the two RHSA providers, but they want slighly different things
+        # get_fixed_version_and_module shuold just take an AffectedRelease object and a package name
 
-        return fixed_ver, module_name
+        return self.rhsa_provider.get_fixed_version_and_module(cve_id, ar_obj, override_package_name)
 
     def _fetch_rhsa(self, rhsa_id, platform):
         if self.rhsa_dict is not None:  # explicit check to allow for easy testing without actually initializing it
@@ -341,65 +365,19 @@ class Parser:
         return p
 
     def _init_rhsa_data(self, skip_if_exists=False):
-        # setup workspace directory
-        if not os.path.exists(self.rhsa_dir_path):
-            self.logger.debug(f"creating workspace for rhsa source data at {self.rhsa_dir_path}")
-            os.makedirs(self.rhsa_dir_path)
-
-        # initialize config
-        cc = Config()
-
-        # regexes
-        cc.tag_pattern = re.compile(r"\{http://oval.mitre.org/XMLSchema/.*\}(\w*)")
-        cc.ns_pattern = re.compile(r"(\{http://oval.mitre.org/XMLSchema/.*\})\w*")
-        cc.is_installed_pattern = re.compile(r"Red Hat Enterprise Linux (\d+).*is installed")
-        cc.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
-        cc.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
-        cc.signed_with_pattern = re.compile(r"(.*) is signed with (.*) key")
-        cc.platform_version_pattern = re.compile(r"Red Hat Enterprise Linux (\d+)")
-
-        # xpath queries
-        cc.title_xpath_query = "{0}metadata/{0}title"
-        cc.severity_xpath_query = "{0}metadata/{0}advisory/{0}severity"
-        cc.platform_xpath_query = "{0}metadata/{0}affected/{0}platform"
-        cc.date_issued_xpath_query = "{0}metadata/{0}advisory/{0}issued"
-        cc.date_updated_xpath_query = "{0}metadata/{0}advisory/{0}updated"
-        cc.description_xpath_query = "{0}metadata/{0}description"
-        cc.sa_ref_xpath_query = '{0}metadata/{0}reference[@source="RHSA"]'
-        cc.cve_xpath_query = "{0}metadata/{0}advisory/{0}cve"
-        cc.criteria_xpath_query = "{0}criteria"
-        cc.criterion_xpath_query = ".//{0}criterion"
-
-        # maps
-        cc.severity_dict = {
-            "low": "Low",
-            "moderate": "Medium",
-            "important": "High",
-            "critical": "Critical",
-        }
-
-        # string formats
-        cc.ns_format = "{}"
-
-        # initialize provider
-        rhsa_provider = RHELOvalParser(
-            # workspace=os.path.join(self.rhsa_dir_path),
-            workspace=self.workspace,
-            config=cc,
-            download_timeout=self.download_timeout,
-            logger=logging.getLogger("rhel.oval_parser.Parser"),
-        )
-
-        # get all data
-        self.logger.debug("parsing RHSA data using RHEL oval parser")
-        self.rhsa_dict = rhsa_provider.get()
-
-        self.urls.extend(rhsa_provider.urls)
-
-        if not self.rhsa_dict:
-            raise Exception("RHSA data not initialized")
-
-        return self.rhsa_dict
+        self.logger.info(f"instantiating RHSA provider of type {self.rhsa_provider_type}")
+        if self.rhsa_provider_type.lower() == "oval":
+            if self.skip_download:
+                self.logger.warning("skip download requested, but OVAL RHSA provider does not support skipping download")
+            self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
+        elif self.rhsa_provider_type.lower() == "csaf":
+            self.rhsa_provider = CSAFRHSAProvider(
+                self.workspace,
+                self.download_timeout,
+                self.logger,
+                self.skip_download,
+                self.csaf_max_workers,
+            )
 
     @staticmethod
     def _get_name_version(package):
@@ -448,6 +426,10 @@ class Parser:
         return name, version
 
     def _parse_affected_release(self, cve_id: str, content) -> list[FixedIn]:  # noqa: C901, PLR0912, PLR0915
+        """_parse_affected_release handles the affected_release section of the hydra API JSON CVE
+        data. If applicable it will ask the parsed OVAL data for the fixed version and module.
+        param: cve_id: str: The CVE ID.
+        param: content: dict: The JSON data for the CVE."""
         fixed_ins = []
         ars = content.get("affected_release", [])
 
@@ -461,23 +443,17 @@ class Parser:
             # first pass to just parse affected releases and construct a list of objects
             for item in ars:
                 try:
-                    match = re.match(
-                        self.__rhel_release_pattern__,
-                        item.get("product_name", None),
-                    )
-                    if not match:
-                        continue
-
-                    platform = match.group(1)
-                    if not platform:  # track even deny-listed platforms here, filter them out later
+                    platform = self._parse_platform(item.get("product_name", None))
+                    if not platform:
                         continue
 
                     ar_obj = AffectedRelease(platform=platform)
                     if ar_obj.platform not in platform_packages:
                         platform_packages[ar_obj.platform] = set()
-
+                    ar_obj.platform_cpe = item.get("cpe", None)
                     package = item.get("package", None)
                     if package:
+                        ar_obj.package = package
                         ar_obj.name, ar_obj.version = self._get_name_version(package)
                         platform_packages[ar_obj.platform].add(ar_obj.name)
                     else:
@@ -499,7 +475,7 @@ class Parser:
 
                     if ar_obj.name:
                         if ar_obj.rhsa_id:  # rhsa lookup for version information tends to make version consistent
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, ar_obj.name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj)
                             if rhsa_version:
                                 final_v = rhsa_version
                                 final_m = rhsa_module
@@ -521,12 +497,12 @@ class Parser:
                             f"{cve_id}, platform={ar_obj.platform} : missing package, trying to find a match using {ar_obj.rhsa_id} and other affected releases",  # noqa: E501
                         )
 
-                        possible_packages = (
-                            set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
-                        )
+                        # TODO: doc comment here. What is this line doing? Why is this a good way to get package names?
+                        # also note: based on my experimentation, this block is never entered.
+                        possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(ar_obj.rhsa_id, ar_obj.platform, pkg_name)
+                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj, override_package_name=pkg_name)
 
                             if rhsa_version:
                                 self.logger.debug(
@@ -575,7 +551,7 @@ class Parser:
                         final_ar_objs[(ar_obj.name, ar_obj.platform, ar_obj.module)] = ar_obj
 
                 except Exception:
-                    self.logger.exception(f"error processing {cve_id} affected release object: { ar_obj.__dict__}")
+                    self.logger.exception(f"error processing {cve_id} affected release object: {ar_obj.__dict__}")
 
             # construct the final fixed in objects
             fixed_ins = [
@@ -622,21 +598,14 @@ class Parser:
 
         return package_name, module
 
-    def _parse_package_state(self, cve_id: str, content) -> list[FixedIn]:  # noqa: C901
+    def _parse_package_state(self, cve_id: str, content) -> list[FixedIn]:
         affected: list[FixedIn] = []
         out_of_support: list[FixedIn] = []  # Track items out of support to be able to add them if others are affected
         pss = content.get("package_state", [])
 
         for item in pss:
             try:
-                match = re.match(
-                    Parser.__rhel_release_pattern__,
-                    item.get("product_name", None),
-                )
-                if not match:
-                    continue
-
-                platform = match.group(1)
+                platform = self._parse_platform(item.get("product_name", None))
                 if not platform or f"{namespace}:{platform}" in self.skip_namespaces:
                     continue
 
@@ -695,6 +664,51 @@ class Parser:
 
         return affected + out_of_support
 
+    def _parse_platform(self, product_name: str | None) -> str | None:
+        is_eus = False
+        is_els = False
+        match = re.match(
+            self.__rhel_release_pattern__,
+            product_name,
+        )
+        if not match:
+            match = re.match(
+                self.__rhel_eus_pattern__,
+                product_name,
+            )
+            if match:
+                is_eus = True
+            else:
+                match = re.match(
+                    self.__rhel_els_pattern__,
+                    product_name,
+                )
+                if match:
+                    is_els = True
+                else:
+                    return None
+
+        platform = match.group(1)
+        if platform and is_eus:
+            platform = f"{platform}+eus"
+        elif platform and is_els:
+            platform = f"{platform}+els"
+        return platform
+
+    def _get_base_platform(self, platform: str) -> str | None:
+        """Extract base major version from extended support platform.
+
+        Examples:
+            "8.6+eus" -> "8"
+            "6+els" -> "6"
+            "8" -> None (already base)
+        """
+        if "+eus" in platform:
+            return platform.split(".")[0]
+        if "+els" in platform:
+            return platform.replace("+els", "")
+        return None
+
     def _parse_cvss3(self, cvss3: dict | None) -> RHELCVSS3 | None:
         if not cvss3:
             return None
@@ -722,7 +736,9 @@ class Parser:
 
         results = []
         platform_artifacts = {}
+        # compute fixed ins from "affected_release" key in JSON + OVAL Parsing
         fins = self._parse_affected_release(cve_id, content)
+        # compute "not fixed ins" from "package_state" key in JSON (affected or out of support)
         nfins = self._parse_package_state(cve_id, content)
         platform_package_module_tuples = set()
 
@@ -776,7 +792,33 @@ class Parser:
 
                 platform_artifacts[item.platform].append(item)
 
+            # Infer base platform records when only extended support channels have data
+            inferred_base_records: dict[str, list[FixedIn]] = {}
             for platform, artifacts in platform_artifacts.items():
+                base_platform = self._get_base_platform(platform)
+                if not base_platform or base_platform in platform_artifacts:
+                    continue
+                if f"{namespace}:{base_platform}" in self.skip_namespaces:
+                    continue
+                if base_platform not in inferred_base_records:
+                    inferred_base_records[base_platform] = []
+                for artifact in artifacts:
+                    inferred_base_records[base_platform].append(
+                        FixedIn(
+                            platform=base_platform,
+                            package=artifact.package,
+                            version="None",
+                            module=artifact.module,
+                            advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
+                        ),
+                    )
+
+            for base_platform, records in inferred_base_records.items():
+                platform_artifacts[base_platform] = records
+
+            for platform, artifacts in platform_artifacts.items():
+                if "+els" in platform:
+                    continue
                 ns = f"{namespace}:{platform}"
 
                 # if len(artifacts) == 1 and artifacts[0].advisory.severity and artifacts[0].advisory.severity != sev:
@@ -808,70 +850,124 @@ class Parser:
                                 },
                             )
 
-                    v["Vulnerability"]["FixedIn"].append(
-                        {
-                            "Name": artifact.package,
-                            "Version": artifact.version,
-                            "Module": artifact.module,
-                            "VersionFormat": "rpm",  # hard code version format for now
-                            "NamespaceName": ns,
-                            "VendorAdvisory": a,
-                        },
+                    fix_version = artifact.version
+                    package_name = artifact.package
+
+                    record = {
+                        "Name": package_name,
+                        "Version": fix_version or "None",
+                        "Module": artifact.module,
+                        "VersionFormat": "rpm",  # hard code version format for now
+                        "NamespaceName": ns,
+                        "VendorAdvisory": a,
+                    }
+
+                    result = self.fixdater.best(
+                        vuln_id=cve_id,
+                        cpe_or_package=package_name,
+                        fix_version=fix_version,
+                        ecosystem=ns,
+                        # TODO: consider getting issued date from CSAF or OVAL data as possible candidate
+                        # candidates=[]
                     )
+                    if result:
+                        record["Available"] = {
+                            "date": result.date.isoformat(),
+                            "kind": result.kind,
+                        }
+
+                    v["Vulnerability"]["FixedIn"].append(record)
 
                 results.append(NamespacePayload(namespace=ns, payload=v))
 
         return results
 
-    def _process_full_cve(self, cve_id, cve_file_path):
+    def _read_cve_file(self, cve_id: str, cve_file_path: str) -> tuple[str, dict]:
+        """Read CVE file from disk. This runs in parallel in the producer threads."""
         with open(cve_file_path, encoding="utf-8") as fp:
             content = orjson.loads(fp.read())
+        return cve_id, content
 
-        return self._parse_cve(cve_id, content)
+    def _start_cve_reader_producer(
+        self,
+        full_dir: str,
+        cve_queue: queue.Queue[tuple[str, dict] | None],
+        read_errors: list[tuple[str, Exception]],
+    ) -> threading.Thread:
+        """Start a background thread that reads CVE files in parallel and enqueues them."""
+
+        def producer() -> None:
+            try:
+                cve_ids = sorted(os.listdir(full_dir))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    future_to_cve = {executor.submit(self._read_cve_file, cve_id, os.path.join(full_dir, cve_id)): cve_id for cve_id in cve_ids}
+                    for future in concurrent.futures.as_completed(future_to_cve):
+                        cve_id = future_to_cve[future]
+                        try:
+                            result = future.result()
+                            cve_queue.put(result)  # blocks if queue is full
+                        except Exception as e:
+                            self.logger.exception(f"error reading CVE file {cve_id}")
+                            read_errors.append((cve_id, e))
+            finally:
+                cve_queue.put(None)  # sentinel signals end of data
+
+        producer_thread = threading.Thread(target=producer, daemon=True)
+        producer_thread.start()
+        return producer_thread
 
     def get(self, skip_if_exists=False):
+        """
+        Process CVE files using a multi-producer single-consumer pattern.
+
+        Producer threads read CVE files from disk in parallel and enqueue them.
+        The consumer (main thread) processes them sequentially, which serializes
+        all fixdater.best() calls to avoid SQLite "database is locked" errors.
+        """
         try:
             # initialize rhsa data
             self._init_rhsa_data(skip_if_exists=skip_if_exists)
 
-            # download cves
-            full_dir = self._sync_cves(skip_if_exists)
+            full_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)
+            if not self.skip_download:
+                # download cves
+                self._sync_cves(skip_if_exists)
 
             # normalize cve files
             self.logger.debug(f"normalizing CVEs from {full_dir}")
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_cve_dict = {
-                    executor.submit(
-                        self._process_full_cve,
-                        cve_id=cve_id,
-                        cve_file_path=os.path.join(full_dir, cve_id),
-                    ): cve_id
-                    for cve_id in sorted(os.listdir(full_dir))
-                }
+            # MPSC pattern: parallel file reads, sequential processing
+            # The queue holds (cve_id, content) tuples; None signals completion
+            cve_queue: queue.Queue[tuple[str, dict] | None] = queue.Queue(maxsize=100)
+            read_errors: list[tuple[str, Exception]] = []
 
-                for future in concurrent.futures.as_completed(future_cve_dict):
-                    cve_id = future_cve_dict[future]
-                    try:
-                        results = future.result()
-                        for item in results:
-                            yield item.namespace, cve_id, item.payload
-                    except Exception:
-                        self.logger.exception(f"ignoring error processing {cve_id}. May retry on next iteration")
+            # Start producer in background thread
+            producer_thread = self._start_cve_reader_producer(full_dir, cve_queue, read_errors)
+
+            # Consumer: drain queue and process sequentially (single-threaded)
+            # This includes fixdater.best() calls which write to the database
+            while True:
+                item = cve_queue.get()
+                if item is None:
+                    break
+                cve_id, content = item
+                try:
+                    results = self._parse_cve(cve_id, content)
+                    for result in results:
+                        yield result.namespace, cve_id, result.payload
+                except Exception:
+                    self.logger.exception(f"ignoring error processing {cve_id}. May retry on next iteration")
+
+            producer_thread.join()
+
+            if read_errors:
+                self.logger.warning(f"encountered {len(read_errors)} errors during CVE file reading")
+
         finally:
             # clear memory for rhsa dict
             if self.rhsa_dict:
                 self.rhsa_dict.clear()
                 del self.rhsa_dict
-
-
-class AffectedRelease:
-    def __init__(self, name=None, version=None, platform=None, rhsa_id=None, module=None):
-        self.name = name
-        self.version = version
-        self.platform = platform
-        self.rhsa_id = rhsa_id
-        self.module = module
 
 
 class RHELCVSS3:
@@ -896,3 +992,32 @@ class RHELCVSS3:
                 "base_severity": self.cvss3_obj.severities()[0],
             },
         }
+
+
+# return a context manager function that uses ignore_hydra_errors to handle restoring the backup dir
+@contextlib.contextmanager
+def handle_hydra_data(ignore_hydra_errors: bool, dir_path: str, backup_dir_path: str, logger):
+    if ignore_hydra_errors:
+        # move existing min pages dir to temp dir in case we need to restore it
+        utils.silent_remove(backup_dir_path, tree=True)
+        if os.path.exists(dir_path):
+            logger.debug(f"moving existing {dir_path} to {backup_dir_path}")
+            utils.move_dir(dir_path, backup_dir_path)
+        else:
+            logger.debug(f"no existing {dir_path} to move, starting fresh")
+    else:
+        # clear all existing records
+        utils.silent_remove(dir_path, tree=True)
+
+    os.makedirs(dir_path)
+
+    try:
+        yield
+    except Exception as e:
+        logger.error(f"error processing minimal CVE pages: {e}")
+        if ignore_hydra_errors:
+            logger.debug("restoring backup directory")
+            utils.silent_remove(dir_path, tree=True)
+            utils.move_dir(backup_dir_path, dir_path)
+        else:
+            raise

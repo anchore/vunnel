@@ -20,3 +20,6 @@
         NOTE: end of security support for jessie
 [18 Oct 2018] DSA-4323-1 drupal7 - security update
         [stretch] - drupal7 7.52-2+deb9u5
+[31 Jul 2025] DSA-5970-1 sope - security update
+        {CVE-2025-53603}
+        [bookworm] - sope 5.8.0-1+deb12u1

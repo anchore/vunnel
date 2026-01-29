@@ -1,17 +1,110 @@
 from __future__ import annotations
 
+import datetime
 import json
 import os
-from pathlib import Path
-import subprocess
-import uuid
 import os.path
 import shutil
+import subprocess
+import uuid
 
 import jsonschema
 import orjson
 import pytest
 
+from vunnel.tool import fixdate
+from vunnel.tool.fixdate.finder import Finder, Result
+from vunnel.utils import http_wrapper
+
+
+@pytest.fixture(autouse=True)
+def reset_http_wrapper():
+    """Reset http_wrapper state before and after each test."""
+    http_wrapper._reset_for_testing()
+    yield
+    http_wrapper._reset_for_testing()
+
+
+class MockFixDateFinder(Finder):
+    """Mock finder that prevents actual downloads and allows configurable responses."""
+
+    def __init__(self, responses=None, default_date=..., ids=None):
+        # initialize parent Finder with empty strategies and self as first_observed
+        super().__init__(strategies=[], first_observed=self)
+        # responses can be:
+        # - None (returns default result or empty list)
+        # - A list of Results (returns same for all calls)
+        # - A dict mapping (vuln_id, package) -> list of Results
+        # - A callable that takes (vuln_id, cpe_or_package, fix_version, ecosystem) -> list of Results
+        self.responses = responses
+        # Use ellipsis as sentinel to distinguish between no argument and explicit None
+        if default_date is ...:
+            self.default_date = datetime.date(2024, 1, 1)
+        else:
+            self.default_date = default_date
+        self.ids = ids or set()
+
+    def __enter__(self) -> MockFixDateFinder:
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        return None
+
+    def download(self) -> None:
+        # no-op, prevents actual download
+        pass
+
+    def find(
+        self,
+        vuln_id: str,
+        cpe_or_package: str,
+        fix_version: str | None,
+        ecosystem: str | None = None,
+    ) -> list[Result]:
+        results = []
+
+        if self.responses is None:
+            # return empty list by default to make the mock transparent
+            # tests that need default results should configure them explicitly
+            return []
+
+        if callable(self.responses):
+            results = self.responses(vuln_id, cpe_or_package, fix_version, ecosystem)
+        elif isinstance(self.responses, list):
+            results = self.responses
+        elif isinstance(self.responses, dict):
+            # try different key combinations for flexibility
+            keys_to_try = [
+                (vuln_id, cpe_or_package, fix_version, ecosystem),
+                (vuln_id, cpe_or_package, fix_version),
+                (vuln_id, cpe_or_package),
+                vuln_id,
+            ]
+            for key in keys_to_try:
+                if key in self.responses:
+                    results = self.responses[key]
+                    break
+
+        # Mimic the behavior of the real Store.find() method by setting the version field
+        # to the fix_version parameter (this matches what the real Store does)
+        adjusted_results = []
+        for result in results:
+            # Create a new Result with the version set to fix_version if not already set
+            if result.version is None:
+                adjusted_result = Result(
+                    date=result.date,
+                    kind=result.kind,
+                    version=fix_version,
+                    accurate=result.accurate,
+                )
+                adjusted_results.append(adjusted_result)
+            else:
+                adjusted_results.append(result)
+
+        return adjusted_results
+
+    def get_changed_vuln_ids_since(self, since_date: datetime.datetime) -> set[str]:
+        return self.ids
 
 class WorkspaceHelper:
     def __init__(self, root: str, name: str, snapshot):
@@ -25,6 +118,10 @@ class WorkspaceHelper:
 
     @property
     def input_dir(self):
+        return self.root / self.name / "input"
+
+    @property
+    def input_path(self) -> str:
         return self.root / self.name / "input"
 
     @property
@@ -96,7 +193,7 @@ class WorkspaceHelper:
                 else:
                     d = orjson.loads(f.read())
                     expected_bytes = orjson.dumps(
-                        d, option=orjson.OPT_APPEND_NEWLINE | orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS
+                        d, option=orjson.OPT_APPEND_NEWLINE | orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
                     )
                     self.snapshot.assert_match(expected_bytes, snapshot_path)
 
@@ -120,7 +217,7 @@ class WorkspaceHelper:
             pytest.fail("\n".join(message_lines), pytrace=False)
 
 
-@pytest.fixture()
+@pytest.fixture
 def validate_json_schema():
     def apply(content: str):
         doc = json.loads(content)
@@ -176,7 +273,7 @@ class Helpers:
         return os.path.join(parent, path)
 
     def provider_workspace_helper(
-        self, name: str, create: bool = True, input_fixture: str | None = None, snapshot_prefix: str = ""
+        self, name: str, create: bool = True, input_fixture: str | None = None, snapshot_prefix: str = "",
     ) -> WorkspaceHelper:
         root = self.tmpdir
         if create:
@@ -197,7 +294,7 @@ class Helpers:
         return h
 
 
-@pytest.fixture()
+@pytest.fixture
 def helpers(request, tmpdir, snapshot):
     """
     Returns a common set of helper functions for tests.
@@ -214,7 +311,7 @@ def git_root() -> str:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def dummy_file():
     def apply(d: str, name: str = ""):
         if name == "":
@@ -229,14 +326,14 @@ def dummy_file():
     return apply
 
 
-@pytest.fixture()
+@pytest.fixture
 def disable_get_requests(monkeypatch):
     def disabled(*args, **kwargs):
         raise RuntimeError("requests disabled but HTTP GET attempted")
 
     from vunnel import utils
 
-    return monkeypatch.setattr(utils.http, "get", disabled)
+    return monkeypatch.setattr(utils.http_wrapper, "get", disabled)
 
 
 def _validate_json_schema(instance: dict, schema: dict):
@@ -262,3 +359,80 @@ def _schema_validator(schema: dict) -> jsonschema.Draft7Validator:
         registry = registry.with_resource(url, schema_resource)
 
     return jsonschema.Draft7Validator(schema, registry=registry)
+
+
+@pytest.fixture
+def auto_fake_fixdate_finder(fake_fixdate_finder):
+    return fake_fixdate_finder(responses=[Result(date=datetime.date(2024, 1, 1), kind="first-observed")])
+
+
+@pytest.fixture
+def fake_fixdate_finder(monkeypatch):
+    """
+    Mock fixture for fixdate.Finder that prevents actual downloads and allows configurable responses.
+
+    This fixture replaces fixdate.default_finder with a mock that:
+    - Never performs actual downloads (download() is a no-op)
+    - Returns configurable responses for find() calls
+    - Prevents network calls to GitHub Container Registry during tests
+
+    Usage Examples:
+
+    1. EASIEST - Default usage returns same date for all find() calls:
+       def test_with_default_date(fake_fixdate_finder):
+           fake_fixdate_finder()  # no responses configured
+           # Any call to fixdate.default_finder().find() will return:
+           # [Result(date=datetime.date(2024, 1, 1), kind="first-observed")]
+
+       # Or customize the default date:
+       def test_with_custom_default(fake_fixdate_finder):
+           fake_fixdate_finder(default_date=datetime.date(2023, 6, 15))
+           # All find() calls return the custom date
+
+    2. Return same result for all find() calls:
+       def test_with_fixed_date(fake_fixdate_finder):
+           fake_fixdate_finder([
+               Result(date=datetime.date(2024, 1, 1), kind="first-observed")
+           ])
+           # All find() calls return the same list of Results
+
+    3. Map specific inputs to different outputs:
+       def test_with_mapping(fake_fixdate_finder):
+           fake_fixdate_finder({
+               ("CVE-2024-1234", "package-name"): [
+                   Result(date=datetime.date(2024, 1, 1), kind="first-observed")
+               ],
+               "CVE-2024-5678": [  # matches any package for this CVE
+                   Result(date=datetime.date(2024, 2, 1), kind="first-observed")
+               ]
+           })
+           # find("CVE-2024-1234", "package-name", ...) returns first result
+           # find("CVE-2024-5678", ...) returns second result regardless of package
+           # find("CVE-2024-9999", ...) returns empty list
+
+    4. Use a function for complex logic:
+       def test_with_function(fake_fixdate_finder):
+           def custom_responses(vuln_id, cpe_or_package, fix_version, ecosystem):
+               if "2024" in vuln_id:
+                   return [Result(date=datetime.date(2024, 1, 1), kind="first-observed")]
+               if cpe_or_package.startswith("cpe:"):
+                   return [Result(date=datetime.date(2023, 1, 1), kind="first-observed")]
+               return []
+
+           fake_fixdate_finder(custom_responses)
+           # find() calls will use your custom function to determine responses
+
+    The mock finder supports flexible key matching for dict-based responses:
+    - (vuln_id, cpe_or_package, fix_version, ecosystem) - exact match
+    - (vuln_id, cpe_or_package, fix_version) - match without ecosystem
+    - (vuln_id, cpe_or_package) - match by vulnerability and package only
+    - vuln_id - match by vulnerability ID only
+
+    Returns:
+        MockFixDateFinder: The mock finder instance for inspection if needed
+    """
+    def apply(responses=None, default_date=None):
+        mock_finder = MockFixDateFinder(responses=responses, default_date=default_date)
+        monkeypatch.setattr(fixdate.first_observed, "Store", lambda ws: mock_finder)
+        return mock_finder
+    return apply

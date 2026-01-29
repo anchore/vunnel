@@ -1,0 +1,18 @@
+[
+  {
+    "CVE": "CVE-2024_11255",
+    "severity": "low",
+    "public_date": "2025-05-30T19:21:14Z",
+    "advisories": [],
+    "bugzilla": "2369500",
+    "bugzilla_description": "liboqs: liboqs affected by theoretical design flaw in HQC",
+    "cvss_score": null,
+    "cvss_scoring_vector": null,
+    "CWE": "CWE-327",
+    "affected_packages": [],
+    "package_state": null,
+    "resource_url": "https://access.redhat.com/hydra/rest/securitydata/cve/CVE-2024_11255.json",
+    "cvss3_scoring_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+    "cvss3_score": "3.7"
+  }
+]

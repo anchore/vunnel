@@ -1,0 +1,4 @@
+# runs-on.com runner configuration
+
+# defer to the https://github.com/anchore/workflows repository for private runner configs
+_extends: workflows

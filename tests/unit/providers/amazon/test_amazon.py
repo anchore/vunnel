@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import shutil
-from requests.exceptions import HTTPError
 from unittest.mock import Mock
 
 import pytest
 from vunnel import result, workspace
-from vunnel.utils.http import requests
 from vunnel.providers.amazon import Config, Provider, parser
+from vunnel.providers.amazon import parser as amazon_parser
 
 
 class TestParser:
@@ -81,9 +80,14 @@ class TestParser:
     def test_get_alas_html_403(self, helpers, monkeypatch, tmpdir):
         # write a mock such that any http.get call will return a response with status code 403
         def mock_get(*args, **kwargs):
-            return Mock(status_code=403)
+            response = Mock(status_code=403)
+            # Invoke status_handler if provided, like the real http.get does
+            status_handler = kwargs.get("status_handler")
+            if status_handler:
+                status_handler(response)
+            return response
 
-        monkeypatch.setattr(requests, "get", mock_get)
+        monkeypatch.setattr(amazon_parser, "http", Mock(get=mock_get))
 
         alas_file = tmpdir.join("alas.html")
 
@@ -96,9 +100,14 @@ class TestParser:
         url = "https://example.com"
 
         def mock_get(*args, **kwargs):
-            return Mock(status_code=403, url=url)
+            response = Mock(status_code=403, url=url)
+            # Invoke status_handler if provided, like the real http.get does
+            status_handler = kwargs.get("status_handler")
+            if status_handler:
+                status_handler(response)
+            return response
 
-        monkeypatch.setattr(requests, "get", mock_get)
+        monkeypatch.setattr(amazon_parser, "http", Mock(get=mock_get))
 
         alas_file = tmpdir.join("alas.html")
 
@@ -117,7 +126,7 @@ class TestParser:
         assert p.alas_403s == ["something", url, url]
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
@@ -138,7 +147,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",

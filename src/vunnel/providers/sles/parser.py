@@ -5,6 +5,7 @@ import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
@@ -12,7 +13,8 @@ import requests
 from cvss import CVSS3
 from cvss.exceptions import CVSS3MalformedError
 
-from vunnel.utils import http
+from vunnel.tool import fixdate
+from vunnel.utils import http_wrapper as http
 from vunnel.utils.oval_v2 import (
     ArtifactParser,
     Impact,
@@ -25,9 +27,12 @@ from vunnel.utils.oval_v2 import (
     VulnerabilityParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, FixedIn, Vulnerability
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+    from types import TracebackType
+
     from vunnel.workspace import Workspace
 
 namespace = "sles"
@@ -61,9 +66,13 @@ class Parser:
         self,
         workspace: Workspace,
         allow_versions: list[str],
+        fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.oval_dir_path = os.path.join(workspace.input_path, self.__source_dir_path__, self.__oval_dir_path__)
         self.allow_versions = allow_versions
         self.download_timeout = download_timeout
@@ -74,6 +83,13 @@ class Parser:
         self.logger = logger
         # this is pretty odd, but there are classmethods that need logging
         Parser.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download(self, major_version: str) -> str:
         if not os.path.exists(self.oval_dir_path):
@@ -222,9 +238,8 @@ class Parser:
 
         return results
 
-    @classmethod
-    def _transform_oval_vulnerabilities(cls, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901
-        cls.logger.info(
+    def _transform_oval_vulnerabilities(self, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901, PLR0912
+        self.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
         )
@@ -245,7 +260,7 @@ class Parser:
             # process CVSS once per oval vulnerability and reuse it for all normalized vulnerabilities
             normalized_cvss_list = []
             for cvss_vector in vulnerability_obj.cvss_v3_vectors:
-                cvss_object = cls._make_cvss(cvss_vector, vulnerability_obj.name)
+                cvss_object = self._make_cvss(cvss_vector, vulnerability_obj.name)
                 if cvss_object:
                     normalized_cvss_list.append(cvss_object)
 
@@ -255,7 +270,7 @@ class Parser:
                 (
                     release_name,
                     release_version,
-                ) = cls._get_name_and_version_from_test(
+                ) = self._get_name_and_version_from_test(
                     impact_item.namespace_test_id,
                     tests_dict,
                     artifacts_dict,
@@ -264,7 +279,7 @@ class Parser:
 
                 # validate release
                 if not release_name:
-                    cls.logger.debug(
+                    self.logger.debug(
                         "release name is invalid, skipping %s",
                         vulnerability_obj.name,
                     )
@@ -272,7 +287,7 @@ class Parser:
 
                 # validate version is inline with major version
                 if not release_version or not release_version.startswith(major_version):
-                    cls.logger.debug(
+                    self.logger.debug(
                         "%s %s is an unsupported namespace for major version %s, skipping %s for this namespace",
                         release_name,
                         release_version,
@@ -290,13 +305,29 @@ class Parser:
                     (
                         pkg_name,
                         pkg_version,
-                    ) = cls._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
+                    ) = self._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
                     if not pkg_name or not pkg_version:
-                        cls.logger.debug(
+                        self.logger.debug(
                             "package name and or version invalid, skipping fixed-in for %s",
                             test_id,
                         )
                         continue
+
+                    available = None
+                    result = self.fixdater.best(
+                        vuln_id=vulnerability_obj.name,
+                        cpe_or_package=pkg_name,
+                        fix_version=pkg_version,
+                        ecosystem=feed_ns,
+                        candidates=[
+                            fixdate.Result(
+                                date=datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d"),  # noqa: DTZ007 # not a timezone aware datetime
+                                kind="advisory",
+                            ),
+                        ],
+                    )
+                    if result:
+                        available = FixAvailability(Date=result.date.isoformat(), Kind=result.kind)
 
                     fixes.append(
                         FixedIn(
@@ -306,6 +337,7 @@ class Parser:
                             Version=pkg_version,
                             Module=None,
                             VendorAdvisory=None,
+                            Available=available,
                         ),
                     )
 
@@ -331,14 +363,16 @@ class Parser:
                     version_release_feed[release_version][release_name] = feed_obj
 
             # resolve multiple normalized entries per version
-            results.extend(cls._release_resolver(version_release_feed, vulnerability_obj.name))
+            results.extend(self._release_resolver(version_release_feed, vulnerability_obj.name))
 
             # free the contents
             version_release_feed.clear()
 
         return results
 
-    def get(self):
+    def get(self) -> Generator[tuple[str, str, dict]]:
+        self.fixdater.download()
+
         parser_factory = OVALParserFactory(
             parsers=[
                 SLESVulnerabilityParser,
@@ -379,6 +413,7 @@ class SLESOVALVulnerability(Parsed):
     link: str
     cvss_v3_vectors: list[str]
     impact: list[Impact]
+    issued_date: str | None = None
 
 
 class SLESVulnerabilityParser(VulnerabilityParser):
@@ -387,7 +422,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
 
     @classmethod
     def parse(cls, xml_element, config: OVALParserConfig) -> SLESOVALVulnerability | None:
-        identity = name = severity = description = link = None
+        identity = name = severity = description = link = issued_date = None
         impact = cvss = []
         try:
             identity = xml_element.attrib["id"]
@@ -408,6 +443,11 @@ class SLESVulnerabilityParser(VulnerabilityParser):
             suse_ref = xml_element.find(config.source_url_xpath_query.format(oval_ns))
             link = suse_ref.attrib["ref_url"]
 
+            # extract issued date from advisory section
+            issued_element = xml_element.find(config.issued_date_xpath_query.format(oval_ns))
+            if issued_element is not None and "date" in issued_element.attrib:
+                issued_date = issued_element.attrib["date"]
+
             cvss = []
             for cve in xml_element.iterfind(config.cve_xpath_query.format(oval_ns)):
                 # example cve element
@@ -423,7 +463,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
             impact = VulnerabilityParser._parse_criteria(xml_element, oval_ns, config)  # noqa: SLF001
         except Exception:
             cls.logger.exception("ignoring error and skip parsing vulnerability definition element")
-            identity = name = severity = description = link = None
+            identity = name = severity = description = link = issued_date = None
             impact = cvss = []
 
         if identity and name and severity and link:
@@ -435,6 +475,7 @@ class SLESVulnerabilityParser(VulnerabilityParser):
                 link=link,
                 cvss_v3_vectors=cvss,
                 impact=impact,
+                issued_date=issued_date,
             )
 
         return None

@@ -8,12 +8,14 @@ from xsdata.formats.dataclass.parsers import XmlParser
 from xsdata.formats.dataclass.parsers.config import ParserConfig
 
 from vunnel.providers.mariner.model import Definition, RpminfoObject, RpminfoState, RpminfoTest
-from vunnel.utils import http
-from vunnel.utils.vulnerability import FixedIn, Vulnerability
+from vunnel.tool import fixdate
+from vunnel.utils import http_wrapper as http
+from vunnel.utils.vulnerability import FixAvailability, FixedIn, Vulnerability
 
 if TYPE_CHECKING:
     import logging
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -25,7 +27,8 @@ IGNORED_PATCHABLE_VALUES = ["Not Applicable"]
 
 
 class MarinerXmlFile:
-    def __init__(self, oval_file_path: str, logger: logging.Logger):
+    def __init__(self, oval_file_path: str, logger: logging.Logger, fixdater: fixdate.Finder):
+        self.fixdater = fixdater
         parser_config = ParserConfig(
             fail_on_converter_warnings=False,
             fail_on_unknown_attributes=False,
@@ -119,7 +122,7 @@ class MarinerXmlFile:
                     objects.append(obj)
         return objects
 
-    def make_fixed_in(self, definition: Definition) -> FixedIn | None:
+    def make_fixed_in(self, definition: Definition, vulnerability_id: str) -> FixedIn | None:  # noqa: C901
         tests = self.get_tests(definition)
         states = self.get_states(tests)
         objects = self.get_objects(tests)
@@ -158,6 +161,29 @@ class MarinerXmlFile:
 
         vulnerability_range_str = ", ".join(vulnerability_range)
 
+        # create availability info when a fix exists
+        candidates = []
+        if fixed_version != "None" and definition.metadata and definition.metadata.advisory_date:
+            candidates.append(
+                fixdate.Result(
+                    date=definition.metadata.advisory_date.to_datetime().date(),
+                    kind="advisory",
+                    accurate=True,
+                ),
+            )
+
+        result = self.fixdater.best(
+            vuln_id=vulnerability_id,
+            cpe_or_package=name,
+            fix_version=fixed_version,
+            ecosystem=self.namespace_name(),
+            candidates=candidates,
+        )
+
+        available = None
+        if result and result.date:
+            available = FixAvailability(Date=result.date.isoformat(), Kind=result.kind)
+
         return FixedIn(
             Name=name,
             NamespaceName=self.namespace_name(),
@@ -166,6 +192,7 @@ class MarinerXmlFile:
             VulnerableRange=vulnerability_range_str,
             Module=None,
             VendorAdvisory=None,
+            Available=available,
         )
 
     def vulnerability_id(self, definition: Definition) -> str | None:
@@ -178,7 +205,7 @@ class MarinerXmlFile:
             return None
         return definition.metadata.description
 
-    def vulnerabilities(self) -> Generator[Vulnerability, None, None]:
+    def vulnerabilities(self) -> Generator[Vulnerability]:
         for d in self.definitions:
             if d.metadata is None or d.metadata.severity is None:
                 self.logger.warning("skipping definition because severity could not be found")
@@ -188,12 +215,15 @@ class MarinerXmlFile:
             link = ""
             if d.metadata.reference and d.metadata.reference.ref_url:
                 link = d.metadata.reference.ref_url
-            fixed_in = self.make_fixed_in(d)
-            if not fixed_in:
-                continue
+
             vulnerability_id = self.vulnerability_id(d)
             if not vulnerability_id:
                 continue
+
+            fixed_in = self.make_fixed_in(d, vulnerability_id)
+            if not fixed_in:
+                continue
+
             yield Vulnerability(
                 Name=vulnerability_id,  # intentional; legacy API uses Name as field for vulnerability ID.
                 NamespaceName=self.namespace_name(),
@@ -224,14 +254,34 @@ VERSION_TO_FILENAME = {
 
 
 class Parser:
-    def __init__(self, workspace: Workspace, download_timeout: int, allow_versions: list[Any], logger: logging.Logger):
+    def __init__(
+        self,
+        workspace: Workspace,
+        download_timeout: int,
+        allow_versions: list[Any],
+        logger: logging.Logger,
+        fixdater: fixdate.Finder | None = None,
+    ):
         self.workspace = workspace
         self.download_timeout = download_timeout
         self.allow_versions = allow_versions
         self._urls: set[str] = set()
         self.logger = logger
 
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
     def _download(self) -> list[str]:
+        self.fixdater.download()
+
         return [self._download_version(v) for v in self.allow_versions]
 
     def _download_version(self, version: str) -> str:
@@ -252,8 +302,8 @@ class Parser:
     def urls(self) -> list[str]:
         return list(self._urls)
 
-    def get(self) -> Generator[tuple[str, str, dict[str, dict[str, Any]]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, dict[str, Any]]]]:
         for oval_file_path in self._download():
-            parsed_file = MarinerXmlFile(oval_file_path, self.logger)
+            parsed_file = MarinerXmlFile(oval_file_path, self.logger, self.fixdater)
             for v in parsed_file.vulnerabilities():
                 yield v.NamespaceName, v.Name, v.to_payload()

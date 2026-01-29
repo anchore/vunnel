@@ -1,92 +1,57 @@
 [project]
 name = "vunnel"
-requires-python = ">=3.11,<=3.13"
+dynamic = ["version"]
+requires-python = "<3.14,>=3.13"
+authors = [
+    {name = "Alex Goodman", email = "alex.goodman@anchore.com"},
+]
+license = {text = "Apache-2.0"}
+description = "vunnel ~= 'vulnerability data funnel'"
+readme = "README.md"
+keywords = ["vulnerability", "data", "aggregator", "grype", "vulnerability-data"]
+classifiers = ["Development Status :: 5 - Production/Stable", "Intended Audience :: Developers", "Intended Audience :: Information Technology", "Intended Audience :: System Administrators", "Natural Language :: English", "Operating System :: POSIX :: Linux", "Operating System :: MacOS", "Topic :: Security", "Topic :: Software Development :: Libraries :: Python Modules", "Topic :: Utilities"]
+dependencies = [
+    "click<9.0.0,>=8.1.3",
+    "requests<3.0.0,>=2.28.1",
+    "colorlog<7.0.0,>=6.7.0",
+    "PyYAML<7.0,>=6.0",
+    "ijson>=2.5.1,<4.0",
+    "xxhash<4.0.0,>=3.1.0",
+    "cvss<4.0,>=2.6",
+    "python-dateutil>=2.8.2,<3.0.0",
+    "defusedxml<1.0.0,>=0.7.1",
+    "orjson<4.0.0,>=3.8.6",
+    "mergedeep<2.0.0,>=1.3.4",
+    "importlib-metadata<9.0.0,>=7.0.1",
+    "xsdata[cli,lxml,soap]<23.0,>=22.12",
+    "pytest-snapshot<1.0.0,>=0.9.0",
+    "mashumaro<4.0,>=3.10",
+    "iso8601<3.0.0,>=2.1.0",
+    "zstandard>=0.22,<0.26",
+    "packageurl-python<1.0.0,>=0.16.0",
+    "oras<1.0.0,>=0.1.0",
+    "sqlalchemy>=2.0.43",
+]
 
-[tool.poetry.scripts]
+[project.urls]
+repository = "https://github.com/anchore/vunnel"
+
+[project.scripts]
 vunnel = "vunnel.cli:run"
 
-[tool.poetry]
-name = "vunnel"
-version = "0.0.0" # note: this is automagically managed -- no need to manually change this
-description = "vunnel ~= 'vulnerability data funnel'"
-authors = ["Alex Goodman <alex.goodman@anchore.com>"]
-license = "Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/anchore/vunnel"
-exclude = [
-  "tests/**/*"
-]
-keywords = [
-  "vulnerability",
-  "data",
-  "aggregator",
-  "grype",
-  "vulnerability-data",
-]
-
-classifiers = [
-  # derived from https://pypi.org/classifiers/
-  "Development Status :: 5 - Production/Stable",
-  "Intended Audience :: Developers",
-  "Intended Audience :: Information Technology",
-  "Intended Audience :: System Administrators",
-  "Natural Language :: English",
-  "Operating System :: POSIX :: Linux",
-  "Operating System :: MacOS",
-  "Topic :: Security",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Utilities",
-]
-
-[tool.poetry.dependencies]
-python = ">=3.11,<=3.13"
-
-click = "^8.1.3"
-requests = "^2.28.1"
-colorlog = "^6.7.0"
-PyYAML = ">= 6.0, < 7.0"  # note: required for enterprise
-ijson = ">= 2.5.1, < 3.0"   # note: required for enterprise
-xxhash = "^3.1.0"
-cvss = ">=2.6,<4.0"
-python-dateutil = "^2.8.2"
-defusedxml = "^0.7.1"
-orjson = "^3.8.6"
-SQLAlchemy = ">= 1.4.46, < 2.0"  # note: 1.4.x currently required for enterprise
-mergedeep = "^1.3.4"
-importlib-metadata = ">=7.0.1,<9.0.0"
-xsdata = {extras = ["cli", "lxml", "soap"], version = "=22.12"}
-pytest-snapshot = "^0.9.0"
-mashumaro = "^3.10"
-iso8601 = "^2.1.0"
-zstandard = ">=0.22,<0.24"
-
-[tool.poetry.group.dev.dependencies]
-pytest = ">=7.2.2,<9.0.0"
-pre-commit = ">=3.2,<5.0"
-black = ">=23.1,<25.0"
-jsonschema = "^4.17.3"
-pytest-unordered = ">=0.5.2,<0.7.0"
-pytest-sugar = ">=0.9.6,<1.1.0"
-pytest-clarity = "^1.0.1"
-pytest-cov = ">=4,<7"
-pytest-picked = ">=0.4.6,<0.6.0"
-pytest-mock = "^3.10.0"
-pytest-xdist = "^3.2.1"
-types-PyYAML = "^6.0.12.5"
-types-requests = "^2.28.11.7"
-mypy = "^1.1"
-radon = ">=5.1,<7.0"
-dunamai = "^1.15.0"
-ruff = ">=0.5.1,<0.8.4"
-yardstick = {git = "https://github.com/anchore/yardstick", rev = "v0.10.0"}
-# yardstick = {path = "../yardstick", develop=true }
-tabulate = "0.9.0"
-tox = "^4.11.3"
-
 [build-system]
-requires = ["poetry-core>=1.3.0", "poetry-dynamic-versioning"]
-# note: this is a thin wrapper around "poetry.core.masonry.api"
-build-backend = "poetry_dynamic_versioning.backend"
+build-backend = "hatchling.build"
+requires = ["hatchling", "uv-dynamic-versioning"]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "semver"
+
+[tool.uv]
+trusted-publishing = "always"
 
 [tool.pytest.ini_options]
 cache_dir = ".cache/pytest"
@@ -102,6 +67,8 @@ check_untyped_defs = true
 no_implicit_reexport = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
+# Note: new files are expected to have type hints. Please do not add files to this
+# ignore list unless they are generated.
 exclude = '''(?x)(
     ^src/vunnel/providers/alpine/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/amazon/parser\.py$    # ported from enterprise, never had type hints
@@ -123,33 +90,6 @@ exclude = '''(?x)(
     | ^tests/.*$     # any tests
 )'''
 
-[tool.black]
-line-length = 130
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-    | data
-    | backup
-    | src/vunnel/providers/mariner/model # files in here are generated
-    | tests/quality/vulnerability-match-labels
-    | tests/quality/.yardstick
-    | tests/quality/data
-    | tests/quality/build
-    | tests/quality/bin
-  )/
-)
-'''
-
 [tool.coverage.run]
 omit = [
   ".*",
@@ -163,18 +103,32 @@ omit = [
 [tool.coverage.report]
 fail_under = 75
 
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-metadata = false
-style = "semver"
-dirty = true
+
+[tool.ruff.format]
+exclude = [
+    ".eggs",         # exclude a few common directories in the
+    ".git",          # root of the project
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "data",
+    "backup",
+    "src/vunnel/providers/mariner/model", # files in here are generated
+    "tests/quality/vulnerability-match-labels",
+    "tests/quality/.yardstick",
+    "tests/quality/data",
+    "tests/quality/build",
+    "tests/quality/bin",
+]
 
 [tool.ruff]
 cache-dir = ".cache/ruff"
-# allow for a wide-birth relative to what black will correct to
 line-length = 150
-
 extend-exclude = [
   "**/tests/**",
   "src/vunnel/providers/mariner/model/**" # these are generated
@@ -236,3 +190,28 @@ select = [
 "json.dumps".msg = "Use orjson.dumps instead"
 "json.load".msg = "Use orjson.loads instead"
 "json.loads".msg = "Use orjson.loads instead"
+
+[dependency-groups]
+dev = [
+    "pytest>=7.2.2,<10.0.0",
+    "pre-commit<5.0,>=3.2",
+    "jsonschema<5.0.0,>=4.17.3",
+    "pytest-unordered<0.7.0,>=0.5.2",
+    "pytest-sugar>=0.9.6,<1.2.0",
+    "pytest-clarity<2.0.0,>=1.0.1",
+    "pytest-cov<7,>=4",
+    "pytest-picked<0.6.0,>=0.4.6",
+    "pytest-mock<4.0.0,>=3.10.0",
+    "pytest-xdist<4.0.0,>=3.2.1",
+    "types-PyYAML<7.0.0.0,>=6.0.12.5",
+    "types-requests<3.0.0.0,>=2.28.11.7",
+    "mypy<2.0,>=1.1",
+    "radon<7.0,>=5.1",
+    "dunamai>=1.15.0,<2.0.0",
+    "ruff<1.0.0,>=0.9.2",
+    "yardstick>=0.16.0",
+    "tabulate==0.9.0",
+    "tox<5.0.0,>=4.11.3",
+    "uv-dynamic-versioning>=0.6.0",
+    "types-python-dateutil>=2.9.0.20250809",
+]

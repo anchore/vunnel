@@ -4,21 +4,17 @@ inputs:
   go-version:
     description: "Go version to install"
     required: true
-    default: "1.22.x"
+    default: "1.24.x"
   python-version:
     description: "Python version to install"
     required: true
     # note: the caller really drives this in a matrix strategy run for unit tests.
     # this default value is used for the rest of the workflow.
-    default: "3.11"
-  poetry-version:
-    description: "Poetry version to install"
+    default: "3.13"
+  uv-version:
+    description: "UV version to install"
     required: true
-    default: "1.8.3"
-  use-poetry-cache:
-    description: "Restore poetry cache"
-    required: true
-    default: "true"
+    default: "0.5.16"
   go:
     description: "Install go"
     required: true
@@ -39,41 +35,22 @@ runs:
   using: "composite"
   steps:
 
-    # note: go mod and build is automatically cached on default with v4+
-    - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe #v4.1.0
+    - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 #v6.2.0
       with:
         go-version: ${{ inputs.go-version }}
 
-    - uses: actions/setup-python@v4
+    - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
+      with:
+        enable-cache: true
+
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: ${{ inputs.python-version }}
-
-    - name: Install poetry
-      shell: bash
-      run: |
-        python -m pip install poetry==${{ inputs.poetry-version }}
-        poetry self add "poetry-dynamic-versioning[plugin]"
-
-    - name: Cache Poetry virtualenv
-      uses: actions/cache@v3
-      if: inputs.use-poetry-cache == 'true'
-      id: cache
-      with:
-        path: ~/.virtualenvs
-        key: ${{ inputs.cache-key-prefix }}-python-${{ inputs.python-version }}-poetry-${{ inputs.poetry-version }}-${{ hashFiles('poetry.lock') }}
-        restore-keys: |
-          ${{ inputs.cache-key-prefix }}-python-${{ inputs.python-version }}-poetry-${{ inputs.poetry-version }}
-
-    - name: Setup Poetry config
-      shell: bash
-      run: |
-        poetry config virtualenvs.in-project false
-        poetry config virtualenvs.path ~/.virtualenvs
 
     - name: Restore tool cache
       id: tool-cache
       if: inputs.tools == 'true'
-      uses: actions/cache@v3
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         path: ${{ github.workspace }}/.tmp
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
@@ -86,16 +63,22 @@ runs:
     - name: Install apt packages
       if: inputs.bootstrap-apt-packages != ''
       shell: bash
+      env:
+        APT_PACKAGES: ${{ inputs.bootstrap-apt-packages }}
       run: |
-        DEBIAN_FRONTEND=noninteractive sudo apt update && sudo -E apt install -y ${{ inputs.bootstrap-apt-packages }}
+        # Convert space-separated string to bash array for safe handling
+        read -ra packages <<< "$APT_PACKAGES"
+        if [ ${#packages[@]} -gt 0 ]; then
+          DEBIAN_FRONTEND=noninteractive sudo apt update && sudo -E apt install -y "${packages[@]}"
+        fi
 
-    - name: Install dependencies and package
+    - name: Install project + dependencies
       shell: bash
-      run: poetry install
+      run: uv sync --all-extras --dev
 
     - name: Restore tox cache
       id: cache-tox
-      uses: actions/cache@v3
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         path: .tox
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('tox.ini') }}

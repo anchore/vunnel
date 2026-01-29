@@ -514,7 +514,7 @@ def _get_tar_zst_writer_obj(tarfile_path):
         ("results.tar.gz", "sha256:1234567890abcdef", ValueError),
     ),
 )
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, archive_name, archive_checksum, raises_type):
     port = 8080
 
@@ -586,7 +586,7 @@ def compare_dir_tar(tmpdir, dir_path, tar_path):
     assert dir_checksums == tar_checksums, "Directory and TAR file contents differ"
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
@@ -611,7 +611,7 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
     assert args == ("http://localhost/dummy/listing.json",)
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider):
     provider = dummy_provider(populate=False)
     tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
@@ -644,7 +644,7 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
     # 4. it overlays it's current workspace with the temp workspace
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
@@ -697,7 +697,7 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     assert start == datetime.datetime(2021, 1, 1, 0, 0, 0)
 
 
-@patch("requests.get")
+@patch("vunnel.provider.http.get")
 def test_fetch_results_keeps_original_metadata(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
@@ -895,14 +895,18 @@ def assert_dummy_workspace_state(ws):
     assert current_state.timestamp is not None
     current_state.timestamp = None
 
+    # ignore processor (it's auto-populated with the vunnel version)
+    current_state.processor = None
+
     expected_state = workspace.State(
         store=result.StoreStrategy.FLAT_FILE.value,
         provider="dummy",
         urls=["http://localhost:8000/dummy-input-1.json"],
-        listing=workspace.File(digest="1e119ae45b38b28f", algorithm="xxh64", path="checksums"),
+        listing=workspace.File(digest="f7b0d70b6cc6d09f", algorithm="xxh64", path="checksums"),
         timestamp=None,
         schema=schema.ProviderStateSchema(),
     )
+    expected_state.processor = None  # also zero out auto-populated value
 
     assert current_state == expected_state
 
@@ -964,15 +968,26 @@ def test_provider_versions(tmpdir):
     # WARNING: changing the values of these versions has operational impact! Do not change them without
     # understanding the implications!
     expected = {
+        "alma": 1,
         "alpine": 1,
         "amazon": 1,
+        "arch": 1,
+        "bitnami": 1,
         "chainguard": 1,
+        "chainguard-libraries": 1,
         "debian": 1,
+        "echo": 1,
+        "eol": 1,
+        "epss": 1,
         "github": 1,
+        "kev": 1,
         "mariner": 1,
+        "minimos": 1,
         "nvd": 2,
         "oracle": 1,
         "rhel": 1,
+        "rocky": 1,
+        "secureos": 1,
         "sles": 1,
         "ubuntu": 3,
         "wolfi": 1,
@@ -992,15 +1007,26 @@ def test_provider_distribution_versions(tmpdir):
     # WARNING: changing the values of these distributions has operational impact! Do not change them without
     # understanding the implications!
     expected = {
+        "alma": 1,
         "alpine": 1,
         "amazon": 1,
+        "arch": 1,
+        "bitnami": 1,
         "chainguard": 1,
+        "chainguard-libraries": 1,
         "debian": 1,
+        "echo": 1,
+        "eol": 1,
+        "epss": 1,
         "github": 1,
+        "kev": 1,
         "mariner": 1,
+        "minimos": 1,
         "nvd": 1,
         "oracle": 1,
         "rhel": 1,
+        "rocky": 1,
+        "secureos": 1,
         "sles": 1,
         "ubuntu": 1,
         "wolfi": 1,
@@ -1012,3 +1038,143 @@ def test_provider_distribution_versions(tmpdir):
         got[p.name()] = p.distribution_version()
 
     assert expected == got, "WARNING! CHANGES TO DISTRIBUTION VERSIONS HAVE OPERATIONAL IMPACT!"
+
+
+class ProviderWithTags(provider.Provider):
+    __schema__ = schema.OSSchema()
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def name(cls) -> str:
+        return "test-with-tags"
+
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["test-tag", "another-tag"]
+
+    def update(self, *args, **kwargs):
+        return [], 0
+
+
+class ProviderWithoutTags(provider.Provider):
+    __schema__ = schema.OSSchema()
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def name(cls) -> str:
+        return "test-without-tags"
+
+    def update(self, *args, **kwargs):
+        return [], 0
+
+
+def test_has_tags_protocol():
+    from vunnel.provider import HasTags
+
+    assert isinstance(ProviderWithTags, HasTags)
+    assert not isinstance(ProviderWithoutTags, HasTags)
+
+
+def test_get_provider_tags_with_tags():
+    from vunnel.provider import get_provider_tags
+
+    tags = get_provider_tags(ProviderWithTags)
+    assert tags == ["test-tag", "another-tag"]
+
+
+def test_get_provider_tags_without_tags():
+    from vunnel.provider import get_provider_tags
+
+    tags = get_provider_tags(ProviderWithoutTags)
+    assert tags == []
+
+
+def test_schema_classmethod():
+    # provider with schema
+    result = ProviderWithTags.schema()
+    assert result is not None
+    assert result.version == "1.1.0"
+    assert result.name == "vulnerability/os"
+
+
+def test_schema_classmethod_no_schema():
+    # provider without __schema__ attribute
+
+    class ProviderNoSchema(provider.Provider):
+        def __init__(self):
+            pass
+
+        @classmethod
+        def name(cls) -> str:
+            return "no-schema"
+
+        def update(self, *args, **kwargs):
+            return [], 0
+
+    result = ProviderNoSchema.schema()
+    assert result is None
+
+
+class TestProvidersWithTags:
+    def test_negation_excludes_matching_providers(self):
+        from vunnel import providers
+
+        result = providers.providers_with_tags(["!auxiliary"])
+
+        # auxiliary providers should be excluded
+        assert "epss" not in result
+        assert "kev" not in result
+        # other providers should be included
+        assert "nvd" in result
+        assert "alpine" in result
+
+    def test_mixed_include_and_exclude(self):
+        from vunnel import providers
+
+        result = providers.providers_with_tags(["vulnerability", "!os"])
+
+        # providers with "vulnerability" but without "os"
+        assert "nvd" in result
+        assert "github" in result
+        # providers with "os" should be excluded
+        assert "alpine" not in result
+        assert "debian" not in result
+
+    def test_multiple_exclusions(self):
+        from vunnel import providers
+
+        result = providers.providers_with_tags(["!os", "!language"])
+
+        # providers without "os" or "language"
+        assert "nvd" in result
+        assert "epss" in result
+        assert "kev" in result
+        # providers with "os" or "language" should be excluded
+        assert "alpine" not in result
+        assert "github" not in result
+
+    def test_invalid_empty_negation_raises_error(self):
+        import pytest
+
+        from vunnel import providers
+
+        with pytest.raises(ValueError, match="invalid tag"):
+            providers.providers_with_tags(["!"])
+
+    def test_exclusion_only_returns_all_except_excluded(self):
+        from vunnel import providers
+
+        # get all provider names
+        all_names = providers.names()
+
+        # exclude only language providers
+        result = providers.providers_with_tags(["!language"])
+
+        # result should have all providers except language ones
+        language_providers = providers.providers_with_tags(["language"])
+        expected = sorted(set(all_names) - set(language_providers))
+        assert result == expected

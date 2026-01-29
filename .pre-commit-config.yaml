@@ -29,6 +29,10 @@ repos:
 
     # Makes sure files end in a newline and only a newline.
     - id: end-of-file-fixer
+      # this fixture should not end in a newline
+      # because https://security.access.redhat.com/data/csaf/v2/advisories/archive_latest.txt
+      # does not end in a newline
+      exclude: "tests/unit/providers/rhel/test-fixtures/csaf/server/archive_latest.txt"
       stages:
         - pre-push
 
@@ -52,14 +56,13 @@ repos:
       stages:
         - pre-push
 
-  # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through poetry
+  # why use the local repo instead of hosted hooks? so that dependencies are centrally managed through uv
   - repo: local
     hooks:
 
       # note: this is used in lieu of autopep8 and yapf
-      - id: black
-        name: black
-        # note: why not use the official black pre-commit hook? so we can use poetry to control which version of black is used.
+      - id: format
+        name: format
         entry: make format
         pass_filenames: false
         language: system

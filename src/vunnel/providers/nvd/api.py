@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
-from vunnel.utils import http
+from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -39,14 +39,10 @@ class NvdAPI:
     def cve_history(
         self,
         cve_id: str | None = None,
-        results_per_page: (
-            int | None
-        ) = None,  # from api docs: "it is recommended that users of the CVE API use the default resultsPerPage value"
-        change_start_date: (
-            str | datetime.datetime | None
-        ) = None,  # note: if you specify a changeStartDate, you must also specify a changeEndDate
+        results_per_page: (int | None) = None,  # from api docs: "it is recommended that users of the CVE API use the default resultsPerPage value"
+        change_start_date: (str | datetime.datetime | None) = None,  # note: if you specify a changeStartDate, you must also specify a changeEndDate
         change_end_date: str | datetime.datetime | None = None,  # note: maximum date range is 120 days
-    ) -> Generator[dict[str, Any], Any, None]:
+    ) -> Generator[dict[str, Any], Any]:
         parameters = {}
 
         if cve_id:
@@ -72,16 +68,12 @@ class NvdAPI:
     def cve(  # noqa: PLR0913
         self,
         cve_id: str | None = None,
-        results_per_page: (
-            int | None
-        ) = None,  # from api docs: "it is recommended that users of the CVE API use the default resultsPerPage value"
+        results_per_page: (int | None) = None,  # from api docs: "it is recommended that users of the CVE API use the default resultsPerPage value"
         last_mod_start_date: str | datetime.datetime | None = None,
         last_mod_end_date: str | datetime.datetime | None = None,
-        pub_start_date: (
-            str | datetime.datetime | None
-        ) = None,  # note: if you specify a pubStartDate, you must also specify a pubEndDate
+        pub_start_date: (str | datetime.datetime | None) = None,  # note: if you specify a pubStartDate, you must also specify a pubEndDate
         pub_end_date: str | datetime.datetime | None = None,  # note: maximum date range is 120 days
-    ) -> Generator[dict[str, Any], Any, None]:
+    ) -> Generator[dict[str, Any], Any]:
         parameters = {}
 
         if cve_id:
@@ -115,7 +107,7 @@ class NvdAPI:
         url: str,
         parameters: dict[str, str],
         message: str = "fetching results",
-    ) -> Generator[dict[str, Any], Any, None]:
+    ) -> Generator[dict[str, Any], Any]:
         headers = {
             "content-type": "application/json",
         }
@@ -143,7 +135,7 @@ class NvdAPI:
         index = results_per_page
 
         for page in range(pages):
-            self.logger.debug(f"{message} (page {page+2} of {pages})")
+            self.logger.debug(f"{message} (page {page + 2} of {pages})")
 
             parameters["resultsPerPage"] = str(results_per_page)
             parameters["startIndex"] = str(index)

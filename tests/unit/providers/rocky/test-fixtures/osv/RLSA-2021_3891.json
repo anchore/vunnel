@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.3.1",
+  "id": "RLSA-2021:3891",
+  "modified": "2023-02-02T14:11:02.724098Z",
+  "published": "2021-10-20T12:41:00Z",
+  "related": [
+    "CVE-2021-35550",
+    "CVE-2021-35556",
+    "CVE-2021-35559",
+    "CVE-2021-35561",
+    "CVE-2021-35564",
+    "CVE-2021-35565",
+    "CVE-2021-35567",
+    "CVE-2021-35578",
+    "CVE-2021-35586",
+    "CVE-2021-35603"
+  ],
+  "summary": "Important: java-11-openjdk security update",
+  "details": "The java-11-openjdk packages provide the OpenJDK 11 Java Runtime Environment and the OpenJDK 11 Java Software Development Kit.\n\nSecurity Fix(es):\n\n* OpenJDK: Loop in HttpsServer triggered during TLS session close (JSSE, 8254967) (CVE-2021-35565)\n\n* OpenJDK: Incorrect principal selection when using Kerberos Constrained Delegation (Libraries, 8266689) (CVE-2021-35567)\n\n* OpenJDK: Weak ciphers preferred over stronger ones for TLS (JSSE, 8264210) (CVE-2021-35550)\n\n* OpenJDK: Excessive memory allocation in RTFParser (Swing, 8265167) (CVE-2021-35556)\n\n* OpenJDK: Excessive memory allocation in RTFReader (Swing, 8265580) (CVE-2021-35559)\n\n* OpenJDK: Excessive memory allocation in HashMap and HashSet (Utility, 8266097) (CVE-2021-35561)\n\n* OpenJDK: Certificates with end dates too far in the future can corrupt keystore (Keytool, 8266137) (CVE-2021-35564)\n\n* OpenJDK: Unexpected exception raised during TLS handshake (JSSE, 8267729) (CVE-2021-35578)\n\n* OpenJDK: Excessive memory allocation in BMPImageReader (ImageIO, 8267735) (CVE-2021-35586)\n\n* OpenJDK: Non-constant comparison during TLS handshakes (JSSE, 8269618) (CVE-2021-35603)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+  "severity": [
+    {
+      "type": "CVSS_V3",
+      "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:H/I:N/A:N"
+    }
+  ],
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Rocky Linux:8",
+        "name": "java-11-openjdk",
+        "purl": "pkg:rpm/rocky-linux/java-11-openjdk?distro=rocky-linux-8-4-legacy&epoch=1"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "1:11.0.13.0.8-1.el8_4"
+            }
+          ],
+          "database_specific": {
+            "yum_repository": "AppStream"
+          }
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "type": "ADVISORY",
+      "url": "https://errata.rockylinux.org/RLSA-2021:3891"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2014508"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2014515"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2014518"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2014524"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2015061"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2015308"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2015311"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2015648"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2015653"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2015658"
+    }
+  ],
+  "credits": [
+    {
+      "name": "Rocky Enterprise Software Foundation"
+    },
+    {
+      "name": "Red Hat"
+    }
+  ]
+}

@@ -3,14 +3,14 @@
 ## Getting Started
 
 This project requires:
-- python (>= 3.7)
+- python (>= 3.13)
 - pip (>= 22.2)
-- poetry (>= 1.2): see [installation instructions](https://python-poetry.org/docs/#installation)
+- uv
 - docker
 - go (>= 1.20)
 - posix shell (bash, zsh, etc... needed for the `make dev` "development shell")
 
-Once you have python and poetry installed, get the project bootstrapped:
+Once you have python and uv installed, get the project bootstrapped:
 
 ```bash
 # clone grype and grype-db, which is needed for provider development
@@ -29,16 +29,14 @@ cd vunnel
 make bootstrap
 
 # install project dependencies
-poetry install
+uv sync --all-extras --dev
 ```
 
 [Pre-commit](https://pre-commit.com/) is used to help enforce static analysis checks with git hooks:
 
 ```bash
-poetry run pre-commit install --hook-type pre-push
+uv run pre-commit install --hook-type pre-push
 ```
-
-To jump into a poetry-managed virtualenv run `poetry shell`, this will prevent the need for `poetry run...` prefix for each command.
 
 ## Developing
 
@@ -55,7 +53,7 @@ Entering vunnel development shell...
 • Configuring with providers: oracle ...
 • Writing grype config: /Users/wagoodman/code/vunnel/.grype.yaml ...
 • Writing grype-db config: /Users/wagoodman/code/vunnel/.grype-db.yaml ...
-• Activating poetry virtual env: /Users/wagoodman/Library/Caches/pypoetry/virtualenvs/vunnel-slR_vCr2-py3.9 ...
+• Activating virtual env: /Users/wagoodman/code/vunnel/.venv ...
 • Installing editable version of vunnel ...
 • Building grype ...
 • Building grype-db ...
@@ -159,9 +157,8 @@ make help
 If you want to use a locally-editable copy of vunnel while you develop without the custom development shell:
 
 ```bash
-poetry shell
-pip uninstall vunnel  #... if you already have vunnel installed in this virtual env
-pip install -e .
+uv pip uninstall vunnel  #... if you already have vunnel installed in this virtual env
+uv pip install -e .
 ```
 
 ### Snapshot Tests
@@ -300,6 +297,7 @@ Possible vulnerability schemas supported within the vunnel repo are:
 - [Generic OS Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/os)
 - [GitHub Security Advisories](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/github-security-advisory)
 - [NVD Vulnerability](https://github.com/anchore/vunnel/tree/main/schema/vulnerability/nvd)
+- [Open Source Vulnerability (OSV)](https://ossf.github.io/osv-schema)
 
 If at any point a breaking change needs to be made to a provider (and say the schema remains the same), then you
 can set the `__version__` attribute on the provider class to a new integer value (incrementing from `1` onwards). This
@@ -370,9 +368,10 @@ To add a new provider, you will need to create a new provider class  under `/src
 - `update()`: downloads and processes the raw data, writing all results with `self.results_writer()`
 
 All results must conform to a [particular schema](https://github.com/anchore/vunnel/tree/main/schema), today there are a few kinds:
-- `os`: a generic operating system vulnerability (e.g redhat, debian, ubuntu, alpine, wolfi, etc.)
+- `os`: a generic operating system vulnerability (e.g redhat, debian, ubuntu, alpine, wolfi, minimos, etc.)
 - `nvd`: tailored to describe vulnerabilities from the NVD
 - `github-security-advisory`: tailored to describe vulnerabilities from GitHub
+- `osv`: tailored to describe vulnerabilities from the [aggregated OSV vulnerability database](https://osv.dev/list)
 
 Once the provider is implemented, you will need to wire it up into the application in a couple places:
 - add a new entry under the dispatch table in `src/vunnel/providers/__init__.py` mapping your provider name to the class
@@ -454,20 +453,19 @@ annotating Grype results with "True Positive" labels (good results) and "False P
 [Yardstick](github.com/anchore/yardstick) to do this:
 
 ```bash
-# note: be certain you are in a "poetry shell" session
 $ cd tests/quality
 
 # capture results with the development version of grype (from your fork)
 $ make capture provider=<your-provider-name>
 
 # list your results
-$ yardstick result list | grep grype
+$ uv run yardstick result list | grep grype
 
 d415064e-2bf3-4a1d-bda6-9c3957f2f71a  docker.io/anc...  grype@v0.58.0             2023-03...
 75d1fe75-0890-4d89-a497-b1050826d9f6  docker.io/anc...  grype[custom-db]@bdcefd2  2023-03...
 
 # use the "grype[custom-db]" result UUID and explore the results and add labels to each entry
-$ yardstick label explore 75d1fe75-0890-4d89-a497-b1050826d9f6
+$ uv run yardstick label explore 75d1fe75-0890-4d89-a497-b1050826d9f6
 
 # You can use the yardstick TUI to label results:
 # - use "T" to label a row as a True Positive
@@ -485,7 +483,6 @@ For the meantime we can iterate locally with the labels we've added.
 #### **6. In Vunnel: run the quality gate.**
 
 ```bash
-# note: be certain you are in a "poetry shell" session
 cd tests/quality
 
 # runs your specific provider to gather vulnerability data, builds a DB, and runs grype with the new DB

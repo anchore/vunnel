@@ -1,0 +1,179 @@
+from pathlib import Path
+
+import pytest
+
+from packageurl import PackageURL
+
+from vunnel.utils.csaf_types import from_path
+from vunnel.providers.rhel.csaf_parser import CSAFParser, is_rpm_module_purl, resolve_module_name_from_purl
+
+from unittest.mock import Mock
+
+@pytest.fixture()
+def fixture_dir():
+    return Path(__file__).parent / "test-fixtures"
+
+@pytest.fixture()
+def csaf_parser(basic_csaf_doc):
+    mock_client = Mock()
+    mock_client.csaf_doc_for_rhsa.return_value = basic_csaf_doc
+    return CSAFParser(workspace=Mock(), client=mock_client, logger=Mock(), download_timeout=125)
+
+@pytest.fixture()
+def basic_csaf_doc(fixture_dir):
+    return from_path(fixture_dir / "csaf/advisories/rhsa-2023_3821.json")
+
+@pytest.fixture()
+def multi_platform_csaf_doc(fixture_dir):
+    return from_path(fixture_dir / "csaf/advisories/rhsa-2024_0811.json")
+
+
+@pytest.mark.parametrize(
+    "csaf_input,expected",
+    [
+        (
+            # Old format with custom rpmmod package url type
+                "csaf/advisories/rhsa-2023_3821.json",
+                {
+                    "fpi": "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.aarch64.rpm-ruby:2.7",
+                    "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                    "module_name": "ruby:2.7",
+                    "package_name": "ruby",
+                    "package_version": "0:2.7.8-139.module+el8.8.0+18745+f1bef313",
+                }
+        ),
+        (
+            # Updated format with rpmmod qualifier on a standard rpm package url type
+            "csaf/advisories/rhsa-2023_7025.json",
+            {
+                "fpi": "AppStream-8.9.0.GA:ruby-2.5.9-111.module+el8.9.0+19193+435404ae.src.rpm-ruby:2.5",
+                "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                "module_name": "ruby:2.5",
+                "package_name": "ruby",
+                "package_version": "0:2.5.9-111.module+el8.9.0+19193+435404ae",
+            }
+        ),
+        (
+                "csaf/advisories/rhsa-2024_0811.json",
+                {
+                    "fpi": "AppStream-9.2.0.Z.EUS:sudo-0:1.9.5p2-9.el9_2.2.x86_64",
+                    "platform_cpe": "cpe:/a:redhat:rhel_eus:9.2::appstream",
+                    "module_name": None,
+                    "package_name": "sudo",
+                    "package_version": "0:1.9.5p2-9.el9_2.2",
+                }
+        ),
+        (
+            # New format with :: separator instead of .rpm-
+            "csaf/advisories/rhsa-2024_1431.json",
+            {
+                "fpi": "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+                "platform_cpe": "cpe:/a:redhat:enterprise_linux:8::appstream",
+                "module_name": "ruby:3.1",
+                "package_name": "ruby",
+                "package_version": "0:3.1.4-142.module+el8.9.0+21471+7d1e4a35",
+            }
+        ),
+    ]
+)
+def test_csaf_parser_platform_module_name_version_from_fpi(csaf_input, expected, fixture_dir, csaf_parser):
+    csaf_doc = from_path(fixture_dir / csaf_input)
+    actual_platform_cpe, actual_module_name, actual_package_name, actual_package_version =  csaf_parser.platform_module_name_version_from_fpi(csaf_doc, expected["fpi"])
+    assert actual_platform_cpe == expected["platform_cpe"]
+    assert actual_module_name == expected["module_name"]
+    assert actual_package_name == expected["package_name"]
+    assert actual_package_version == expected["package_version"]
+
+def test_best_version_module_from_fpis_package_name(csaf_parser, fixture_dir):
+    # and more than one platform
+    fpis = [
+        # right answer:
+        "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.src.rpm-ruby:2.7",
+        # wrong package name (note: different version):
+        "AppStream-8.8.0.Z.MAIN.EUS:rubygem-irb-1.2.6-139.module+el8.8.0+18745+f1bef313.noarch.rpm-ruby:2.7",
+    ]
+    doc = from_path(fixture_dir / "csaf/advisories/rhsa-2023_3821.json")
+    actual_version, actual_module = csaf_parser.best_version_module_from_fpis(
+        doc,
+        "RHSA-2023:3821",
+        fpis,
+        "ruby",
+        "cpe:/a:redhat:enterprise_linux:8")
+    assert actual_version == "0:2.7.8-139.module+el8.8.0+18745+f1bef313"
+    assert actual_module == "ruby:2.7"
+
+def test_best_version_module_from_fpis_multi_platform(csaf_parser, fixture_dir, multi_platform_csaf_doc):
+    fpis = [
+        # RHEL 9 variant, has platform cpe like "cpe:/a:redhat:rhel_eus:9.0::appstream"
+        "AppStream-9.0.0.Z.EUS:sudo-0:1.9.5p2-7.el9_0.4.src",
+        # the right answer, has platform cpe "cpe:/a:redhat:enterprise_linux:9::appstream",
+        # which starts with "cpe:/a:redhat:enterprise_linux:9"
+        "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src",
+        # RHEL 8 variant, has platform cpe like "cpe:/o:redhat:rhel_eus:8.6::baseos"
+        "BaseOS-8.6.0.Z.EUS:sudo-0:1.9.5p2-1.el8_6.src",
+    ]
+    platform_cpe = "cpe:/a:redhat:enterprise_linux:9"
+    fix_id = "RHSA-2024:0811"
+    actual_version, actual_module = csaf_parser.best_version_module_from_fpis(
+        multi_platform_csaf_doc, fix_id, fpis, "sudo", platform_cpe,
+    )
+    assert actual_module is None
+    assert actual_version == "0:1.9.5p2-10.el9_3"
+
+
+@pytest.mark.parametrize(
+    "purl,expected",
+    [
+        (
+            "pkg:rpmmod/redhat/mariadb@10.3:8060020220715055054:ad008a3a",
+            True,
+        ),
+        (
+            "pkg:rpm/redhat/mariadb@10.3?rpmmod=mariadb:10.3:8060020220715055054:ad008a3a",
+            True,
+        ),
+        (
+            "pkg:rpm/redhat/mariadb@10.3?rpmmod=",
+            False,
+        ),
+        (
+            "pkg:rpm/redhat/mariadb@10.3",
+            False,
+        ),
+    ]
+)
+def test_is_rpm_module_purl(purl: str, expected: bool):
+    assert is_rpm_module_purl(PackageURL.from_string(purl)) == expected
+
+
+@pytest.mark.parametrize(
+    "purl,expected",
+    [
+        (
+            "pkg:rpmmod/redhat/mariadb@10.3:8060020220715055054:ad008a3a",
+            "mariadb:10.3",
+        ),
+        (
+            "pkg:rpm/redhat/mariadb@10.3?rpmmod=mariadb:10.3:8060020220715055054:ad008a3a",
+            "mariadb:10.3",
+        ),
+        (
+            "pkg:rpm/redhat/mariadb@10.3?rpmmod=",
+            None,
+        ),
+        (
+            "pkg:rpm/redhat/mariadb@10.3",
+            None,
+        ),
+        (
+            "pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14",
+            "ruby:2.5",
+        ),
+        (
+            "pkg:rpmmod/redhat/ruby@2.5:8090020230627084142:b46abd14",
+            "ruby:2.5",
+        ),
+    ]
+)
+def test_resolve_module_name_from_purl(purl: PackageURL, expected: str):
+    assert resolve_module_name_from_purl(PackageURL.from_string(purl)) == expected

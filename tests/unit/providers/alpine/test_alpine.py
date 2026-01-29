@@ -133,7 +133,7 @@ class TestAlpineProvider:
 
         assert counter == 1
 
-    def test_normalize(self, mock_parsed_data, tmpdir):
+    def test_normalize(self, mock_parsed_data, tmpdir, auto_fake_fixdate_finder):
         p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         release = mock_parsed_data[0]
         dbtype_data_dict = mock_parsed_data[1]
@@ -190,7 +190,7 @@ class TestAlpineProvider:
         assert Parser._link_finder_regex_.findall(content) == expected
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()
@@ -214,7 +214,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",

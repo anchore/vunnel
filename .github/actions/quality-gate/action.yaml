@@ -8,40 +8,57 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # assume we have python and poetry installed
+    # assume we have python and uv installed
+
+    # required for magic-cache from runs-on to function with artifact upload/download (see https://runs-on.com/caching/magic-cache/#actionsupload-artifact-compatibility)
+    - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e # v2.0.3
+
+    - name: Login to ghcr.io
+      shell: bash
+      env:
+        GITHUB_ACTOR: ${{ github.actor }}
+      run: |
+        echo "$GITHUB_TOKEN" | .tool/oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
     - name: Capture vulnerability results
       shell: bash
       working-directory: tests/quality
-      run: poetry run make capture provider=${{ inputs.provider }}
-
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: make capture provider="$PROVIDER"
 
     - name: Validate provider results
       shell: bash
       working-directory: tests/quality
-      run: poetry run make validate provider=${{ inputs.provider }}
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: make validate provider="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
       shell: bash
-      run: tar -czvf qg-capture-state-${{ inputs.provider }}.tar.gz -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
+      env:
+        PROVIDER: ${{ inputs.provider }}
+      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: qg-capture-state-${{ inputs.provider }}
         path: qg-capture-state-${{ inputs.provider }}.tar.gz
 
-    - name: Show instructions to debug
+    - name: Show instructions to debug (${{ inputs.provider }})
       if: ${{ failure() }}
       shell: bash
+      env:
+        PROVIDER: ${{ inputs.provider }}
       run: |
-        ARCHIVE_BASENAME=qg-capture-state-${{ inputs.provider }}
-        ARCHIVE_NAME=$ARCHIVE_BASENAME.zip
+        ARCHIVE_BASENAME="qg-capture-state-$PROVIDER"
+        ARCHIVE_NAME="$ARCHIVE_BASENAME.zip"
 
         cat << EOF >> $GITHUB_STEP_SUMMARY
-        ## Troubleshooting '${{ inputs.provider }}' failed run
+        ## Troubleshooting '$PROVIDER' failed run
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
@@ -49,13 +66,12 @@ runs:
         \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality
-        unzip $ARCHIVE_NAME && tar -xzf $ARCHIVE_BASENAME.tar.gz
+        unzip "$ARCHIVE_NAME" && tar -xzf "$ARCHIVE_BASENAME.tar.gz"
         \`\`\`
 
         Now you can debug the provider with yardstick:
         \`\`\`bash
-        poetry shell
-        yardstick result list
-        yardstick label explore
+        uv run yardstick result list
+        uv run yardstick label explore
         \`\`\`
         EOF

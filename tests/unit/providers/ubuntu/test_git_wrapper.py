@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import unittest
+from unittest.mock import Mock, patch
 
 import pytest
 from vunnel.providers.ubuntu.git import GitRevision, GitWrapper
@@ -195,3 +197,167 @@ A       active/CVE-2013-4348
 )
 def test_parse_full_cve_revision_history(git_log_output: str, expected: dict[str, list[GitRevision]]):
     assert GitWrapper("", "master", "").parse_full_cve_revision_history(git_log_output) == expected
+
+
+class TestGitCatFileBatch(unittest.TestCase):
+    """Tests for GitCatFileBatch long-running process"""
+
+    _location_ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__), "test-fixtures"))
+    _git_cat_file_response_cve_11411_ = os.path.join(_location_, "git_cat_file_batch_response_cve_11411.txt")
+    _git_cat_file_response_cve_11261_ = os.path.join(_location_, "git_cat_file_batch_response_cve_11261.txt")
+
+    @patch('vunnel.providers.ubuntu.git.subprocess.Popen')
+    def test_git_cat_file_batch_single_file(self, mock_popen):
+        """Test fetching a single file with git cat-file --batch"""
+        from vunnel.providers.ubuntu.git import GitCatFileBatch
+
+        # Load fixture with real git cat-file output
+        with open(self._git_cat_file_response_cve_11411_, 'rb') as f:
+            fixture_output = f.read()
+
+        # Parse fixture: first line is header, rest is content
+        lines = fixture_output.split(b'\n', 1)
+        header_line = lines[0] + b'\n'
+        content_bytes = lines[1]
+
+        # Extract size from header to know how many bytes to return
+        header_parts = header_line.decode().strip().split()
+        size = int(header_parts[2])
+
+        # Mock the process
+        mock_process = Mock()
+        mock_stdin = Mock()
+        mock_stdout = Mock()
+        mock_stderr = Mock()
+
+        # Simulate reading from stdout
+        mock_stdout.readline.return_value = header_line
+        mock_stdout.read.side_effect = [
+            content_bytes[:size],  # Read exactly <size> bytes
+            b'\n'                  # Trailing newline
+        ]
+
+        mock_process.stdin = mock_stdin
+        mock_process.stdout = mock_stdout
+        mock_process.stderr = mock_stderr
+        mock_popen.return_value = mock_process
+
+        # Test
+        with GitCatFileBatch("/fake/path") as batch:
+            content = batch.get_content("5e1f7677f0d", "active/CVE-2025-11411")
+            lines = content.splitlines()
+
+            assert len(lines) == 41
+            assert lines[0] == "Candidate: CVE-2025-11411"
+            assert "Discovered-by: Yuxiao Wu, Yunyi Zhang, Baojun Liu, and Haixin Duan" in content
+
+        # Verify subprocess was called correctly
+        mock_popen.assert_called_once_with(
+            ["git", "cat-file", "--batch"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd="/fake/path",
+            text=False,
+        )
+
+        # Verify we wrote the correct request
+        mock_stdin.write.assert_called_once_with(b"5e1f7677f0d:active/CVE-2025-11411\n")
+        mock_stdin.flush.assert_called_once()
+
+    @patch('vunnel.providers.ubuntu.git.subprocess.Popen')
+    def test_git_cat_file_batch_multiple_files(self, mock_popen):
+        """Test fetching multiple files from the same batch process"""
+        from vunnel.providers.ubuntu.git import GitCatFileBatch
+
+        # Load both fixtures
+        with open(self._git_cat_file_response_cve_11411_, 'rb') as f:
+            fixture1 = f.read()
+        with open(self._git_cat_file_response_cve_11261_, 'rb') as f:
+            fixture2 = f.read()
+
+        # Parse both fixtures
+        def parse_fixture(fixture_bytes):
+            lines = fixture_bytes.split(b'\n', 1)
+            header = lines[0] + b'\n'
+            content = lines[1]
+            size = int(header.decode().strip().split()[2])
+            return header, content, size
+
+        header1, content1, size1 = parse_fixture(fixture1)
+        header2, content2, size2 = parse_fixture(fixture2)
+
+        # Mock the process
+        mock_process = Mock()
+        mock_stdin = Mock()
+        mock_stdout = Mock()
+        mock_stderr = Mock()
+
+        # Simulate two sequential requests to the same process
+        mock_stdout.readline.side_effect = [header1, header2]
+        mock_stdout.read.side_effect = [
+            content1[:size1], b'\n',  # First file: content + newline
+            content2[:size2], b'\n',  # Second file: content + newline
+        ]
+
+        mock_process.stdin = mock_stdin
+        mock_process.stdout = mock_stdout
+        mock_process.stderr = mock_stderr
+        mock_popen.return_value = mock_process
+
+        # Test
+        with GitCatFileBatch("/fake/path") as batch:
+            result1 = batch.get_content("5e1f7677f0d", "active/CVE-2025-11411")
+            result2 = batch.get_content("89e1fa3cbb9", "active/CVE-2025-11261")
+
+            assert len(result1.splitlines()) == 41
+            assert len(result2.splitlines()) == 28
+            assert "Candidate: CVE-2025-11411" in result1
+            assert "Candidate: CVE-2025-11261" in result2
+
+        # Verify both requests were sent
+        assert mock_stdin.write.call_count == 2
+        mock_stdin.write.assert_any_call(b"5e1f7677f0d:active/CVE-2025-11411\n")
+        mock_stdin.write.assert_any_call(b"89e1fa3cbb9:active/CVE-2025-11261\n")
+
+    @patch('vunnel.providers.ubuntu.git.GitCatFileBatch')
+    def test_git_wrapper_get_content_uses_batch(self, mock_batch_class):
+        """Test that GitWrapper.get_content() uses the batch process"""
+        from vunnel.providers.ubuntu.git import GitRevision, GitWrapper
+
+        # Load fixture to get expected content
+        with open(self._git_cat_file_response_cve_11411_, 'rb') as f:
+            fixture = f.read()
+
+        # Extract just the file content (skip header line)
+        lines = fixture.split(b'\n', 1)
+        header_parts = lines[0].decode().strip().split()
+        size = int(header_parts[2])
+        content = lines[1][:size].decode()
+
+        # Mock the batch instance
+        mock_batch = Mock()
+        mock_batch.get_content.return_value = content
+        mock_batch.start = Mock()
+        mock_batch_class.return_value = mock_batch
+
+        # Create GitWrapper
+        wrapper = GitWrapper(
+            source="git://git.launchpad.net/ubuntu-cve-tracker",
+            branch="master",
+            checkout_dest="/fake/path",
+        )
+
+        # Call get_content
+        rev = GitRevision(sha="5e1f7677f0d", file="active/CVE-2025-11411")
+        lines = wrapper.get_content(rev)
+
+        # Verify batch was created and used
+        mock_batch_class.assert_called_once_with("/fake/path", wrapper.logger)
+        mock_batch.start.assert_called_once()
+        mock_batch.get_content.assert_called_once_with("5e1f7677f0d", "active/CVE-2025-11411")
+
+        # Verify return format is correct (list of strings)
+        assert isinstance(lines, list)
+        assert len(lines) == 41
+        assert lines[0] == "Candidate: CVE-2025-11411"

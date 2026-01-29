@@ -1,13 +1,28 @@
 version: 2
 updates:
+
   - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 10
+    directory: "/.github/actions/bootstrap"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 10
+    directory: "/.github/workflows"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: daily
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: daily
+    cooldown:
+      default-days: 7
     ignore:
       # used to generate Mariner models.
       # pin to keep from introducing needless drift in the models.

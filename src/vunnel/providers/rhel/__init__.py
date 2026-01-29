@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
+from vunnel.utils.concurrency import resolve_workers
 
 from .parser import Parser
 
@@ -21,13 +23,22 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    # this parallelism controls the rate at which the Hydra API is queried. That API
+    # can be a bit touchy, so it is hard coded to a pretty low value.
     parallelism: int = 4
-    full_sync_interval: int = 2
+    # the csaf_parallelism controls the amount of concurrency used when re-downloading CSAF
+    # files that have changed since the last archive. That file server seems very tolerant of
+    # highly concurrent download, so oversubscribe CPUs with 20 http requests / core
+    # for this download. Sometimes thousands of changes need to be processed, and each
+    # concurrent process is logically.
+    csaf_parallelism: int | str = "20x"
+    full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
+    rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
+    ignore_hydra_errors: bool = False
 
 
 class Provider(provider.Provider):
-
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -43,24 +54,44 @@ class Provider(provider.Provider):
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
             max_workers=self.config.parallelism,
+            csaf_max_workers=resolve_workers(
+                self.config.csaf_parallelism,
+            ),
             full_sync_interval=self.config.full_sync_interval,
+            rhsa_provider_type=self.config.rhsa_source,
+            ignore_hydra_errors=self.config.ignore_hydra_errors,
             skip_namespaces=self.config.skip_namespaces,
             logger=self.logger,
+            skip_download=self.config.runtime.skip_download,
         )
 
     @classmethod
     def name(cls) -> str:
         return "rhel"
 
-    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
-                namespace = namespace.lower()
-                vuln_id = vuln_id.lower()
-                writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
-                    schema=self.__schema__,
-                    payload=record,
-                )
+    @classmethod
+    def tags(cls) -> list[str]:
+        return [
+            "vulnerability",
+            "os",
+            "incremental",
+        ]
 
-        return self.parser.urls, len(writer)
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
+
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                for namespace, vuln_id, record in self.parser.get(skip_if_exists=self.config.runtime.skip_if_exists):
+                    namespace = namespace.lower()
+                    vuln_id = vuln_id.lower()
+                    writer.write(
+                        identifier=os.path.join(namespace, vuln_id),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+            if len(writer) == 0 and self.config.runtime.skip_download:
+                raise RuntimeError("skip download used on empty workspace")
+            return self.parser.urls, len(writer)

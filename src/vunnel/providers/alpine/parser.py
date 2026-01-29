@@ -10,10 +10,13 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from vunnel.utils import http
+from vunnel.tool import fixdate
+from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     import requests
 
     from vunnel import workspace
@@ -51,14 +54,20 @@ class Parser:
     _db_types = ["main", "community"]  # noqa: RUF012
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
+    _security_reference_url_ = "https://security.alpinelinux.org/vuln"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
+        fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
         url: str | None = None,
+        security_reference_url: str | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
             workspace.input_path,
@@ -67,14 +76,30 @@ class Parser:
         )  # no longer used except for cleanup, leaving it here for backwards compatibility
         self.secdb_dir_path = os.path.join(workspace.input_path, self._secdb_dir_)
         self.metadata_url = url.strip("/") if url else Parser._url_
+        self.security_reference_url = security_reference_url.strip("/") if security_reference_url else Parser._security_reference_url_
         if logger is None:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self._urls = set()
 
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
     @property
     def urls(self) -> list[str]:
         return list(self._urls)
+
+    def build_reference_links(self, vulnerability_id: str) -> list[str]:
+        urls = []
+        if self.security_reference_url and vulnerability_id.startswith("CVE-"):
+            urls.append(f"{self.security_reference_url}/{vulnerability_id}")
+
+        urls.extend(build_reference_links(vulnerability_id))
+        return urls
 
     def _download(self):  # noqa: C901, PLR0912
         """
@@ -86,6 +111,8 @@ class Parser:
             shutil.rmtree(self.source_dir_path)
         if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
+
+        self.fixdater.download()
 
         links = []
         try:
@@ -206,10 +233,10 @@ class Parser:
                     pkg_el = el["pkg"]
 
                     pkg = pkg_el["name"]
-                    for pkg_version in pkg_el["secfixes"]:
+                    for fix_version in pkg_el["secfixes"]:
                         vids = []
-                        if pkg_el["secfixes"][pkg_version]:
-                            for rawvid in pkg_el["secfixes"][pkg_version]:
+                        if pkg_el["secfixes"][fix_version]:
+                            for rawvid in pkg_el["secfixes"][fix_version]:
                                 tmp = rawvid.split()
                                 for newvid in tmp:
                                     if newvid not in vids:
@@ -224,7 +251,7 @@ class Parser:
                                 # create a new record
                                 vuln_dict[vid] = copy.deepcopy(vulnerability_element)
                                 vuln_record = vuln_dict[vid]
-                                reference_links = build_reference_links(vid)
+                                reference_links = self.build_reference_links(vid)
 
                                 # populate the static information about the new vuln record
                                 vuln_record["Vulnerability"]["Name"] = str(vid)
@@ -238,10 +265,25 @@ class Parser:
 
                             # SET UP fixedins
                             fixed_el = {}
+                            ecosystem = f"{namespace}:{release}"
                             fixed_el["VersionFormat"] = "apk"
-                            fixed_el["NamespaceName"] = namespace + ":" + str(release)
+                            fixed_el["NamespaceName"] = ecosystem
                             fixed_el["Name"] = pkg
-                            fixed_el["Version"] = pkg_version
+                            fixed_el["Version"] = fix_version
+
+                            candidate = self.fixdater.best(
+                                vuln_id=str(vid),
+                                cpe_or_package=pkg,
+                                fix_version=fix_version,
+                                ecosystem=ecosystem,
+                            )
+                            if candidate:
+                                available = {
+                                    "Date": candidate.date.isoformat(),
+                                    "Kind": candidate.kind,
+                                }
+
+                                fixed_el["Available"] = available
 
                             vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 

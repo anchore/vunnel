@@ -8,48 +8,51 @@ on:
   # needed when running from forks
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Static-Analysis:
     name: "Static Analysis"
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
 
       - name: Run static analysis
-        run: poetry run make static-analysis
+        run: make static-analysis
 
-      # - name: Ensure quality gate tools are properly configured
-      #   run: |
-      #     cd tests/quality && make validate-test-tool-versions
+      - name: Ensure quality gate tools are properly configured
+        run: |
+          cd tests/quality && make validate-test-tool-versions
 
   Test:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}-test-${{ strategy.job-index }}/runner=small
     permissions:
       contents: read
     strategy:
       matrix:
         # note: this is not a single source of truth (this is also in the tox.ini)
         python:
-          - version: '3.11'
-            toxEnv: py311
+          - version: '3.13'
+            toxEnv: py313
 
-          - version: '3.12'
-            toxEnv: py312
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
@@ -57,30 +60,31 @@ jobs:
           python-version: ${{ matrix.python.version }}
 
       - name: Run unit tests
-        run: poetry run tox -e ${{ matrix.python.toxEnv }}
+        run: uv run tox -e ${{ matrix.python.toxEnv }}
 
       - name: Build assets
-        run: poetry run make build
+        run: make build
 
   # this is to help facilitate ensuring all checks have run with the checks API for release
   # see https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
   # as well as the release.yaml workflow
   Test-Gate:
     if: ${{ always() }}
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=small
     name: Test Gate
-    needs: [test]
+    needs: [Test]
     steps:
-      - run: |
-          result="${{ needs.Test.result }}"
-          if [[ $result == "success" || $result == "skipped" ]]; then
+      - env:
+          TEST_RESULT: ${{ needs.Test.result }}
+        run: |
+          if [[ $TEST_RESULT == "success" || $TEST_RESULT == "skipped" ]]; then
             exit 0
           else
             exit 1
           fi
 
   Publish-PreProd:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/runner=release
     needs: [Static-Analysis, Test]
     if: github.ref == 'refs/heads/main'
     permissions:
@@ -88,26 +92,24 @@ jobs:
       # package write permission is needed for publishing commit images
       packages: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
 
       - name: Login to ghcr.io
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username ${{ github.actor }} --password-stdin
+          echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
       - name: Build assets
-        run: poetry run make build
+        run: make build
 
       - name: Publish commit image
         run: make ci-publish-commit
-
-      - name: Publish to test PyPI
-        run: make ci-publish-testpypi
-        env:
-          # note: "..._TESTPYPI" suffix should match the name of the testpypi repository (see the Makefile target)
-          POETRY_PYPI_TOKEN_TESTPYPI: ${{ secrets.TEST_PYPI_TOKEN }}

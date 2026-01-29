@@ -61,6 +61,8 @@ def test_full_config(helpers):
             debian=providers.debian.Config(
                 releases={
                     # this is the defaults...
+                    "duke": "15",
+                    "forky": "14",
                     "trixie": "13",
                     "bookworm": "12",
                     "bullseye": "11",
@@ -75,9 +77,24 @@ def test_full_config(helpers):
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),
+            epss=providers.epss.Config(
+                runtime=runtime_cfg,
+                dataset="2025-03-04",
+                url_template="https://localhost/epss_scores-{}.csv.gz",
+                request_timeout=20,
+            ),
             github=providers.github.Config(
                 token="",
                 api_url="https://api.gitlab.com/graphql",
+                runtime=runtime_cfg,
+                request_timeout=20,
+            ),
+            kev=providers.kev.Config(
+                runtime=runtime_cfg,
+                url="https://anchore.com/kev/data.json",
+                request_timeout=20,
+            ),
+            minimos=providers.minimos.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
             ),

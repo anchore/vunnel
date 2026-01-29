@@ -1,0 +1,1166 @@
+{
+  "document": {
+    "aggregate_severity": {
+      "namespace": "https://access.redhat.com/security/updates/classification/",
+      "text": "Moderate"
+    },
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "text": "Copyright © Red Hat, Inc. All rights reserved.",
+      "tlp": {
+        "label": "WHITE",
+        "url": "https://www.first.org/tlp/"
+      }
+    },
+    "lang": "en",
+    "notes": [
+      {
+        "category": "summary",
+        "text": "An update for the ruby:3.1 module is now available for Red Hat Enterprise Linux 8.\n\nRed Hat Product Security has rated this update as having a security impact of Moderate. A Common Vulnerability Scoring System (CVSS) base score, which gives a detailed severity rating, is available for each vulnerability from the CVE link(s) in the References section.",
+        "title": "Topic"
+      },
+      {
+        "category": "general",
+        "text": "Ruby is an extensible, interpreted, object-oriented, scripting language. It has features to process text files and to perform system management tasks.\n\nThe following packages have been upgraded to a later upstream version: ruby (3.1). (RHEL-28565)\n\nSecurity Fix(es):\n\n* ruby/cgi-gem: HTTP response splitting in CGI (CVE-2021-33621)\n\n* ruby: ReDoS vulnerability in URI (CVE-2023-28755)\n\n* ruby: ReDoS vulnerability - upstream's incomplete fix for CVE-2023-28755 (CVE-2023-36617)\n\n* ruby: ReDoS vulnerability in Time (CVE-2023-28756)\n\nBug Fix(es):\n\n* ruby/rubygem-irb: IRB has hard dependency on rubygem-rdoc (RHEL-28569)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+        "title": "Details"
+      },
+      {
+        "category": "legal_disclaimer",
+        "text": "This content is licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). If you distribute this content, or a modified version of it, you must provide attribution to Red Hat Inc. and provide a link to the original.",
+        "title": "Terms of Use"
+      }
+    ],
+    "publisher": {
+      "category": "vendor",
+      "contact_details": "https://access.redhat.com/security/team/contact/",
+      "issuing_authority": "Red Hat Product Security is responsible for vulnerability handling across all Red Hat products and services.",
+      "name": "Red Hat Product Security",
+      "namespace": "https://www.redhat.com"
+    },
+    "references": [
+      {
+        "category": "self",
+        "summary": "https://access.redhat.com/errata/RHSA-2024:1431",
+        "url": "https://access.redhat.com/errata/RHSA-2024:1431"
+      },
+      {
+        "category": "external",
+        "summary": "https://access.redhat.com/security/updates/classification/#moderate",
+        "url": "https://access.redhat.com/security/updates/classification/#moderate"
+      },
+      {
+        "category": "external",
+        "summary": "2149706",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2149706"
+      },
+      {
+        "category": "external",
+        "summary": "2184059",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184059"
+      },
+      {
+        "category": "external",
+        "summary": "2184061",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184061"
+      },
+      {
+        "category": "external",
+        "summary": "2218614",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2218614"
+      },
+      {
+        "category": "self",
+        "summary": "Canonical URL",
+        "url": "https://security.access.redhat.com/data/csaf/v2/advisories/2024/rhsa-2024_1431.json"
+      }
+    ],
+    "title": "Red Hat Security Advisory: ruby:3.1 security, bug fix, and enhancement update",
+    "tracking": {
+      "current_release_date": "2025-10-25T00:55:50+00:00",
+      "generator": {
+        "date": "2025-10-25T00:55:50+00:00",
+        "engine": {
+          "name": "Red Hat SDEngine",
+          "version": "4.6.10"
+        }
+      },
+      "id": "RHSA-2024:1431",
+      "initial_release_date": "2024-03-19T18:46:43+00:00",
+      "revision_history": [
+        {
+          "date": "2024-03-19T18:46:43+00:00",
+          "number": "1",
+          "summary": "Initial version"
+        },
+        {
+          "date": "2024-03-19T18:46:43+00:00",
+          "number": "2",
+          "summary": "Last updated version"
+        },
+        {
+          "date": "2025-10-25T00:55:50+00:00",
+          "number": "3",
+          "summary": "Last generated version"
+        }
+      ],
+      "status": "final",
+      "version": "3"
+    }
+  },
+  "product_tree": {
+    "relationships": [
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64 (ruby:3.1) as a component of Red Hat Enterprise Linux AppStream (v. 8)",
+          "product_id": "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1"
+        },
+        "product_reference": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+        "relates_to_product_reference": "AppStream-8.9.0.Z.MAIN"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src (ruby:3.1) as a component of Red Hat Enterprise Linux AppStream (v. 8)",
+          "product_id": "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+        },
+        "product_reference": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+        "relates_to_product_reference": "AppStream-8.9.0.Z.MAIN"
+      }
+    ],
+    "branches": [
+      {
+        "category": "vendor",
+        "name": "Red Hat",
+        "branches": [
+          {
+            "category": "product_family",
+            "name": "Red Hat Enterprise Linux",
+            "branches": [
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux AppStream (v. 8)",
+                "branches": [],
+                "product": {
+                  "name": "Red Hat Enterprise Linux AppStream (v. 8)",
+                  "product_id": "AppStream-8.9.0.Z.MAIN",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/a:redhat:enterprise_linux:8::appstream"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "category": "architecture",
+            "name": "src",
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+                "branches": [],
+                "product": {
+                  "name": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src (ruby:3.1)",
+                  "product_id": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/ruby@3.1.4-142.module%2Bel8.9.0%2B21471%2B7d1e4a35?arch=src&rpmmod=ruby:3.1:8090020240311122605:a75119d5"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "category": "architecture",
+            "name": "aarch64",
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+                "branches": [],
+                "product": {
+                  "name": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64 (ruby:3.1)",
+                  "product_id": "ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/ruby@3.1.4-142.module%2Bel8.9.0%2B21471%2B7d1e4a35?arch=aarch64&rpmmod=ruby:3.1:8090020240311122605:a75119d5"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "title": "ruby/cgi-gem: HTTP response splitting in CGI",
+      "cve": "CVE-2021-33621",
+      "cwe": "{'id': 'CWE-113', 'name': \"Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Request/Response Splitting')\"}",
+      "discovery_date": "2022-11-18T00:00:00+00:00",
+      "flags": [],
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2149706"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A vulnerability was found in Ruby that allows HTTP header injection. A CGI application using the CGI library may insert untrusted input into the HTTP response header. This issue can allow an attacker to insert a newline character to split a header and inject malicious content to deceive clients.",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "ruby/cgi-gem: HTTP response splitting in CGI",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "This vulnerability is marked as moderate because the flaw was more difficult to exploit but could still lead to some compromise of the confidentiality, integrity, or availability of resources under certain circumstances but are less easily exploited based on a technical evaluation of the flaw, or affect unlikely configurations.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2021-33621"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2149706",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2149706"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2021-33621",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2021-33621"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2021-33621",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-33621"
+        }
+      ],
+      "release_date": "2022-11-18T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:1431"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-default-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-doc-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-doc-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bundler-0:2.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-irb-0:1.4.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-minitest-0:5.15.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-doc-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-doc-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-power_assert-0:2.0.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rake-0:13.0.6-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rdoc-0:6.4.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rexml-0:3.2.5-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rss-0:0.2.9-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-test-unit-0:3.5.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-typeprof-0:0.21.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-devel-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "HIGH",
+            "baseScore": 8.8,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "LOW",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "ruby: ReDoS vulnerability in URI",
+      "cve": "CVE-2023-28755",
+      "cwe": "{'id': 'CWE-20', 'name': 'Improper Input Validation'}",
+      "discovery_date": "2023-04-03T00:00:00+00:00",
+      "flags": [],
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2184059"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A flaw was found in the rubygem URI. The URI parser mishandles invalid URLs that have specific characters, which causes an increase in execution time parsing strings to URI objects. This may result in a regular expression denial of service (ReDoS).",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "ruby: ReDoS vulnerability in URI",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-28755"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2184059",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184059"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-28755",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-28755"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-28755",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28755"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.ruby-lang.org/en/news/2023/03/28/redos-in-uri-cve-2023-28755/",
+          "url": "https://www.ruby-lang.org/en/news/2023/03/28/redos-in-uri-cve-2023-28755/"
+        }
+      ],
+      "release_date": "2023-03-21T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:1431"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-default-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-doc-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-doc-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bundler-0:2.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-irb-0:1.4.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-minitest-0:5.15.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-doc-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-doc-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-power_assert-0:2.0.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rake-0:13.0.6-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rdoc-0:6.4.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rexml-0:3.2.5-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rss-0:0.2.9-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-test-unit-0:3.5.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-typeprof-0:0.21.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-devel-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "LOW",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "ruby: ReDoS vulnerability in Time",
+      "cve": "CVE-2023-28756",
+      "cwe": "{'id': 'CWE-20', 'name': 'Improper Input Validation'}",
+      "discovery_date": "2023-04-03T00:00:00+00:00",
+      "flags": [],
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2184061"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A flaw was found in the Time gem and Time library of Ruby. The Time parser mishandles invalid strings with specific characters and causes an increase in execution time for parsing strings to Time objects. This issue may result in a Regular expression denial of service (ReDoS).",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "ruby: ReDoS vulnerability in Time",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-28756"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2184061",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2184061"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-28756",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-28756"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-28756",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-28756"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.ruby-lang.org/en/news/2023/03/30/redos-in-time-cve-2023-28756/",
+          "url": "https://www.ruby-lang.org/en/news/2023/03/30/redos-in-time-cve-2023-28756/"
+        }
+      ],
+      "release_date": "2023-03-21T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:1431"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-default-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-doc-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-doc-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bundler-0:2.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-irb-0:1.4.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-minitest-0:5.15.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-doc-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-doc-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-power_assert-0:2.0.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rake-0:13.0.6-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rdoc-0:6.4.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rexml-0:3.2.5-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rss-0:0.2.9-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-test-unit-0:3.5.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-typeprof-0:0.21.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-devel-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "LOW",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    },
+    {
+      "title": "rubygem-uri: ReDoS vulnerability - upstream's incomplete fix for CVE-2023-28755",
+      "cve": "CVE-2023-36617",
+      "cwe": "{'id': 'CWE-185', 'name': 'Incorrect Regular Expression'}",
+      "discovery_date": "2023-06-29T00:00:00+00:00",
+      "flags": [],
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2218614"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A flaw was found in the rubygem URI. The URI parser mishandles invalid URLs that have specific characters, which causes an increase in execution time parsing strings to URI objects. This issue may result in a regular expression denial of service (ReDoS).",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "rubygem-uri: ReDoS vulnerability - upstream's incomplete fix for CVE-2023-28755",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "This vulnerability exists due to an incomplete fix for CVE-2023-28755 in upstream.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+          "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+        ],
+        "known_affected": [],
+        "known_not_affected": [],
+        "under_investigation": []
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2023-36617"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2218614",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2218614"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2023-36617",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2023-36617"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2023-36617",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-36617"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.ruby-lang.org/en/news/2023/06/29/redos-in-uri-CVE-2023-36617",
+          "url": "https://www.ruby-lang.org/en/news/2023/06/29/redos-in-uri-CVE-2023-36617"
+        }
+      ],
+      "release_date": "2023-06-29T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1"
+          ],
+          "url": "https://access.redhat.com/errata/RHSA-2024:1431"
+        }
+      ],
+      "scores": [
+        {
+          "products": [
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-bundled-gems-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-debugsource-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-default-gems-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-devel-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-doc-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:ruby-libs-debuginfo-0:3.1.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-abrt-doc-0:0.4.0-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bigdecimal-debuginfo-0:3.1.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-bundler-0:2.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-io-console-debuginfo-0:0.5.11-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-irb-0:1.4.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-json-debuginfo-0:2.6.1-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-minitest-0:5.15.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debuginfo-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-debugsource-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-mysql2-doc-0:0.5.3-3.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.src::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debuginfo-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-debugsource-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-pg-doc-0:1.3.2-1.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-power_assert-0:2.0.1-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-psych-debuginfo-0:4.0.4-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rake-0:13.0.6-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.aarch64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.i686::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.ppc64le::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.s390x::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rbs-debuginfo-0:2.7.0-142.module+el8.9.0+21471+7d1e4a35.x86_64::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rdoc-0:6.4.0-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rexml-0:3.2.5-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-rss-0:0.2.9-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-test-unit-0:3.5.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygem-typeprof-0:0.21.3-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1",
+            "AppStream-8.9.0.Z.MAIN:rubygems-devel-0:3.3.26-142.module+el8.9.0+21471+7d1e4a35.noarch::ruby:3.1"
+          ],
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "LOW",
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "NONE",
+            "privilegesRequired": "NONE",
+            "scope": "UNCHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "version": "3.1"
+          }
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate",
+          "product_ids": []
+        }
+      ]
+    }
+  ]
+}

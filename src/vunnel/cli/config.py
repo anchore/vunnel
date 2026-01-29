@@ -38,19 +38,31 @@ class ImportResults:
 @dataclass
 class CommonProviderConfig:
     import_results: ImportResults = field(default_factory=ImportResults)
+    user_agent: str | None = None
 
 
 @dataclass
 class Providers:
+    alma: providers.alma.Config = field(default_factory=providers.alma.Config)
     alpine: providers.alpine.Config = field(default_factory=providers.alpine.Config)
     amazon: providers.amazon.Config = field(default_factory=providers.amazon.Config)
+    arch: providers.arch.Config = field(default_factory=providers.arch.Config)
+    bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
+    chainguard_libraries: providers.chainguard_libraries.Config = field(default_factory=providers.chainguard_libraries.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
+    echo: providers.echo.Config = field(default_factory=providers.echo.Config)
+    eol: providers.eol.Config = field(default_factory=providers.eol.Config)
+    epss: providers.epss.Config = field(default_factory=providers.epss.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
+    kev: providers.kev.Config = field(default_factory=providers.kev.Config)
     mariner: providers.mariner.Config = field(default_factory=providers.mariner.Config)
+    minimos: providers.minimos.Config = field(default_factory=providers.minimos.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
     rhel: providers.rhel.Config = field(default_factory=providers.rhel.Config)
+    rocky: providers.rocky.Config = field(default_factory=providers.rocky.Config)
+    secureos: providers.secureos.Config = field(default_factory=providers.secureos.Config)
     sles: providers.sles.Config = field(default_factory=providers.sles.Config)
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
     wolfi: providers.wolfi.Config = field(default_factory=providers.wolfi.Config)
@@ -59,7 +71,9 @@ class Providers:
 
     def __post_init__(self) -> None:
         for name in self.provider_names():
-            runtime_cfg = getattr(self, name).runtime
+            cfg = getattr(self, name)
+
+            runtime_cfg = getattr(cfg, "runtime", None)
             if runtime_cfg and isinstance(runtime_cfg, provider.RuntimeConfig):
                 if runtime_cfg.import_results_enabled is None:
                     runtime_cfg.import_results_enabled = self.common.import_results.enabled
@@ -67,6 +81,8 @@ class Providers:
                     runtime_cfg.import_results_host = self.common.import_results.host
                 if not runtime_cfg.import_results_path:
                     runtime_cfg.import_results_path = self.common.import_results.path
+                if runtime_cfg.user_agent is None:
+                    runtime_cfg.user_agent = self.common.user_agent
 
     def get(self, name: str) -> Any | None:
         for candidate in self.provider_names():
@@ -75,7 +91,7 @@ class Providers:
         return None
 
     @staticmethod
-    def provider_names() -> Generator[str, None, None]:
+    def provider_names() -> Generator[str]:
         for f in fields(Providers):
             if f.name == "common":
                 continue
@@ -89,7 +105,7 @@ class Providers:
 @dataclass
 class Log:
     slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
-    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")  # noqa: RUF009
+    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
     show_timestamp: bool = os.environ.get("VUNNEL_LOG_SHOW_TIMESTAMP", default="false") == "true"
     show_level: bool = os.environ.get("VUNNEL_LOG_SHOW_LEVEL", default="true") == "true"
 
