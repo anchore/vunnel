@@ -383,3 +383,15 @@ tests:
       - <<: *default-validations
         max_year: 2022
         candidate_tool_label: custom-db
+
+  - provider: secureos
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - registry.replicated.com/library/grype-test:20250106@sha256:3339bcd874d21fa3ca5bd20636e793c0c33bd71ace3a18a9a3b3d147b91dd000
+    expected_namespaces:
+      - secureos:distro:secureos:rolling
+      - nvd:cpe
+    validations:
+      - *default-validations
