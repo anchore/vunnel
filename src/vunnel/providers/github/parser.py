@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 # this is the ecosystem in GHSA to a syft package type
 ecosystem_map = {
     "COMPOSER": "composer",
+    "ERLANG": "erlang",
     "GO": "go",
     "MAVEN": "java",
     "NPM": "npm",
