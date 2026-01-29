@@ -14,6 +14,8 @@ from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
+from .rejections import SecurityRejections
+
 if TYPE_CHECKING:
     from types import TracebackType
 
@@ -56,6 +58,8 @@ class Parser:
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
     _security_reference_url_ = "https://security.alpinelinux.org/vuln"
 
+    _rejections_url_ = "https://gitlab.alpinelinux.org/alpine/security/security-rejections/-/raw/master"
+
     def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
@@ -81,6 +85,13 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self._urls = set()
+        self._workspace = workspace
+        self.rejections = SecurityRejections(
+            url=Parser._rejections_url_,
+            workspace=workspace,
+            logger=logger,
+            download_timeout=download_timeout,
+        )
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -113,6 +124,7 @@ class Parser:
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
 
         self.fixdater.download()
+        self.rejections.download()
 
         links = []
         try:
@@ -287,7 +299,42 @@ class Parser:
 
                             vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
+            # Process security-rejections for this db_type
+            self._process_rejections(vuln_dict, dbtype, release)
+
         return vuln_dict
+
+    def _process_rejections(self, vuln_dict: dict, dbtype: str, release: str) -> None:
+        """
+        Process security-rejections for a db_type, emitting FixedIn entries with Version: "0" (NAK).
+        """
+        rejections = self.rejections.get(dbtype)
+        for pkg, cve_ids in rejections.items():
+            for vid in cve_ids:
+                if not re.match("^CVE-.*", vid):
+                    continue
+
+                if vid not in vuln_dict:
+                    vuln_dict[vid] = copy.deepcopy(vulnerability_element)
+                    vuln_record = vuln_dict[vid]
+                    reference_links = self.build_reference_links(vid)
+
+                    vuln_record["Vulnerability"]["Name"] = str(vid)
+                    vuln_record["Vulnerability"]["NamespaceName"] = f"{namespace}:{release}"
+
+                    if reference_links:
+                        vuln_record["Vulnerability"]["Link"] = reference_links[0]
+                    vuln_record["Vulnerability"]["Severity"] = "Unknown"
+                else:
+                    vuln_record = vuln_dict[vid]
+
+                fixed_el = {
+                    "VersionFormat": "apk",
+                    "NamespaceName": f"{namespace}:{release}",
+                    "Name": pkg,
+                    "Version": "0",
+                }
+                vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
     def get(self):
         """
