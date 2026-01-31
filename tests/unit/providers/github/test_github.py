@@ -49,7 +49,13 @@ def advisories():
                             "ghsaId": "GHSA-mh6f-8j2x-4483",
                             "summary": "Critical severity vulnerability that affects flatmap-stream and event-stream",
                             "severity": "CRITICAL",
-                            "cvss": {"score": 9.8, "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"},
+                            "cvssSeverities": {
+                                "cvssV3": {"score": 9.8, "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"},
+                                "cvssV4": {
+                                    "score": 9.8,
+                                    "vectorString": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+                                }
+                            },
                             "identifiers": [{"type": "GHSA", "value": "GHSA-mh6f-8j2x-4483"}],
                             "references": [{"url": "https://github.com/dominictarr/event-stream/issues/116"}],
                             "vulnerabilities": {
@@ -126,9 +132,15 @@ def node():
         "classification": "GENERAL",
         "summary": "Critical severity vulnerability that affects waitress",
         "severity": "CRITICAL",
-        "cvss": {
-            "score": 9.8,
-            "vectorString": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "cvssSeverities": {
+            "cvssV3": {
+                "score": 9.8,
+                "vectorString": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            },
+            "cvssV4": {
+                "score": 9.8,
+                "vectorString": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+            }
         },
         "publishedAt": "2020-02-04T03:07:31Z",
         "updatedAt": "2020-02-04T03:07:32Z",
@@ -208,7 +220,7 @@ class TestNodeParser:
         assert result.CVSS == expected
 
     def test_trailing_slash_cvss(self, node, helpers, auto_fake_fixdate_finder):
-        node["cvss"]["vectorString"] = node["cvss"]["vectorString"] + "/"
+        node["cvssSeverities"]["cvssV3"]["vectorString"] = node["cvssSeverities"]["cvssV3"]["vectorString"] + "/"
         ws = helpers.provider_workspace_helper(name=Provider.name())
         result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
         expected = CVSS(

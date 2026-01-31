@@ -25,8 +25,8 @@ from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
 import requests
-from cvss import CVSS3
-from cvss.exceptions import CVSS3MalformedError
+from cvss import CVSS3, CVSS4
+from cvss.exceptions import CVSS3MalformedError, CVSS4MalformedError
 
 from vunnel import utils
 from vunnel.tool import fixdate
@@ -397,9 +397,15 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
               classification
               summary
               severity
-              cvss {
-                score
-                vectorString
+              cvssSeverities {
+                cvssV3 {
+                    score
+                    vectorString
+                }
+                cvssV4 {
+                    score
+                    vectorString
+                }
               }
               identifiers {
                 type
@@ -478,9 +484,15 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
           classification
           summary
           severity
-          cvss {{
-            score
-            vectorString
+          cvssSeverities {{
+            cvssV3 {{
+              score
+              vectorString
+            }}
+            cvssV4 {{
+              score
+              vectorString
+            }}
           }}
           identifiers {{
             type
@@ -524,7 +536,7 @@ class NodeParser(dict):
     __parsers__ = (
         "_classification",
         "_severity",
-        "_cvss",
+        "_cvss_severities",
         "_fixedin",
         "_summary",
         "_url",
@@ -532,6 +544,7 @@ class NodeParser(dict):
         "_published",
         "_updated",
         "_withdrawn",
+        "_references",
     )
 
     def __init__(self, data: dict, fixdater: fixdate.Finder, logger: logging.Logger | None = None):
@@ -588,7 +601,7 @@ class NodeParser(dict):
         severity = self.data.get("severity")
         self["Severity"] = severity_map.get(severity, "Unknown")
 
-    def _make_cvss(self, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
+    def _make_legacy_cvss(self, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
         try:
             cvss_vector = cvss_vector.removesuffix("/")
             cvss3_obj = CVSS3(cvss_vector)
@@ -606,7 +619,7 @@ class NodeParser(dict):
             )
         except (CVSS3MalformedError, DecimalException, AttributeError):
             self.logger.exception(
-                "error transforming CVSS vector %s, skipping it for %s",
+                "error transforming CVSS v3 vector %s, skipping it for %s",
                 cvss_vector,
                 vulnerability_id,
             )
@@ -614,14 +627,70 @@ class NodeParser(dict):
 
         return cvss_object
 
-    def _cvss(self):
-        cvss = self.data.get("cvss")
+    def _make_cvss_v3(self, cvss_vector: str, vulnerability_id: str) -> dict | None:
+        try:
+            cvss_vector = cvss_vector.removesuffix("/")
+            cvss3_obj = CVSS3(cvss_vector)
+            cvss_object = {
+              "version": f"3.{cvss3_obj.minor_version}",
+              "vector": cvss_vector,
+            }
+        except (CVSS3MalformedError, DecimalException, AttributeError):
+            self.logger.exception(
+                "error transforming CVSS v3 vector %s, skipping it for %s",
+                cvss_vector,
+                vulnerability_id,
+            )
+            cvss_object = None
 
-        if cvss:
-            vector = cvss.get("vectorString")
+        return cvss_object
 
+    def _make_cvss_v4(self, cvss_vector: str, vulnerability_id: str) -> dict | None:
+        try:
+            cvss_vector = cvss_vector.removesuffix("/")
+            _ = CVSS4(cvss_vector)
+
+            cvss_object = {
+              "version": "4.0",
+              "vector": cvss_vector,
+            }
+        except (CVSS4MalformedError, DecimalException, AttributeError):
+            self.logger.exception(
+                "error transforming CVSS v4 vector %s, skipping it for %s",
+                cvss_vector,
+                vulnerability_id,
+            )
+            cvss_object = None
+
+        return cvss_object
+
+    def _make_cvss_severities(self, cvss_severities: dict, vulnerability_id: str) -> dict[str, CVSS | None]:
+        result = {}
+        v3 = cvss_severities.get("cvssV3")
+        if v3:
+            vector = v3.get("vectorString")
             if vector:
-                self["CVSS"] = self._make_cvss(vector, self.data.get("ghsaId"))
+                # legacy CVSS needs to stick around until v5 schema db updates stop
+                self["CVSS"] = self._make_legacy_cvss(vector, vulnerability_id)
+                cvss_v3 = self._make_cvss_v3(vector, vulnerability_id)
+                if cvss_v3:
+                    result["cvss_v3"] = cvss_v3
+
+        v4 = cvss_severities.get("cvssV4")
+        if v4:
+            vector = v4.get("vectorString")
+            if vector:
+                cvss_v4 = self._make_cvss_v4(vector, vulnerability_id)
+                if cvss_v4:
+                    result["cvss_v4"] = cvss_v4
+
+        return result
+
+    def _cvss_severities(self):
+        cvss_severities = self.data.get("cvssSeverities")
+
+        if cvss_severities:
+            self["cvss_severities"] = self._make_cvss_severities(cvss_severities, self.data.get("ghsaId"))
 
     def _fixedin(self):
         """
@@ -697,6 +766,9 @@ class NodeParser(dict):
 
     def _withdrawn(self):
         self["withdrawn"] = self.data.get("withdrawnAt")
+
+    def _references(self):
+        self["references"] = self.data.get("references", [])
 
     def _url(self):
         """

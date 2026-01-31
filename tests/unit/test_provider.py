@@ -979,7 +979,7 @@ def test_provider_versions(tmpdir):
         "echo": 1,
         "eol": 1,
         "epss": 1,
-        "github": 1,
+        "github": 2,
         "kev": 1,
         "mariner": 1,
         "minimos": 1,
