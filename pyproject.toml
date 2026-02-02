@@ -1,7 +1,7 @@
 [project]
 name = "vunnel"
 dynamic = ["version"]
-requires-python = "<3.14,>=3.13"
+requires-python = "<3.15,>=3.13"
 authors = [
     {name = "Alex Goodman", email = "alex.goodman@anchore.com"},
 ]
@@ -23,7 +23,7 @@ dependencies = [
     "orjson<4.0.0,>=3.8.6",
     "mergedeep<2.0.0,>=1.3.4",
     "importlib-metadata<9.0.0,>=7.0.1",
-    "xsdata[cli,lxml,soap]<23.0,>=22.12",
+    "xsdata[cli,lxml,soap]>=26.1,<28.0",
     "pytest-snapshot<1.0.0,>=0.9.0",
     "mashumaro<4.0,>=3.10",
     "iso8601<3.0.0,>=2.1.0",
