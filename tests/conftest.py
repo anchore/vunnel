@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import json
 import os
 import os.path
@@ -153,8 +154,7 @@ class WorkspaceHelper:
                 envelope = json.load(f)
                 schema_url = envelope["schema"]
 
-                schema_dict = load_json_schema(get_schema_repo_path(schema_url))
-                _validate_json_schema(instance=envelope["item"], schema=schema_dict)
+                _validate_json_schema(instance=envelope["item"], schema_url=schema_url)
                 entries_validated += 1
 
         if require_entries and entries_validated == 0:
@@ -167,8 +167,7 @@ class WorkspaceHelper:
             item = json.load(f)
             schema_url = item["schema"]["url"]
 
-            schema_dict = load_json_schema(get_schema_repo_path(schema_url))
-            _validate_json_schema(instance=item, schema=schema_dict)
+            _validate_json_schema(instance=item, schema_url=schema_url)
 
         return True
 
@@ -225,9 +224,7 @@ def validate_json_schema():
         if not schema_url:
             raise ValueError("No schema URL found in document")
 
-        schema_path = get_schema_repo_path(schema_url)
-        schema = load_json_schema(schema_path)
-        _validate_json_schema(instance=doc, schema=schema)
+        _validate_json_schema(instance=doc, schema_url=schema_url)
 
     return apply
 
@@ -336,12 +333,15 @@ def disable_get_requests(monkeypatch):
     return monkeypatch.setattr(utils.http_wrapper, "get", disabled)
 
 
-def _validate_json_schema(instance: dict, schema: dict):
-    _schema_validator(schema=schema).validate(instance=instance)
+def _validate_json_schema(instance: dict, schema_url: str):
+    _schema_validator(schema_url=schema_url).validate(instance=instance)
 
 
-def _schema_validator(schema: dict) -> jsonschema.Draft7Validator:
+@functools.lru_cache(maxsize=16)
+def _schema_validator(schema_url: str) -> jsonschema.Draft7Validator:
     from referencing import Registry, Resource
+
+    schema = load_json_schema(get_schema_repo_path(schema_url))
 
     # load up known schema references into a common registry to prevent network calls
     # see https://python-jsonschema.readthedocs.io/en/latest/referencing/ for more details
