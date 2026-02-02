@@ -648,10 +648,10 @@ class NodeParser(dict):
     def _make_cvss_v4(self, cvss_vector: str, vulnerability_id: str) -> dict | None:
         try:
             cvss_vector = cvss_vector.removesuffix("/")
-            _ = CVSS4(cvss_vector)
-
+            v4 = CVSS4(cvss_vector)
+            version = v4.clean_vector().split("/")[0].split(":")[1]
             cvss_object = {
-              "version": "4.0",
+              "version": version,
               "vector": cvss_vector,
             }
         except (CVSS4MalformedError, DecimalException, AttributeError):
@@ -664,8 +664,8 @@ class NodeParser(dict):
 
         return cvss_object
 
-    def _make_cvss_severities(self, cvss_severities: dict, vulnerability_id: str) -> dict[str, CVSS | None]:
-        result = {}
+    def _make_cvss_severities(self, cvss_severities: dict, vulnerability_id: str) -> list:
+        result: list = []
         v3 = cvss_severities.get("cvssV3")
         if v3:
             vector = v3.get("vectorString")
@@ -674,7 +674,7 @@ class NodeParser(dict):
                 self["CVSS"] = self._make_legacy_cvss(vector, vulnerability_id)
                 cvss_v3 = self._make_cvss_v3(vector, vulnerability_id)
                 if cvss_v3:
-                    result["cvss_v3"] = cvss_v3
+                    result.append(cvss_v3)
 
         v4 = cvss_severities.get("cvssV4")
         if v4:
@@ -682,7 +682,7 @@ class NodeParser(dict):
             if vector:
                 cvss_v4 = self._make_cvss_v4(vector, vulnerability_id)
                 if cvss_v4:
-                    result["cvss_v4"] = cvss_v4
+                    result.append(cvss_v4)
 
         return result
 

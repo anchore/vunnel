@@ -40,16 +40,16 @@
       },
       "Severity": "Critical",
       "Summary": "Critical severity vulnerability that affects flatmap-stream and event-stream",
-      "cvss_severities": {
-        "cvss_v3": {
+      "cvss_severities": [
+        {
           "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
           "version": "3.1"
         },
-        "cvss_v4": {
+        {
           "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
           "version": "4.0"
         }
-      },
+      ],
       "ghsaId": "GHSA-mh6f-8j2x-4483",
       "namespace": "github:npm",
       "published": "2018-11-26T23:58:21Z",
