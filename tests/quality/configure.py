@@ -667,7 +667,11 @@ def _install_from_clone(bin_dir: str, checkout: str, clone_dir: str, repo_url: s
     else:
         subprocess.run(["git", "fetch", "--all"], cwd=clone_dir, check=True)
 
-    subprocess.run(["git", "checkout", checkout], cwd=clone_dir, check=True)
+    # use origin/{checkout} to ensure we get the latest fetched ref, not a stale local branch
+    # fall back to {checkout} directly for tags or if origin/{checkout} doesn't exist
+    result = subprocess.run(["git", "-c", "advice.detachedHead=false", "checkout", f"origin/{checkout}"], cwd=clone_dir)
+    if result.returncode != 0:
+        subprocess.run(["git", "checkout", checkout], cwd=clone_dir, check=True)
 
     install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
 
