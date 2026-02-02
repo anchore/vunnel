@@ -93,7 +93,7 @@ class TestArchParser:
         """Test parsing valid Arch Linux security data."""
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=mock_raw_data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=mock_raw_data), patch.object(parser, "_prefetch_asa_dates"):
             records = list(parser.parse())
 
             assert len(records) == 3
@@ -123,7 +123,7 @@ class TestArchParser:
         """Test that metadata is properly populated."""
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=mock_raw_data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=mock_raw_data), patch.object(parser, "_prefetch_asa_dates"):
             records = list(parser.parse())
             group_id, payload = records[0]
 
@@ -202,7 +202,7 @@ class TestArchParser:
 
         parser = Parser(ws=mock_workspace, url="https://security.archlinux.org/all.json", timeout=30)
 
-        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data):
+        with patch.object(parser, "_download"), patch.object(parser, "_load", return_value=data), patch.object(parser, "_prefetch_asa_dates"):
             records = list(parser.parse())
             assert len(records) == 1
             group_id, payload = records[0]
