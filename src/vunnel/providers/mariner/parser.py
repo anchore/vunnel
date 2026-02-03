@@ -36,7 +36,7 @@ class MarinerXmlFile:
         )
         xml_parser = XmlParser(config=parser_config)
         # S320 disable explanation: the mariner linux vulnerability feed is not untrusted xml
-        root = etree.parse(oval_file_path)  # noqa: S320
+        root = etree.parse(oval_file_path)
         nsmap = etree.XPath("/*")(root)[0].nsmap
         default = nsmap[None]
         nsmap["default"] = default

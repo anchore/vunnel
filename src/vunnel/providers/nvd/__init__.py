@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
@@ -22,7 +22,7 @@ class Config:
     )
     request_timeout: int = 125
     request_retry_count: int = 10
-    api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
+    api_key: str | None = "env:NVD_API_KEY"
     overrides_url: str = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
     overrides_enabled: bool = False
 

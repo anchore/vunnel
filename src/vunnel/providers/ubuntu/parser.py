@@ -754,7 +754,7 @@ class Parser:
                     futures.append(future)
 
             # wait for all the futures to complete
-            done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
+            done, _not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
 
             if len(done) > 0 and len(done) != len(futures):
                 future = done.pop()

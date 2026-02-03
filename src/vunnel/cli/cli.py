@@ -22,7 +22,7 @@ from vunnel.cli import config
 @click.version_option(package_name=package_name, message="%(prog)s %(version)s")
 @click.pass_context
 def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
-    import logging.config
+    import logging.config  # noqa: PLC0415 - intentional: avoid polluting logging state when vunnel is used as a library
 
     # TODO: config parsing
     ctx.obj = config.load(path=config_path)

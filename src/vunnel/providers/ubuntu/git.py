@@ -61,7 +61,7 @@ class GitCatFileBatch:
 
             self.logger.debug(f"starting git cat-file --batch process in {self.cwd}")
             # S603, S607 disable explanation: running git commands by design, git expected on PATH
-            self.process = subprocess.Popen(  # noqa: S603
+            self.process = subprocess.Popen(
                 ["git", "cat-file", "--batch"],  # noqa: S607
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -103,7 +103,7 @@ class GitCatFileBatch:
                 # Handle "not found" or error cases
                 raise RuntimeError(f"git cat-file error: {header_line.strip()}")
 
-            obj_sha, obj_type, size_str = parts
+            _obj_sha, _obj_type, size_str = parts
             size = int(size_str)
 
             # Read exactly <size> bytes of content
