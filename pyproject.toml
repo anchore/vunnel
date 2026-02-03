@@ -217,4 +217,5 @@ dev = [
     "tox<5.0.0,>=4.11.3",
     "uv-dynamic-versioning>=0.6.0",
     "types-python-dateutil>=2.9.0.20250809",
+    "tox-uv>=1.29.0",
 ]
