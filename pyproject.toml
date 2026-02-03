@@ -54,7 +54,11 @@ style = "semver"
 trusted-publishing = "always"
 
 [tool.pytest.ini_options]
+addopts = "-vv --color=yes"
 cache_dir = ".cache/pytest"
+filterwarnings = [
+    "ignore:unclosed database:ResourceWarning",
+]
 
 [tool.mypy]
 cache_dir = ".cache/mypy"

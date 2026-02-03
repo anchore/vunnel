@@ -166,7 +166,13 @@ tasks:
     desc: Run unit tests
     deps: [tools, tmpdir]
     cmds:
-      - "uv run pytest --cov-report html --cov vunnel -v --durations=10 tests/unit/"
+      - "uv run pytest --cov vunnel -v --durations=10 tests/unit/"
+
+  unit-coverage:
+    desc: Run unit tests with HTML coverage report
+    deps: [tools, tmpdir]
+    cmds:
+      - "uv run pytest --cov vunnel --cov-report html -v --durations=10 tests/unit/"
 
   unit-matrix:
     desc: Run unit tests across multiple Python versions

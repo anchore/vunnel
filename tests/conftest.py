@@ -8,14 +8,41 @@ import os.path
 import shutil
 import subprocess
 import uuid
+from unittest import mock
 
 import jsonschema
 import orjson
 import pytest
+import sqlalchemy as db
+from sqlalchemy.pool import NullPool
 
 from vunnel.tool import fixdate
 from vunnel.tool.fixdate.finder import Finder, Result
 from vunnel.utils import http_wrapper
+
+# Store the original create_engine function
+_original_create_engine = db.create_engine
+
+
+def _create_engine_with_null_pool(*args, **kwargs):
+    """Wrapper that forces NullPool for all SQLite engines during tests."""
+    # Only force NullPool if not already specified and it's a sqlite connection
+    if "poolclass" not in kwargs:
+        url = args[0] if args else kwargs.get("url", "")
+        if "sqlite" in str(url).lower():
+            kwargs["poolclass"] = NullPool
+    return _original_create_engine(*args, **kwargs)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def use_null_pool_for_sqlite():
+    """Force NullPool for all SQLite connections during tests.
+
+    This ensures connections are closed immediately, making connection
+    leaks deterministic and visible during test runs.
+    """
+    with mock.patch.object(db, "create_engine", _create_engine_with_null_pool):
+        yield
 
 
 @pytest.fixture(autouse=True)
