@@ -233,6 +233,102 @@ class TestNodeParser:
         assert result["CVSS"] == expected
         assert result.CVSS == expected
 
+    def test_cvss_severities_contains_both_v3_and_v4(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
+
+        assert len(result["cvss_severities"]) == 2
+        assert result["cvss_severities"][0] == {
+            "version": "3.0",
+            "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        }
+        assert result["cvss_severities"][1] == {
+            "version": "4.0",
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+        }
+
+    @pytest.mark.parametrize(
+        ("cvss_input", "expected_count", "expected_version", "expect_legacy_cvss"),
+        [
+            pytest.param(
+                {"cvssV3": {"score": 9.8, "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}, "cvssV4": None},
+                1,
+                "3.1",
+                True,
+                id="v3_only",
+            ),
+            pytest.param(
+                {"cvssV3": None, "cvssV4": {"score": 7.1, "vectorString": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N"}},
+                1,
+                "4.0",
+                False,
+                id="v4_only",
+            ),
+        ],
+    )
+    def test_cvss_severities_partial_data(self, node, helpers, auto_fake_fixdate_finder, cvss_input, expected_count, expected_version, expect_legacy_cvss):
+        node["cvssSeverities"] = cvss_input
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
+
+        assert len(result["cvss_severities"]) == expected_count
+        assert result["cvss_severities"][0]["version"] == expected_version
+        assert ("CVSS" in result) == expect_legacy_cvss
+
+    @pytest.mark.parametrize(
+        ("vector", "expected_version", "expected_vector"),
+        [
+            pytest.param(
+                "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+                "4.0",
+                "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+                id="valid_v4",
+            ),
+            pytest.param(
+                "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/",
+                "4.0",
+                "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:P/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+                id="trailing_slash",
+            ),
+        ],
+    )
+    def test_make_cvss_v4_valid(self, node, helpers, auto_fake_fixdate_finder, vector, expected_version, expected_vector):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        node_parser = parser.NodeParser(node, fixdater=fixdate.default_finder(ws))
+
+        result = node_parser._make_cvss_v4(vector, "GHSA-test-1234")
+
+        assert result == {"version": expected_version, "vector": expected_vector}
+
+    @pytest.mark.parametrize(
+        "vector",
+        [
+            pytest.param("invalid-vector", id="malformed"),
+            pytest.param("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", id="wrong_version"),
+        ],
+    )
+    def test_make_cvss_v4_invalid(self, node, helpers, auto_fake_fixdate_finder, vector):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        node_parser = parser.NodeParser(node, fixdater=fixdate.default_finder(ws))
+
+        assert node_parser._make_cvss_v4(vector, "GHSA-test-1234") is None
+
+    def test_references_captured(self, node, helpers, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
+
+        assert result["references"] == [
+            {"url": "https://github.com/Pylons/waitress/security/advisories/GHSA-73m2-3pwg-5fgc"},
+            {"url": "https://nvd.nist.gov/vuln/detail/CVE-2020-5236"},
+        ]
+
+    def test_references_defaults_to_empty_list(self, node, helpers, auto_fake_fixdate_finder):
+        del node["references"]
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
+
+        assert result["references"] == []
+
     def test_gets_published(self, node, helpers, auto_fake_fixdate_finder):
         ws = helpers.provider_workspace_helper(name=Provider.name())
         result = parser.NodeParser(node, fixdater=fixdate.default_finder(ws)).parse()
