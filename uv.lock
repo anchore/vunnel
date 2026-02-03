@@ -830,14 +830,14 @@ wheels = [
 
 [[package]]
 name = "pytest-unordered"
-version = "0.6.1"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/8f/85275d036f702a5af3b24a5e6460df3a5d3ae8ffae3ed2625fb4cae97f84/pytest_unordered-0.6.1.tar.gz", hash = "sha256:061f7a538247f8adc97a4fcf7415d36e0db4b16548c42d5b49168e6ec2cd95b0", size = 7239, upload-time = "2024-07-05T16:18:01.413Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/3e/6ec9ec74551804c9e005d5b3cbe1fd663f03ed3bd4bdb1ce764c3d334d8e/pytest_unordered-0.7.0.tar.gz", hash = "sha256:0f953a438db00a9f6f99a0f4727f2d75e72dd93319b3d548a97ec9db4903a44f", size = 7930, upload-time = "2025-06-03T12:56:04.289Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/65/aae0ad8a7f4cc3e7117ac69ccd81cbd0bc90192485a2f60327c263c22344/pytest_unordered-0.6.1-py3-none-any.whl", hash = "sha256:baa809a0ff811d97cfd85f138dbca52e2d7831612b4e19225b3a65ebd9fce068", size = 5983, upload-time = "2024-07-05T16:17:59.889Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/95/ae2875e19472797e9672b65412858ab6639d8e55defd9859241e5ff80d02/pytest_unordered-0.7.0-py3-none-any.whl", hash = "sha256:486b26d24a2d3b879a275c3d16d14eda1bd9c32aafddbb17b98ac755daba7584", size = 6210, upload-time = "2025-06-03T12:36:06.66Z" },
 ]
 
 [[package]]
@@ -1308,7 +1308,7 @@ dev = [
     { name = "pytest-mock", specifier = ">=3.10.0,<4.0.0" },
     { name = "pytest-picked", specifier = ">=0.4.6,<0.6.0" },
     { name = "pytest-sugar", specifier = ">=0.9.6,<1.2.0" },
-    { name = "pytest-unordered", specifier = ">=0.5.2,<0.7.0" },
+    { name = "pytest-unordered", specifier = ">=0.5.2,<0.8.0" },
     { name = "pytest-xdist", specifier = ">=3.2.1,<4.0.0" },
     { name = "radon", specifier = ">=5.1,<7.0" },
     { name = "ruff", specifier = ">=0.9.2,<1.0.0" },
