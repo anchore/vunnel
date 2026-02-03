@@ -319,6 +319,21 @@ class Manager:
             # original record configurations. Can figure out more complicated scenarios
             # later if needed
             record["cve"]["configurations"] = override["cve"]["configurations"]
+
+            # For additional references, just merge into the existing references if the url doesn't already exist:
+            override_refs = override["cve"].get("references", [])
+            if override_refs:
+                if "references" not in record["cve"]:
+                    record["cve"]["references"] = []
+
+                existing_set: set[str] = set()
+                for r in record["cve"]["references"]:
+                    existing_set.add(r["url"])
+
+                for r in override_refs:
+                    if r["url"] not in existing_set:
+                        record["cve"]["references"].append(r)
+
             modified = True
 
         return modified, record
