@@ -157,7 +157,7 @@ class KspliceFilterer:
         :param version:
         :return:
         """
-        epoch, version, release = rpm.split_fullversion(version)
+        _epoch, version, release = rpm.split_fullversion(version)
         return cls.ksplice_regex.match(release) is not None
 
     def filter(self, vuln_dict: dict) -> dict:

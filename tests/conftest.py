@@ -1,20 +1,48 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import json
 import os
 import os.path
 import shutil
 import subprocess
 import uuid
+from unittest import mock
 
 import jsonschema
 import orjson
 import pytest
+import sqlalchemy as db
+from sqlalchemy.pool import NullPool
 
 from vunnel.tool import fixdate
 from vunnel.tool.fixdate.finder import Finder, Result
 from vunnel.utils import http_wrapper
+
+# Store the original create_engine function
+_original_create_engine = db.create_engine
+
+
+def _create_engine_with_null_pool(*args, **kwargs):
+    """Wrapper that forces NullPool for all SQLite engines during tests."""
+    # Only force NullPool if not already specified and it's a sqlite connection
+    if "poolclass" not in kwargs:
+        url = args[0] if args else kwargs.get("url", "")
+        if "sqlite" in str(url).lower():
+            kwargs["poolclass"] = NullPool
+    return _original_create_engine(*args, **kwargs)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def use_null_pool_for_sqlite():
+    """Force NullPool for all SQLite connections during tests.
+
+    This ensures connections are closed immediately, making connection
+    leaks deterministic and visible during test runs.
+    """
+    with mock.patch.object(db, "create_engine", _create_engine_with_null_pool):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -153,8 +181,7 @@ class WorkspaceHelper:
                 envelope = json.load(f)
                 schema_url = envelope["schema"]
 
-                schema_dict = load_json_schema(get_schema_repo_path(schema_url))
-                _validate_json_schema(instance=envelope["item"], schema=schema_dict)
+                _validate_json_schema(instance=envelope["item"], schema_url=schema_url)
                 entries_validated += 1
 
         if require_entries and entries_validated == 0:
@@ -167,8 +194,7 @@ class WorkspaceHelper:
             item = json.load(f)
             schema_url = item["schema"]["url"]
 
-            schema_dict = load_json_schema(get_schema_repo_path(schema_url))
-            _validate_json_schema(instance=item, schema=schema_dict)
+            _validate_json_schema(instance=item, schema_url=schema_url)
 
         return True
 
@@ -225,9 +251,7 @@ def validate_json_schema():
         if not schema_url:
             raise ValueError("No schema URL found in document")
 
-        schema_path = get_schema_repo_path(schema_url)
-        schema = load_json_schema(schema_path)
-        _validate_json_schema(instance=doc, schema=schema)
+        _validate_json_schema(instance=doc, schema_url=schema_url)
 
     return apply
 
@@ -336,12 +360,15 @@ def disable_get_requests(monkeypatch):
     return monkeypatch.setattr(utils.http_wrapper, "get", disabled)
 
 
-def _validate_json_schema(instance: dict, schema: dict):
-    _schema_validator(schema=schema).validate(instance=instance)
+def _validate_json_schema(instance: dict, schema_url: str):
+    _schema_validator(schema_url=schema_url).validate(instance=instance)
 
 
-def _schema_validator(schema: dict) -> jsonschema.Draft7Validator:
+@functools.lru_cache(maxsize=16)
+def _schema_validator(schema_url: str) -> jsonschema.Draft7Validator:
     from referencing import Registry, Resource
+
+    schema = load_json_schema(get_schema_repo_path(schema_url))
 
     # load up known schema references into a common registry to prevent network calls
     # see https://python-jsonschema.readthedocs.io/en/latest/referencing/ for more details

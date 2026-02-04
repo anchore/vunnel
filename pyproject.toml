@@ -1,7 +1,7 @@
 [project]
 name = "vunnel"
 dynamic = ["version"]
-requires-python = "<3.14,>=3.13"
+requires-python = "<3.15,>=3.13"
 authors = [
     {name = "Alex Goodman", email = "alex.goodman@anchore.com"},
 ]
@@ -23,7 +23,7 @@ dependencies = [
     "orjson<4.0.0,>=3.8.6",
     "mergedeep<2.0.0,>=1.3.4",
     "importlib-metadata<9.0.0,>=7.0.1",
-    "xsdata[cli,lxml,soap]<23.0,>=22.12",
+    "xsdata[cli,lxml,soap]>=26.1,<28.0",
     "pytest-snapshot<1.0.0,>=0.9.0",
     "mashumaro<4.0,>=3.10",
     "iso8601<3.0.0,>=2.1.0",
@@ -54,7 +54,11 @@ style = "semver"
 trusted-publishing = "always"
 
 [tool.pytest.ini_options]
+addopts = "-vv --color=yes"
 cache_dir = ".cache/pytest"
+filterwarnings = [
+    "ignore:unclosed database:ResourceWarning",
+]
 
 [tool.mypy]
 cache_dir = ".cache/mypy"
@@ -142,7 +146,6 @@ ignore = [
   "PGH004", # no blanked "noqa" usage, can be improved over time, but not now
   "PLR2004", # a little too agressive, not allowing any magic numbers
   "PLW2901", # "Outer for loop variable X overwritten by inner assignment target", not useful in most cases
-  "UP038", # Use `X | Y` in `isinstance` call instead of `(X, Y)` -- not compatible with python 3.9 (even with __future__ import)
 ]
 
 select = [
@@ -214,4 +217,5 @@ dev = [
     "tox<5.0.0,>=4.11.3",
     "uv-dynamic-versioning>=0.6.0",
     "types-python-dateutil>=2.9.0.20250809",
+    "tox-uv>=1.29.0",
 ]

@@ -5,6 +5,7 @@ import gzip
 import hashlib
 import logging
 import os
+from functools import cmp_to_key
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -231,8 +232,6 @@ class Parser:
         """
         Sort secfixes versions from smallest to largest, excluding special versions like "0".
         """
-        from functools import cmp_to_key
-
         versions = [v for v in secfixes if v not in ("0", "None", None, "")]
         return sorted(versions, key=cmp_to_key(self._compare_apk_versions))
 

@@ -36,17 +36,33 @@ jobs:
         run: |
           cd tests/quality && make validate-test-tool-versions
 
+  Discover-Test-Envs:
+    runs-on: runs-on=${{ github.run_id }}/runner=small
+    outputs:
+      envs: ${{ steps.get-envs.outputs.envs }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Get tox environments
+        id: get-envs
+        run: |
+          envs=$(uv run tox -l | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "envs=$envs" >> $GITHUB_OUTPUT
+
   Test:
+    needs: Discover-Test-Envs
     runs-on: runs-on=${{ github.run_id }}-test-${{ strategy.job-index }}/runner=small
     permissions:
       contents: read
     strategy:
+      fail-fast: false
       matrix:
-        # note: this is not a single source of truth (this is also in the tox.ini)
-        python:
-          - version: '3.13'
-            toxEnv: py313
-
+        toxenv: ${{ fromJson(needs.Discover-Test-Envs.outputs.envs) }}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
@@ -56,11 +72,11 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
-        with:
-          python-version: ${{ matrix.python.version }}
 
       - name: Run unit tests
-        run: uv run tox -e ${{ matrix.python.toxEnv }}
+        env:
+          TOXENV: ${{ matrix.toxenv }}
+        run: uv run tox -e "$TOXENV"
 
       - name: Build assets
         run: make build

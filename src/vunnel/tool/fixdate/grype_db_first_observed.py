@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import oras.client
+import oras.defaults
+import oras.utils
 import sqlalchemy as db
 import zstandard
 from sqlalchemy import event
@@ -29,9 +31,6 @@ class _ProgressLoggingOrasClient(oras.client.OrasClient):
 
     def download_blob(self, container: "container_type", digest: str, outfile: str) -> str:
         """Override download_blob to add progress logging."""
-        import oras.defaults
-        import oras.utils
-
         try:
             # Ensure output directory exists first
             outdir = os.path.dirname(outfile)
@@ -117,8 +116,6 @@ class Store(Strategy):
         Returns:
             Digest string (e.g., "sha256:abc123...") or None if failed
         """
-        import oras.defaults
-
         try:
             client = oras.client.OrasClient()
 

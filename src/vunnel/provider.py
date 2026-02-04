@@ -8,7 +8,7 @@ import os
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 from vunnel.utils import archive, hasher
@@ -76,10 +76,10 @@ class RuntimeConfig:
     # skip downloading any data; useful for working on a provider with a slow download step
     skip_download: bool = False
 
-    import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
-    import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
-    import_results_enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
-    user_agent: Optional[str] = None  # noqa: UP007 - breaks mashumaro
+    import_results_host: str | None = None
+    import_results_path: str | None = None
+    import_results_enabled: bool | None = None
+    user_agent: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.existing_input, InputStatePolicy):
