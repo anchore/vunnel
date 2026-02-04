@@ -512,7 +512,7 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
 
 
 @pytest.mark.parametrize(
-    ("overrides_enabled", "override_data", "expected_configurations"),
+    ("overrides_enabled", "override_data", "expected_configurations", "expected_references"),
     [
         pytest.param(
             False,
@@ -538,6 +538,11 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
                             ],
                         }
                     ]
+                }
+            ],
+            [
+                {
+                    "url": "https://vuln.id/CVE-2024-1234"
                 }
             ],
             id="overrides-disabled-no-changes",
@@ -568,6 +573,11 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
                     ]
                 }
             ],
+            [
+                {
+                    "url": "https://vuln.id/CVE-2024-1234"
+                }
+            ],
             id="overrides-enabled-no-override-data",
         ),
         pytest.param(
@@ -589,7 +599,18 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
                                 }
                             ]
                         }
-                    ]
+                    ],
+                    "references": [
+                        {
+                            "url": "https://armadillo.com/1234567"
+                        },
+                        {
+                            "url": "https://vuln.id/CVE-2024-1234"
+                        },
+                        {
+                            "url": "https://fix.me/abc/123"
+                        },
+                    ],
                 }
             },
             # override configurations applied with fix dates
@@ -613,6 +634,17 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
                         }
                     ]
                 }
+            ],
+            [
+                {
+                    "url": "https://vuln.id/CVE-2024-1234"
+                },
+                {
+                    "url": "https://armadillo.com/1234567"
+                },
+                {
+                    "url": "https://fix.me/abc/123"
+                },
             ],
             id="overrides-enabled-with-valid-override-data",
         ),
@@ -642,12 +674,17 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
                     ]
                 }
             ],
+            [
+                {
+                    "url": "https://vuln.id/CVE-2024-1234"
+                }
+            ],
             id="overrides-enabled-empty-override-configurations",
         ),
     ],
 )
 def test_get_main_nvd_download_path_applies_overrides(
-    tmpdir, mocker, fake_fixdate_finder, overrides_enabled, override_data, expected_configurations
+    tmpdir, mocker, fake_fixdate_finder, overrides_enabled, override_data, expected_configurations, expected_references,
 ):
     """test that overrides are applied in the main NVD download path (_unwrap_records) and fix dates are always applied."""
 
@@ -680,6 +717,11 @@ def test_get_main_nvd_download_path_applies_overrides(
                             ]
                         }
                     ],
+                    "references": [
+                        {
+                            "url": "https://vuln.id/CVE-2024-1234"
+                        }
+                    ]
                 }
             }
         ]
@@ -717,6 +759,7 @@ def test_get_main_nvd_download_path_applies_overrides(
     record_id, record = results[0]
     assert record_id == "2024/cve-2024-1234"
     assert record["cve"]["configurations"] == expected_configurations
+    assert record["cve"]["references"] == expected_references
 
     # verify fix dates were applied regardless of override settings
     final_cpe_match = record["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]
