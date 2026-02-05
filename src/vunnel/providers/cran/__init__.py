@@ -4,17 +4,16 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
 if TYPE_CHECKING:
     import datetime
 
-# NOTE, CHANGE ME!: a unique and semantically useful name for this provider
-PROVIDER_NAME = "my-awesome-provider"
+PROVIDER_NAME = "cran"
 
-# NOTE, CHANGE ME!: the data shape that all entries produced by this provider conform to
-SCHEMA = schema.OSSchema()
+SCHEMA = schema.OSVSchema(version="1.7.5")
 
 
 @dataclass
@@ -27,26 +26,11 @@ class Config:
     )
     request_timeout: int = 125
 
-    # NOTE, CHANGE ME!: Example for fetching secrets from the environment and sanitizing output.
-    # It is important to sanitize the __str__ method so that these secrets are not accidentally
-    # written to log output.
-    #
-    # token: str = "env:VUNNEL_AWESOME_TOKEN"
-    #
-    # def __post_init__(self) -> None:
-    #     if self.token.startswith("env:"):
-    #         self.token = os.environ.get(self.token[4:], "")
-    #
-    # def __str__(self) -> str:
-    #     # sanitize secrets from any output
-    #     tok_value = self.token
-    #     str_value = super().__str__()
-    #     if not tok_value:
-    #         return str_value
-    #     return str_value.replace(tok_value, "********")
-
 
 class Provider(provider.Provider):
+    __schema__ = SCHEMA
+    __distribution_version__ = int(__schema__.major_version)
+
     def __init__(self, root: str, config: Config | None = None):
         if not config:
             config = Config()
@@ -59,8 +43,6 @@ class Provider(provider.Provider):
             ws=self.workspace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
-            # NOTE, CHANGE ME!: example of passing a config secret to the parser to download the vulnerability data
-            # token=self.config.token
         )
 
         # this provider requires the previous state from former runs
@@ -70,22 +52,34 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return PROVIDER_NAME
 
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "language"]
+
+    @classmethod
+    def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
+        candidate = schema.OSVSchema(schema_version)
+        if candidate.major_version == cls.__schema__.major_version:
+            return candidate
+        return None
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            # TODO: use of last_updated as NVD provider does to avoid downloading all
+            # vulnerability data from the source and make incremental updates instead
+            with self.results_writer() as writer:
+                for vuln_id, vuln_schema_version, record in self.parser.get():
+                    vuln_schema = self.compatible_schema(vuln_schema_version)
+                    if not vuln_schema:
+                        self.logger.warning(
+                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
+                            f"as is incompatible with provider schema version {self.__schema__.version}",
+                        )
+                        continue
+                    writer.write(
+                        identifier=vuln_id.lower(),
+                        schema=vuln_schema,
+                        payload=record,
+                    )
 
-        # NOTE: CHANGE ME! Why is last_updated passed in here? This allows you to be able to make decisions about
-        # incremental updates of the existing vulnerability data state instead of needing to download all
-        # vulnerability data from the source. For an example of this see the NVD provider implementation at
-        # https://github.com/anchore/vunnel/blob/main/src/vunnel/providers/nvd/manager.py
-
-        with self.results_writer() as writer:
-
-            for vuln_id, record in self.parser.get():
-                vuln_id = vuln_id.lower()
-
-                writer.write(
-                    identifier=vuln_id,
-                    schema=SCHEMA,
-                    payload=record,
-                )
-
-        return self.parser.urls, len(writer)
+            return self.parser.urls, len(writer)

@@ -2,73 +2,95 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import TYPE_CHECKING, Any
 
 import orjson
-import requests
 
-from vunnel import utils, workspace
+from vunnel.tool import fixdate
+from vunnel.utils import osv
 
-# NOTE, CHANGE ME!: this namespace should be unique to your provider and match expectations from
-# grype to know what to search for in the DB.
-NAMESPACE = "GRYPEOSNAMESPACETHATYOUCHOOSE"
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from types import TracebackType
+
+    from vunnel.workspace import Workspace
+
+from .git import GitWrapper
+
+NAMESPACE = "cran"
 
 
 class Parser:
-    # NOTE, CHANGE ME!: remove / add / change these attributes as needed to download and parse your provider
-    _json_url_ = "https://services.nvd.nist.gov/made-up-location"
-    _json_file_ = "vulnerability_data.json"
+    _git_src_url_ = "https://github.com/RConsortium/r-advisory-database.git"
+    _git_src_branch_ = "main"
 
-    def __init__(self, ws: workspace.Workspace, download_timeout: int = 125, logger: logging.Logger | None = None):
+    def __init__(
+        self,
+        ws: Workspace,
+        download_timeout: int = 125,
+        fixdater: fixdate.Finder | None = None,
+        logger: logging.Logger | None = None,
+    ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
+        self.fixdater = fixdater
         self.workspace = ws
         self.download_timeout = download_timeout
-        self.json_file_path = os.path.join(ws.input_path, self._json_file_)
-
-        # NOTE, CHANGE ME!: you should always record any URLs accessed in this list, either
-        # statically or dynamically within _download()
-        self.urls = [self._json_url_]
+        self.git_url = self._git_src_url_
+        self.git_branch = self._git_src_branch_
+        self.urls = [self._git_src_url_]
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def get(self):
-        self._download()
-        yield from self._normalize()
+        _checkout_dst_ = os.path.join(self.workspace.input_path, "vulndb")
+        self.git_wrapper = GitWrapper(
+            source=self.git_url,
+            branch=self.git_branch,
+            checkout_dest=_checkout_dst_,
+            logger=self.logger,
+        )
 
-    @utils.retry_with_backoff()
-    def _download(self):
-        self.logger.info(f"downloading vulnerability data from {self._json_url_}")
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
 
-        r = requests.get(self._json_url_, timeout=self.download_timeout)
-        r.raise_for_status()
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-        with open(self.json_file_path, "w", encoding="utf-8") as f:
-            f.write(r.text)
+    def _load(self) -> Generator[dict[str, Any]]:
+        self.logger.info("loading data from git repository {self.git_url}")
 
-    def _normalize(self):
+        vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "data")
+        for root, dirs, files in os.walk(vuln_data_dir):
+            dirs.sort()
+            for file in sorted(files):
+                full_path = os.path.join(root, file)
+                with open(full_path, encoding="utf-8") as f:
+                    yield orjson.loads(f.read())
 
-        with open(self.json_file_path, encoding="utf-8") as f:
+    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+        self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
 
-            for input_record in orjson.loads(f.read()):
+        # We want to return the OSV record as it is (using OSV schema)
+        # We'll transform it into the Grype-specific vulnerability schema
+        # on grype-db
+        vuln_id = vuln_entry["id"]
+        vuln_schema = vuln_entry["schema_version"]
+        return vuln_id, vuln_schema, vuln_entry
 
-                vuln_id = input_record["name"]
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
+        # Initialize the git repository
+        self.git_wrapper.delete_repo()
+        self.git_wrapper.clone_repo()
 
-                # NOTE: this is in the data shape described by the OS vulnerability schema
-                yield vuln_id, {
-                    "Vulnerability": {
-                        "Name": vuln_id,
-                        "NamespaceName": NAMESPACE,
-                        "Link": f"https://someplace.com/{vuln_id}",
-                        "Severity": input_record["severity"],
-                        "Description": input_record["description"],
-                        "FixedIn": [
-                            {
-                                "Name": p,
-                                "VersionFormat": "apk",
-                                "NamespaceName": NAMESPACE,
-                                "Version": input_record["fixed"] or "None",
-                            }
-                            for p in input_record["packages"]
-                        ],
-                    },
-                }
+        self.fixdater.download()
+
+        # Load the data from the git repository
+        for vuln_entry in self._load():
+            # Normalize the loaded data
+            osv.patch_fix_date(vuln_entry, self.fixdater)
+            yield self._normalize(vuln_entry)
+
+
