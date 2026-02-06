@@ -93,5 +93,3 @@ class Parser:
             # Normalize the loaded data
             osv.patch_fix_date(vuln_entry, self.fixdater)
             yield self._normalize(vuln_entry)
-
-
