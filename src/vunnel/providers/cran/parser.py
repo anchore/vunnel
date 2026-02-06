@@ -72,7 +72,7 @@ class Parser:
                 with open(full_path, encoding="utf-8") as f:
                     yield yaml.safe_load(f)
 
-    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
+    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
 
         # We want to return the OSV record as it is (using OSV schema)
@@ -81,7 +81,7 @@ class Parser:
         vuln_id = vuln_entry["id"]
         return vuln_id, vuln_entry
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
+    def get(self) -> Generator[tuple[str, dict[str, Any]]]:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
