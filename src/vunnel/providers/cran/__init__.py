@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 PROVIDER_NAME = "cran"
 
-SCHEMA = schema.OSVSchema(version="1.7.5")
+SCHEMA = schema.OSVSchema()
 
 
 @dataclass
@@ -56,29 +56,15 @@ class Provider(provider.Provider):
     def tags(cls) -> list[str]:
         return ["vulnerability", "language"]
 
-    @classmethod
-    def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
-        candidate = schema.OSVSchema(schema_version)
-        if candidate.major_version == cls.__schema__.major_version:
-            return candidate
-        return None
-
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
             # TODO: use of last_updated as NVD provider does to avoid downloading all
             # vulnerability data from the source and make incremental updates instead
             with self.results_writer() as writer:
-                for vuln_id, vuln_schema_version, record in self.parser.get():
-                    vuln_schema = self.compatible_schema(vuln_schema_version)
-                    if not vuln_schema:
-                        self.logger.warning(
-                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
-                            f"as is incompatible with provider schema version {self.__schema__.version}",
-                        )
-                        continue
+                for vuln_id, record in self.parser.get():
                     writer.write(
                         identifier=vuln_id.lower(),
-                        schema=vuln_schema,
+                        schema=self.__schema__,
                         payload=record,
                     )
 

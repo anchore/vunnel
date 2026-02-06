@@ -4,7 +4,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-import orjson
+import yaml
 
 from vunnel.tool import fixdate
 from vunnel.utils import osv
@@ -60,15 +60,17 @@ class Parser:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _load(self) -> Generator[dict[str, Any]]:
-        self.logger.info("loading data from git repository {self.git_url}")
+        self.logger.info(f"loading data from git repository {self.git_url}")
 
-        vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "data")
+        vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "vulns")
         for root, dirs, files in os.walk(vuln_data_dir):
             dirs.sort()
             for file in sorted(files):
                 full_path = os.path.join(root, file)
+                if not full_path.endswith(".yaml"):
+                    continue
                 with open(full_path, encoding="utf-8") as f:
-                    yield orjson.loads(f.read())
+                    yield yaml.safe_load(f)
 
     def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
@@ -77,8 +79,7 @@ class Parser:
         # We'll transform it into the Grype-specific vulnerability schema
         # on grype-db
         vuln_id = vuln_entry["id"]
-        vuln_schema = vuln_entry["schema_version"]
-        return vuln_id, vuln_schema, vuln_entry
+        return vuln_id, vuln_entry
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         # Initialize the git repository
