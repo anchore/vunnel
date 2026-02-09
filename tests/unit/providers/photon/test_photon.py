@@ -7,7 +7,6 @@ from vunnel import result, workspace
 from vunnel.providers.photon import Config, Provider
 from vunnel.providers.photon.parser import (
     Parser,
-    build_vulnerable_range,
     cvss_to_severity,
     parse_fixed_version,
 )
@@ -46,20 +45,6 @@ class TestParseFixedVersion:
 
     def test_valid_version(self):
         assert parse_fixed_version("7.88.1-4.ph4") == "7.88.1-4.ph4"
-
-
-class TestBuildVulnerableRange:
-    def test_na_aff_ver(self):
-        assert build_vulnerable_range("NA", "7.88.1-4.ph4") is None
-
-    def test_empty_aff_ver(self):
-        assert build_vulnerable_range("", "7.88.1-4.ph4") is None
-
-    def test_na_res_ver(self):
-        assert build_vulnerable_range("all versions before X", "NA") is None
-
-    def test_valid(self):
-        assert build_vulnerable_range("all versions before 7.88.1-4.ph4 are vulnerable", "7.88.1-4.ph4") == "< 7.88.1-4.ph4"
 
 
 class TestParser:

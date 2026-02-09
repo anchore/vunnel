@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json
 import os
 import re
 from typing import TYPE_CHECKING, Any
+
+import orjson
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
@@ -41,20 +42,6 @@ def parse_fixed_version(res_ver: str) -> str:
     if res_ver == "NA" or not res_ver:
         return "None"
     return res_ver
-
-
-def build_vulnerable_range(aff_ver: str, res_ver: str) -> str | None:
-    """Build a vulnerable range constraint from the affected version description."""
-    if aff_ver == "NA" or not aff_ver:
-        return None
-
-    fixed_version = parse_fixed_version(res_ver)
-    if fixed_version == "None":
-        return None
-
-    # The format is typically: "all versions before X.Y.Z-R.phN are vulnerable"
-    # We convert this to a constraint like "< X.Y.Z-R.phN"
-    return f"< {fixed_version}"
 
 
 class Parser:
@@ -114,6 +101,24 @@ class Parser:
             return match.group(1)
         return ""
 
+    def _build_fixed_in(self, entry: dict[str, Any], namespace: str) -> FixedIn | None:
+        """Build a FixedIn entry from a single CVE entry, or None if not affected."""
+        if entry.get("status") == "Not Affected":
+            return None
+
+        pkg = entry.get("pkg")
+        if not pkg:
+            return None
+
+        return FixedIn(
+            Name=pkg,
+            NamespaceName=namespace,
+            VersionFormat="rpm",
+            Version=parse_fixed_version(entry.get("res_ver", "")),
+            Module=None,
+            VendorAdvisory=None,
+        )
+
     def _parse_file(self, filepath: str) -> Generator[tuple[str, str, dict[str, Any]]]:
         """Parse a Photon CVE JSON file and yield vulnerabilities."""
         photon_version = self._extract_version_from_filename(filepath)
@@ -121,8 +126,8 @@ class Parser:
             self.logger.warning(f"Could not extract version from {filepath}")
             return
 
-        with open(filepath) as f:
-            cve_data = json.load(f)
+        with open(filepath, "rb") as f:
+            cve_data = orjson.loads(f.read())
 
         # Group CVEs by ID since multiple packages can be affected by the same CVE
         cve_map: dict[str, list[dict[str, Any]]] = {}
@@ -130,60 +135,30 @@ class Parser:
             cve_id = entry.get("cve_id")
             if not cve_id:
                 continue
-            if cve_id not in cve_map:
-                cve_map[cve_id] = []
-            cve_map[cve_id].append(entry)
+            cve_map.setdefault(cve_id, []).append(entry)
 
         namespace = f"photon:{photon_version}"
 
         for cve_id, entries in cve_map.items():
-            # Build FixedIn list from all affected packages for this CVE
-            fixed_in_list = []
-            severity = "Unknown"
-            reference_links = build_reference_links(cve_id)
-            link = reference_links[0] if reference_links else ""
-
-            for entry in entries:
-                status = entry.get("status")
-                if status == "Not Affected":
-                    continue
-
-                pkg = entry.get("pkg")
-                if not pkg:
-                    continue
-
-                cve_score = entry.get("cve_score")
-                aff_ver = entry.get("aff_ver", "")
-                res_ver = entry.get("res_ver", "")
-
-                # Update severity from first valid score
-                if severity == "Unknown":
-                    severity = cvss_to_severity(cve_score)
-
-                fixed_version = parse_fixed_version(res_ver)
-                vulnerable_range = build_vulnerable_range(aff_ver, res_ver)
-
-                fixed_in = FixedIn(
-                    Name=pkg,
-                    NamespaceName=namespace,
-                    VersionFormat="rpm",
-                    Version=fixed_version,
-                    VulnerableRange=vulnerable_range,
-                    Module=None,
-                    VendorAdvisory=None,
-                )
-                fixed_in_list.append(fixed_in)
-
-            # Skip CVEs with no affected packages
+            fixed_in_list = [fi for e in entries if (fi := self._build_fixed_in(e, namespace))]
             if not fixed_in_list:
                 continue
+
+            # Derive severity from the first entry with a score
+            severity = "Unknown"
+            for entry in entries:
+                severity = cvss_to_severity(entry.get("cve_score"))
+                if severity != "Unknown":
+                    break
+
+            reference_links = build_reference_links(cve_id)
 
             vuln = Vulnerability(
                 Name=cve_id,
                 NamespaceName=namespace,
                 Description="",
                 Severity=severity,
-                Link=link,
+                Link=reference_links[0] if reference_links else "",
                 CVSS=[],
                 FixedIn=fixed_in_list,
                 Metadata={},
@@ -199,7 +174,7 @@ class Parser:
 
         fixed_in_list = vuln_record.get("Vulnerability", {}).get("FixedIn", [])
         for fixedin in fixed_in_list:
-            if "Available" in fixedin and fixedin["Available"] is not None:
+            if fixedin.get("Available") and "Date" in fixedin["Available"]:
                 continue
             if "Version" not in fixedin or fixedin["Version"] in ("None", "0"):
                 continue

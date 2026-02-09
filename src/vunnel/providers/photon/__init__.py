@@ -5,8 +5,9 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from .parser import Parser
 from vunnel.utils import timer
+
+from .parser import Parser
 
 if TYPE_CHECKING:
     import datetime
