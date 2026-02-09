@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils.vulnerability import FixedIn, Vulnerability
+from vunnel.utils.vulnerability import FixedIn, Vulnerability, build_reference_links
 
 if TYPE_CHECKING:
     import logging
@@ -140,7 +140,8 @@ class Parser:
             # Build FixedIn list from all affected packages for this CVE
             fixed_in_list = []
             severity = "Unknown"
-            link = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
+            reference_links = build_reference_links(cve_id)
+            link = reference_links[0] if reference_links else ""
 
             for entry in entries:
                 status = entry.get("status")
