@@ -384,6 +384,17 @@ tests:
         max_year: 2022
         candidate_tool_label: custom-db
 
+  - provider: photon
+    images:
+      - docker.io/anchore/test_images:photon4-bcdb8f0@sha256:1fcd94525a47fa3fb959e6c82fec473df477d256fbb520ab4d06b69769e52470
+    expected_namespaces:
+      - photon:distro:photon:3.0
+      - photon:distro:photon:4.0
+      - photon:distro:photon:5.0
+    validations:
+      - <<: *default-validations
+        max_year: 2024
+
   - provider: secureos
     additional_providers:
       - name: nvd
