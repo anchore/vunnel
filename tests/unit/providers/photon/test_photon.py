@@ -172,7 +172,7 @@ class TestParser:
         assert results["CVE-2023-50447"]["Vulnerability"]["Severity"] == "Unknown"
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder, monkeypatch):
     ws = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",
@@ -195,7 +195,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert ws.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, auto_fake_fixdate_finder, monkeypatch):
     ws = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",

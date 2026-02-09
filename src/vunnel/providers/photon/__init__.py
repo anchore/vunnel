@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.providers.photon.parser import Parser
+from .parser import Parser
 from vunnel.utils import timer
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
-            with self.results_writer() as writer:
+            with self.results_writer() as writer, self.parser:
                 for namespace, vuln_id, record in self.parser.get():
                     writer.write(
                         identifier=os.path.join(namespace, vuln_id),

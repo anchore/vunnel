@@ -5,17 +5,19 @@ import os
 import re
 from typing import TYPE_CHECKING, Any
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import FixedIn, Vulnerability
 
 if TYPE_CHECKING:
     import logging
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
 
-PHOTON_CVE_URL_BASE = "https://packages.vmware.com/photon/photon_cve_metadata/"
+PHOTON_CVE_URL_BASE = "https://packages.broadcom.com/photon/photon_cve_metadata/"
 PHOTON_CVE_FILENAME = "cve_data_photon{version}.json"
 
 
@@ -62,15 +64,27 @@ class Parser:
         download_timeout: int,
         allow_versions: list[str],
         logger: logging.Logger,
+        fixdater: fixdate.Finder | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.workspace = workspace
         self.download_timeout = download_timeout
         self.allow_versions = allow_versions
         self._urls: set[str] = set()
         self.logger = logger
 
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
     def _download(self) -> list[str]:
         """Download CVE JSON files for all allowed Photon versions."""
+        self.fixdater.download()
         return [self._download_version(v) for v in self.allow_versions]
 
     def _download_version(self, version: str) -> str:
@@ -176,7 +190,34 @@ class Parser:
 
             yield namespace, cve_id, vuln.to_payload()
 
+    def _patch_fix_date(self, vuln_record: dict[str, Any]) -> dict[str, Any]:
+        """Annotate FixedIn entries with fix-availability dates from the fixdater."""
+        vid = vuln_record.get("Vulnerability", {}).get("Name", "")
+        if not vid:
+            return vuln_record
+
+        fixed_in_list = vuln_record.get("Vulnerability", {}).get("FixedIn", [])
+        for fixedin in fixed_in_list:
+            if "Available" in fixedin and fixedin["Available"] is not None:
+                continue
+            if "Version" not in fixedin or fixedin["Version"] in ("None", "0"):
+                continue
+
+            result = self.fixdater.best(
+                vuln_id=vid,
+                cpe_or_package=fixedin.get("Name", ""),
+                fix_version=fixedin["Version"],
+                ecosystem=fixedin.get("NamespaceName", "").lower(),
+            )
+            if result:
+                fixedin["Available"] = {
+                    "Date": result.date.isoformat(),
+                    "Kind": result.kind,
+                }
+        return vuln_record
+
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         """Download and parse all Photon CVE data files."""
         for filepath in self._download():
-            yield from self._parse_file(filepath)
+            for namespace, vuln_id, record in self._parse_file(filepath):
+                yield namespace, vuln_id, self._patch_fix_date(record)
