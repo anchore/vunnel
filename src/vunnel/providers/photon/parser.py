@@ -185,7 +185,7 @@ class Parser:
                 fix_version=fixedin["Version"],
                 ecosystem=fixedin.get("NamespaceName", "").lower(),
             )
-            if result:
+            if result and result.date:
                 fixedin["Available"] = {
                     "Date": result.date.isoformat(),
                     "Kind": result.kind,
