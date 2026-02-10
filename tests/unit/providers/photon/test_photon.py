@@ -61,6 +61,17 @@ class TestParseAdvisoryFile:
         assert version == "4.0"
         assert cve_ids == {"CVE-2023-38545", "CVE-2023-38546"}
 
+    def test_parse_short_format_advisory_id(self, helpers):
+        """Photon 1.0/2.0 advisories use short IDs like PHSA-2017-0010 (no version component)."""
+        fixture_path = helpers.local_dir("test-fixtures/input/photon.wiki/Security-Update-1.0-10.md")
+        result = _parse_advisory_file(fixture_path)
+        assert result is not None
+        advisory_id, date, version, cve_ids = result
+        assert advisory_id == "PHSA-2017-0010"
+        assert date == "2017-02-02"
+        assert version == "1.0"
+        assert cve_ids == {"CVE-2016-1238", "CVE-2016-9178"}
+
     def test_parse_non_advisory_file(self, tmp_path):
         f = tmp_path / "Home.md"
         f.write_text("# Home\nSome content\n")
@@ -105,6 +116,16 @@ class TestParseAdvisories:
 
         # CVE-2023-50447 should NOT be in the map (no advisory for it)
         assert ("4.0", "CVE-2023-50447") not in advisory_map
+
+        # Photon 1.0 short-format advisory IDs should also be parsed
+        assert ("1.0", "CVE-2016-1238") in advisory_map
+        info = advisory_map[("1.0", "CVE-2016-1238")]
+        assert info.advisory_id == "PHSA-2017-0010"
+        assert info.date == "2017-02-02"
+        assert info.url == "https://github.com/vmware/photon/wiki/Security-Update-1.0-10"
+
+        assert ("1.0", "CVE-2016-9178") in advisory_map
+        assert advisory_map[("1.0", "CVE-2016-9178")].advisory_id == "PHSA-2017-0010"
 
     def test_parse_advisories_nonexistent_dir(self):
         assert parse_advisories("/nonexistent/path") == {}
@@ -305,7 +326,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
     )
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
-    c.allow_versions = ["4.0"]
+    c.allow_versions = ["1.0", "4.0"]
     p = Provider(root=ws.root, config=c)
 
     # Monkeypatch _download to return paths to already-copied fixture files
@@ -313,13 +334,16 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
         # Parse advisories from the fixture wiki directory
         wiki_path = os.path.join(p.workspace.input_path, "photon.wiki")
         self_inner._advisory_map = parse_advisories(wiki_path)
-        return [os.path.join(p.workspace.input_path, "cve_data_photon4.0.json")]
+        return [
+            os.path.join(p.workspace.input_path, "cve_data_photon1.0.json"),
+            os.path.join(p.workspace.input_path, "cve_data_photon4.0.json"),
+        ]
 
     monkeypatch.setattr(Parser, "_download", mock_download)
 
     p.update(None)
 
-    assert ws.num_result_entries() == 4
+    assert ws.num_result_entries() == 6
     assert ws.result_schemas_valid(require_entries=True)
 
 
@@ -331,14 +355,17 @@ def test_provider_via_snapshot(helpers, disable_get_requests, auto_fake_fixdate_
 
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
-    c.allow_versions = ["4.0"]
+    c.allow_versions = ["1.0", "4.0"]
     p = Provider(root=ws.root, config=c)
 
     def mock_download(self_inner):
         # Parse advisories from the fixture wiki directory
         wiki_path = os.path.join(p.workspace.input_path, "photon.wiki")
         self_inner._advisory_map = parse_advisories(wiki_path)
-        return [os.path.join(p.workspace.input_path, "cve_data_photon4.0.json")]
+        return [
+            os.path.join(p.workspace.input_path, "cve_data_photon1.0.json"),
+            os.path.join(p.workspace.input_path, "cve_data_photon4.0.json"),
+        ]
 
     monkeypatch.setattr(Parser, "_download", mock_download)
 
