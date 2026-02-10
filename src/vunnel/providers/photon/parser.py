@@ -286,6 +286,10 @@ class Parser:
 
             reference_links = build_reference_links(cve_id)
 
+            metadata: dict[str, Any] = {}
+            if advisory:
+                metadata["Issued"] = advisory.date
+
             vuln = Vulnerability(
                 Name=cve_id,
                 NamespaceName=namespace,
@@ -294,7 +298,7 @@ class Parser:
                 Link=reference_links[0] if reference_links else "",
                 CVSS=[],
                 FixedIn=fixed_in_list,
-                Metadata={},
+                Metadata=metadata,
             )
 
             yield namespace, cve_id, vuln.to_payload()
