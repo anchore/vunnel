@@ -33,7 +33,8 @@ PHOTON_CVE_FILENAME = "cve_data_photon{version}.json"
 PHOTON_WIKI_BASE_URL = "https://github.com/vmware/photon/wiki"
 
 # Regex patterns for parsing advisory markdown files
-_ADVISORY_ID_RE = re.compile(r"Advisory\s+(?:Id|ID)\s*:\s*(PHSA-\d{4}-\d+\.\d+-\d+)")
+# Matches both versioned IDs (PHSA-2023-4.0-0500) and short IDs (PHSA-2017-0010)
+_ADVISORY_ID_RE = re.compile(r"Advisory\s+(?:Id|ID)\s*:\s*(PHSA-\d{4}-(?:\d+\.\d+-)?0*\d+)")
 _ISSUE_DATE_RE = re.compile(r"(?:Issue\s+date|Issued\s+on)\s*:\s*(\d{4}-\d{2}-\d{2})")
 _CVE_ID_RE = re.compile(r"(CVE-\d{4}-\d+)")
 _ADVISORY_FILENAME_RE = re.compile(r"Security-Updates?-(\d+\.\d+)-(\d+)\.md")
