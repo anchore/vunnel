@@ -23,6 +23,7 @@ class Config:
     )
     request_timeout: int = 125
     allow_versions: list[str] = field(default_factory=lambda: ["3.0", "4.0", "5.0"])
+    wiki_url: str = "https://github.com/vmware/photon.wiki.git"
 
 
 class Provider(provider.Provider):
@@ -42,6 +43,7 @@ class Provider(provider.Provider):
             allow_versions=self.config.allow_versions,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
+            wiki_url=self.config.wiki_url,
         )
 
     @classmethod
