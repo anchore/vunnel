@@ -632,8 +632,8 @@ class NodeParser(dict):
             cvss_vector = cvss_vector.removesuffix("/")
             cvss3_obj = CVSS3(cvss_vector)
             cvss_object = {
-              "version": f"3.{cvss3_obj.minor_version}",
-              "vector": cvss_vector,
+                "version": f"3.{cvss3_obj.minor_version}",
+                "vector": cvss_vector,
             }
         except (CVSS3MalformedError, DecimalException, AttributeError):
             self.logger.exception(
@@ -651,8 +651,8 @@ class NodeParser(dict):
             v4 = CVSS4(cvss_vector)
             version = v4.clean_vector().split("/")[0].split(":")[1]
             cvss_object = {
-              "version": version,
-              "vector": cvss_vector,
+                "version": version,
+                "vector": cvss_vector,
             }
         except (CVSS4MalformedError, DecimalException, AttributeError):
             self.logger.exception(
