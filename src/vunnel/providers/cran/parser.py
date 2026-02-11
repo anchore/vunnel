@@ -17,7 +17,11 @@ if TYPE_CHECKING:
 
 from .git import GitWrapper
 
-NAMESPACE = "cran"
+# Default OSV schema version to use when not specified in the YAML file
+_DEFAULT_SCHEMA_VERSION_ = "1.6.1"
+
+# Repository directory name for the R advisory database
+_REPO_DIR_NAME_ = "r-advisory-database"
 
 
 class Parser:
@@ -27,7 +31,6 @@ class Parser:
     def __init__(
         self,
         ws: Workspace,
-        download_timeout: int = 125,
         fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
     ):
@@ -35,7 +38,6 @@ class Parser:
             fixdater = fixdate.default_finder(ws)
         self.fixdater = fixdater
         self.workspace = ws
-        self.download_timeout = download_timeout
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
         self.urls = [self._git_src_url_]
@@ -44,11 +46,11 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-        _checkout_dst_ = os.path.join(self.workspace.input_path, "vulndb")
+        checkout_dest = os.path.join(self.workspace.input_path, _REPO_DIR_NAME_)
         self.git_wrapper = GitWrapper(
             source=self.git_url,
             branch=self.git_branch,
-            checkout_dest=_checkout_dst_,
+            checkout_dest=checkout_dest,
             logger=self.logger,
         )
 
@@ -62,26 +64,40 @@ class Parser:
     def _load(self) -> Generator[dict[str, Any]]:
         self.logger.info(f"loading data from git repository {self.git_url}")
 
-        vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "vulns")
+        vuln_data_dir = os.path.join(self.workspace.input_path, _REPO_DIR_NAME_, "vulns")
         for root, dirs, files in os.walk(vuln_data_dir):
             dirs.sort()
             for file in sorted(files):
-                full_path = os.path.join(root, file)
-                if not full_path.endswith(".yaml"):
+                if not file.endswith(".yaml"):
                     continue
+                full_path = os.path.join(root, file)
                 with open(full_path, encoding="utf-8") as f:
-                    yield yaml.safe_load(f)
+                    try:
+                        yield yaml.safe_load(f)
+                    except yaml.YAMLError as e:
+                        self.logger.warning(f"failed to parse YAML file {full_path}: {e}")
+                        continue
 
-    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
 
-        # We want to return the OSV record as it is (using OSV schema)
-        # We'll transform it into the Grype-specific vulnerability schema
-        # on grype-db
         vuln_id = vuln_entry["id"]
-        return vuln_id, vuln_entry
+        vuln_schema = vuln_entry.get("schema_version", _DEFAULT_SCHEMA_VERSION_)
 
-    def get(self) -> Generator[tuple[str, dict[str, Any]]]:
+        # RSEC YAML files use "upstream" for CVE references, but OSV schema uses "aliases".
+        # Normalize by moving upstream values to aliases.
+        if "upstream" in vuln_entry:
+            upstream = vuln_entry.pop("upstream")
+            if upstream:
+                existing_aliases = vuln_entry.get("aliases") or []
+                for cve in upstream:
+                    if cve not in existing_aliases:
+                        existing_aliases.append(cve)
+                vuln_entry["aliases"] = existing_aliases
+
+        return vuln_id, vuln_schema, vuln_entry
+
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
@@ -90,6 +106,8 @@ class Parser:
 
         # Load the data from the git repository
         for vuln_entry in self._load():
+            if vuln_entry is None:
+                continue
             # Normalize the loaded data
             osv.patch_fix_date(vuln_entry, self.fixdater)
             yield self._normalize(vuln_entry)

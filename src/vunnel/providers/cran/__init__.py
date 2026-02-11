@@ -11,10 +11,6 @@ from .parser import Parser
 if TYPE_CHECKING:
     import datetime
 
-PROVIDER_NAME = "cran"
-
-SCHEMA = schema.OSVSchema()
-
 
 @dataclass
 class Config:
@@ -24,11 +20,10 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    request_timeout: int = 125
 
 
 class Provider(provider.Provider):
-    __schema__ = SCHEMA
+    __schema__ = schema.OSVSchema()
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
@@ -41,7 +36,6 @@ class Provider(provider.Provider):
 
         self.parser = Parser(
             ws=self.workspace,
-            download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
 
@@ -50,21 +44,33 @@ class Provider(provider.Provider):
 
     @classmethod
     def name(cls) -> str:
-        return PROVIDER_NAME
+        return "cran"
 
     @classmethod
     def tags(cls) -> list[str]:
         return ["vulnerability", "language"]
 
+    @classmethod
+    def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
+        candidate = schema.OSVSchema(schema_version)
+        if candidate.major_version == cls.__schema__.major_version:
+            return candidate
+        return None
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
-            # TODO: use of last_updated as NVD provider does to avoid downloading all
-            # vulnerability data from the source and make incremental updates instead
             with self.results_writer() as writer, self.parser:
-                for vuln_id, record in self.parser.get():
+                for vuln_id, vuln_schema_version, record in self.parser.get():
+                    vuln_schema = self.compatible_schema(vuln_schema_version)
+                    if not vuln_schema:
+                        self.logger.warning(
+                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} "
+                            f"as is incompatible with provider schema version {self.__schema__.version}",
+                        )
+                        continue
                     writer.write(
                         identifier=vuln_id.lower(),
-                        schema=self.__schema__,
+                        schema=vuln_schema,
                         payload=record,
                     )
 
