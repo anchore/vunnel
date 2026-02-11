@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import gzip
-import hashlib
+import copy
 import logging
-import lzma
 import os
+import re
 from typing import TYPE_CHECKING, Any
-from xml.etree import ElementTree
 
-import zstandard
+import orjson
 
 from vunnel.utils import http_wrapper as http
 
@@ -21,8 +19,7 @@ if TYPE_CHECKING:
     from . import Config
 
 
-# Severity mapping from Fedora/Bodhi to Vunnel schema
-# Fedora uses: urgent, critical, important, moderate, low, unspecified
+# Severity mapping from Bodhi to Vunnel schema
 SEVERITY_MAP = {
     "urgent": "Critical",
     "critical": "Critical",
@@ -36,18 +33,18 @@ SEVERITY_MAP = {
     "": "Unknown",
 }
 
-# XML namespace for repomd.xml
-REPO_NS = {"repo": "http://linux.duke.edu/metadata/repo"}
+_CVE_PATTERN = re.compile(r"CVE-\d{4}-\d+")
 
 
 class Parser:
-    """Parser for Fedora updateinfo.xml repository metadata."""
+    """Parser for Fedora security updates via the Bodhi REST API."""
 
     def __init__(
         self,
         workspace: Workspace,
         config: Config,
         logger: logging.Logger | None = None,
+        user_agent: str | None = None,
     ):
         self.workspace = workspace
         self.config = config
@@ -55,6 +52,7 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self.urls: list[str] = []
+        self.user_agent = user_agent
 
     def __enter__(self) -> Parser:
         return self
@@ -67,332 +65,133 @@ class Parser:
     ) -> None:
         pass
 
-    def _discover_releases(self) -> list[str]:
-        """Query Bodhi API to discover current Fedora releases."""
-        if self.config.releases:
-            self.logger.info(f"using configured releases: {self.config.releases}")
-            return self.config.releases
+    def _fetch_page(self, page: int, release: str | None = None) -> dict[str, Any]:
+        """Fetch a single page of security updates from the Bodhi API."""
+        url = f"{self.config.bodhi_url}/updates/"
+        params: dict[str, str] = {
+            "status": "stable",
+            "type": "security",
+            "rows_per_page": str(self.config.rows_per_page),
+            "page": str(page),
+        }
+        if release:
+            params["releases"] = f"F{release}"
 
-        url = f"{self.config.bodhi_url}/releases/"
-        params = "?state=current&id_prefix=FEDORA&rows_per_page=50"
-        full_url = url + params
-        self.urls.append(full_url)
+        self.urls.append(url)
+        self.logger.debug(f"fetching page {page} from Bodhi API")
 
-        try:
-            self.logger.info(f"discovering releases from Bodhi API: {full_url}")
-            resp = http.get(full_url, self.logger, timeout=self.config.request_timeout)
-            resp.raise_for_status()
-            data = resp.json()
+        resp = http.get(
+            url,
+            self.logger,
+            timeout=self.config.request_timeout,
+            user_agent=self.user_agent,
+            params=params,
+        )
+        resp.raise_for_status()
+        return resp.json()
 
-            releases = []
-            for release in data.get("releases", []):
-                version = release.get("version")
-                # Only include numeric versions (skip "eln", "rawhide", etc.)
-                if version and version.isdigit():
-                    releases.append(version)
-
-            if releases:
-                releases = sorted(releases, key=int, reverse=True)
-                self.logger.info(f"discovered releases from Bodhi: {releases}")
-                return releases
-            else:
-                self.logger.warning("no releases found from Bodhi API, using fallback")
-                return self._fallback_releases()
-
-        except Exception as e:
-            self.logger.warning(f"failed to discover releases from Bodhi: {e}, using fallback")
-            return self._fallback_releases()
-
-    def _fallback_releases(self) -> list[str]:
-        """Fallback releases if Bodhi API is unavailable."""
-        # These are commonly supported releases as of late 2024
-        return ["41", "40", "39"]
-
-    def _get_repo_urls(self, release: str) -> list[tuple[str, str, str]]:
-        """Get repository URLs for a release.
+    def _download(self) -> list[str]:
+        """Download all security updates from Bodhi and save JSON pages to workspace.
 
         Returns:
-            List of (repo_type, repo_url, source) tuples where source is 'mirror' or 'archive'
+            List of file paths to saved JSON pages.
         """
-        base = self.config.mirror_url.rstrip("/")
-        archive_base = self.config.archive_url.rstrip("/")
+        os.makedirs(self.workspace.input_path, exist_ok=True)
+        saved_files: list[str] = []
 
-        # Try main mirror first, then archive as fallback
-        repos = [
-            ("updates", f"{base}/updates/{release}/Everything/x86_64", "mirror"),
-            ("updates", f"{archive_base}/updates/{release}/Everything/x86_64", "archive"),
-        ]
-        if self.config.include_testing:
-            repos.append(("updates-testing", f"{base}/updates/testing/{release}/Everything/x86_64", "mirror"))
-            repos.append(("updates-testing", f"{archive_base}/updates/testing/{release}/Everything/x86_64", "archive"))
-        return repos
-
-    def _fetch_repomd(self, repo_url: str) -> ElementTree.Element | None:
-        """Fetch and parse repomd.xml from a repository."""
-        repomd_url = f"{repo_url}/repodata/repomd.xml"
-        self.urls.append(repomd_url)
-
-        try:
-            self.logger.debug(f"fetching repomd.xml from {repomd_url}")
-            # Use a custom status handler to not retry on 404
-            def status_handler(resp):
-                if resp.status_code == 404:
-                    # Don't retry on 404 - the repo doesn't exist at this URL
-                    return
-                resp.raise_for_status()
-
-            resp = http.get(
-                repomd_url,
-                self.logger,
-                timeout=self.config.request_timeout,
-                retries=2,  # Fewer retries since we have fallback URLs
-                status_handler=status_handler,
-            )
-            if resp.status_code == 404:
-                self.logger.debug(f"repomd.xml not found at {repomd_url}")
-                return None
-            return ElementTree.fromstring(resp.content)
-        except Exception as e:
-            self.logger.debug(f"failed to fetch repomd.xml from {repomd_url}: {e}")
-            return None
-
-    def _find_updateinfo_location(self, repomd: ElementTree.Element) -> tuple[str, str | None] | None:
-        """Find updateinfo location and checksum from repomd.xml.
-
-        Returns:
-            Tuple of (href, expected_sha256) or None if not found
-        """
-        updateinfo_data = repomd.find(".//repo:data[@type='updateinfo']", REPO_NS)
-        if updateinfo_data is None:
-            return None
-
-        location = updateinfo_data.find("repo:location", REPO_NS)
-        if location is None:
-            return None
-
-        href = location.get("href")
-        if not href:
-            return None
-
-        # Get checksum for validation
-        checksum_elem = updateinfo_data.find("repo:checksum", REPO_NS)
-        expected_checksum = None
-        if checksum_elem is not None and checksum_elem.get("type") == "sha256":
-            expected_checksum = checksum_elem.text
-
-        return href, expected_checksum
-
-    def _decompress(self, data: bytes, filename: str) -> bytes:
-        """Decompress data based on file extension."""
-        if filename.endswith(".gz"):
-            return gzip.decompress(data)
-        elif filename.endswith(".xz"):
-            return lzma.decompress(data)
-        elif filename.endswith(".zst"):
-            dctx = zstandard.ZstdDecompressor()
-            return dctx.decompress(data)
-        else:
-            # Assume uncompressed
-            return data
-
-    def _fetch_updateinfo(self, repo_url: str, release: str, repo_type: str) -> str | None:
-        """Fetch and decompress updateinfo.xml from a repository.
-
-        Returns:
-            Path to the downloaded updateinfo.xml file, or None on failure
-        """
-        repomd = self._fetch_repomd(repo_url)
-        if repomd is None:
-            return None
-
-        location_info = self._find_updateinfo_location(repomd)
-        if location_info is None:
-            self.logger.warning(f"no updateinfo found in repomd.xml for {repo_url}")
-            return None
-
-        href, expected_checksum = location_info
-        updateinfo_url = f"{repo_url}/{href}"
-        self.urls.append(updateinfo_url)
-
-        try:
-            self.logger.info(f"fetching updateinfo from {updateinfo_url}")
-            resp = http.get(updateinfo_url, self.logger, timeout=self.config.request_timeout, stream=True)
-            resp.raise_for_status()
-            compressed_data = resp.content
-
-            # Validate checksum if available
-            if expected_checksum:
-                actual_checksum = hashlib.sha256(compressed_data).hexdigest()
-                if actual_checksum != expected_checksum:
-                    self.logger.error(f"checksum mismatch for {updateinfo_url}: expected {expected_checksum}, got {actual_checksum}")
-                    return None
-
-            # Decompress
-            xml_data = self._decompress(compressed_data, href)
-
-            # Save to workspace
-            output_filename = f"updateinfo-{release}-{repo_type}.xml"
-            output_path = os.path.join(self.workspace.input_path, output_filename)
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-            with open(output_path, "wb") as f:
-                f.write(xml_data)
-
-            self.logger.debug(f"saved updateinfo to {output_path}")
-            return output_path
-
-        except Exception as e:
-            self.logger.warning(f"failed to fetch updateinfo from {updateinfo_url}: {e}")
-            return None
-
-    def _download(self) -> list[tuple[str, str]]:
-        """Download updateinfo.xml files for all releases.
-
-        Returns:
-            List of (release, file_path) tuples
-        """
-        releases = self._discover_releases()
-        downloaded = []
+        releases = self.config.releases if self.config.releases else [None]
 
         for release in releases:
-            repo_urls = self._get_repo_urls(release)
-            # Group by repo_type and try mirror first, then archive
-            repo_groups: dict[str, list[tuple[str, str]]] = {}
-            for repo_type, repo_url, source in repo_urls:
-                if repo_type not in repo_groups:
-                    repo_groups[repo_type] = []
-                repo_groups[repo_type].append((repo_url, source))
+            label = f"Fedora {release}" if release else "all releases"
+            page = 1
 
-            for repo_type, urls_with_source in repo_groups.items():
-                path = None
-                for repo_url, source in urls_with_source:
-                    self.logger.info(f"trying {repo_type} repository for Fedora {release} from {source}")
-                    path = self._fetch_updateinfo(repo_url, release, repo_type)
-                    if path:
-                        self.logger.info(f"successfully fetched {repo_type} for Fedora {release} from {source}")
-                        downloaded.append((release, path))
-                        break  # Stop trying other sources for this repo_type
-                    else:
-                        self.logger.debug(f"failed to fetch from {source}, trying next source")
+            while True:
+                self.logger.info(f"fetching {label} security updates page {page}")
+                data = self._fetch_page(page, release=release)
 
-                if not path:
-                    self.logger.warning(f"could not fetch {repo_type} for Fedora {release} from any source")
+                updates = data.get("updates", [])
+                if not updates:
+                    break
 
-        return downloaded
+                suffix = f"-f{release}" if release else ""
+                filename = f"bodhi-updates{suffix}-page-{page}.json"
+                filepath = os.path.join(self.workspace.input_path, filename)
 
-    def _parse_updateinfo(self, release: str, file_path: str) -> Generator[dict[str, Any]]:
-        """Parse updateinfo.xml and yield security advisories.
+                with open(filepath, "wb") as f:
+                    f.write(orjson.dumps(updates))
 
-        Uses iterparse for memory-efficient parsing of large files.
-        """
-        self.logger.info(f"parsing {file_path} for release {release}")
+                saved_files.append(filepath)
 
-        try:
-            context = ElementTree.iterparse(file_path, events=("end",))
+                total_pages = data.get("pages", 1)
+                self.logger.debug(f"page {page}/{total_pages}, updates on page: {len(updates)}")
 
-            for event, elem in context:
-                if elem.tag != "update":
-                    continue
+                if page >= total_pages:
+                    break
+                page += 1
 
-                # Only process security updates
-                update_type = elem.get("type", "")
-                if update_type != "security":
-                    elem.clear()
-                    continue
+        return saved_files
 
-                advisory = self._parse_advisory(elem, release)
-                if advisory:
-                    yield advisory
-
-                # Clear element to free memory
-                elem.clear()
-
-        except ElementTree.ParseError as e:
-            self.logger.error(f"XML parse error in {file_path}: {e}")
-
-    def _parse_advisory(self, elem: ElementTree.Element, release: str) -> dict[str, Any] | None:
-        """Parse a single <update> element into an advisory dict."""
-        advisory_id = elem.findtext("id", "")
-        if not advisory_id:
+    def _parse_update(self, update: dict[str, Any]) -> dict[str, Any] | None:
+        """Parse a single Bodhi update into an advisory dict."""
+        alias = update.get("alias", "")
+        if not alias:
             return None
 
-        severity = elem.findtext("severity", "").lower()
+        release_info = update.get("release", {})
+        release_version = release_info.get("version", "")
+        if not release_version or not release_version.isdigit():
+            return None
+
+        severity = update.get("severity", "").lower()
         severity = SEVERITY_MAP.get(severity, "Unknown")
 
-        title = elem.findtext("title", "")
-        description = elem.findtext("description", "")
+        # Extract unique CVEs from security bugs
+        cves: list[str] = []
+        seen_cves: set[str] = set()
+        for bug in update.get("bugs", []):
+            if not bug.get("security", False):
+                continue
+            title = bug.get("title", "")
+            for match in _CVE_PATTERN.finditer(title):
+                cve_id = match.group()
+                if cve_id not in seen_cves:
+                    seen_cves.add(cve_id)
+                    cves.append(cve_id)
 
-        issued = elem.find("issued")
-        issued_date = issued.get("date", "") if issued is not None else ""
-
-        updated = elem.find("updated")
-        updated_date = updated.get("date", "") if updated is not None else ""
-
-        # Extract CVE references
-        cves = []
-        references = elem.find("references")
-        if references is not None:
-            for ref in references.findall("reference"):
-                if ref.get("type") == "cve":
-                    cve_id = ref.get("id", "")
-                    cve_link = ref.get("href", "")
-                    if cve_id:
-                        cves.append({"id": cve_id, "link": cve_link})
-
-        # Extract packages from pkglist
+        # Parse builds into packages
         packages = []
-        pkglist = elem.find("pkglist")
-        if pkglist is not None:
-            for collection in pkglist.findall("collection"):
-                # Check for module info
-                module_elem = collection.find("module")
-                module_str = ""
-                if module_elem is not None:
-                    mod_name = module_elem.get("name", "")
-                    mod_stream = module_elem.get("stream", "")
-                    if mod_name and mod_stream:
-                        module_str = f"{mod_name}:{mod_stream}"
+        for build in update.get("builds", []):
+            if build.get("type") != "rpm":
+                continue
+            nvr = build.get("nvr", "")
+            epoch = build.get("epoch", 0)
 
-                for pkg in collection.findall("package"):
-                    arch = pkg.get("arch", "")
-                    # Skip source RPMs - we want binary packages
-                    if arch == "src":
-                        continue
-                    # Only include x86_64 and noarch for now
-                    if arch not in ("x86_64", "noarch"):
-                        continue
+            parts = nvr.rsplit("-", 2)
+            if len(parts) != 3:
+                self.logger.debug(f"skipping build with unexpected NVR format: {nvr}")
+                continue
 
-                    name = pkg.get("name", "")
-                    version = pkg.get("version", "")
-                    pkg_release = pkg.get("release", "")
-                    epoch = pkg.get("epoch", "0")
+            name, version, rel = parts
+            full_version = f"{epoch}:{version}-{rel}"
 
-                    if not name or not version:
-                        continue
+            packages.append({
+                "name": name,
+                "version": full_version,
+            })
 
-                    # Construct full version string with epoch: epoch:version-release
-                    full_version = f"{epoch}:{version}-{pkg_release}"
-
-                    packages.append({
-                        "name": name,
-                        "version": full_version,
-                        "module": module_str,
-                    })
-
-        # Construct advisory link
-        advisory_link = f"https://bodhi.fedoraproject.org/updates/{advisory_id}"
+        advisory_url = update.get("url", f"{self.config.bodhi_url}/updates/{alias}")
 
         return {
-            "advisory_id": advisory_id,
-            "release": release,
+            "advisory_id": alias,
+            "release": release_version,
             "severity": severity,
-            "title": title,
-            "description": description,
-            "issued_date": issued_date,
-            "updated_date": updated_date,
+            "title": update.get("display_name", alias),
+            "description": update.get("notes", ""),
+            "issued_date": update.get("date_submitted", ""),
+            "updated_date": update.get("date_pushed", ""),
             "cves": cves,
             "packages": packages,
-            "link": advisory_link,
+            "link": advisory_url,
         }
 
     def _normalize(self, advisory: dict[str, Any]) -> Generator[tuple[str, dict[str, Any]]]:
@@ -410,77 +209,70 @@ class Parser:
         # Build FixedIn list
         fixed_in = []
         for pkg in packages:
-            fixed_in_entry = {
+            fixed_in.append({
                 "Name": pkg["name"],
                 "Version": pkg["version"],
                 "VersionFormat": "rpm",
                 "NamespaceName": namespace,
-                "Module": pkg.get("module", ""),
+                "Module": "",
                 "VendorAdvisory": {
                     "NoAdvisory": False,
                     "AdvisorySummary": [
                         {
                             "ID": advisory["advisory_id"],
                             "Link": advisory["link"],
-                        }
+                        },
                     ],
                 },
-            }
-            fixed_in.append(fixed_in_entry)
+            })
 
-        # Build base vulnerability record
         base_record = {
             "Vulnerability": {
                 "Severity": advisory["severity"],
                 "NamespaceName": namespace,
                 "FixedIn": fixed_in,
                 "Link": advisory["link"],
-                "Description": advisory.get("description", ""),
+                "Description": "",
                 "Metadata": {
                     "Issued": advisory.get("issued_date", ""),
                     "Updated": advisory.get("updated_date", ""),
                 },
-                "Name": "",  # Will be set per CVE/advisory
+                "Name": "",
                 "CVSS": [],
             },
         }
 
-        # If we have CVEs, emit one record per CVE
         if advisory["cves"]:
-            for cve in advisory["cves"]:
-                cve_id = cve["id"]
-                record = _deep_copy_record(base_record)
+            for cve_id in advisory["cves"]:
+                record = copy.deepcopy(base_record)
                 record["Vulnerability"]["Name"] = cve_id
                 record["Vulnerability"]["Metadata"]["CVE"] = [
-                    {"Name": cve_id, "Link": cve.get("link", "")}
+                    {"Name": cve_id, "Link": f"https://nvd.nist.gov/vuln/detail/{cve_id}"},
                 ]
-
                 yield (f"{namespace}/{cve_id}", record)
         else:
-            # No CVEs - emit record with advisory ID as the identifier
             vuln_id = advisory["advisory_id"]
-            record = _deep_copy_record(base_record)
+            record = copy.deepcopy(base_record)
             record["Vulnerability"]["Name"] = vuln_id
             record["Vulnerability"]["Metadata"]["CVE"] = []
-
             yield (f"{namespace}/{vuln_id}", record)
 
     def get(self) -> Generator[tuple[str, dict[str, Any]]]:
         """Main entry point - download, parse, and normalize vulnerabilities."""
-        downloaded = self._download()
+        saved_files = self._download()
 
-        # Track emitted vulnerabilities to avoid duplicates across repos
         emitted: set[str] = set()
 
-        for release, file_path in downloaded:
-            for advisory in self._parse_updateinfo(release, file_path):
+        for filepath in saved_files:
+            with open(filepath, "rb") as f:
+                updates = orjson.loads(f.read())
+
+            for update in updates:
+                advisory = self._parse_update(update)
+                if not advisory:
+                    continue
+
                 for vuln_id, record in self._normalize(advisory):
                     if vuln_id not in emitted:
                         emitted.add(vuln_id)
                         yield (vuln_id, record)
-
-
-def _deep_copy_record(record: dict[str, Any]) -> dict[str, Any]:
-    """Create a deep copy of a vulnerability record."""
-    import copy
-    return copy.deepcopy(record)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
+from importlib import metadata
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
@@ -13,25 +13,30 @@ if TYPE_CHECKING:
     import datetime
 
 
+def _default_user_agent() -> str:
+    try:
+        version = metadata.version("vunnel")
+    except metadata.PackageNotFoundError:
+        version = "unknown"
+    return f"anchore/vunnel-{version}"
+
+
 @dataclass
 class Config:
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            user_agent=_default_user_agent(),
         ),
     )
     request_timeout: int = 125
-    # Fedora releases to process (empty list = auto-discover via Bodhi API)
+    # Fedora releases to process (empty list = all from Bodhi API)
     releases: list[str] = field(default_factory=list)
-    # Include updates-testing repository (packages not yet pushed to stable)
-    include_testing: bool = False
-    # Base mirror URL for Fedora repositories (active releases)
-    mirror_url: str = "https://dl.fedoraproject.org/pub/fedora/linux"
-    # Archive URL for EOL releases
-    archive_url: str = "https://archives.fedoraproject.org/pub/archive/fedora/linux"
-    # Bodhi API URL for release discovery
+    # Bodhi API base URL
     bodhi_url: str = "https://bodhi.fedoraproject.org"
+    # Number of results per page when querying Bodhi API
+    rows_per_page: int = 100
 
 
 class Provider(provider.Provider):
@@ -50,6 +55,7 @@ class Provider(provider.Provider):
             workspace=self.workspace,
             config=config,
             logger=self.logger,
+            user_agent=self.runtime_cfg.user_agent,
         )
 
         # this provider requires the previous state from former runs

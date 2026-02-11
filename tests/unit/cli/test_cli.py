@@ -395,12 +395,10 @@ providers:
       user_agent: null
     url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
   fedora:
-    archive_url: https://archives.fedoraproject.org/pub/archive/fedora/linux
     bodhi_url: https://bodhi.fedoraproject.org
-    include_testing: false
-    mirror_url: https://dl.fedoraproject.org/pub/fedora/linux
     releases: []
     request_timeout: 125
+    rows_per_page: 100
     runtime:
       existing_input: keep
       existing_results: delete-before-write
@@ -416,7 +414,7 @@ providers:
       result_store: sqlite
       skip_download: false
       skip_newer_archive_check: false
-      user_agent: null
+      user_agent: anchore/vunnel-$VUNNEL_VERSION
   github:
     api_url: https://api.github.com/graphql
     request_timeout: 125
