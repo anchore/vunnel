@@ -394,6 +394,29 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
     url_template: https://epss.cyentia.com/epss_scores-{}.csv.gz
+  fedora:
+    archive_url: https://archives.fedoraproject.org/pub/archive/fedora/linux
+    bodhi_url: https://bodhi.fedoraproject.org
+    include_testing: false
+    mirror_url: https://dl.fedoraproject.org/pub/fedora/linux
+    releases: []
+    request_timeout: 125
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_download: false
+      skip_newer_archive_check: false
+      user_agent: null
   github:
     api_url: https://api.github.com/graphql
     request_timeout: 125

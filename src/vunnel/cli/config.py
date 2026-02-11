@@ -54,6 +54,7 @@ class Providers:
     echo: providers.echo.Config = field(default_factory=providers.echo.Config)
     eol: providers.eol.Config = field(default_factory=providers.eol.Config)
     epss: providers.epss.Config = field(default_factory=providers.epss.Config)
+    fedora: providers.fedora.Config = field(default_factory=providers.fedora.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
     kev: providers.kev.Config = field(default_factory=providers.kev.Config)
     mariner: providers.mariner.Config = field(default_factory=providers.mariner.Config)
