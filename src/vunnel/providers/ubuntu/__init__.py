@@ -71,6 +71,8 @@ class Provider(provider.Provider):
             # This is particularly important for the ubuntu provider (which can take hours to run).
             "multicore",
             "incremental",
+            # this generates a large dataset and historically can take a while to process (long wall clock time)
+            "large",
         ]
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
