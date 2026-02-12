@@ -13,7 +13,7 @@ from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Sequence
     from types import TracebackType
 
     from vunnel.workspace import Workspace
@@ -106,7 +106,7 @@ class Parser:
         os.makedirs(self.workspace.input_path, exist_ok=True)
         saved_files: list[str] = []
 
-        releases = self.config.releases if self.config.releases else [None]
+        releases: Sequence[str | None] = self.config.releases if self.config.releases else (None,)
 
         for release in releases:
             label = f"Fedora {release}" if release else "all releases"
