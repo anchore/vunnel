@@ -75,6 +75,8 @@ class Provider(provider.Provider):
             "vulnerability",
             "os",
             "incremental",
+            # this generates a large dataset and historically can take a while to process (long wall clock time)
+            "large",
         ]
 
     @classmethod
