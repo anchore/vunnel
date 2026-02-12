@@ -66,6 +66,10 @@ class Provider(provider.Provider):
         return "fedora"
 
     @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
+
+    @classmethod
     def tags(cls) -> list[str]:
         return ["vulnerability", "os"]
 

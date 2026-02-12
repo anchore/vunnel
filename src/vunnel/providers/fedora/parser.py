@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import glob
 import logging
 import os
 import re
@@ -8,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
@@ -45,6 +47,7 @@ class Parser:
         config: Config,
         logger: logging.Logger | None = None,
         user_agent: str | None = None,
+        fixdater: fixdate.Finder | None = None,
     ):
         self.workspace = workspace
         self.config = config
@@ -53,8 +56,12 @@ class Parser:
         self.logger = logger
         self.urls: list[str] = []
         self.user_agent = user_agent
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
 
     def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
         return self
 
     def __exit__(
@@ -63,7 +70,7 @@ class Parser:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        pass
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _fetch_page(self, page: int, release: str | None = None) -> dict[str, Any]:
         """Fetch a single page of security updates from the Bodhi API."""
@@ -174,10 +181,12 @@ class Parser:
             name, version, rel = parts
             full_version = f"{epoch}:{version}-{rel}"
 
-            packages.append({
-                "name": name,
-                "version": full_version,
-            })
+            packages.append(
+                {
+                    "name": name,
+                    "version": full_version,
+                },
+            )
 
         advisory_url = update.get("url", f"{self.config.bodhi_url}/updates/{alias}")
 
@@ -188,7 +197,8 @@ class Parser:
             "title": update.get("display_name", alias),
             "description": update.get("notes", ""),
             "issued_date": update.get("date_submitted", ""),
-            "updated_date": update.get("date_pushed", ""),
+            "updated_date": update.get("date_modified", "") or update.get("date_stable", ""),
+            "date_stable": update.get("date_stable", ""),
             "cves": cves,
             "packages": packages,
             "link": advisory_url,
@@ -206,10 +216,19 @@ class Parser:
         if not packages:
             return
 
+        # Build advisory date candidate from date_stable
+        date_stable = advisory.get("date_stable", "")
+        candidates = []
+        if date_stable:
+            candidates.append(fixdate.Result(date=date_stable, kind="advisory", accurate=True))
+
+        # Determine CVE IDs for fixdater lookups
+        vuln_ids = advisory["cves"] if advisory["cves"] else [advisory["advisory_id"]]
+
         # Build FixedIn list
         fixed_in = []
         for pkg in packages:
-            fixed_in.append({
+            fixed_in_entry = {
                 "Name": pkg["name"],
                 "Version": pkg["version"],
                 "VersionFormat": "rpm",
@@ -224,7 +243,23 @@ class Parser:
                         },
                     ],
                 },
-            })
+            }
+
+            # Use the first vuln_id for the fixdater lookup (all CVEs in an advisory share the same fix)
+            result = self.fixdater.best(
+                vuln_id=vuln_ids[0],
+                cpe_or_package=pkg["name"],
+                fix_version=pkg["version"],
+                ecosystem=namespace,
+                candidates=candidates,
+            )
+            if result and result.date:
+                fixed_in_entry["Available"] = {
+                    "Date": result.date.isoformat(),
+                    "Kind": result.kind,
+                }
+
+            fixed_in.append(fixed_in_entry)
 
         base_record = {
             "Vulnerability": {
@@ -257,9 +292,20 @@ class Parser:
             record["Vulnerability"]["Metadata"]["CVE"] = []
             yield (f"{namespace}/{vuln_id}", record)
 
+    def _existing_input_files(self) -> list[str]:
+        """Return previously downloaded JSON files from the input directory."""
+        pattern = os.path.join(self.workspace.input_path, "bodhi-updates*.json")
+        return sorted(glob.glob(pattern))
+
     def get(self) -> Generator[tuple[str, dict[str, Any]]]:
         """Main entry point - download, parse, and normalize vulnerabilities."""
-        saved_files = self._download()
+        self.fixdater.download()
+
+        if self.config.runtime.skip_download:
+            self.logger.info("skip_download set, using existing input data")
+            saved_files = self._existing_input_files()
+        else:
+            saved_files = self._download()
 
         emitted: set[str] = set()
 
