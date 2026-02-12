@@ -26,9 +26,16 @@ class Store(Strategy):
         """remove existing grype-db fix date files to reclaim disk space"""
         input_path = Path(self.workspace.input_path)
         db_path = input_path / "grype-db-observed-fix-dates.db"
-        digest_path = db_path.with_suffix(".db.digest")
 
-        for path in [db_path, digest_path]:
+        # include SQLite WAL mode files and digest
+        paths_to_remove = [
+            db_path,
+            db_path.with_suffix(".db-shm"),
+            db_path.with_suffix(".db-wal"),
+            db_path.with_suffix(".db.digest"),
+        ]
+
+        for path in paths_to_remove:
             if path.exists():
                 self.logger.debug(f"removing disabled grype-db fixdates file: {path}")
                 path.unlink()

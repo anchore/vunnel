@@ -83,14 +83,21 @@ class TestStore:
         """test that context manager entry removes grype-db files when disabled"""
         ws = workspace.Workspace(tmpdir, "test", create=True)
 
-        # create fake grype-db files
+        # create fake grype-db files (including SQLite WAL mode files)
         input_path = Path(ws.input_path)
         db_path = input_path / "grype-db-observed-fix-dates.db"
+        shm_path = db_path.with_suffix(".db-shm")
+        wal_path = db_path.with_suffix(".db-wal")
         digest_path = db_path.with_suffix(".db.digest")
+
         db_path.write_text("fake db content")
+        shm_path.write_text("fake shm content")
+        wal_path.write_text("fake wal content")
         digest_path.write_text("fake digest")
 
         assert db_path.exists()
+        assert shm_path.exists()
+        assert wal_path.exists()
         assert digest_path.exists()
 
         store = Store(ws)  # default is use_grype_db=False
@@ -99,8 +106,10 @@ class TestStore:
         # test context manager entry
         store.__enter__()
 
-        # verify files were removed
+        # verify all files were removed
         assert not db_path.exists()
+        assert not shm_path.exists()
+        assert not wal_path.exists()
         assert not digest_path.exists()
 
     def test_context_manager_exit_with_grype_db_enabled(self, tmpdir):
