@@ -138,6 +138,52 @@ class Parser:
 
         return saved_files
 
+    @staticmethod
+    def _extract_cves(update: dict[str, Any]) -> list[str]:
+        """Extract unique CVE IDs from a Bodhi update.
+
+        Checks security bugs first, then falls back to display_name and title fields.
+        """
+        cves: list[str] = []
+        seen: set[str] = set()
+
+        for bug in update.get("bugs", []):
+            if not bug.get("security", False):
+                continue
+            for match in _CVE_PATTERN.finditer(bug.get("title", "")):
+                if match.group() not in seen:
+                    seen.add(match.group())
+                    cves.append(match.group())
+
+        if not cves:
+            for field in ("display_name", "title"):
+                for match in _CVE_PATTERN.finditer(update.get(field, "")):
+                    if match.group() not in seen:
+                        seen.add(match.group())
+                        cves.append(match.group())
+
+        return cves
+
+    @staticmethod
+    def _parse_builds(update: dict[str, Any], logger: logging.Logger) -> list[dict[str, str]]:
+        """Parse RPM builds from a Bodhi update into package dicts."""
+        packages = []
+        for build in update.get("builds", []):
+            if build.get("type") != "rpm":
+                continue
+            nvr = build.get("nvr", "")
+            epoch = build.get("epoch") or 0
+
+            parts = nvr.rsplit("-", 2)
+            if len(parts) != 3:
+                logger.debug(f"skipping build with unexpected NVR format: {nvr}")
+                continue
+
+            name, version, rel = parts
+            packages.append({"name": name, "version": f"{epoch}:{version}-{rel}"})
+
+        return packages
+
     def _parse_update(self, update: dict[str, Any]) -> dict[str, Any] | None:
         """Parse a single Bodhi update into an advisory dict."""
         alias = update.get("alias", "")
@@ -152,42 +198,6 @@ class Parser:
         severity = update.get("severity", "").lower()
         severity = SEVERITY_MAP.get(severity, "Unknown")
 
-        # Extract unique CVEs from security bugs
-        cves: list[str] = []
-        seen_cves: set[str] = set()
-        for bug in update.get("bugs", []):
-            if not bug.get("security", False):
-                continue
-            title = bug.get("title", "")
-            for match in _CVE_PATTERN.finditer(title):
-                cve_id = match.group()
-                if cve_id not in seen_cves:
-                    seen_cves.add(cve_id)
-                    cves.append(cve_id)
-
-        # Parse builds into packages
-        packages = []
-        for build in update.get("builds", []):
-            if build.get("type") != "rpm":
-                continue
-            nvr = build.get("nvr", "")
-            epoch = build.get("epoch", 0)
-
-            parts = nvr.rsplit("-", 2)
-            if len(parts) != 3:
-                self.logger.debug(f"skipping build with unexpected NVR format: {nvr}")
-                continue
-
-            name, version, rel = parts
-            full_version = f"{epoch}:{version}-{rel}"
-
-            packages.append(
-                {
-                    "name": name,
-                    "version": full_version,
-                },
-            )
-
         advisory_url = update.get("url", f"{self.config.bodhi_url}/updates/{alias}")
 
         return {
@@ -199,8 +209,8 @@ class Parser:
             "issued_date": update.get("date_submitted", ""),
             "updated_date": update.get("date_modified", "") or update.get("date_stable", ""),
             "date_stable": update.get("date_stable", ""),
-            "cves": cves,
-            "packages": packages,
+            "cves": self._extract_cves(update),
+            "packages": self._parse_builds(update, self.logger),
             "link": advisory_url,
         }
 
