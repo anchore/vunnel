@@ -163,6 +163,37 @@ tests:
       - debian:distro:debian:14
       - debian:distro:debian:unstable
 
+  - provider: fedora
+    images:
+      - docker.io/fedora:40@sha256:2b0571b74dee5d891610276601c6680d622686113488076e7b35c18b455ce879
+    expected_namespaces:
+      - fedora:distro:fedora:21
+      - fedora:distro:fedora:22
+      - fedora:distro:fedora:23
+      - fedora:distro:fedora:24
+      - fedora:distro:fedora:25
+      - fedora:distro:fedora:26
+      - fedora:distro:fedora:27
+      - fedora:distro:fedora:28
+      - fedora:distro:fedora:29
+      - fedora:distro:fedora:30
+      - fedora:distro:fedora:31
+      - fedora:distro:fedora:32
+      - fedora:distro:fedora:33
+      - fedora:distro:fedora:34
+      - fedora:distro:fedora:35
+      - fedora:distro:fedora:36
+      - fedora:distro:fedora:37
+      - fedora:distro:fedora:38
+      - fedora:distro:fedora:39
+      - fedora:distro:fedora:40
+      - fedora:distro:fedora:41
+      - fedora:distro:fedora:42
+      - fedora:distro:fedora:43
+    validations:
+      - <<: *default-validations
+        max_year: 2024
+
   - provider: github
     additional_providers:
       # we need to convert GHSAs to CVEs so that we can filter based on date
