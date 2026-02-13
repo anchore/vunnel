@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 from dataclasses import dataclass
+from importlib.metadata import version
 from typing import Any
 
 import click
@@ -84,6 +85,8 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
         },
     )
 
+    logging.info(f"vunnel@{version('vunnel')}")
+
     providers.load_plugins()
 
 
@@ -149,7 +152,7 @@ def show_config(cfg: config.Application) -> None:
 @click.option("--skip-download", is_flag=True, help="skip downloading data", default=False)
 @click.pass_obj
 def run_provider(cfg: config.Application, provider_name: str, skip_download: bool) -> None:
-    logging.info(f"running {provider_name} provider")
+    logging.info(f"running {provider_name} provider in {cfg.root}")
     config = cfg.providers.get(provider_name)
     # technically config has type Any | None, so double check to appease mypy
     if config and config.runtime and hasattr(config.runtime, "skip_download"):

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 import pytest
 from vunnel import provider, providers, result
 from vunnel.cli import config
@@ -221,3 +223,159 @@ def test_import_results_host(common_host: str, provider_host: str | None, want: 
         )
     )
     assert cfg.providers.nvd.runtime.import_results_host == want
+
+
+class TestApplyEnvOverrides:
+    def test_simple_string_override(self, monkeypatch):
+        @dataclass
+        class SimpleConfig:
+            name: str = "default"
+
+        obj = SimpleConfig()
+        monkeypatch.setenv("TEST_NAME", "from_env")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.name == "from_env"
+
+    def test_bool_true_override(self, monkeypatch):
+        @dataclass
+        class BoolConfig:
+            enabled: bool = False
+
+        obj = BoolConfig()
+        monkeypatch.setenv("TEST_ENABLED", "true")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.enabled is True
+
+    def test_bool_false_override(self, monkeypatch):
+        @dataclass
+        class BoolConfig:
+            enabled: bool = True
+
+        obj = BoolConfig()
+        monkeypatch.setenv("TEST_ENABLED", "false")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.enabled is False
+
+    def test_int_override(self, monkeypatch):
+        @dataclass
+        class IntConfig:
+            count: int = 0
+
+        obj = IntConfig()
+        monkeypatch.setenv("TEST_COUNT", "42")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.count == 42
+
+    def test_float_override(self, monkeypatch):
+        @dataclass
+        class FloatConfig:
+            rate: float = 0.0
+
+        obj = FloatConfig()
+        monkeypatch.setenv("TEST_RATE", "3.14")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.rate == 3.14
+
+    def test_nested_dataclass_override(self, monkeypatch):
+        @dataclass
+        class InnerConfig:
+            value: str = "inner_default"
+            count: int = 0
+
+        @dataclass
+        class OuterConfig:
+            name: str = "outer_default"
+            inner: InnerConfig = field(default_factory=InnerConfig)
+
+        obj = OuterConfig()
+        monkeypatch.setenv("TEST_NAME", "outer_from_env")
+        monkeypatch.setenv("TEST_INNER_VALUE", "inner_from_env")
+        monkeypatch.setenv("TEST_INNER_COUNT", "99")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.name == "outer_from_env"
+        assert obj.inner.value == "inner_from_env"
+        assert obj.inner.count == 99
+
+    def test_deeply_nested_override(self, monkeypatch):
+        @dataclass
+        class Level3:
+            deep: str = "level3_default"
+
+        @dataclass
+        class Level2:
+            level3: Level3 = field(default_factory=Level3)
+
+        @dataclass
+        class Level1:
+            level2: Level2 = field(default_factory=Level2)
+
+        obj = Level1()
+        monkeypatch.setenv("TEST_LEVEL2_LEVEL3_DEEP", "deep_from_env")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.level2.level3.deep == "deep_from_env"
+
+    def test_no_override_without_env_var(self):
+        @dataclass
+        class SimpleConfig:
+            name: str = "default"
+
+        obj = SimpleConfig()
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.name == "default"
+
+    def test_overrides_existing_non_default_value(self, monkeypatch):
+        # this is the key behavior: env var should override even if the object
+        # already has a non-default value (e.g., loaded from YAML)
+        @dataclass
+        class SimpleConfig:
+            name: str = "default"
+
+        obj = SimpleConfig(name="from_yaml")
+        monkeypatch.setenv("TEST_NAME", "from_env")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.name == "from_env"
+
+    def test_case_insensitive_bool(self, monkeypatch):
+        @dataclass
+        class BoolConfig:
+            enabled: bool = False
+
+        obj = BoolConfig()
+        monkeypatch.setenv("TEST_ENABLED", "TRUE")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.enabled is True
+
+    def test_non_dataclass_is_noop(self, monkeypatch):
+        # should not raise an error
+        obj = {"key": "value"}
+        monkeypatch.setenv("TEST_KEY", "new_value")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj == {"key": "value"}
+
+
+def test_env_vars_override_yaml_config(helpers, monkeypatch):
+    # this tests the 12-factor config precedence: env vars should win over YAML
+    cfg_path = helpers.local_dir("test-fixtures/minimal.yaml")
+
+    # the YAML file has log.level = "trace", we override via env var
+    monkeypatch.setenv("VUNNEL_LOG_LEVEL", "WARNING")
+    monkeypatch.setenv("VUNNEL_ROOT", "/env/override/path")
+    monkeypatch.setenv("VUNNEL_LOG_SLIM", "true")
+
+    cfg = config.load(path=cfg_path)
+
+    # env vars should take precedence
+    assert cfg.log.level == "WARNING"
+    assert cfg.root == "/env/override/path"
+    assert cfg.log.slim is True

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, is_dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -105,10 +105,10 @@ class Providers:
 
 @dataclass
 class Log:
-    slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
-    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
-    show_timestamp: bool = os.environ.get("VUNNEL_LOG_SHOW_TIMESTAMP", default="false") == "true"
-    show_level: bool = os.environ.get("VUNNEL_LOG_SHOW_LEVEL", default="true") == "true"
+    slim: bool = False
+    level: str = "INFO"
+    show_timestamp: bool = False
+    show_level: bool = True
 
     def __post_init__(self) -> None:
         self.level = self.level.upper()
@@ -119,6 +119,42 @@ class Application(DataClassDictMixin):
     root: str = "./data"
     log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
+
+
+def apply_env_overrides(obj: Any, prefix: str = "VUNNEL") -> None:
+    """
+    Recursively apply env var overrides to dataclass fields.
+
+    Derives env var names from the nested path:
+      Application.root         -> VUNNEL_ROOT
+      Application.log.slim     -> VUNNEL_LOG_SLIM
+    """
+    if not is_dataclass(obj):
+        return
+
+    for f in fields(obj):
+        env_name = f"{prefix}_{f.name}".upper()
+        current_value = getattr(obj, f.name)
+
+        # recurse into nested dataclasses
+        if is_dataclass(current_value):
+            apply_env_overrides(current_value, env_name)
+            continue
+
+        if env_name not in os.environ:
+            continue
+
+        env_value = os.environ[env_name]
+
+        # type coercion based on the field's type annotation
+        if f.type is bool or f.type == "bool":
+            setattr(obj, f.name, env_value.lower() == "true")
+        elif f.type is int or f.type == "int":
+            setattr(obj, f.name, int(env_value))
+        elif f.type is float or f.type == "float":
+            setattr(obj, f.name, float(env_value))
+        else:
+            setattr(obj, f.name, env_value)
 
 
 def load(path: str = ".vunnel.yaml") -> Application:
@@ -139,5 +175,8 @@ def load(path: str = ".vunnel.yaml") -> Application:
                 raise FileNotFoundError("parsed empty config")
     except FileNotFoundError:
         cfg = Application()
+
+    # ensure env vars take precedence over config file values
+    apply_env_overrides(cfg)
 
     return cfg
