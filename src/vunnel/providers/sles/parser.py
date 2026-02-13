@@ -385,24 +385,19 @@ class Parser:
         parsed_dict = None
 
         for major_version in self.allow_versions:
-            try:
-                # download oval
-                oval_file_path = self._download(major_version)
+            # download oval
+            oval_file_path = self._download(major_version)
 
-                # parse oval contents
-                parsed_dict = iter_parse_vulnerability_file(
-                    oval_file_path,
-                    parser_config=PARSER_CONFIG,
-                    parser_factory=parser_factory,
-                )
+            # parse oval contents
+            parsed_dict = iter_parse_vulnerability_file(
+                oval_file_path,
+                parser_config=PARSER_CONFIG,
+                parser_factory=parser_factory,
+            )
 
-                # map oval data to feed vulnerabilities
-                for item in self._transform_oval_vulnerabilities(major_version, parsed_dict):
-                    yield item.NamespaceName, item.Name, item.to_payload()
-            except Exception:
-                self.logger.exception("error processing OVAL for SLES %s", major_version)
-                if parsed_dict:
-                    parsed_dict.clear()
+            # map oval data to feed vulnerabilities
+            for item in self._transform_oval_vulnerabilities(major_version, parsed_dict):
+                yield item.NamespaceName, item.Name, item.to_payload()
 
 
 @dataclass
