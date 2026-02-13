@@ -85,7 +85,7 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
         },
     )
 
-    logging.info(f"vunnel@{version('vunnel')}")
+    logging.debug("vunnel@%s", version("vunnel"))
 
     providers.load_plugins()
 

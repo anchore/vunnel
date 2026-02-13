@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 import pytest
 from vunnel import provider, providers, result
@@ -321,7 +322,9 @@ class TestApplyEnvOverrides:
 
         assert obj.level2.level3.deep == "deep_from_env"
 
-    def test_no_override_without_env_var(self):
+    def test_no_override_without_env_var(self, monkeypatch):
+        monkeypatch.delenv("TEST_NAME", raising=False)
+
         @dataclass
         class SimpleConfig:
             name: str = "default"
@@ -362,6 +365,80 @@ class TestApplyEnvOverrides:
         config.apply_env_overrides(obj, prefix="TEST")
 
         assert obj == {"key": "value"}
+
+    @pytest.mark.parametrize(
+        "env_value,expected",
+        [
+            ("true", True),
+            ("TRUE", True),
+            ("True", True),
+            ("yes", True),
+            ("YES", True),
+            ("1", True),
+            ("on", True),
+            ("ON", True),
+            ("false", False),
+            ("FALSE", False),
+            ("no", False),
+            ("0", False),
+            ("off", False),
+            ("anything_else", False),
+        ],
+    )
+    def test_bool_truthy_values(self, monkeypatch, env_value, expected):
+        @dataclass
+        class BoolConfig:
+            enabled: bool = False
+
+        obj = BoolConfig()
+        monkeypatch.setenv("TEST_ENABLED", env_value)
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.enabled is expected
+
+    def test_invalid_int_raises_error(self, monkeypatch):
+        @dataclass
+        class IntConfig:
+            count: int = 0
+
+        obj = IntConfig()
+        monkeypatch.setenv("TEST_COUNT", "not_a_number")
+
+        with pytest.raises(ValueError, match="invalid value for TEST_COUNT"):
+            config.apply_env_overrides(obj, prefix="TEST")
+
+    def test_invalid_float_raises_error(self, monkeypatch):
+        @dataclass
+        class FloatConfig:
+            rate: float = 0.0
+
+        obj = FloatConfig()
+        monkeypatch.setenv("TEST_RATE", "not_a_float")
+
+        with pytest.raises(ValueError, match="invalid value for TEST_RATE"):
+            config.apply_env_overrides(obj, prefix="TEST")
+
+    def test_optional_string_override(self, monkeypatch):
+        @dataclass
+        class OptionalConfig:
+            name: Optional[str] = None
+
+        obj = OptionalConfig()
+        monkeypatch.setenv("TEST_NAME", "from_env")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.name == "from_env"
+
+    def test_optional_int_override(self, monkeypatch):
+        @dataclass
+        class OptionalConfig:
+            count: Optional[int] = None
+
+        obj = OptionalConfig()
+        monkeypatch.setenv("TEST_COUNT", "42")
+        config.apply_env_overrides(obj, prefix="TEST")
+
+        assert obj.count == 42
 
 
 def test_env_vars_override_yaml_config(helpers, monkeypatch):
