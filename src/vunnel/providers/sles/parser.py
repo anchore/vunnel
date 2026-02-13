@@ -238,7 +238,7 @@ class Parser:
 
         return results
 
-    def _transform_oval_vulnerabilities(self, major_version: str, parsed_dict: dict) -> list[Vulnerability]:  # noqa: C901, PLR0912
+    def _transform_oval_vulnerabilities(self, major_version: str, parsed_dict: dict) -> list[Vulnerability]:
         self.logger.info(
             "generating normalized vulnerabilities from oval vulnerabilities for %s",
             major_version,
@@ -254,121 +254,146 @@ class Parser:
             return results
 
         for identity, vulnerability_obj in vulnerabilities_dict.items():  # noqa: B007
-            # version->release->feed map
-            version_release_feed = defaultdict()
-
-            # process CVSS once per oval vulnerability and reuse it for all normalized vulnerabilities
-            normalized_cvss_list = []
-            for cvss_vector in vulnerability_obj.cvss_v3_vectors:
-                cvss_object = self._make_cvss(cvss_vector, vulnerability_obj.name)
-                if cvss_object:
-                    normalized_cvss_list.append(cvss_object)
-
-            # process impact item, each impact translates to a normalized vulnerability
-            for impact_item in vulnerability_obj.impact:
-                # get the release and version
-                (
-                    release_name,
-                    release_version,
-                ) = self._get_name_and_version_from_test(
-                    impact_item.namespace_test_id,
+            try:
+                self._transform_oval_vulnerability(
+                    major_version,
+                    vulnerability_obj,
                     tests_dict,
                     artifacts_dict,
                     versions_dict,
+                    results,
                 )
-
-                # validate release
-                if not release_name:
-                    self.logger.debug(
-                        "release name is invalid, skipping %s",
-                        vulnerability_obj.name,
-                    )
-                    continue
-
-                # validate version is inline with major version
-                if not release_version or not release_version.startswith(major_version):
-                    self.logger.debug(
-                        "%s %s is an unsupported namespace for major version %s, skipping %s for this namespace",
-                        release_name,
-                        release_version,
-                        major_version,
-                        vulnerability_obj.name,
-                    )
-                    continue
-
-                # construct the feed namespace and payload
-                feed_ns = f"{namespace}:{release_version}"
-
-                # normalized fixes
-                fixes = []
-                for test_id in impact_item.affected_test_ids:
-                    (
-                        pkg_name,
-                        pkg_version,
-                    ) = self._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
-                    if not pkg_name or not pkg_version:
-                        self.logger.debug(
-                            "package name and or version invalid, skipping fixed-in for %s",
-                            test_id,
-                        )
-                        continue
-
-                    available = None
-                    result = self.fixdater.best(
-                        vuln_id=vulnerability_obj.name,
-                        cpe_or_package=pkg_name,
-                        fix_version=pkg_version,
-                        ecosystem=feed_ns,
-                        candidates=[
-                            fixdate.Result(
-                                date=datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d"),  # noqa: DTZ007 # not a timezone aware datetime
-                                kind="advisory",
-                            ),
-                        ],
-                    )
-                    if result:
-                        available = FixAvailability(Date=result.date.isoformat(), Kind=result.kind)
-
-                    fixes.append(
-                        FixedIn(
-                            Name=pkg_name,
-                            NamespaceName=feed_ns,
-                            VersionFormat="rpm",
-                            Version=pkg_version,
-                            Module=None,
-                            VendorAdvisory=None,
-                            Available=available,
-                        ),
-                    )
-
-                # create the normalized vulnerability
-                feed_obj = Vulnerability(
-                    Name=vulnerability_obj.name,
-                    NamespaceName=feed_ns,
-                    Description=vulnerability_obj.description,
-                    Severity=vulnerability_obj.severity,
-                    Link=vulnerability_obj.link,
-                    CVSS=normalized_cvss_list,
-                    FixedIn=fixes,
+            except Exception:
+                self.logger.exception(
+                    "error transforming vulnerability %s for SLES %s, skipping",
+                    vulnerability_obj.name,
+                    major_version,
                 )
-
-                if release_version not in version_release_feed:
-                    version_release_feed[release_version] = defaultdict(Vulnerability)
-
-                if release_name not in version_release_feed[release_version]:
-                    version_release_feed[release_version][release_name] = feed_obj
-                else:
-                    old_feed_obj = version_release_feed[release_version][release_name]
-                    feed_obj.FixedIn.extend(old_feed_obj.FixedIn)
-                    version_release_feed[release_version][release_name] = feed_obj
-
-            # resolve multiple normalized entries per version
-            results.extend(self._release_resolver(version_release_feed, vulnerability_obj.name))
-
-            # free the contents
-            version_release_feed.clear()
 
         return results
+
+    def _transform_oval_vulnerability(  # noqa: C901, PLR0913
+        self,
+        major_version: str,
+        vulnerability_obj: SLESOVALVulnerability,
+        tests_dict: dict,
+        artifacts_dict: dict,
+        versions_dict: dict,
+        results: list[Vulnerability],
+    ) -> None:
+        # version->release->feed map
+        version_release_feed = defaultdict()
+
+        # process CVSS once per oval vulnerability and reuse it for all normalized vulnerabilities
+        normalized_cvss_list = []
+        for cvss_vector in vulnerability_obj.cvss_v3_vectors:
+            cvss_object = self._make_cvss(cvss_vector, vulnerability_obj.name)
+            if cvss_object:
+                normalized_cvss_list.append(cvss_object)
+
+        # process impact item, each impact translates to a normalized vulnerability
+        for impact_item in vulnerability_obj.impact:
+            # get the release and version
+            (
+                release_name,
+                release_version,
+            ) = self._get_name_and_version_from_test(
+                impact_item.namespace_test_id,
+                tests_dict,
+                artifacts_dict,
+                versions_dict,
+            )
+
+            # validate release
+            if not release_name:
+                self.logger.debug(
+                    "release name is invalid, skipping %s",
+                    vulnerability_obj.name,
+                )
+                continue
+
+            # validate version is inline with major version
+            if not release_version or not release_version.startswith(major_version):
+                self.logger.debug(
+                    "%s %s is an unsupported namespace for major version %s, skipping %s for this namespace",
+                    release_name,
+                    release_version,
+                    major_version,
+                    vulnerability_obj.name,
+                )
+                continue
+
+            # construct the feed namespace and payload
+            feed_ns = f"{namespace}:{release_version}"
+
+            # normalized fixes
+            fixes = []
+            for test_id in impact_item.affected_test_ids:
+                (
+                    pkg_name,
+                    pkg_version,
+                ) = self._get_name_and_version_from_test(test_id, tests_dict, artifacts_dict, versions_dict)
+                if not pkg_name or not pkg_version:
+                    self.logger.debug(
+                        "package name and or version invalid, skipping fixed-in for %s",
+                        test_id,
+                    )
+                    continue
+
+                available = None
+                result = self.fixdater.best(
+                    vuln_id=vulnerability_obj.name,
+                    cpe_or_package=pkg_name,
+                    fix_version=pkg_version,
+                    ecosystem=feed_ns,
+                    candidates=[
+                        fixdate.Result(
+                            date=datetime.strptime(vulnerability_obj.issued_date, "%Y-%m-%d"),  # noqa: DTZ007 # not a timezone aware datetime
+                            kind="advisory",
+                        ),
+                    ],
+                )
+                if result:
+                    available = FixAvailability(Date=result.date.isoformat(), Kind=result.kind)
+
+                fixes.append(
+                    FixedIn(
+                        Name=pkg_name,
+                        NamespaceName=feed_ns,
+                        VersionFormat="rpm",
+                        Version=pkg_version,
+                        Module=None,
+                        VendorAdvisory=None,
+                        Available=available,
+                    ),
+                )
+
+            # create the normalized vulnerability
+            feed_obj = Vulnerability(
+                Name=vulnerability_obj.name,
+                NamespaceName=feed_ns,
+                Description=vulnerability_obj.description,
+                Severity=vulnerability_obj.severity,
+                Link=vulnerability_obj.link,
+                CVSS=normalized_cvss_list,
+                FixedIn=fixes,
+            )
+
+            if release_version not in version_release_feed:
+                version_release_feed[release_version] = defaultdict(Vulnerability)
+
+            if release_name not in version_release_feed[release_version]:
+                version_release_feed[release_version][release_name] = feed_obj
+            else:
+                old_feed_obj = version_release_feed[release_version][release_name]
+                feed_obj.FixedIn.extend(old_feed_obj.FixedIn)
+                version_release_feed[release_version][release_name] = feed_obj
+
+        # resolve multiple normalized entries per version
+        results.extend(self._release_resolver(version_release_feed, vulnerability_obj.name))
+
+        # free the contents
+        version_release_feed.clear()
 
     def get(self) -> Generator[tuple[str, str, dict]]:
         self.fixdater.download()
