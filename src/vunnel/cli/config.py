@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 import os
-from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field, fields, is_dataclass
+from typing import TYPE_CHECKING, Any, Union, get_args, get_origin, get_type_hints
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -105,10 +106,10 @@ class Providers:
 
 @dataclass
 class Log:
-    slim: bool = os.environ.get("VUNNEL_LOG_SLIM", default="false") == "true"
-    level: str = os.environ.get("VUNNEL_LOG_LEVEL", default="INFO")
-    show_timestamp: bool = os.environ.get("VUNNEL_LOG_SHOW_TIMESTAMP", default="false") == "true"
-    show_level: bool = os.environ.get("VUNNEL_LOG_SHOW_LEVEL", default="true") == "true"
+    slim: bool = False
+    level: str = "INFO"
+    show_timestamp: bool = False
+    show_level: bool = True
 
     def __post_init__(self) -> None:
         self.level = self.level.upper()
@@ -119,6 +120,96 @@ class Application(DataClassDictMixin):
     root: str = "./data"
     log: Log = field(default_factory=Log)
     providers: Providers = field(default_factory=Providers)
+
+
+def _resolve_field_type(obj: Any, field_name: str) -> type | None:
+    """
+    Resolve the actual type of a dataclass field, handling forward references
+    and Optional/Union types.
+    """
+    try:
+        hints = get_type_hints(type(obj))
+        field_type = hints.get(field_name)
+    except Exception:
+        return None
+
+    if field_type is None:
+        return None
+
+    # handle Optional[X] and Union[X, None] by extracting the non-None type
+    origin = get_origin(field_type)
+    if origin is Union:
+        # get_args returns the types in the union, e.g., (str, None) for Optional[str]
+        args = [arg for arg in get_args(field_type) if arg is not type(None)]
+        if len(args) == 1:
+            return args[0]
+        # for complex unions, fall back to string handling
+        return None
+
+    return field_type
+
+
+def _parse_bool(value: str) -> bool:
+    """Parse a string value to boolean, accepting common truthy/falsy values."""
+    return value.lower() in ("true", "yes", "1", "on")
+
+
+def apply_env_overrides(obj: Any, prefix: str = "VUNNEL") -> None:
+    """
+    Recursively apply env var overrides to dataclass fields.
+
+    Derives env var names from the nested path:
+      Application.root             -> VUNNEL_ROOT
+      Application.log.slim         -> VUNNEL_LOG_SLIM
+      Application.log.level        -> VUNNEL_LOG_LEVEL
+      Application.log.show_level   -> VUNNEL_LOG_SHOW_LEVEL
+
+    Supported types:
+      - str: assigned directly
+      - bool: accepts "true", "yes", "1", "on" (case-insensitive) as truthy
+      - int: parsed as integer
+      - float: parsed as float
+
+    Environment variables always take precedence over config file values.
+    """
+    if not is_dataclass(obj):
+        return
+
+    for f in fields(obj):
+        env_name = f"{prefix}_{f.name}".upper()
+        current_value = getattr(obj, f.name)
+
+        # recurse into nested dataclasses
+        if is_dataclass(current_value):
+            apply_env_overrides(current_value, env_name)
+            continue
+
+        if env_name not in os.environ:
+            continue
+
+        env_value = os.environ[env_name]
+
+        # resolve the field's type, handling Optional and forward references
+        field_type = _resolve_field_type(obj, f.name)
+
+        try:
+            coerced_value: bool | int | float | str
+            if field_type is bool:
+                coerced_value = _parse_bool(env_value)
+            elif field_type is int:
+                coerced_value = int(env_value)
+            elif field_type is float:
+                coerced_value = float(env_value)
+            else:
+                # default to string assignment
+                coerced_value = env_value
+
+            setattr(obj, f.name, coerced_value)
+            logging.debug("config override: %s=%s", env_name, env_value)
+
+        except ValueError as e:
+            type_name = field_type.__name__ if field_type else "unknown"
+            raise ValueError(f"invalid value for {env_name}: {env_value!r} (expected {type_name})") from e
 
 
 def load(path: str = ".vunnel.yaml") -> Application:
@@ -139,5 +230,8 @@ def load(path: str = ".vunnel.yaml") -> Application:
                 raise FileNotFoundError("parsed empty config")
     except FileNotFoundError:
         cfg = Application()
+
+    # ensure env vars take precedence over config file values
+    apply_env_overrides(cfg)
 
     return cfg
