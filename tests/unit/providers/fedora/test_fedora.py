@@ -187,6 +187,116 @@ class TestNormalize:
         assert results[0][1]["Vulnerability"]["Name"] == "FEDORA-2025-nocve"
 
 
+class TestCrossUpdateMerging:
+    """Test that the same CVE fixed across multiple updates merges FixedIn entries."""
+
+    @pytest.fixture()
+    def parser(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        config = Config()
+        return Parser(workspace=ws, config=config)
+
+    def _write_update(self, parser, update):
+        alias = update["alias"]
+        filepath = os.path.join(parser.workspace.input_path, f"{alias}.json")
+        with open(filepath, "wb") as f:
+            f.write(orjson.dumps(update))
+
+    def test_same_cve_different_packages_merged(self, parser):
+        """CVE-2004-2779 fixed in mingw-libid3tag by one update and libid3tag by another.
+
+        Based on real Bodhi data: FEDORA-2018-4e26c06aef and FEDORA-2018-e06468b832.
+        The output should have a single CVE-2004-2779 record with both packages in FixedIn.
+        """
+        # mingw-libid3tag update
+        self._write_update(parser, {
+            "alias": "FEDORA-2018-4e26c06aef",
+            "display_name": "",
+            "title": "mingw-libid3tag-0.15.1b-23.fc27",
+            "notes": "Fix CVE-2017-11550 and CVE-2004-2779",
+            "type": "security",
+            "status": "stable",
+            "severity": "low",
+            "date_submitted": "2018-04-12 10:04:32",
+            "date_modified": None,
+            "date_stable": "2018-04-23 15:50:52",
+            "date_pushed": "2018-04-23 15:50:52",
+            "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2018-4e26c06aef",
+            "release": {"name": "F27", "version": "27", "id_prefix": "FEDORA"},
+            "bugs": [
+                {"bug_id": 1561983, "security": True, "title": "CVE-2004-2779 libid3tag: id3_utf16_deserialize() misparses ID3v2 tags with an odd number of bytes resulting in an endless loop"},
+                {"bug_id": 1561986, "security": True, "title": "CVE-2004-2779 mingw-libid3tag: libid3tag: id3_utf16_deserialize() misparses ID3v2 tags with an odd number of bytes resulting in an endless loop [fedora-all]"},
+            ],
+            "builds": [{"nvr": "mingw-libid3tag-0.15.1b-23.fc27", "type": "rpm", "epoch": 0}],
+        })
+
+        # libid3tag update
+        self._write_update(parser, {
+            "alias": "FEDORA-2018-e06468b832",
+            "display_name": "",
+            "title": "libid3tag-0.15.1b-26.fc27",
+            "notes": "Security fix for CVE-2004-2779 and CVE-2017-11550",
+            "type": "security",
+            "status": "stable",
+            "severity": "low",
+            "date_submitted": "2018-03-29 14:44:23",
+            "date_modified": "2018-03-30 15:35:22",
+            "date_stable": "2018-04-09 19:08:06",
+            "date_pushed": "2018-04-09 19:08:06",
+            "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2018-e06468b832",
+            "release": {"name": "F27", "version": "27", "id_prefix": "FEDORA"},
+            "bugs": [
+                {"bug_id": 1478934, "security": True, "title": "CVE-2017-11550 libid3tag: NULL Pointer Dereference in id3_ucs4_length function in ucs4.c"},
+                {"bug_id": 1561983, "security": True, "title": "CVE-2004-2779 libid3tag: id3_utf16_deserialize() misparses ID3v2 tags with an odd number of bytes resulting in an endless loop"},
+                {"bug_id": 1561985, "security": True, "title": "CVE-2004-2779 libid3tag: id3_utf16_deserialize() misparses ID3v2 tags with an odd number of bytes resulting in an endless loop [fedora-all]"},
+            ],
+            "builds": [{"nvr": "libid3tag-0.15.1b-26.fc27", "type": "rpm", "epoch": 0}],
+        })
+
+        parser.config.runtime.skip_download = True
+        results = list(parser.get())
+
+        # Find the CVE-2004-2779 record
+        cve_2779 = [r for vid, r in results if vid == "fedora:27/CVE-2004-2779"]
+        assert len(cve_2779) == 1, f"expected exactly 1 record for CVE-2004-2779, got {len(cve_2779)}"
+
+        fixed_in = cve_2779[0]["Vulnerability"]["FixedIn"]
+        fixed_in_names = sorted(entry["Name"] for entry in fixed_in)
+        assert fixed_in_names == ["libid3tag", "mingw-libid3tag"], (
+            f"expected both packages in FixedIn, got {fixed_in_names}"
+        )
+
+        # CVE-2017-11550 should also exist (only in the libid3tag update)
+        cve_11550 = [r for vid, r in results if vid == "fedora:27/CVE-2017-11550"]
+        assert len(cve_11550) == 1
+
+    def test_same_cve_same_package_different_updates_keeps_first(self, parser):
+        """If two updates fix the same CVE in the same package, FixedIn should not duplicate."""
+        for alias, version in [("FEDORA-2025-aaa", "1.0-1.fc40"), ("FEDORA-2025-bbb", "1.1-1.fc40")]:
+            self._write_update(parser, {
+                "alias": alias,
+                "release": {"version": "40"},
+                "severity": "medium",
+                "bugs": [{"bug_id": 1, "security": True, "title": "CVE-2025-0001 test vuln"}],
+                "builds": [{"nvr": f"foo-{version}", "type": "rpm", "epoch": 0}],
+                "date_submitted": "2025-01-01 10:00:00",
+                "date_stable": "2025-01-05 12:00:00",
+            })
+
+        parser.config.runtime.skip_download = True
+        results = list(parser.get())
+
+        cve_records = [(vid, r) for vid, r in results if vid == "fedora:40/CVE-2025-0001"]
+        assert len(cve_records) == 1
+
+        fixed_in = cve_records[0][1]["Vulnerability"]["FixedIn"]
+        pkg_names = [entry["Name"] for entry in fixed_in]
+        # Both are "foo" — should have both versions since they're different advisories
+        assert len(fixed_in) == 2
+        versions = sorted(entry["Version"] for entry in fixed_in)
+        assert versions == ["0:1.0-1.fc40", "0:1.1-1.fc40"]
+
+
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),

@@ -394,7 +394,7 @@ class Parser:
             self._download()
 
         updates = self._load_all_updates()
-        emitted: set[str] = set()
+        merged: dict[str, dict[str, Any]] = {}
 
         for update in updates:
             advisory = self._parse_update(update)
@@ -402,6 +402,12 @@ class Parser:
                 continue
 
             for vuln_id, record in self._normalize(advisory):
-                if vuln_id not in emitted:
-                    emitted.add(vuln_id)
-                    yield (vuln_id, record)
+                if vuln_id not in merged:
+                    merged[vuln_id] = record
+                else:
+                    # Merge FixedIn entries from additional updates for the same CVE
+                    merged[vuln_id]["Vulnerability"]["FixedIn"].extend(
+                        record["Vulnerability"]["FixedIn"],
+                    )
+
+        yield from merged.items()
