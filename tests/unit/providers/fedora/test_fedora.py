@@ -8,7 +8,7 @@ import pytest
 
 from vunnel import result, workspace
 from vunnel.providers.fedora import Config, Provider
-from vunnel.providers.fedora.parser import Parser, _INCREMENTAL_FILE
+from vunnel.providers.fedora.parser import Parser, _UPDATE_FILE_GLOB
 
 
 class TestParseUpdate:
@@ -196,7 +196,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
-    monkeypatch.setattr(p.parser, "_download", p.parser._existing_input_files)
+    monkeypatch.setattr(p.parser, "_download", lambda: None)
 
     p.update(None)
 
@@ -214,7 +214,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
-    monkeypatch.setattr(p.parser, "_download", p.parser._existing_input_files)
+    monkeypatch.setattr(p.parser, "_download", lambda: None)
 
     p.update(None)
 
@@ -228,11 +228,12 @@ class TestIncremental:
         config = Config()
         return Parser(workspace=ws, config=config)
 
-    def _write_page(self, parser, updates, filename="bodhi-updates-page-1.json"):
-        """Helper to write a page file into the parser's input directory."""
-        filepath = os.path.join(parser.workspace.input_path, filename)
+    def _write_update(self, parser, update):
+        """Helper to write a single update file into the parser's input directory."""
+        alias = update["alias"]
+        filepath = os.path.join(parser.workspace.input_path, f"{alias}.json")
         with open(filepath, "wb") as f:
-            f.write(orjson.dumps(updates))
+            f.write(orjson.dumps(update))
         return filepath
 
     def _make_update(self, alias="FEDORA-2025-aaa", cve="CVE-2025-0001", severity="medium", version="40", pkg_name="foo", pkg_version="1.0-1.fc40"):
@@ -257,59 +258,47 @@ class TestIncremental:
 
     def test_can_update_incrementally_with_data(self, parser):
         """Can update incrementally when both timestamp and input files exist."""
-        self._write_page(parser, [self._make_update()])
+        self._write_update(parser, self._make_update())
         ts = datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC)
         assert parser._can_update_incrementally(ts) is True
 
-    def test_load_all_updates_deduplicates_by_alias(self, parser):
-        """Incremental file should override full-sync data for the same alias."""
+    def test_incremental_overwrites_existing_update(self, parser):
+        """Writing a new version of the same update overwrites the file."""
         original = self._make_update(alias="FEDORA-2025-aaa", severity="medium")
-        self._write_page(parser, [original])
+        self._write_update(parser, original)
 
-        # Write incremental file with updated severity for the same alias
         modified = self._make_update(alias="FEDORA-2025-aaa", severity="critical")
-        incremental_path = os.path.join(parser.workspace.input_path, _INCREMENTAL_FILE)
-        with open(incremental_path, "wb") as f:
-            f.write(orjson.dumps([modified]))
+        self._write_update(parser, modified)
 
         updates = parser._load_all_updates()
         assert len(updates) == 1
         assert updates[0]["severity"] == "critical"
 
-    def test_load_all_updates_merges_new_and_old(self, parser):
-        """Incremental file adds new updates alongside full-sync data."""
-        original = self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001")
-        self._write_page(parser, [original])
-
-        new_update = self._make_update(alias="FEDORA-2025-bbb", cve="CVE-2025-0002")
-        incremental_path = os.path.join(parser.workspace.input_path, _INCREMENTAL_FILE)
-        with open(incremental_path, "wb") as f:
-            f.write(orjson.dumps([new_update]))
+    def test_load_all_updates_loads_multiple_files(self, parser):
+        """Each update file is loaded independently."""
+        self._write_update(parser, self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001"))
+        self._write_update(parser, self._make_update(alias="FEDORA-2025-bbb", cve="CVE-2025-0002"))
 
         updates = parser._load_all_updates()
         aliases = {u["alias"] for u in updates}
         assert aliases == {"FEDORA-2025-aaa", "FEDORA-2025-bbb"}
 
-    def test_full_download_cleans_incremental_file(self, parser, monkeypatch):
-        """Full sync should remove the incremental overlay file."""
-        # Create an incremental file
-        incremental_path = os.path.join(parser.workspace.input_path, _INCREMENTAL_FILE)
-        with open(incremental_path, "wb") as f:
-            f.write(orjson.dumps([self._make_update()]))
-
-        assert os.path.exists(incremental_path)
+    def test_full_download_cleans_existing_files(self, parser, monkeypatch):
+        """Full sync should remove all existing per-update files."""
+        self._write_update(parser, self._make_update(alias="FEDORA-2025-old"))
+        filepath = os.path.join(parser.workspace.input_path, "FEDORA-2025-old.json")
+        assert os.path.exists(filepath)
 
         # Mock _fetch_page to return empty results (simulating end of pagination)
         monkeypatch.setattr(parser, "_fetch_page", lambda *a, **kw: {"updates": [], "pages": 1})
 
         parser._download()
 
-        assert not os.path.exists(incremental_path)
+        assert not os.path.exists(filepath)
 
     def test_get_uses_incremental_path(self, parser, monkeypatch):
         """When skip_if_exists=True and last_updated is set, get() should use incremental download."""
-        original = self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001")
-        self._write_page(parser, [original])
+        self._write_update(parser, self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001"))
 
         download_updates_called = []
 
@@ -331,7 +320,6 @@ class TestIncremental:
 
         def mock_download():
             download_called.append(True)
-            return []
 
         monkeypatch.setattr(parser, "_download", mock_download)
 
@@ -340,16 +328,14 @@ class TestIncremental:
         assert len(download_called) == 1
 
     def test_incremental_produces_correct_results(self, parser):
-        """End-to-end: incremental overlay should affect the final vulnerability output."""
+        """End-to-end: overwriting an update file should affect the final vulnerability output."""
         # Original data: severity medium
         original = self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001", severity="medium")
-        self._write_page(parser, [original])
+        self._write_update(parser, original)
 
-        # Incremental: same advisory updated to critical severity
+        # Overwrite with updated severity
         modified = self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001", severity="critical")
-        incremental_path = os.path.join(parser.workspace.input_path, _INCREMENTAL_FILE)
-        with open(incremental_path, "wb") as f:
-            f.write(orjson.dumps([modified]))
+        self._write_update(parser, modified)
 
         # Use skip_download to process existing data
         parser.config.runtime.skip_download = True

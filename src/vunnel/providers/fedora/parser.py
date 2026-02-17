@@ -38,7 +38,9 @@ SEVERITY_MAP = {
 
 _CVE_PATTERN = re.compile(r"CVE-\d{4}-\d+")
 
-_INCREMENTAL_FILE = "bodhi-incremental-updates.json"
+# Each Bodhi update is persisted as its own file: <alias>.json
+# e.g. FEDORA-2025-21c36b3aa5.json
+_UPDATE_FILE_GLOB = "FEDORA-*.json"
 
 
 class Parser:
@@ -102,21 +104,28 @@ class Parser:
         resp.raise_for_status()
         return resp.json()
 
-    def _download(self) -> list[str]:
+    def _save_update(self, update: dict[str, Any]) -> str | None:
+        """Persist a single Bodhi update to its own file, keyed by alias.
+
+        Returns the file path written, or None if the update has no alias.
+        """
+        alias = update.get("alias")
+        if not alias:
+            return None
+        filepath = os.path.join(self.workspace.input_path, f"{alias}.json")
+        with open(filepath, "wb") as f:
+            f.write(orjson.dumps(update))
+        return filepath
+
+    def _download(self) -> None:
         """Download all security updates from Bodhi (full sync).
 
-        Clears any existing input files before downloading.
-
-        Returns:
-            List of file paths to saved JSON pages.
+        Clears any existing per-update input files before downloading.
         """
         os.makedirs(self.workspace.input_path, exist_ok=True)
 
-        # Clean up all existing input files for a fresh full sync
-        for filepath in glob.glob(os.path.join(self.workspace.input_path, "bodhi-*.json")):
+        for filepath in glob.glob(os.path.join(self.workspace.input_path, _UPDATE_FILE_GLOB)):
             os.remove(filepath)
-
-        saved_files: list[str] = []
 
         releases: Sequence[str | None] = self.config.releases if self.config.releases else (None,)
 
@@ -132,14 +141,8 @@ class Parser:
                 if not updates:
                     break
 
-                suffix = f"-f{release}" if release else ""
-                filename = f"bodhi-updates{suffix}-page-{page}.json"
-                filepath = os.path.join(self.workspace.input_path, filename)
-
-                with open(filepath, "wb") as f:
-                    f.write(orjson.dumps(updates))
-
-                saved_files.append(filepath)
+                for update in updates:
+                    self._save_update(update)
 
                 total_pages = data.get("pages", 1)
                 self.logger.debug(f"page {page}/{total_pages}, updates on page: {len(updates)}")
@@ -148,53 +151,26 @@ class Parser:
                     break
                 page += 1
 
-        return saved_files
-
     def _can_update_incrementally(self, last_updated: datetime.datetime | None) -> bool:
         """Check if incremental update is possible.
 
-        Requires both a last_updated timestamp and existing full-sync input data.
+        Requires both a last_updated timestamp and existing per-update input files.
         """
         if not last_updated:
             return False
         return len(self._existing_input_files()) > 0
 
-    def _read_incremental(self) -> dict[str, dict[str, Any]]:
-        """Load existing incremental overlay data keyed by update alias."""
-        incremental_path = os.path.join(self.workspace.input_path, _INCREMENTAL_FILE)
-        updates: dict[str, dict[str, Any]] = {}
-        if os.path.exists(incremental_path):
-            with open(incremental_path, "rb") as f:
-                for update in orjson.loads(f.read()):
-                    alias = update.get("alias")
-                    if alias:
-                        updates[alias] = update
-        return updates
-
-    def _write_incremental(self, updates: dict[str, dict[str, Any]]) -> None:
-        """Write the incremental overlay file."""
-        if not updates:
-            return
-        incremental_path = os.path.join(self.workspace.input_path, _INCREMENTAL_FILE)
-        with open(incremental_path, "wb") as f:
-            f.write(orjson.dumps(list(updates.values())))
-        self.logger.info(f"incremental file contains {len(updates)} total modified updates")
-
     def _download_updates(self, last_updated: datetime.datetime) -> None:
-        """Download only recently pushed security updates and merge into incremental file.
+        """Download only recently pushed security updates.
 
         Uses the Bodhi API's ``pushed_since`` parameter to fetch updates pushed
-        to stable since the given timestamp.  This covers both brand-new updates
-        and updates that were edited while in testing then pushed (edits in Bodhi
-        always happen before the push, so ``date_pushed`` is always >= ``date_modified``).
-        Results are merged into a single incremental overlay file so that
-        multiple incremental runs accumulate correctly without duplicating entries.
+        to stable since the given timestamp.  Each update is written to its own
+        file, overwriting any previous version of that update.
         """
         os.makedirs(self.workspace.input_path, exist_ok=True)
 
-        incremental = self._read_incremental()
-
         releases: Sequence[str | None] = self.config.releases if self.config.releases else (None,)
+        count = 0
 
         for release in releases:
             label = f"Fedora {release}" if release else "all releases"
@@ -209,9 +185,8 @@ class Parser:
                     break
 
                 for update in updates:
-                    alias = update.get("alias")
-                    if alias:
-                        incremental[alias] = update
+                    if self._save_update(update):
+                        count += 1
 
                 total_pages = data.get("pages", 1)
                 self.logger.debug(f"page {page}/{total_pages}, updates on page: {len(updates)}")
@@ -220,35 +195,15 @@ class Parser:
                     break
                 page += 1
 
-        self._write_incremental(incremental)
+        self.logger.info(f"incremental update wrote {count} update files")
 
     def _load_all_updates(self) -> list[dict[str, Any]]:
-        """Load all updates from input files, deduplicating by alias.
-
-        Full-sync page files are loaded first, then the incremental overlay
-        file is applied on top so that modified updates take precedence.
-        """
-        updates_by_alias: dict[str, dict[str, Any]] = {}
-
-        # Load full-sync pages first
-        pattern = os.path.join(self.workspace.input_path, "bodhi-updates*.json")
-        for filepath in sorted(glob.glob(pattern)):
+        """Load all per-update input files."""
+        updates = []
+        for filepath in self._existing_input_files():
             with open(filepath, "rb") as f:
-                for update in orjson.loads(f.read()):
-                    alias = update.get("alias")
-                    if alias:
-                        updates_by_alias[alias] = update
-
-        # Load incremental file second (overrides full-sync data)
-        incremental_path = os.path.join(self.workspace.input_path, _INCREMENTAL_FILE)
-        if os.path.exists(incremental_path):
-            with open(incremental_path, "rb") as f:
-                for update in orjson.loads(f.read()):
-                    alias = update.get("alias")
-                    if alias:
-                        updates_by_alias[alias] = update
-
-        return list(updates_by_alias.values())
+                updates.append(orjson.loads(f.read()))
+        return updates
 
     @staticmethod
     def _extract_cves(update: dict[str, Any]) -> list[str]:
@@ -415,8 +370,8 @@ class Parser:
             yield (f"{namespace}/{vuln_id}", record)
 
     def _existing_input_files(self) -> list[str]:
-        """Return previously downloaded JSON files from the input directory."""
-        pattern = os.path.join(self.workspace.input_path, "bodhi-updates*.json")
+        """Return previously downloaded per-update JSON files from the input directory."""
+        pattern = os.path.join(self.workspace.input_path, _UPDATE_FILE_GLOB)
         return sorted(glob.glob(pattern))
 
     def get(self, last_updated: datetime.datetime | None = None, skip_if_exists: bool = False) -> Generator[tuple[str, dict[str, Any]]]:
