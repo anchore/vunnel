@@ -327,6 +327,72 @@ class TestIncremental:
 
         assert len(download_called) == 1
 
+    def test_incremental_partial_failure_preserves_already_saved_files(self, parser, monkeypatch):
+        """If a fetch fails mid-pagination, files saved before the error remain on disk."""
+        # Pre-existing update from a prior full sync
+        self._write_update(parser, self._make_update(alias="FEDORA-2025-old", cve="CVE-2025-0001"))
+
+        call_count = 0
+
+        def mock_fetch_page(page, release=None, extra_params=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First page succeeds — returns one new update
+                return {
+                    "updates": [self._make_update(alias="FEDORA-2025-new", cve="CVE-2025-0002")],
+                    "pages": 2,
+                }
+            # Second page blows up
+            raise RuntimeError("simulated network failure")
+
+        monkeypatch.setattr(parser, "_fetch_page", mock_fetch_page)
+
+        ts = datetime.datetime(2025, 6, 1, tzinfo=datetime.UTC)
+        with pytest.raises(RuntimeError, match="simulated network failure"):
+            parser._download_updates(ts)
+
+        # The pre-existing file and the successfully-saved file should both still be on disk
+        existing = {os.path.basename(f) for f in parser._existing_input_files()}
+        assert "FEDORA-2025-old.json" in existing
+        assert "FEDORA-2025-new.json" in existing
+
+    def test_incremental_partial_failure_does_not_update_results(self, parser, monkeypatch):
+        """If incremental download fails, get() raises and yields no partial results."""
+        self._write_update(parser, self._make_update(alias="FEDORA-2025-aaa", cve="CVE-2025-0001"))
+
+        def mock_download_updates(last_updated):
+            raise RuntimeError("simulated network failure")
+
+        monkeypatch.setattr(parser, "_download_updates", mock_download_updates)
+
+        ts = datetime.datetime(2025, 6, 1, tzinfo=datetime.UTC)
+        with pytest.raises(RuntimeError, match="simulated network failure"):
+            list(parser.get(last_updated=ts, skip_if_exists=True))
+
+    def test_save_update_skips_update_without_alias(self, parser):
+        """An update with no alias should not be saved and _save_update returns None."""
+        update = self._make_update()
+        del update["alias"]
+        result = parser._save_update(update)
+        assert result is None
+        assert len(parser._existing_input_files()) == 0
+
+    def test_duplicate_cve_across_updates_emitted_once(self, parser):
+        """If two different updates fix the same CVE for the same release, it's emitted only once."""
+        self._write_update(parser, self._make_update(
+            alias="FEDORA-2025-aaa", cve="CVE-2025-0001", pkg_name="foo", pkg_version="1.0-1.fc40",
+        ))
+        self._write_update(parser, self._make_update(
+            alias="FEDORA-2025-bbb", cve="CVE-2025-0001", pkg_name="bar", pkg_version="2.0-1.fc40",
+        ))
+
+        parser.config.runtime.skip_download = True
+        results = list(parser.get())
+
+        vuln_ids = [vid for vid, _ in results]
+        assert vuln_ids.count("fedora:40/CVE-2025-0001") == 1
+
     def test_incremental_produces_correct_results(self, parser):
         """End-to-end: overwriting an update file should affect the final vulnerability output."""
         # Original data: severity medium
