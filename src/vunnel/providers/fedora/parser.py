@@ -13,6 +13,7 @@ from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
+    import datetime
     from collections.abc import Generator, Sequence
     from types import TracebackType
 
@@ -36,6 +37,10 @@ SEVERITY_MAP = {
 }
 
 _CVE_PATTERN = re.compile(r"CVE-\d{4}-\d+")
+
+# Each Bodhi update is persisted as its own file: <alias>.json
+# e.g. FEDORA-2025-21c36b3aa5.json
+_UPDATE_FILE_GLOB = "FEDORA-*.json"
 
 
 class Parser:
@@ -72,7 +77,7 @@ class Parser:
     ) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-    def _fetch_page(self, page: int, release: str | None = None) -> dict[str, Any]:
+    def _fetch_page(self, page: int, release: str | None = None, extra_params: dict[str, str] | None = None) -> dict[str, Any]:
         """Fetch a single page of security updates from the Bodhi API."""
         url = f"{self.config.bodhi_url}/updates/"
         params: dict[str, str] = {
@@ -83,6 +88,8 @@ class Parser:
         }
         if release:
             params["releases"] = f"F{release}"
+        if extra_params:
+            params.update(extra_params)
 
         self.urls.append(url)
         self.logger.debug(f"fetching page {page} from Bodhi API")
@@ -97,14 +104,28 @@ class Parser:
         resp.raise_for_status()
         return resp.json()
 
-    def _download(self) -> list[str]:
-        """Download all security updates from Bodhi and save JSON pages to workspace.
+    def _save_update(self, update: dict[str, Any]) -> str | None:
+        """Persist a single Bodhi update to its own file, keyed by alias.
 
-        Returns:
-            List of file paths to saved JSON pages.
+        Returns the file path written, or None if the update has no alias.
+        """
+        alias = update.get("alias")
+        if not alias:
+            return None
+        filepath = os.path.join(self.workspace.input_path, f"{alias}.json")
+        with open(filepath, "wb") as f:
+            f.write(orjson.dumps(update))
+        return filepath
+
+    def _download(self) -> None:
+        """Download all security updates from Bodhi (full sync).
+
+        Clears any existing per-update input files before downloading.
         """
         os.makedirs(self.workspace.input_path, exist_ok=True)
-        saved_files: list[str] = []
+
+        for filepath in glob.glob(os.path.join(self.workspace.input_path, _UPDATE_FILE_GLOB)):
+            os.remove(filepath)
 
         releases: Sequence[str | None] = self.config.releases if self.config.releases else (None,)
 
@@ -120,14 +141,8 @@ class Parser:
                 if not updates:
                     break
 
-                suffix = f"-f{release}" if release else ""
-                filename = f"bodhi-updates{suffix}-page-{page}.json"
-                filepath = os.path.join(self.workspace.input_path, filename)
-
-                with open(filepath, "wb") as f:
-                    f.write(orjson.dumps(updates))
-
-                saved_files.append(filepath)
+                for update in updates:
+                    self._save_update(update)
 
                 total_pages = data.get("pages", 1)
                 self.logger.debug(f"page {page}/{total_pages}, updates on page: {len(updates)}")
@@ -136,7 +151,59 @@ class Parser:
                     break
                 page += 1
 
-        return saved_files
+    def _can_update_incrementally(self, last_updated: datetime.datetime | None) -> bool:
+        """Check if incremental update is possible.
+
+        Requires both a last_updated timestamp and existing per-update input files.
+        """
+        if not last_updated:
+            return False
+        return len(self._existing_input_files()) > 0
+
+    def _download_updates(self, last_updated: datetime.datetime) -> None:
+        """Download only recently pushed security updates.
+
+        Uses the Bodhi API's ``pushed_since`` parameter to fetch updates pushed
+        to stable since the given timestamp.  Each update is written to its own
+        file, overwriting any previous version of that update.
+        """
+        os.makedirs(self.workspace.input_path, exist_ok=True)
+
+        releases: Sequence[str | None] = self.config.releases if self.config.releases else (None,)
+        count = 0
+
+        for release in releases:
+            label = f"Fedora {release}" if release else "all releases"
+            page = 1
+
+            while True:
+                self.logger.info(f"fetching {label} security updates pushed since last sync, page {page}")
+                data = self._fetch_page(page, release=release, extra_params={"pushed_since": last_updated.isoformat()})
+
+                updates = data.get("updates", [])
+                if not updates:
+                    break
+
+                for update in updates:
+                    if self._save_update(update):
+                        count += 1
+
+                total_pages = data.get("pages", 1)
+                self.logger.debug(f"page {page}/{total_pages}, updates on page: {len(updates)}")
+
+                if page >= total_pages:
+                    break
+                page += 1
+
+        self.logger.info(f"incremental update wrote {count} update files")
+
+    def _load_all_updates(self) -> list[dict[str, Any]]:
+        """Load all per-update input files."""
+        updates = []
+        for filepath in self._existing_input_files():
+            with open(filepath, "rb") as f:
+                updates.append(orjson.loads(f.read()))
+        return updates
 
     @staticmethod
     def _extract_cves(update: dict[str, Any]) -> list[str]:
@@ -303,32 +370,44 @@ class Parser:
             yield (f"{namespace}/{vuln_id}", record)
 
     def _existing_input_files(self) -> list[str]:
-        """Return previously downloaded JSON files from the input directory."""
-        pattern = os.path.join(self.workspace.input_path, "bodhi-updates*.json")
+        """Return previously downloaded per-update JSON files from the input directory."""
+        pattern = os.path.join(self.workspace.input_path, _UPDATE_FILE_GLOB)
         return sorted(glob.glob(pattern))
 
-    def get(self) -> Generator[tuple[str, dict[str, Any]]]:
-        """Main entry point - download, parse, and normalize vulnerabilities."""
+    def get(self, last_updated: datetime.datetime | None = None, skip_if_exists: bool = False) -> Generator[tuple[str, dict[str, Any]]]:
+        """Main entry point - download, parse, and normalize vulnerabilities.
+
+        Args:
+            last_updated: Timestamp of the last successful run, used for incremental updates.
+            skip_if_exists: When True and last_updated is available, attempt incremental update.
+        """
         self.fixdater.download()
 
         if self.config.runtime.skip_download:
             self.logger.info("skip_download set, using existing input data")
-            saved_files = self._existing_input_files()
+        elif skip_if_exists and last_updated and self._can_update_incrementally(last_updated):
+            self.logger.info(f"incremental update: fetching updates modified since {last_updated.isoformat()}")
+            self._download_updates(last_updated)
         else:
-            saved_files = self._download()
+            if skip_if_exists and last_updated:
+                self.logger.info("cannot update incrementally (missing input data), performing full sync")
+            self._download()
 
-        emitted: set[str] = set()
+        updates = self._load_all_updates()
+        merged: dict[str, dict[str, Any]] = {}
 
-        for filepath in saved_files:
-            with open(filepath, "rb") as f:
-                updates = orjson.loads(f.read())
+        for update in updates:
+            advisory = self._parse_update(update)
+            if not advisory:
+                continue
 
-            for update in updates:
-                advisory = self._parse_update(update)
-                if not advisory:
-                    continue
+            for vuln_id, record in self._normalize(advisory):
+                if vuln_id not in merged:
+                    merged[vuln_id] = record
+                else:
+                    # Merge FixedIn entries from additional updates for the same CVE
+                    merged[vuln_id]["Vulnerability"]["FixedIn"].extend(
+                        record["Vulnerability"]["FixedIn"],
+                    )
 
-                for vuln_id, record in self._normalize(advisory):
-                    if vuln_id not in emitted:
-                        emitted.add(vuln_id)
-                        yield (vuln_id, record)
+        yield from merged.items()
