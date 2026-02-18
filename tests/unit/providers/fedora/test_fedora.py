@@ -319,6 +319,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
         input_fixture="test-fixtures/input",
+        snapshot_prefix="default",
     )
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
@@ -328,6 +329,31 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
 
     p.update(None)
 
+    workspace.assert_result_snapshots()
+
+
+def test_merge_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
+    """Snapshot test for cross-update FixedIn merging using real Bodhi data.
+
+    Input fixtures cover three cases:
+    - Case 6: Two updates share CVE-2012-6662 (drupal7 + dokuwiki) but each has unique CVEs too.
+    - Case 7: Same CVEs (CVE-2006-20001 etc.) fixed in httpd for F36 and F37 — should NOT merge.
+    - Case 8: Same CVEs (CVE-2014-8501 etc.) in EPEL-7, different severities (unspecified vs low).
+    """
+    workspace = helpers.provider_workspace_helper(
+        name=Provider.name(),
+        input_fixture="test-fixtures/merge-input",
+        snapshot_prefix="merge",
+    )
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    monkeypatch.setattr(p.parser, "_download", lambda: None)
+
+    p.update(None)
+
+    assert workspace.result_schemas_valid(require_entries=True)
     workspace.assert_result_snapshots()
 
 
