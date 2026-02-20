@@ -261,6 +261,8 @@ tests:
         candidate_tool_label: custom-db
 
   - provider: nvd
+    # building nvd without cache takes ~3 hours
+    use_cache: true
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
     expected_namespaces:
