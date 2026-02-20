@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Any
 
 from vunnel import result
@@ -123,11 +124,17 @@ class Manager:
         self.logger.info("applying current fix dates and overrides to remaining CVEs...")
 
         overrides_applied = 0
+        processed_count = 0
+        skipped_count = 0
+        start_time = time.time()
+        last_log_time = start_time
+        last_log_count = 0
 
         with self._sqlite_reader() as reader:
             for record in reader.each():
                 cve_id = record.item["cve"]["id"].upper()
                 if cve_id in already_processed:
+                    skipped_count += 1
                     continue
 
                 original_record = record.item
@@ -140,7 +147,27 @@ class Manager:
                     overrides_applied += 1
 
                 already_processed.add(cve_id)
+                processed_count += 1
+
+                # Log progress every 10k records processed
+                if processed_count % 10000 == 0:
+                    now = time.time()
+                    interval = now - last_log_time
+                    rate = (processed_count - last_log_count) / interval if interval > 0 else 0
+                    self.logger.debug(
+                        f"finalize progress: processed={processed_count} skipped={skipped_count} "
+                        f"interval={interval:.1f}s ({rate:.0f} CVEs/s)",
+                    )
+                    last_log_time = now
+                    last_log_count = processed_count
+
                 yield cve_to_id(cve_id), self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+
+        elapsed = time.time() - start_time
+        self.logger.info(
+            f"finalized {processed_count} CVEs (skipped {skipped_count} already processed) "
+            f"in {elapsed:.1f}s ({processed_count / elapsed:.0f} CVEs/s)",
+        )
 
         # Now we need to synthesize an NVD record for any overrides where there wasn't an existing NVD record
         if self.overrides.enabled:

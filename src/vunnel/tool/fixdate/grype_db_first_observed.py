@@ -18,6 +18,41 @@ from vunnel import workspace
 from .ecosystem import normalize_package_name
 from .finder import Result, Strategy
 
+
+def cpe_to_v6_format(cpe: str) -> str | None:
+    """Convert a standard CPE 2.3 string to v6 simplified format.
+
+    Standard format: cpe:2.3:a:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+    V6 format: a:vendor:product:version:update:edition:lang:sw_edition:target_sw
+
+    Returns None if the input is not a valid CPE 2.3 string.
+    """
+    if not cpe or not cpe.lower().startswith("cpe:2.3:"):
+        return None
+
+    parts = cpe.split(":")
+    if len(parts) < 5:
+        return None
+
+    # parts[2] is the part type (a, o, h)
+    part = parts[2]
+    if part not in ("a", "o", "h"):
+        return None
+
+    # extract fields 3-10 (vendor through target_sw), replacing * with empty string
+    fields = []
+    for i in range(3, min(len(parts), 12)):
+        field = parts[i] if parts[i] != "*" else ""
+        fields.append(field)
+
+    # pad to 8 fields if needed, truncate if too many
+    while len(fields) < 8:
+        fields.append("")
+    fields = fields[:8]
+
+    return f"{part}:{':'.join(fields)}"
+
+
 if TYPE_CHECKING:
     from oras.container import Container as container_type
 
@@ -275,23 +310,46 @@ class Store(Strategy):
         if self._not_found:
             # this is in cases where the fix date database does not exist for the provider. We want to act as
             # if the database is empty and return no results.
+            self.logger.trace("grype_db.get: skipping (db not found)")
             return []
 
         conn, table = self._get_connection()
 
         # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
+        # IMPORTANT: use .collate("NOCASE") to match the index collation, otherwise SQLite does a full table scan
         query = table.select().where(
-            (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
+            (table.c.vuln_id.collate("NOCASE") == vuln_id)
+            & (table.c.provider.collate("NOCASE") == self.provider),
         )
 
-        if cpe_or_package.lower().startswith("cpe:"):
-            query = query.where(table.c.full_cpe == cpe_or_package)
+        is_cpe = cpe_or_package.lower().startswith("cpe:")
+        if is_cpe:
+            # try v6 simplified CPE format (e.g., "a:vendor:product:...") since grype-db stores CPEs this way
+            v6_cpe = cpe_to_v6_format(cpe_or_package)
+            if v6_cpe:
+                query = query.where(
+                    (table.c.full_cpe.collate("NOCASE") == cpe_or_package)
+                    | (table.c.full_cpe.collate("NOCASE") == v6_cpe),
+                )
+                self.logger.trace(
+                    f"grype_db.get: querying by CPE - vuln_id={vuln_id} cpe={cpe_or_package} v6={v6_cpe}",
+                )
+            else:
+                query = query.where(table.c.full_cpe.collate("NOCASE") == cpe_or_package)
+                self.logger.trace(
+                    f"grype_db.get: querying by CPE - vuln_id={vuln_id} cpe={cpe_or_package}",
+                )
         else:
+            normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
             query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                (table.c.package_name.collate("NOCASE") == normalized_pkg)
+                & (table.c.full_cpe.collate("NOCASE") == ""),
             )
             if ecosystem:
-                query = query.where(table.c.ecosystem == ecosystem)
+                query = query.where(table.c.ecosystem.collate("NOCASE") == ecosystem)
+            self.logger.trace(
+                f"grype_db.get: querying by package - vuln_id={vuln_id} pkg={normalized_pkg} ecosystem={ecosystem}",
+            )
 
         if fix_version:
             query = query.where(table.c.fix_version == fix_version)
@@ -299,7 +357,13 @@ class Store(Strategy):
         results = conn.execute(query).fetchall()
 
         if not results:
+            self.logger.trace(
+                f"grype_db.get: no results for vuln_id={vuln_id} "
+                f"{'cpe=' + cpe_or_package if is_cpe else 'pkg=' + cpe_or_package}",
+            )
             return []
+
+        self.logger.trace(f"grype_db.get: found {len(results)} result(s)")
 
         return [
             FixDate(
@@ -400,13 +464,14 @@ class Store(Strategy):
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
 
-                # configure SQLAlchemy engine with SQLite pragmas
+                # configure SQLAlchemy engine with SQLite pragmas for read-only performance
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA query_only = ON")
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection

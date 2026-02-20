@@ -98,6 +98,13 @@ class Finder:
         for s in self.strategies:
             s.__exit__(exc_type, exc_val, exc_tb)
         self.first_observed.__exit__(exc_type, exc_val, exc_tb)
+        # Log cache stats before clearing
+        cache_info = self._cached_find_from_strategies.cache_info()
+        logger.debug(
+            f"fix date cache stats: hits={cache_info.hits} misses={cache_info.misses} "
+            f"size={cache_info.currsize}/{cache_info.maxsize} "
+            f"hit_rate={cache_info.hits / (cache_info.hits + cache_info.misses) * 100 if (cache_info.hits + cache_info.misses) > 0 else 0:.1f}%",
+        )
         # Clear cache on exit
         self._cached_find_from_strategies.cache_clear()
 

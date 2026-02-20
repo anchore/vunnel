@@ -72,18 +72,26 @@ class Store:
             full_cpe = ""
             package_name = normalize_package_name(cpe_or_package, ecosystem)
 
-        insert_stmt = table.insert().values(
-            vuln_id=vuln_id,
-            provider=self.provider,
-            package_name=package_name,
-            full_cpe=full_cpe,
-            ecosystem=ecosystem or "",
-            fix_version=fix_version,
-            first_observed_date=first_observed_date.isoformat(),
-            updated_at=datetime.now(UTC),
-        )
+        # use INSERT OR IGNORE to avoid duplicates (primary key constraint) without extra SELECT
+        upsert_stmt = db.text("""
+            INSERT OR IGNORE INTO fixdates
+            (vuln_id, provider, package_name, full_cpe, ecosystem, fix_version, first_observed_date, updated_at)
+            VALUES (:vuln_id, :provider, :package_name, :full_cpe, :ecosystem, :fix_version, :first_observed_date, :updated_at)
+        """)
 
-        conn.execute(insert_stmt)
+        conn.execute(
+            upsert_stmt,
+            {
+                "vuln_id": vuln_id,
+                "provider": self.provider,
+                "package_name": package_name,
+                "full_cpe": full_cpe,
+                "ecosystem": ecosystem or "",
+                "fix_version": fix_version,
+                "first_observed_date": first_observed_date.isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
+            },
+        )
         self._pending_operations += 1
 
         # auto-flush every batch_size operations to limit memory usage
@@ -95,7 +103,7 @@ class Store:
         if self._pending_operations > 0:
             conn, _ = self._get_connection()
             conn.commit()
-            self.logger.debug(f"flushed {self._pending_operations} operations to database")
+            self.logger.debug(f"flushed {self._pending_operations} operations to the fix-date database")
             self._pending_operations = 0
 
     def get(
@@ -113,14 +121,22 @@ class Store:
             (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
         )
 
-        if cpe_or_package.lower().startswith("cpe:"):
+        is_cpe = cpe_or_package.lower().startswith("cpe:")
+        if is_cpe:
             query = query.where(table.c.full_cpe == cpe_or_package)
+            self.logger.trace(
+                f"vunnel.get: querying by CPE - vuln_id={vuln_id} cpe={cpe_or_package}",
+            )
         else:
+            normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
             query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                (table.c.package_name == normalized_pkg) & (table.c.full_cpe == ""),
             )
             if ecosystem:
                 query = query.where(table.c.ecosystem == ecosystem)
+            self.logger.trace(
+                f"vunnel.get: querying by package - vuln_id={vuln_id} pkg={normalized_pkg} ecosystem={ecosystem}",
+            )
 
         if fix_version:
             query = query.where(table.c.fix_version == fix_version)
@@ -135,7 +151,13 @@ class Store:
         conn.commit()
 
         if not results:
+            self.logger.trace(
+                f"vunnel.get: no results for vuln_id={vuln_id} "
+                f"{'cpe=' + cpe_or_package if is_cpe else 'pkg=' + cpe_or_package}",
+            )
             return []
+
+        self.logger.trace(f"vunnel.get: found {len(results)} result(s)")
 
         return [
             FixDate(
@@ -234,11 +256,12 @@ class Store:
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
-                    cursor.execute("PRAGMA journal_mode=DELETE")  # we don't want wal and shm files lingering around in the result workspace
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache for better performance
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA journal_mode=WAL")  # WAL is faster for mixed read/write
                     cursor.execute("PRAGMA synchronous=NORMAL")
                     cursor.execute("PRAGMA busy_timeout=30000")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection
