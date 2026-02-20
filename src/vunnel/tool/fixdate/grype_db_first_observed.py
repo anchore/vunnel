@@ -106,6 +106,9 @@ class Store(Strategy):
         self._thread_local = threading.local()
         self._not_found = False
         self._downloaded = False
+        self._cpe_index: dict[tuple[str, str], list[FixDate]] | None = None
+        self._pkg_index: dict[tuple[str, str, str], list[FixDate]] | None = None
+        self._index_lock = threading.Lock()
 
     def _get_remote_digest(self, image_ref: str) -> str | None:
         """Get the digest of a remote OCI artifact using oras client.
@@ -260,6 +263,59 @@ class Store(Strategy):
             self.logger.error(f"failed to fetch fix date database for {self.provider}: {e}")
             raise
 
+    def _build_index(self) -> None:
+        """bulk-load all fixdate rows into in-memory dicts for O(1) lookups
+
+        No provider filter is applied here: each Store downloads from a
+        provider-scoped OCI image (ghcr.io/anchore/grype-db-observed-fix-date/{provider}),
+        so the database on disk only ever contains rows for this provider.
+        """
+        conn, table = self._get_connection()
+        rows = conn.execute(table.select()).fetchall()
+        cpe_index: dict[tuple[str, str], list[FixDate]] = {}
+        pkg_index: dict[tuple[str, str, str], list[FixDate]] = {}
+        for row in rows:
+            if not row.first_observed_date:
+                continue
+            fd = FixDate(
+                vuln_id=row.vuln_id,
+                provider=row.provider,
+                package_name=row.package_name,
+                full_cpe=row.full_cpe,
+                ecosystem=row.ecosystem,
+                fix_version=row.fix_version,
+                first_observed_date=date.fromisoformat(row.first_observed_date),
+                resolution=row.resolution,
+                source=row.source,
+                run_id=row.run_id,
+                database_id=row.database_id,
+                updated_at=row.updated_at,
+            )
+            if row.full_cpe:
+                key: tuple[str, str] = (row.vuln_id.lower(), row.full_cpe.lower())
+                cpe_index.setdefault(key, []).append(fd)
+            else:
+                pkey: tuple[str, str, str] = (
+                    row.vuln_id.lower(),
+                    row.package_name.lower(),
+                    (row.ecosystem or "").lower(),
+                )
+                pkg_index.setdefault(pkey, []).append(fd)
+        self._cpe_index = cpe_index
+        self._pkg_index = pkg_index
+
+    def _ensure_index(
+        self,
+    ) -> tuple[dict[tuple[str, str], list[FixDate]], dict[tuple[str, str, str], list[FixDate]]]:
+        """return the in-memory indexes, building them on first call (thread-safe)"""
+        if self._cpe_index is None or self._pkg_index is None:
+            with self._index_lock:
+                if self._cpe_index is None or self._pkg_index is None:
+                    self._build_index()
+        if self._cpe_index is None or self._pkg_index is None:
+            raise RuntimeError("index build failed: indexes are not populated")
+        return self._cpe_index, self._pkg_index
+
     def get(
         self,
         vuln_id: str,
@@ -277,48 +333,20 @@ class Store(Strategy):
             # if the database is empty and return no results.
             return []
 
-        conn, table = self._get_connection()
-
-        # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
-        query = table.select().where(
-            (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
-        )
+        cpe_index, pkg_index = self._ensure_index()
 
         if cpe_or_package.lower().startswith("cpe:"):
-            query = query.where(table.c.full_cpe == cpe_or_package)
+            cpe_key: tuple[str, str] = (vuln_id.lower(), cpe_or_package.lower())
+            candidates = cpe_index.get(cpe_key, [])
         else:
-            query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
-            )
-            if ecosystem:
-                query = query.where(table.c.ecosystem == ecosystem)
+            normalized = normalize_package_name(cpe_or_package, ecosystem)
+            pkg_key: tuple[str, str, str] = (vuln_id.lower(), normalized.lower(), (ecosystem or "").lower())
+            candidates = pkg_index.get(pkg_key, [])
 
         if fix_version:
-            query = query.where(table.c.fix_version == fix_version)
+            candidates = [c for c in candidates if c.fix_version and c.fix_version.lower() == fix_version.lower()]
 
-        results = conn.execute(query).fetchall()
-
-        if not results:
-            return []
-
-        return [
-            FixDate(
-                vuln_id=row.vuln_id,
-                provider=row.provider,
-                package_name=row.package_name,
-                full_cpe=row.full_cpe,
-                ecosystem=row.ecosystem,
-                fix_version=row.fix_version,
-                first_observed_date=date.fromisoformat(row.first_observed_date),
-                resolution=row.resolution,
-                source=row.source,
-                run_id=row.run_id,
-                database_id=row.database_id,
-                updated_at=row.updated_at,
-            )
-            for row in results
-            if row and row.first_observed_date
-        ]
+        return candidates
 
     def find(
         self,
