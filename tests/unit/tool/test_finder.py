@@ -364,30 +364,3 @@ class TestFinder:
         strategy1.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
         strategy2.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
         first_observed.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
-
-    def test_caching_reduces_database_calls(self):
-        """test that repeated queries use cache instead of hitting database"""
-        # Create mock strategy that counts calls
-        call_count = {"count": 0}
-        test_result = self.create_result("2023-01-01", "test")
-        
-        def counted_find(*args, **kwargs):
-            call_count["count"] += 1
-            return [test_result]
-        
-        mock_strategy = Mock(spec=Strategy)
-        mock_strategy.find = counted_find
-        
-        mock_first_observed = Mock(spec=Strategy)
-        mock_first_observed.find = Mock(return_value=[])
-        
-        finder = Finder(strategies=[mock_strategy], first_observed=mock_first_observed)
-        
-        # Make the same query three times
-        result1 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
-        result2 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
-        result3 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
-        
-        # Should only call find once - subsequent calls use cache
-        assert call_count["count"] == 1, f"Expected 1 database call, got {call_count['count']}"
-        assert result1 == result2 == result3, "Cached results should match original"

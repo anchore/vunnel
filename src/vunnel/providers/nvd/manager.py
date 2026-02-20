@@ -3,12 +3,14 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Any
 
 from vunnel import result
 from vunnel.providers.nvd.api import NvdAPI
 from vunnel.providers.nvd.overrides import NVDOverrides
 from vunnel.tool import fixdate
+from vunnel.utils import PerfTimer
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -16,6 +18,79 @@ if TYPE_CHECKING:
 
     from vunnel import schema as schema_def
     from vunnel.workspace import Workspace
+
+
+class _ProgressTracker:
+    """tracks interval-based performance metrics for CVE processing."""
+
+    def __init__(self, logger: logging.Logger, log_interval: int = 10000):
+        self.logger = logger
+        self.log_interval = log_interval
+
+        # counts
+        self.processed = 0
+        self.skipped = 0
+        self.overrides_applied = 0
+
+        # timing
+        self._start_time = time.time()
+        self._last_log_time = self._start_time
+        self._last_log_count = 0
+
+        # interval accumulators (reset each log interval)
+        self._interval_fixdate_ms = 0.0
+        self._interval_cpe_matches = 0
+        self._interval_lookups = 0
+
+    def record_fixdate_time(self, ms: float, lookups: int, cpe_matches: int) -> None:
+        self._interval_fixdate_ms += ms
+        self._interval_lookups += lookups
+        self._interval_cpe_matches += cpe_matches
+
+    def record_processed(self, had_override: bool = False) -> None:
+        self.processed += 1
+        if had_override:
+            self.overrides_applied += 1
+
+    def record_skipped(self) -> None:
+        self.skipped += 1
+
+    def maybe_log_progress(self) -> None:
+        """log progress at configured intervals."""
+        if self.processed % self.log_interval != 0:
+            return
+
+        now = time.time()
+        interval = now - self._last_log_time
+        interval_count = self.processed - self._last_log_count
+        rate = interval_count / interval if interval > 0 else 0
+
+        avg_fixdate_ms = self._interval_fixdate_ms / interval_count if interval_count else 0
+        avg_cpe = self._interval_cpe_matches / interval_count if interval_count else 0
+        avg_lookups = self._interval_lookups / interval_count if interval_count else 0
+
+        self.logger.trace(  # type: ignore[attr-defined]
+            f"finalize progress: processed={self.processed:,d} skipped={self.skipped:,d} "
+            f"interval={interval:.1f}s ({rate:.0f} CVEs/s) "
+            f"avg_fixdate={avg_fixdate_ms:.2f}ms avg_cpe={avg_cpe:.1f} avg_lookups={avg_lookups:.1f}",
+        )
+
+        # reset interval accumulators
+        self._last_log_time = now
+        self._last_log_count = self.processed
+        self._interval_fixdate_ms = 0.0
+        self._interval_cpe_matches = 0
+        self._interval_lookups = 0
+
+    def log_summary(self) -> None:
+        elapsed = time.time() - self._start_time
+        rate = self.processed / elapsed if elapsed > 0 else 0
+        self.logger.info(
+            f"finalized {self.processed:,d} CVEs (skipped {self.skipped:,d} already processed) in {elapsed:.1f}s ({rate:.0f} CVEs/s)",
+        )
+
+    def log_overrides_summary(self) -> None:
+        self.logger.info(f"applied {self.overrides_applied} CVE overrides")
 
 
 class Manager:
@@ -122,12 +197,17 @@ class Manager:
 
         self.logger.info("applying current fix dates and overrides to remaining CVEs...")
 
-        overrides_applied = 0
+        tracker = _ProgressTracker(self.logger)
 
+        # process all CVEs from the existing results database, applying overrides and fix dates.
+        # This handles CVEs that weren't updated in this run but need fix date enrichment.
         with self._sqlite_reader() as reader:
             for record in reader.each():
                 cve_id = record.item["cve"]["id"].upper()
+
+                # skip CVEs already processed during the update phase
                 if cve_id in already_processed:
+                    tracker.record_skipped()
                     continue
 
                 original_record = record.item
@@ -135,14 +215,31 @@ class Manager:
                     self.logger.warning(f"missing original data for CVE {cve_id}")
                     continue
 
+                # apply any user-defined overrides to the CVE record
                 modified, record_with_overrides = self._apply_override(cve_id=cve_id, record=original_record)
-                if modified:
-                    overrides_applied += 1
-
                 already_processed.add(cve_id)
-                yield cve_to_id(cve_id), self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+                tracker.record_processed(had_override=modified)
 
-        # Now we need to synthesize an NVD record for any overrides where there wasn't an existing NVD record
+                # count CPE matches for performance metrics (more CPEs = more fix date lookups)
+                cpe_matches = sum(
+                    len(node.get("cpeMatch", []))
+                    for config in record_with_overrides.get("cve", {}).get("configurations", [])
+                    for node in config.get("nodes", [])
+                )
+
+                # enrich the record with fix dates for each affected package/CPE
+                with PerfTimer() as fixdate_timer:
+                    result, lookups = self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+
+                tracker.record_fixdate_time(fixdate_timer.ms, lookups, cpe_matches)
+                tracker.maybe_log_progress()
+
+                yield cve_to_id(cve_id), result
+
+        tracker.log_summary()
+
+        # synthesize NVD records from overrides where there isn't existing NVD data.
+        # This handles CVEs that are published but not yet in NVD (e.g., still showing as reserved).
         if self.overrides.enabled:
             for cve_id in self.overrides.cves():
                 if cve_id in already_processed:
@@ -152,11 +249,12 @@ class Manager:
                 if not synthesized_record:
                     continue
 
-                overrides_applied += 1
+                tracker.overrides_applied += 1
                 already_processed.add(cve_id)
-                yield cve_to_id(cve_id), self._apply_fix_dates(cve_id=cve_id, record=synthesized_record)
+                result, _ = self._apply_fix_dates(cve_id=cve_id, record=synthesized_record)
+                yield cve_to_id(cve_id), result
 
-        self.logger.info(f"applied {overrides_applied} CVE overrides")
+        tracker.log_overrides_summary()
 
     def _download_nvd_input(
         self,
@@ -250,7 +348,8 @@ class Manager:
 
             # apply overrides and fix dates to output
             _, record_with_overrides = self._apply_override(cve_id=cve_id, record=vuln)
-            yield record_id, self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+            result, _ = self._apply_fix_dates(cve_id=cve_id, record=record_with_overrides)
+            yield record_id, result
 
     def _is_empty_override(self, override: dict[str, Any] | None) -> bool:
         return override is None or "cve" not in override or "configurations" not in override["cve"]
@@ -338,7 +437,7 @@ class Manager:
 
         return modified, record
 
-    def _apply_fix_dates(self, cve_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    def _apply_fix_dates(self, cve_id: str, record: dict[str, Any]) -> tuple[dict[str, Any], int]:
         """enrich CVE records with fix date information from external databases.
 
         Traverses the CVE's configuration structure to find CPE matches and looks up
@@ -347,13 +446,18 @@ class Manager:
 
         The fix date includes version, date, and kind information to help users
         understand when vulnerabilities were first observed to be fixed.
+
+        Returns:
+            Tuple of (modified_record, lookup_count)
         """
         if not self.fixdater:
-            return record
+            return record, 0
 
         configurations = record.get("cve", {}).get("configurations", [])
         if not configurations:
-            return record
+            return record, 0
+
+        lookup_count = 0
 
         # traverse configurations -> nodes -> cpeMatch to find CPE entries
         for config in configurations:
@@ -375,6 +479,8 @@ class Manager:
                     if not fix_version:
                         continue
 
+                    lookup_count += 1
+
                     # look up fix dates for this CPE and CVE
                     # get the underlying FixDate objects with version info
                     fix_date = self.fixdater.best(
@@ -391,7 +497,7 @@ class Manager:
                             "kind": fix_date.kind,
                         }
 
-        return record
+        return record, lookup_count
 
 
 def cve_to_id(cve: str) -> str:

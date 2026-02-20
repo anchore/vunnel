@@ -502,7 +502,7 @@ def test_apply_fix_dates(tmpdir, fake_fixdate_finder, fixdater_config, record, e
     )
 
     # apply fix dates
-    actual_record = manager_instance._apply_fix_dates(
+    actual_record, _ = manager_instance._apply_fix_dates(
         cve_id=record["cve"]["id"],
         record=record,
     )
@@ -968,11 +968,11 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
     assert apply_override_spy.call_count == 2
     apply_override_spy.assert_has_calls([
         mocker.call(
-            cve_id="CVE-2024-1234", 
+            cve_id="CVE-2024-1234",
             record=nvd_api_response["vulnerabilities"][0]
         ),
         mocker.call(
-            cve_id="CVE-99999-1234", 
+            cve_id="CVE-99999-1234",
             record=synthesize_nvd_record_from_override_spy.spy_return
         )
     ])
@@ -980,17 +980,18 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
     assert apply_fix_dates_spy.call_count == 2
     apply_fix_dates_spy.assert_has_calls([
         mocker.call(
-            cve_id="CVE-2024-1234", 
+            cve_id="CVE-2024-1234",
             record=apply_override_spy.spy_return_list[0][1]
         ),
         mocker.call(
-            cve_id="CVE-99999-1234", 
+            cve_id="CVE-99999-1234",
             record=synthesize_nvd_record_from_override_spy.spy_return
         )
     ])
 
     # verify the record passed to _apply_fix_dates has the override applied (3.0.0 not 2.0.0)
-    assert apply_fix_dates_spy.spy_return_list[0]["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]["versionEndExcluding"] == "3.0.0"
+    # spy_return_list[0] is a tuple (record, lookup_count), so we need [0][0] to get the record
+    assert apply_fix_dates_spy.spy_return_list[0][0]["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]["versionEndExcluding"] == "3.0.0"
     assert len(results) == 2
 
     # verify final result for CVE-2024-1234 contains both override changes AND fix date information
@@ -1034,6 +1035,6 @@ def test_get_applies_both_overrides_and_fix_dates(tmpdir, mocker, fake_fixdate_f
     # verify override download and lookup were called
     manager_instance.overrides.download.assert_called_once()
     manager_instance.overrides.cve.assert_has_calls([
-        mocker.call("CVE-2024-1234"), 
+        mocker.call("CVE-2024-1234"),
         mocker.call("CVE-99999-1234"),
     ])

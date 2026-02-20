@@ -320,8 +320,10 @@ class TestStore:
         with patch.object(Store, '__init__', return_value=None):
             store = Store.__new__(Store)
             store.workspace = ws
+            store.logger = Mock()
             store.grype_db_store = Mock()
             store.vunnel_store = Mock()
+            store._stats = Mock(total_lookups=0)
 
             store.grype_db_store.__enter__ = Mock(return_value=store.grype_db_store)
             store.grype_db_store.__exit__ = Mock(return_value=None)

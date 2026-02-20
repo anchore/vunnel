@@ -132,7 +132,7 @@ class Finder:
 
         first_observed_results = self.first_observed.find(vuln_id, cpe_or_package, fix_version, ecosystem)
 
-        return (results, first_observed_results)
+        return results, first_observed_results
 
     def best(
         self,

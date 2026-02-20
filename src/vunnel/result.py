@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any
 import orjson
 import sqlalchemy as db
 
+from vunnel.utils import PerfTimer
+
 if TYPE_CHECKING:
     from collections.abc import Generator
     from types import TracebackType
@@ -115,34 +117,46 @@ class SQLiteStore(Store):
     temp_filename = "results.db.tmp"
     table_name = "results"
 
-    def __init__(self, *args: Any, write_location: str | None = None, batch_size: int = 2000, **kwargs: Any):
+    def __init__(self, *args: Any, write_location: str | None = None, batch_size: int = 5000, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.conn: db.engine.Connection | None = None
         self.engine: db.engine.Engine | None = None
-        self.table: db.Table | None = None
         self.write_location = write_location
         self.batch_size = batch_size
-        self._pending_operations = 0
-        self._transaction: Any = None  # Active transaction context
-        self._lock = threading.Lock()  # Protects transaction state for thread safety
+        self._thread_local = threading.local()
+        self._pending_records: list[tuple[str, bytes]] = []
+        self._total_flushed = 0
+        self._lock = threading.Lock()
+        self._engine_lock = threading.Lock()
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
             self.temp_filename = f"{self.filename}.tmp"
 
-        @db.event.listens_for(db.engine.Engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
-            cursor = dbapi_connection.cursor()
-            # cursor.execute("pragma journal_mode=OFF")
-            cursor.execute("PRAGMA synchronous=NORMAL")
-            # cursor.execute("PRAGMA cache_size=100000")
-            cursor.close()
+    def _get_engine(self) -> db.engine.Engine:
+        """get or create the shared engine (thread-safe)."""
+        if self.engine is None:
+            with self._engine_lock:
+                if self.engine is None:
+                    self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
+
+                    @db.event.listens_for(self.engine, "connect")
+                    def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+                        cursor = dbapi_connection.cursor()
+                        cursor.execute("PRAGMA journal_mode=WAL")
+                        cursor.execute("PRAGMA synchronous=NORMAL")
+                        cursor.execute("PRAGMA cache_size=10000")
+                        cursor.execute("PRAGMA temp_store=MEMORY")
+                        cursor.execute("PRAGMA wal_autocheckpoint=10000")
+                        cursor.close()
+
+        return self.engine
 
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
-        if not self.conn:
-            self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
-            self.conn = self.engine.connect()
-            self.table = self._create_table()
-        return self.conn, self.table  # type: ignore[return-value]
+        """get or create a thread-local connection and table."""
+        if not hasattr(self._thread_local, "conn") or self._thread_local.conn is None:
+            engine = self._get_engine()
+            self._thread_local.conn = engine.connect()
+            self._thread_local.table = self._create_table()
+        return self._thread_local.conn, self._thread_local.table
 
     @property
     def write_dir(self) -> str:
@@ -173,31 +187,15 @@ class SQLiteStore(Store):
         return table
 
     def store(self, identifier: str, record: Envelope) -> None:
-        record_str = orjson.dumps(asdict(record))
-        conn, table = self.connection()
+        # serialize immediately to bytes since we use raw DBAPI executemany() for batch inserts,
+        # which requires (id, bytes) tuples. This matches what SQLAlchemy does internally anyway.
+        record_bytes = orjson.dumps(asdict(record))
 
         with self._lock:
-            # Start a transaction if we don't have one active
-            if self._transaction is None:
-                self._transaction = conn.begin()
+            self._pending_records.append((identifier, record_bytes))
 
-            # upsert the record conditionally based on the skip_duplicates configuration
-            existing = conn.execute(table.select().where(table.c.id == identifier)).first()
-            if existing:
-                if self.skip_duplicates:
-                    self.logger.warning(f"{identifier!r} entry already written (skipping)")
-                    return
-                self.logger.trace(f"overwriting existing entry: {identifier!r}")  # type: ignore[attr-defined]
-                statement = db.update(table).where(table.c.id == identifier).values(record=record_str)
-            else:
-                self.logger.trace(f"writing record to {identifier!r} key")  # type: ignore[attr-defined]
-                statement = db.insert(table).values(id=identifier, record=record_str)  # type: ignore[assignment]
-
-            conn.execute(statement)
-            self._pending_operations += 1
-
-            # Auto-flush every batch_size operations to limit memory usage
-            if self._pending_operations >= self.batch_size:
+            # auto-flush every batch_size records to limit memory usage
+            if len(self._pending_records) >= self.batch_size:
                 self._flush_unlocked()
 
     def flush(self) -> None:
@@ -207,11 +205,32 @@ class SQLiteStore(Store):
 
     def _flush_unlocked(self) -> None:
         """Internal flush helper - caller must hold lock."""
-        if self._pending_operations > 0 and self._transaction is not None:
-            self._transaction.commit()
-            self.logger.debug(f"flushed {self._pending_operations} operations to database")
-            self._transaction = None
-            self._pending_operations = 0
+        if not self._pending_records:
+            return
+
+        conn, _ = self.connection()
+        count = len(self._pending_records)
+
+        # use raw DBAPI executemany for batch insert performance
+        if self.skip_duplicates:
+            sql = f"INSERT OR IGNORE INTO {self.table_name} (id, record) VALUES (?, ?)"  # noqa: S608
+        else:
+            sql = f"INSERT OR REPLACE INTO {self.table_name} (id, record) VALUES (?, ?)"  # noqa: S608
+
+        with PerfTimer() as timer:
+            raw_conn = conn.connection.dbapi_connection
+            cursor = raw_conn.cursor()  # type: ignore[union-attr]
+            cursor.execute("BEGIN")
+            cursor.executemany(sql, self._pending_records)
+            cursor.execute("COMMIT")
+            cursor.close()
+
+        self._total_flushed += count
+        rate = count / timer.ms * 1000 if timer.ms > 0 else 0
+        self.logger.debug(
+            f"flushed {count} records to results database in {timer.ms:,.1f}ms ({rate:,.0f} rec/s, total={self._total_flushed:,d})",
+        )
+        self._pending_records = []
 
     def read(self, identifier: str) -> Envelope:
         conn, table = self.connection()
@@ -231,17 +250,19 @@ class SQLiteStore(Store):
             shutil.copy2(self.db_file_path, self.temp_db_file_path)
 
     def close(self, successful: bool) -> None:
-        # Flush any remaining operations before closing
+        # flush any remaining records before closing
         self.flush()
 
-        if self.conn:
-            self.conn.close()
-            if self.engine:
-                self.engine.dispose()
+        # close the current thread's connection if it exists
+        if hasattr(self._thread_local, "conn") and self._thread_local.conn is not None:
+            self._thread_local.conn.close()
+            self._thread_local.conn = None
+            self._thread_local.table = None
 
-            self.conn = None
+        # dispose the engine to close all pooled connections from any thread
+        if self.engine:
+            self.engine.dispose()
             self.engine = None
-            self.table = None
 
         if successful and os.path.exists(self.temp_db_file_path):
             shutil.move(self.temp_db_file_path, self.db_file_path)

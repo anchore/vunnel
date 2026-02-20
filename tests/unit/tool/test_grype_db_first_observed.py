@@ -10,7 +10,77 @@ import zstandard
 
 from vunnel import workspace
 from vunnel.tool.fixdate.finder import Result
-from vunnel.tool.fixdate.grype_db_first_observed import Store
+from vunnel.tool.fixdate.grype_db_first_observed import Store, cpe_to_v6_format
+
+
+class TestCpeToV6Format:
+    """tests for cpe_to_v6_format function"""
+
+    @pytest.mark.parametrize(
+        "cpe,expected",
+        [
+            # standard CPE 2.3 with all fields (wildcards become empty strings)
+            # format: part:vendor:product:version:update:edition:lang:sw_edition:target_sw
+            (
+                "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+                "a:apache:httpd:2.4.41:::::",
+            ),
+            # CPE with specific version fields
+            (
+                "cpe:2.3:a:vendor:product:1.0:update1:edition1:en:sw_edition1:target_sw1:target_hw1:other1",
+                "a:vendor:product:1.0:update1:edition1:en:sw_edition1:target_sw1",
+            ),
+            # operating system CPE
+            (
+                "cpe:2.3:o:linux:linux_kernel:5.4.0:*:*:*:*:*:*:*",
+                "o:linux:linux_kernel:5.4.0:::::",
+            ),
+            # hardware CPE
+            (
+                "cpe:2.3:h:cisco:router:1.0:*:*:*:*:*:*:*",
+                "h:cisco:router:1.0:::::",
+            ),
+            # CPE with empty version (all wildcards)
+            (
+                "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
+                "a:vendor:product::::::",
+            ),
+        ],
+    )
+    def test_valid_cpe_conversion(self, cpe: str, expected: str) -> None:
+        result = cpe_to_v6_format(cpe)
+        assert result == expected
+
+    @pytest.mark.parametrize(
+        "cpe",
+        [
+            None,
+            "",
+            "not-a-cpe",
+            "cpe:2.2:a:vendor:product",  # wrong version
+            "cpe:a:vendor:product",  # missing 2.3
+            "a:vendor:product:1.0",  # already v6 format
+            "o:linux:linux_kernel",  # already v6 format
+            "cpe:2.3:x:vendor:product:1.0:*:*:*:*:*:*:*",  # invalid part type
+            "cpe:2.3:a:v",  # too few parts
+        ],
+    )
+    def test_invalid_cpe_returns_none(self, cpe: str | None) -> None:
+        result = cpe_to_v6_format(cpe)
+        assert result is None
+
+    def test_case_insensitive_prefix(self) -> None:
+        # lowercase should work
+        result = cpe_to_v6_format("cpe:2.3:a:vendor:product:1.0:*:*:*:*:*:*:*")
+        assert result is not None
+
+        # uppercase should also work
+        result = cpe_to_v6_format("CPE:2.3:a:vendor:product:1.0:*:*:*:*:*:*:*")
+        assert result is not None
+
+        # mixed case should also work
+        result = cpe_to_v6_format("Cpe:2.3:a:vendor:product:1.0:*:*:*:*:*:*:*")
+        assert result is not None
 
 
 class DatabaseFixture:
@@ -1102,6 +1172,70 @@ class TestStore:
         # verify database file exists with correct content
         assert store.db_path.exists()
         assert store.db_path.read_text() == "uncompressed db content"
+
+    def test_v6_cpe_query_matching(self, tmpdir, helpers):
+        """test that queries using standard CPE format match v6 stored CPEs"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # create test database with v6-format CPE (as stored in grype-db)
+        # v6 format: part:vendor:product:version:update:edition:lang:sw_edition:target_sw
+        v6_cpe_data = [
+            (
+                "CVE-2023-0001", "test-db", "",
+                "a:apache:httpd:2.4.41:::::",  # v6 format (8 colons = 9 parts)
+                "",
+                "2.4.42", "2023-01-15", "fixed", "grype-db", None, 1, "2023-01-15T00:00:00",
+            ),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, v6_cpe_data, vulnerability_count=1)
+        store._downloaded = True
+
+        # query using standard CPE 2.3 format - should match via cpe_to_v6_format conversion
+        results = store.find(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+            fix_version="2.4.42",
+        )
+
+        assert len(results) == 1
+        result = results[0]
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 1, 15)
+
+    def test_v6_cpe_os_query_matching(self, tmpdir, helpers):
+        """test that operating system CPE queries match v6 stored CPEs"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # create test database with v6-format OS CPE
+        # v6 format: part:vendor:product:version:update:edition:lang:sw_edition:target_sw
+        v6_cpe_data = [
+            (
+                "CVE-2023-0002", "test-db", "",
+                "o:linux:linux_kernel:5.4.0:::::",  # v6 format OS CPE (8 colons = 9 parts)
+                "",
+                "5.4.1", "2023-02-20", "fixed", "grype-db", None, 1, "2023-02-20T00:00:00",
+            ),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, v6_cpe_data, vulnerability_count=1)
+        store._downloaded = True
+
+        # query using standard CPE 2.3 format - should match via cpe_to_v6_format conversion
+        results = store.find(
+            vuln_id="CVE-2023-0002",
+            cpe_or_package="cpe:2.3:o:linux:linux_kernel:5.4.0:*:*:*:*:*:*:*",
+            fix_version="5.4.1",
+        )
+
+        assert len(results) == 1
+        result = results[0]
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 2, 20)
 
     @patch("oras.client.OrasClient")
     def test_resolve_image_ref_fallback(self, mock_oras_client_constructor, tmpdir):

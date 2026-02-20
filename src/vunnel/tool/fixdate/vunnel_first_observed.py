@@ -95,7 +95,7 @@ class Store:
         if self._pending_operations > 0:
             conn, _ = self._get_connection()
             conn.commit()
-            self.logger.debug(f"flushed {self._pending_operations} operations to database")
+            self.logger.debug(f"flushed {self._pending_operations} operations to the fix-date database")
             self._pending_operations = 0
 
     def get(
@@ -116,8 +116,9 @@ class Store:
         if cpe_or_package.lower().startswith("cpe:"):
             query = query.where(table.c.full_cpe == cpe_or_package)
         else:
+            normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
             query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                (table.c.package_name == normalized_pkg) & (table.c.full_cpe == ""),
             )
             if ecosystem:
                 query = query.where(table.c.ecosystem == ecosystem)
@@ -234,11 +235,12 @@ class Store:
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
-                    cursor.execute("PRAGMA journal_mode=DELETE")  # we don't want wal and shm files lingering around in the result workspace
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache for better performance
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA journal_mode=WAL")  # WAL is faster for mixed read/write
                     cursor.execute("PRAGMA synchronous=NORMAL")
                     cursor.execute("PRAGMA busy_timeout=30000")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection
