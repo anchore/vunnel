@@ -122,39 +122,42 @@ class SQLiteStore(Store):
         self.batch_size = batch_size
         self._thread_local = threading.local()
         self._pending_records: list[dict[str, Any]] = []
-        self._total_flushed = 0
+        self._total_submitted = 0
+        self._closed = False
         self._lock = threading.Lock()
         self._engine_lock = threading.Lock()
+        self._table: db.Table | None = None
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
             self.temp_filename = f"{self.filename}.tmp"
 
-    def _get_engine(self) -> db.engine.Engine:
-        """get or create the shared engine (thread-safe)."""
-        if self.engine is None:
-            with self._engine_lock:
-                if self.engine is None:
-                    self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
+    def _ensure_engine_and_table(self) -> tuple[db.engine.Engine, db.Table]:
+        """get or create the shared engine and table definition (thread-safe)."""
+        with self._engine_lock:
+            if self.engine is None:
+                self.engine = db.create_engine(f"sqlite:///{self.temp_db_file_path}")
 
-                    @db.event.listens_for(self.engine, "connect")
-                    def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
-                        cursor = dbapi_connection.cursor()
-                        cursor.execute("PRAGMA journal_mode=WAL")
-                        cursor.execute("PRAGMA synchronous=NORMAL")
-                        cursor.execute("PRAGMA cache_size=10000")
-                        cursor.execute("PRAGMA temp_store=MEMORY")
-                        cursor.execute("PRAGMA wal_autocheckpoint=10000")
-                        cursor.close()
+                @db.event.listens_for(self.engine, "connect")
+                def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA journal_mode=WAL")
+                    cursor.execute("PRAGMA synchronous=NORMAL")
+                    cursor.execute("PRAGMA cache_size=10000")
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA wal_autocheckpoint=10000")
+                    cursor.close()
 
-        return self.engine
+            if self._table is None:
+                self._table = self._create_table(self.engine)
+
+        return self.engine, self._table
 
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
-        """get or create a thread-local connection and table."""
+        """get or create a thread-local connection and shared table."""
+        engine, table = self._ensure_engine_and_table()
         if not hasattr(self._thread_local, "conn") or self._thread_local.conn is None:
-            engine = self._get_engine()
             self._thread_local.conn = engine.connect()
-            self._thread_local.table = self._create_table()
-        return self._thread_local.conn, self._thread_local.table
+        return self._thread_local.conn, table
 
     @property
     def write_dir(self) -> str:
@@ -172,7 +175,7 @@ class SQLiteStore(Store):
     def temp_db_file_path(self) -> str:
         return os.path.join(self.write_dir, self.temp_filename)
 
-    def _create_table(self) -> db.Table:
+    def _create_table(self, engine: db.engine.Engine) -> db.Table:
         metadata = db.MetaData()
         table = db.Table(
             self.table_name,
@@ -180,14 +183,16 @@ class SQLiteStore(Store):
             db.Column("id", db.String(), primary_key=True, index=True),
             db.Column("record", db.LargeBinary()),
         )
-        if self.engine:
-            metadata.create_all(self.engine)
+        metadata.create_all(engine)
         return table
 
     def store(self, identifier: str, record: Envelope) -> None:
         record_bytes = orjson.dumps(asdict(record))
 
         with self._lock:
+            if self._closed:
+                raise RuntimeError("store() called after close()")
+
             self._pending_records.append({"id": identifier, "record": record_bytes})
 
             # auto-flush every batch_size records to limit memory usage
@@ -200,7 +205,11 @@ class SQLiteStore(Store):
             self._flush_unlocked()
 
     def _flush_unlocked(self) -> None:
-        """Internal flush helper - caller must hold lock."""
+        """Internal flush helper - caller must hold lock.
+
+        Note: any thread may trigger a flush, writing all pending records through its own
+        thread-local connection. This is safe because the lock serializes all access to
+        _pending_records."""
         if not self._pending_records:
             return
 
@@ -211,10 +220,16 @@ class SQLiteStore(Store):
         stmt = table.insert().prefix_with(prefix)
 
         with conn.begin():
-            conn.execute(stmt, self._pending_records)
+            result = conn.execute(stmt, self._pending_records)
+            rows_written = result.rowcount
 
-        self._total_flushed += count
-        self.logger.debug(f"flushed {count} records to results database (total={self._total_flushed:,d})")
+        self._total_submitted += count
+
+        if self.skip_duplicates and rows_written < count:
+            skipped = count - rows_written
+            self.logger.warning(f"skipped {skipped} duplicate records in batch of {count}")
+
+        self.logger.debug(f"flushed {count} records to results database (total={self._total_submitted:,d})")
         self._pending_records = []
 
     def read(self, identifier: str) -> Envelope:
@@ -226,28 +241,46 @@ class SQLiteStore(Store):
 
             return Envelope(**orjson.loads(result.record))
 
+    def _remove_wal_sidecar_files(self, db_path: str) -> None:
+        """remove WAL sidecar files (-wal and -shm) for the given database path."""
+        for suffix in ("-wal", "-shm"):
+            sidecar = db_path + suffix
+            if os.path.exists(sidecar):
+                os.remove(sidecar)
+
     def prepare(self) -> None:
         if os.path.exists(self.temp_db_file_path):
             self.logger.warning("removing unexpected partial result state")
             os.remove(self.temp_db_file_path)
+            # clean up any stale WAL sidecar files from a previous interrupted run
+            self._remove_wal_sidecar_files(self.temp_db_file_path)
 
         if self.result_state_policy == ResultStatePolicy.KEEP and os.path.exists(self.db_file_path):
             shutil.copy2(self.db_file_path, self.temp_db_file_path)
 
     def close(self, successful: bool) -> None:
-        # flush any remaining records before closing
-        self.flush()
+        """close the store, checkpointing WAL and moving the database into place."""
+        # mark as closed and flush under lock so no new store() calls can interleave
+        with self._lock:
+            self._closed = True
+            self._flush_unlocked()
 
-        # close the current thread's connection if it exists
+        # checkpoint WAL to fold all data into the main DB file, then close.
+        # This ensures no data is left only in the -wal file before we move the .db
         if hasattr(self._thread_local, "conn") and self._thread_local.conn is not None:
+            with self._thread_local.conn.begin():
+                self._thread_local.conn.execute(db.text("PRAGMA wal_checkpoint(TRUNCATE)"))
             self._thread_local.conn.close()
             self._thread_local.conn = None
-            self._thread_local.table = None
 
         # dispose the engine to close all pooled connections from any thread
         if self.engine:
             self.engine.dispose()
             self.engine = None
+            self._table = None
+
+        # remove any lingering WAL sidecar files after engine disposal
+        self._remove_wal_sidecar_files(self.temp_db_file_path)
 
         if successful and os.path.exists(self.temp_db_file_path):
             shutil.move(self.temp_db_file_path, self.db_file_path)

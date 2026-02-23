@@ -420,7 +420,7 @@ class Store(Strategy):
         return self._thread_local.conn, self._thread_local.table
 
     def cleanup_thread_connections(self) -> None:
-        """clean up thread-local connections for the current thread"""
+        """clean up thread-local connections for the current thread, then dispose the engine."""
         if hasattr(self._thread_local, "conn"):
             try:
                 self.logger.debug("closing grype-db fixdates database")
@@ -434,6 +434,11 @@ class Store(Strategy):
                     delattr(self._thread_local, "conn")
                 if hasattr(self._thread_local, "table"):
                     delattr(self._thread_local, "table")
+
+        # dispose the engine to close all pooled connections from any thread
+        if self.engine:
+            self.engine.dispose()
+            self.engine = None
 
     def __enter__(self) -> "Store":
         return self
