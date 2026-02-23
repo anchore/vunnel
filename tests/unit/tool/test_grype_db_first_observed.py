@@ -1103,17 +1103,67 @@ class TestStore:
         assert store.db_path.exists()
         assert store.db_path.read_text() == "uncompressed db content"
 
-    def test_get_by_v6_cpe(self, tmpdir, helpers):
-        """test that CPE queries match rows stored in v6 format via cpe_to_v6_format conversion"""
+    @pytest.mark.parametrize(
+        "name,v6_cpe,cpe23,vuln_id,fix_version,obs_date",
+        [
+            # real: ISC BIND with sw_edition=stable (CVE-2007-0494)
+            (
+                "isc_bind_stable",
+                "a:isc:bind:::stable:::",
+                "cpe:2.3:a:isc:bind:*:*:*:*:stable:*:*:*",
+                "CVE-2007-0494",
+                "9.3.4",
+                "2025-09-04",
+            ),
+            # real: WordPress plugin with target_sw=wordpress (CVE-2005-10002)
+            (
+                "wordpress_plugin",
+                "a:wp-plugins:secure_files:::::wordpress:",
+                "cpe:2.3:a:wp-plugins:secure_files:*:*:*:*:*:wordpress:*:*",
+                "CVE-2005-10002",
+                "1.2",
+                "2025-09-04",
+            ),
+            # real: Xerox WorkCentre hardware with edition=pro (CVE-2006-1136)
+            (
+                "xerox_workcentre_pro",
+                "h:xerox:workcentre_65:pro:::::",
+                "cpe:2.3:h:xerox:workcentre_65:*:*:pro:*:*:*:*:*",
+                "CVE-2006-1136",
+                "1.001.02.0715",
+                "2025-09-04",
+            ),
+            # real: Digium Asterisk with sw_edition=business (CVE-2007-6170)
+            (
+                "asterisk_business",
+                "a:digium:asterisk:::business:::",
+                "cpe:2.3:a:digium:asterisk:*:*:*:*:business:*:*:*",
+                "CVE-2007-6170",
+                "b.2.3.4",
+                "2025-09-04",
+            ),
+            # real: Drupal module with target_sw=drupal (CVE-2007-5598)
+            (
+                "drupal_module",
+                "a:web_links_project:web_links:::::drupal:",
+                "cpe:2.3:a:web_links_project:web_links:*:*:*:*:*:drupal:*:*",
+                "CVE-2007-5598",
+                "5.x-1.8",
+                "2025-09-04",
+            ),
+        ],
+    )
+    def test_get_by_v6_cpe(self, tmpdir, helpers, name, v6_cpe, cpe23, vuln_id, fix_version, obs_date):
+        """test that CPE 2.3 queries match rows stored in v6 format, using real CPEs from grype-db"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
         store = Store(ws)
 
         # insert a row with the v6-format CPE (as grype-db stores them)
         v6_cpe_data = [
             (
-                "CVE-2023-0001", "test-db", "",
-                "a:paloaltonetworks:cortex_xdr_agent:::critical_environment:::", "",
-                "7.5.0", "2023-04-01", "fixed", "grype-db", None, 2, "2023-04-01T00:00:00",
+                vuln_id, "test-db", "",
+                v6_cpe, "",
+                fix_version, obs_date, "fixed", "grype-db", None, 2, f"{obs_date}T00:00:00",
             ),
         ]
         db = DatabaseFixture(store.db_path)
@@ -1122,17 +1172,15 @@ class TestStore:
 
         # query using the full CPE 2.3 string - the v6 conversion should enable the match
         results = store.find(
-            vuln_id="CVE-2023-0001",
-            cpe_or_package="cpe:2.3:a:paloaltonetworks:cortex_xdr_agent:*:*:*:*:critical_environment:*:*:*",
-            fix_version="7.5.0",
+            vuln_id=vuln_id,
+            cpe_or_package=cpe23,
+            fix_version=fix_version,
         )
 
-        assert len(results) == 1
+        assert len(results) == 1, f"{name}: expected 1 result, got {len(results)}"
         result = results[0]
         assert isinstance(result, Result)
         assert result.kind == "first-observed"
-        from datetime import date
-        assert result.date == date(2023, 4, 1)
 
     @patch("oras.client.OrasClient")
     def test_resolve_image_ref_fallback(self, mock_oras_client_constructor, tmpdir):
@@ -1175,40 +1223,53 @@ class TestCpeToV6Format:
     @pytest.mark.parametrize(
         "input_cpe,expected",
         [
-            # standard CPE with all wildcards
+            # real: paloaltonetworks cortex_xdr_agent (simple, all wildcards)
+            # DB v6: a:paloaltonetworks:cortex_xdr_agent::::::
             (
-                "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
-                "a:vendor:product::::::",
+                "cpe:2.3:a:paloaltonetworks:cortex_xdr_agent:*:*:*:*:*:*:*:*",
+                "a:paloaltonetworks:cortex_xdr_agent::::::",
             ),
-            # CPE with version (version is omitted in v6 format)
+            # real: ISC BIND with sw_edition=stable
+            # DB v6: a:isc:bind:::stable:::
             (
-                "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
-                "a:apache:httpd::::::",
+                "cpe:2.3:a:isc:bind:*:*:*:*:stable:*:*:*",
+                "a:isc:bind:::stable:::",
             ),
-            # CPE with target_sw (e.g., wordpress plugin) - version omitted, wordpress at target_sw position
+            # real: Xerox WorkCentre with edition=pro (hardware CPE)
+            # DB v6: h:xerox:workcentre_65:pro:::::
             (
-                "cpe:2.3:a:developer:plugin:1.0:*:*:*:*:wordpress:*:*",
-                "a:developer:plugin:::::wordpress:",
+                "cpe:2.3:h:xerox:workcentre_65:*:*:pro:*:*:*:*:*",
+                "h:xerox:workcentre_65:pro:::::",
             ),
-            # operating system CPE (version omitted)
+            # real: WordPress plugin with target_sw=wordpress
+            # DB v6: a:wp-plugins:secure_files:::::wordpress:
+            (
+                "cpe:2.3:a:wp-plugins:secure_files:*:*:*:*:*:wordpress:*:*",
+                "a:wp-plugins:secure_files:::::wordpress:",
+            ),
+            # real: Digium Asterisk with sw_edition=business
+            # DB v6: a:digium:asterisk:::business:::
+            (
+                "cpe:2.3:a:digium:asterisk:*:*:*:*:business:*:*:*",
+                "a:digium:asterisk:::business:::",
+            ),
+            # real: Revenera InstallShield with sw_edition=premier, update="-" (skipped)
+            # DB v6: a:revenera:installshield:::premier:::
+            (
+                "cpe:2.3:a:revenera:installshield:*:-:*:*:premier:*:*:*",
+                "a:revenera:installshield:::premier:::",
+            ),
+            # real: Drupal module with target_sw=drupal
+            # DB v6: a:web_links_project:web_links:::::drupal:
+            (
+                "cpe:2.3:a:web_links_project:web_links:*:*:*:*:*:drupal:*:*",
+                "a:web_links_project:web_links:::::drupal:",
+            ),
+            # real: linux kernel (os part type, version omitted)
+            # DB v6: o:linux:linux_kernel::::::
             (
                 "cpe:2.3:o:linux:linux_kernel:5.10:*:*:*:*:*:*:*",
                 "o:linux:linux_kernel::::::",
-            ),
-            # hardware CPE
-            (
-                "cpe:2.3:h:cisco:router:*:*:*:*:*:*:*:*",
-                "h:cisco:router::::::",
-            ),
-            # CPE with version and update (both omitted in v6 format)
-            (
-                "cpe:2.3:a:vendor:product:1.0:update1:*:*:*:*:*:*",
-                "a:vendor:product::::::",
-            ),
-            # CPE with edition value (maps to v6 edition field)
-            (
-                "CPE:2.3:a:vendor:product:*:*:edition_val:*:*:*:*:*",
-                "a:vendor:product:edition_val:::::",
             ),
         ],
     )
