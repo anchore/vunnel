@@ -7,11 +7,13 @@ import os
 import shutil
 import threading
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import orjson
 import sqlalchemy as db
+
+from vunnel.utils import PerfTimer
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -19,6 +21,36 @@ if TYPE_CHECKING:
 
     from .schema import Schema
     from .workspace import Workspace
+
+
+@dataclass
+class _FlushStats:
+    """thread-safe statistics for result store flush operations."""
+
+    total_flushed: int = 0
+    total_flushes: int = 0
+    total_flush_time_ms: float = 0.0
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record_flush(self, count: int, time_ms: float) -> tuple[float, float]:
+        """record a flush operation. Returns (rate_per_sec, avg_flush_time_ms)."""
+        with self._lock:
+            self.total_flushed += count
+            self.total_flushes += 1
+            self.total_flush_time_ms += time_ms
+            rate = (count / time_ms) * 1000 if time_ms > 0 else 0
+            avg_time = self.total_flush_time_ms / self.total_flushes if self.total_flushes > 0 else 0
+            return rate, avg_time
+
+    def summary(self) -> str:
+        with self._lock:
+            if self.total_flushes == 0:
+                return "no flushes"
+            avg_time = self.total_flush_time_ms / self.total_flushes
+            avg_rate = (self.total_flushed / self.total_flush_time_ms) * 1000 if self.total_flush_time_ms > 0 else 0
+            return (
+                f"total_records={self.total_flushed} flushes={self.total_flushes} avg_flush_time={avg_time:.1f}ms avg_rate={avg_rate:.0f} records/s"
+            )
 
 
 class ResultStatePolicy(str, enum.Enum):
@@ -125,6 +157,7 @@ class SQLiteStore(Store):
         self._pending_operations = 0
         self._transaction: Any = None  # Active transaction context
         self._lock = threading.Lock()  # Protects transaction state for thread safety
+        self._flush_stats = _FlushStats()
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
             self.temp_filename = f"{self.filename}.tmp"
@@ -208,8 +241,11 @@ class SQLiteStore(Store):
     def _flush_unlocked(self) -> None:
         """Internal flush helper - caller must hold lock."""
         if self._pending_operations > 0 and self._transaction is not None:
-            self._transaction.commit()
-            self.logger.debug(f"flushed {self._pending_operations} operations to database")
+            count = self._pending_operations
+            with PerfTimer() as timer:
+                self._transaction.commit()
+            rate, _ = self._flush_stats.record_flush(count, timer.ms)
+            self.logger.debug(f"flushed {count} records to results database in {timer.ms:.1f}ms ({rate:.0f} records/s)")
             self._transaction = None
             self._pending_operations = 0
 
@@ -233,6 +269,10 @@ class SQLiteStore(Store):
     def close(self, successful: bool) -> None:
         # Flush any remaining operations before closing
         self.flush()
+
+        # Log final stats summary
+        if self._flush_stats.total_flushes > 0:
+            self.logger.debug(f"results store stats: {self._flush_stats.summary()}")
 
         if self.conn:
             self.conn.close()
