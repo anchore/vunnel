@@ -22,8 +22,11 @@ from .finder import Result, Strategy
 def cpe_to_v6_format(cpe: str) -> str | None:
     """Convert a standard CPE 2.3 string to v6 simplified format.
 
-    Standard format: cpe:2.3:a:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
-    V6 format: a:vendor:product:version:update:edition:lang:sw_edition:target_sw
+    Standard format: cpe:2.3:part:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+    V6 format: part:vendor:product:edition:lang:sw_edition:target_hw:target_sw:other
+
+    The v6 format omits version and update, and swaps target_hw/target_sw order
+    relative to CPE 2.3. Wildcard (*) values are replaced with empty strings.
 
     Returns None if the input is not a valid CPE 2.3 string.
     """
@@ -39,16 +42,13 @@ def cpe_to_v6_format(cpe: str) -> str | None:
     if part not in ("a", "o", "h"):
         return None
 
-    # extract fields 3-10 (vendor through target_sw), replacing * with empty string
+    # map CPE 2.3 indices to v6 field order, skipping version[5] and update[6],
+    # and swapping target_hw[11] before target_sw[10]
+    v6_indices = [3, 4, 7, 8, 9, 11, 10, 12]
     fields = []
-    for i in range(3, min(len(parts), 12)):
-        field = parts[i] if parts[i] != "*" else ""
-        fields.append(field)
-
-    # pad to 8 fields if needed, truncate if too many
-    while len(fields) < 8:
-        fields.append("")
-    fields = fields[:8]
+    for i in v6_indices:
+        val = parts[i] if i < len(parts) else "*"
+        fields.append("" if val == "*" else val)
 
     return f"{part}:{':'.join(fields)}"
 

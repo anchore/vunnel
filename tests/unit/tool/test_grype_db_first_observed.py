@@ -1103,6 +1103,37 @@ class TestStore:
         assert store.db_path.exists()
         assert store.db_path.read_text() == "uncompressed db content"
 
+    def test_get_by_v6_cpe(self, tmpdir, helpers):
+        """test that CPE queries match rows stored in v6 format via cpe_to_v6_format conversion"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # insert a row with the v6-format CPE (as grype-db stores them)
+        v6_cpe_data = [
+            (
+                "CVE-2023-0001", "test-db", "",
+                "a:paloaltonetworks:cortex_xdr_agent:::critical_environment:::", "",
+                "7.5.0", "2023-04-01", "fixed", "grype-db", None, 2, "2023-04-01T00:00:00",
+            ),
+        ]
+        db = DatabaseFixture(store.db_path)
+        db.insert_custom_data(store.db_path, v6_cpe_data, vulnerability_count=1)
+        store._downloaded = True
+
+        # query using the full CPE 2.3 string - the v6 conversion should enable the match
+        results = store.find(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="cpe:2.3:a:paloaltonetworks:cortex_xdr_agent:*:*:*:*:critical_environment:*:*:*",
+            fix_version="7.5.0",
+        )
+
+        assert len(results) == 1
+        result = results[0]
+        assert isinstance(result, Result)
+        assert result.kind == "first-observed"
+        from datetime import date
+        assert result.date == date(2023, 4, 1)
+
     @patch("oras.client.OrasClient")
     def test_resolve_image_ref_fallback(self, mock_oras_client_constructor, tmpdir):
         """test that _resolve_image_ref falls back from latest-zstd to latest"""
@@ -1149,30 +1180,35 @@ class TestCpeToV6Format:
                 "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
                 "a:vendor:product::::::",
             ),
-            # CPE with version
+            # CPE with version (version is omitted in v6 format)
             (
                 "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
-                "a:apache:httpd:2.4.41:::::",
+                "a:apache:httpd::::::",
             ),
-            # CPE with target_sw (e.g., wordpress plugin)
+            # CPE with target_sw (e.g., wordpress plugin) - version omitted, wordpress at target_sw position
             (
                 "cpe:2.3:a:developer:plugin:1.0:*:*:*:*:wordpress:*:*",
-                "a:developer:plugin:1.0:::::wordpress",
+                "a:developer:plugin:::::wordpress:",
             ),
-            # operating system CPE
+            # operating system CPE (version omitted)
             (
                 "cpe:2.3:o:linux:linux_kernel:5.10:*:*:*:*:*:*:*",
-                "o:linux:linux_kernel:5.10:::::",
+                "o:linux:linux_kernel::::::",
             ),
             # hardware CPE
             (
                 "cpe:2.3:h:cisco:router:*:*:*:*:*:*:*:*",
                 "h:cisco:router::::::",
             ),
-            # CPE with update field
+            # CPE with version and update (both omitted in v6 format)
             (
                 "cpe:2.3:a:vendor:product:1.0:update1:*:*:*:*:*:*",
-                "a:vendor:product:1.0:update1::::",
+                "a:vendor:product::::::",
+            ),
+            # CPE with edition value (maps to v6 edition field)
+            (
+                "CPE:2.3:a:vendor:product:*:*:edition_val:*:*:*:*:*",
+                "a:vendor:product:edition_val:::::",
             ),
         ],
     )
