@@ -10,7 +10,7 @@ import zstandard
 
 from vunnel import workspace
 from vunnel.tool.fixdate.finder import Result
-from vunnel.tool.fixdate.grype_db_first_observed import Store
+from vunnel.tool.fixdate.grype_db_first_observed import Store, cpe_to_v6_format
 
 
 class DatabaseFixture:
@@ -1136,3 +1136,70 @@ class TestStore:
 
         # verify both tags were tried
         assert mock_digest_client.do_request.call_count == 2
+
+
+class TestCpeToV6Format:
+    """Tests for CPE 2.3 to v6 format conversion."""
+
+    @pytest.mark.parametrize(
+        "input_cpe,expected",
+        [
+            # standard CPE with all wildcards
+            (
+                "cpe:2.3:a:vendor:product:*:*:*:*:*:*:*:*",
+                "a:vendor:product::::::",
+            ),
+            # CPE with version
+            (
+                "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+                "a:apache:httpd:2.4.41:::::",
+            ),
+            # CPE with target_sw (e.g., wordpress plugin)
+            (
+                "cpe:2.3:a:developer:plugin:1.0:*:*:*:*:wordpress:*:*",
+                "a:developer:plugin:1.0:::::wordpress",
+            ),
+            # operating system CPE
+            (
+                "cpe:2.3:o:linux:linux_kernel:5.10:*:*:*:*:*:*:*",
+                "o:linux:linux_kernel:5.10:::::",
+            ),
+            # hardware CPE
+            (
+                "cpe:2.3:h:cisco:router:*:*:*:*:*:*:*:*",
+                "h:cisco:router::::::",
+            ),
+            # CPE with update field
+            (
+                "cpe:2.3:a:vendor:product:1.0:update1:*:*:*:*:*:*",
+                "a:vendor:product:1.0:update1::::",
+            ),
+        ],
+    )
+    def test_valid_conversions(self, input_cpe: str, expected: str) -> None:
+        assert cpe_to_v6_format(input_cpe) == expected
+
+    @pytest.mark.parametrize(
+        "input_cpe",
+        [
+            # None input
+            None,
+            # empty string
+            "",
+            # not a CPE
+            "not-a-cpe",
+            # CPE 2.2 format (not 2.3)
+            "cpe:/a:vendor:product:1.0",
+            # invalid part type
+            "cpe:2.3:x:vendor:product:*:*:*:*:*:*:*:*",
+            # too few parts
+            "cpe:2.3:a:vendor",
+        ],
+    )
+    def test_invalid_inputs_return_none(self, input_cpe: str | None) -> None:
+        assert cpe_to_v6_format(input_cpe) is None
+
+    def test_case_insensitive_prefix(self) -> None:
+        # CPE prefix should be case-insensitive
+        result = cpe_to_v6_format("CPE:2.3:a:vendor:product:*:*:*:*:*:*:*:*")
+        assert result == "a:vendor:product::::::"

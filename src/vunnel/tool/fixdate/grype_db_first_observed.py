@@ -18,6 +18,41 @@ from vunnel import workspace
 from .ecosystem import normalize_package_name
 from .finder import Result, Strategy
 
+
+def cpe_to_v6_format(cpe: str) -> str | None:
+    """Convert a standard CPE 2.3 string to v6 simplified format.
+
+    Standard format: cpe:2.3:a:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+    V6 format: a:vendor:product:version:update:edition:lang:sw_edition:target_sw
+
+    Returns None if the input is not a valid CPE 2.3 string.
+    """
+    if not cpe or not cpe.lower().startswith("cpe:2.3:"):
+        return None
+
+    parts = cpe.split(":")
+    if len(parts) < 5:
+        return None
+
+    # parts[2] is the part type (a, o, h)
+    part = parts[2]
+    if part not in ("a", "o", "h"):
+        return None
+
+    # extract fields 3-10 (vendor through target_sw), replacing * with empty string
+    fields = []
+    for i in range(3, min(len(parts), 12)):
+        field = parts[i] if parts[i] != "*" else ""
+        fields.append(field)
+
+    # pad to 8 fields if needed, truncate if too many
+    while len(fields) < 8:
+        fields.append("")
+    fields = fields[:8]
+
+    return f"{part}:{':'.join(fields)}"
+
+
 if TYPE_CHECKING:
     from oras.container import Container as container_type
 
@@ -284,11 +319,20 @@ class Store(Strategy):
             (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
         )
 
-        if cpe_or_package.lower().startswith("cpe:"):
-            query = query.where(table.c.full_cpe == cpe_or_package)
+        is_cpe = cpe_or_package.lower().startswith("cpe:")
+        if is_cpe:
+            # try v6 simplified CPE format (e.g., "a:vendor:product:...") since grype-db stores CPEs this way
+            v6_cpe = cpe_to_v6_format(cpe_or_package)
+            if v6_cpe:
+                query = query.where(
+                    (table.c.full_cpe == cpe_or_package) | (table.c.full_cpe == v6_cpe),
+                )
+            else:
+                query = query.where(table.c.full_cpe == cpe_or_package)
         else:
+            normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
             query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                (table.c.package_name == normalized_pkg) & (table.c.full_cpe == ""),
             )
             if ecosystem:
                 query = query.where(table.c.ecosystem == ecosystem)
