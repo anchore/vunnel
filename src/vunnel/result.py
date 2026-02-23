@@ -123,7 +123,7 @@ class SQLiteStore(Store):
         self.write_location = write_location
         self.batch_size = batch_size
         self._thread_local = threading.local()
-        self._pending_records: list[tuple[str, bytes]] = []
+        self._pending_records: list[dict[str, Any]] = []
         self._total_flushed = 0
         self._lock = threading.Lock()
         self._engine_lock = threading.Lock()
@@ -187,12 +187,10 @@ class SQLiteStore(Store):
         return table
 
     def store(self, identifier: str, record: Envelope) -> None:
-        # serialize immediately to bytes since we use raw DBAPI executemany() for batch inserts,
-        # which requires (id, bytes) tuples. This matches what SQLAlchemy does internally anyway.
         record_bytes = orjson.dumps(asdict(record))
 
         with self._lock:
-            self._pending_records.append((identifier, record_bytes))
+            self._pending_records.append({"id": identifier, "record": record_bytes})
 
             # auto-flush every batch_size records to limit memory usage
             if len(self._pending_records) >= self.batch_size:
@@ -208,22 +206,14 @@ class SQLiteStore(Store):
         if not self._pending_records:
             return
 
-        conn, _ = self.connection()
+        conn, table = self.connection()
         count = len(self._pending_records)
 
-        # use raw DBAPI executemany for batch insert performance
-        if self.skip_duplicates:
-            sql = f"INSERT OR IGNORE INTO {self.table_name} (id, record) VALUES (?, ?)"  # noqa: S608
-        else:
-            sql = f"INSERT OR REPLACE INTO {self.table_name} (id, record) VALUES (?, ?)"  # noqa: S608
+        prefix = "OR IGNORE" if self.skip_duplicates else "OR REPLACE"
+        stmt = table.insert().prefix_with(prefix)
 
-        with PerfTimer() as timer:
-            raw_conn = conn.connection.dbapi_connection
-            cursor = raw_conn.cursor()  # type: ignore[union-attr]
-            cursor.execute("BEGIN")
-            cursor.executemany(sql, self._pending_records)
-            cursor.execute("COMMIT")
-            cursor.close()
+        with PerfTimer() as timer, conn.begin():
+            conn.execute(stmt, self._pending_records)
 
         self._total_flushed += count
         rate = count / timer.ms * 1000 if timer.ms > 0 else 0

@@ -315,9 +315,8 @@ class Store(Strategy):
         conn, table = self._get_connection()
 
         # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
-        # IMPORTANT: use .collate("NOCASE") to match the index collation, otherwise SQLite does a full table scan
         query = table.select().where(
-            (table.c.vuln_id.collate("NOCASE") == vuln_id) & (table.c.provider.collate("NOCASE") == self.provider),
+            (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
         )
 
         is_cpe = cpe_or_package.lower().startswith("cpe:")
@@ -326,17 +325,17 @@ class Store(Strategy):
             v6_cpe = cpe_to_v6_format(cpe_or_package)
             if v6_cpe:
                 query = query.where(
-                    (table.c.full_cpe.collate("NOCASE") == cpe_or_package) | (table.c.full_cpe.collate("NOCASE") == v6_cpe),
+                    (table.c.full_cpe == cpe_or_package) | (table.c.full_cpe == v6_cpe),
                 )
             else:
-                query = query.where(table.c.full_cpe.collate("NOCASE") == cpe_or_package)
+                query = query.where(table.c.full_cpe == cpe_or_package)
         else:
             normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
             query = query.where(
-                (table.c.package_name.collate("NOCASE") == normalized_pkg) & (table.c.full_cpe.collate("NOCASE") == ""),
+                (table.c.package_name == normalized_pkg) & (table.c.full_cpe == ""),
             )
             if ecosystem:
-                query = query.where(table.c.ecosystem.collate("NOCASE") == ecosystem)
+                query = query.where(table.c.ecosystem == ecosystem)
 
         if fix_version:
             query = query.where(table.c.fix_version == fix_version)
