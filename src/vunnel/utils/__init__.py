@@ -73,3 +73,29 @@ def timer(name: str, logger: logging.Logger) -> Iterator[None]:
     finally:
         elapsed_time = time.time() - start_time
         logger.info(f"updating {name} took {elapsed_time:.2f} seconds")
+
+
+class PerfTimer:
+    """context manager for timing code blocks in milliseconds.
+
+    Example:
+        with PerfTimer() as t:
+            do_something()
+        print(f"elapsed: {t.ms:.2f}ms")
+
+        # or for accumulation:
+        total_ms = 0.0
+        with PerfTimer() as t:
+            do_something()
+        total_ms += t.ms
+    """
+
+    __slots__ = ("_start", "ms")
+
+    def __enter__(self) -> PerfTimer:
+        self._start = time.perf_counter()
+        self.ms = 0.0
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.ms = (time.perf_counter() - self._start) * 1000
