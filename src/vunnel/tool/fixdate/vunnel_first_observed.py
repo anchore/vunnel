@@ -230,15 +230,15 @@ class Store:
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
 
-                # configure SQLAlchemy engine with SQLite pragmas
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
-                    cursor.execute("PRAGMA journal_mode=DELETE")  # we don't want wal and shm files lingering around in the result workspace
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache for better performance
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA journal_mode=WAL")  # WAL is faster for mixed read/write
                     cursor.execute("PRAGMA synchronous=NORMAL")
                     cursor.execute("PRAGMA busy_timeout=30000")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection

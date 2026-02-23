@@ -400,13 +400,14 @@ class Store(Strategy):
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
 
-                # configure SQLAlchemy engine with SQLite pragmas
+                # configure SQLAlchemy engine with SQLite pragmas for read-only performance
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA query_only = ON")
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection
