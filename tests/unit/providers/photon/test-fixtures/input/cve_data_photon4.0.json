@@ -1,0 +1,50 @@
+[
+  {
+    "cve_id": "CVE-2023-38545",
+    "pkg": "curl",
+    "cve_score": 9.8,
+    "aff_ver": "all versions before 7.88.1-4.ph4 are vulnerable",
+    "res_ver": "7.88.1-4.ph4",
+    "status": "Fixed"
+  },
+  {
+    "cve_id": "CVE-2023-38546",
+    "pkg": "curl",
+    "cve_score": 3.7,
+    "aff_ver": "all versions before 7.88.1-4.ph4 are vulnerable",
+    "res_ver": "7.88.1-4.ph4",
+    "status": "Fixed"
+  },
+  {
+    "cve_id": "CVE-2023-38546",
+    "pkg": "curl-libs",
+    "cve_score": 3.7,
+    "aff_ver": "all versions before 7.88.1-4.ph4 are vulnerable",
+    "res_ver": "7.88.1-4.ph4",
+    "status": "Fixed"
+  },
+  {
+    "cve_id": "CVE-2023-44487",
+    "pkg": "nghttp2",
+    "cve_score": 7.5,
+    "aff_ver": "all versions before 1.57.0-1.ph4 are vulnerable",
+    "res_ver": "1.57.0-1.ph4",
+    "status": "Fixed"
+  },
+  {
+    "cve_id": "CVE-2023-44487",
+    "pkg": "httpd",
+    "cve_score": 7.5,
+    "aff_ver": "",
+    "res_ver": "NA",
+    "status": "Not Affected"
+  },
+  {
+    "cve_id": "CVE-2023-50447",
+    "pkg": "python3",
+    "cve_score": null,
+    "aff_ver": "NA",
+    "res_ver": "NA",
+    "status": "Fixed"
+  }
+]

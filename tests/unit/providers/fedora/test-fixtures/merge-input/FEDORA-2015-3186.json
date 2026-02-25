@@ -1,0 +1,21 @@
+{
+  "alias": "FEDORA-2015-3186",
+  "display_name": "",
+  "title": "dokuwiki-0-0.24.20140929c.fc21",
+  "notes": "Security fix for dokuwiki",
+  "type": "security",
+  "status": "stable",
+  "severity": "unspecified",
+  "date_submitted": "2015-03-03 09:01:56",
+  "date_modified": null,
+  "date_stable": "2015-03-26 21:44:21",
+  "date_pushed": "2015-03-26 21:44:21",
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2015-3186",
+  "release": {"name": "F21", "version": "21", "id_prefix": "FEDORA"},
+  "bugs": [
+    {"bug_id": 1166099, "security": true, "title": "CVE-2012-6662 dokuwiki: jquery-ui: XSS vulnerability in default content in Tooltip widget [fedora-all]"},
+    {"bug_id": 1174331, "security": true, "title": "CVE-2014-9253 dokuwiki: XSS via SFW file upload [fedora-all]"},
+    {"bug_id": 1197822, "security": true, "title": "CVE-2015-2172 dokuwiki: privilege escalation in RPC API"}
+  ],
+  "builds": [{"nvr": "dokuwiki-0-0.24.20140929c.fc21", "type": "rpm", "epoch": 0}]
+}

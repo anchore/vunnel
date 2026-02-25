@@ -52,6 +52,7 @@ grype_db:
 tests:
 
   - provider: alpine
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -86,6 +87,7 @@ tests:
       - *default-validations
 
   - provider: echo
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -97,6 +99,7 @@ tests:
       - *default-validations
 
   - provider: amazon
+    use_cache: true
     validations:
       - <<: *default-validations
         # TODO: docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
@@ -112,6 +115,7 @@ tests:
       - amazon:distro:amazonlinux:2023
 
   - provider: arch
+    use_cache: true
     images:
       - docker.io/anchore/test_images@sha256:a933b27534e5c911e2c660f7090aa497dee763fbbcb214a37207c2320cfedd98
     expected_namespaces:
@@ -121,6 +125,7 @@ tests:
         max_year: 2023
 
   - provider: chainguard
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -135,6 +140,7 @@ tests:
       - *default-validations
 
   - provider: chainguard-libraries
+    use_cache: true
     additional_providers:
       - name: github
         use_cache: true
@@ -163,7 +169,40 @@ tests:
       - debian:distro:debian:14
       - debian:distro:debian:unstable
 
+  - provider: fedora
+    use_cache: true
+    images:
+      - docker.io/fedora:40@sha256:2b0571b74dee5d891610276601c6680d622686113488076e7b35c18b455ce879
+    expected_namespaces:
+      - fedora:distro:fedora:21
+      - fedora:distro:fedora:22
+      - fedora:distro:fedora:23
+      - fedora:distro:fedora:24
+      - fedora:distro:fedora:25
+      - fedora:distro:fedora:26
+      - fedora:distro:fedora:27
+      - fedora:distro:fedora:28
+      - fedora:distro:fedora:29
+      - fedora:distro:fedora:30
+      - fedora:distro:fedora:31
+      - fedora:distro:fedora:32
+      - fedora:distro:fedora:33
+      - fedora:distro:fedora:34
+      - fedora:distro:fedora:35
+      - fedora:distro:fedora:36
+      - fedora:distro:fedora:37
+      - fedora:distro:fedora:38
+      - fedora:distro:fedora:39
+      - fedora:distro:fedora:40
+      - fedora:distro:fedora:41
+      - fedora:distro:fedora:42
+      - fedora:distro:fedora:43
+    validations:
+      - <<: *default-validations
+        max_year: 2024
+
   - provider: github
+    use_cache: true
     additional_providers:
       # we need to convert GHSAs to CVEs so that we can filter based on date
       - name: nvd
@@ -200,6 +239,7 @@ tests:
       - *default-validations
 
   - provider: mariner
+    use_cache: true
     images:
       - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
       - docker.io/anchore/test_images:azurelinux3-63671fe@sha256:2d761ba36575ddd4e07d446f4f2a05448298c20e5bdcd3dedfbbc00f9865240d
@@ -213,6 +253,7 @@ tests:
         candidate_tool_label: custom-db
 
   - provider: minimos
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -230,6 +271,8 @@ tests:
         candidate_tool_label: custom-db
 
   - provider: nvd
+    # building nvd without cache takes ~3 hours
+    use_cache: true
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
     expected_namespaces:
@@ -238,6 +281,7 @@ tests:
       - *default-validations
 
   - provider: oracle
+    use_cache: true
     additional_trigger_globs:
       - src/vunnel/utils/oval_parser.py
     images:
@@ -259,6 +303,7 @@ tests:
         fail_on_empty_match_set: false
 
   - provider: rhel
+    use_cache: true
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
     # This will still test incremental updates relative to the nightly cache that is populated.
     additional_trigger_globs:
@@ -284,6 +329,7 @@ tests:
       - redhat:distro:redhat:10
 
   - provider: sles
+    use_cache: true
     additional_trigger_globs:
       - src/vunnel/utils/oval_v2.py
 
@@ -355,6 +401,7 @@ tests:
       - *default-validations
 
   - provider: wolfi
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -366,6 +413,7 @@ tests:
       - *default-validations
 
   - provider: alma
+    use_cache: true
     additional_providers:
       - name: rhel
         use_cache: true
@@ -384,7 +432,20 @@ tests:
         max_year: 2022
         candidate_tool_label: custom-db
 
+  - provider: photon
+    use_cache: true
+    images:
+      - docker.io/anchore/test_images:photon4-bcdb8f0@sha256:1fcd94525a47fa3fb959e6c82fec473df477d256fbb520ab4d06b69769e52470
+    expected_namespaces:
+      - photon:distro:photon:3.0
+      - photon:distro:photon:4.0
+      - photon:distro:photon:5.0
+    validations:
+      - <<: *default-validations
+        max_year: 2024
+
   - provider: secureos
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true

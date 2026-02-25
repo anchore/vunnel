@@ -18,6 +18,41 @@ from vunnel import workspace
 from .ecosystem import normalize_package_name
 from .finder import Result, Strategy
 
+
+def cpe_to_v6_format(cpe: str) -> str | None:
+    """Convert a standard CPE 2.3 string to v6 simplified format.
+
+    Standard format: cpe:2.3:part:vendor:product:version:update:edition:lang:sw_edition:target_sw:target_hw:other
+    V6 format: part:vendor:product:edition:lang:sw_edition:target_hw:target_sw:other
+
+    The v6 format omits version and update, and swaps target_hw/target_sw order
+    relative to CPE 2.3. Wildcard (*) values are replaced with empty strings.
+
+    Returns None if the input is not a valid CPE 2.3 string.
+    """
+    if not cpe or not cpe.lower().startswith("cpe:2.3:"):
+        return None
+
+    parts = cpe.split(":")
+    if len(parts) < 5:
+        return None
+
+    # parts[2] is the part type (a, o, h)
+    part = parts[2]
+    if part not in ("a", "o", "h"):
+        return None
+
+    # map CPE 2.3 indices to v6 field order, skipping version[5] and update[6],
+    # and swapping target_hw[11] before target_sw[10]
+    v6_indices = [3, 4, 7, 8, 9, 11, 10, 12]
+    fields = []
+    for i in v6_indices:
+        val = parts[i] if i < len(parts) else "*"
+        fields.append("" if val == "*" else val)
+
+    return f"{part}:{':'.join(fields)}"
+
+
 if TYPE_CHECKING:
     from oras.container import Container as container_type
 
@@ -284,11 +319,20 @@ class Store(Strategy):
             (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
         )
 
-        if cpe_or_package.lower().startswith("cpe:"):
-            query = query.where(table.c.full_cpe == cpe_or_package)
+        is_cpe = cpe_or_package.lower().startswith("cpe:")
+        if is_cpe:
+            # try v6 simplified CPE format (e.g., "a:vendor:product:...") since grype-db stores CPEs this way
+            v6_cpe = cpe_to_v6_format(cpe_or_package)
+            if v6_cpe:
+                query = query.where(
+                    (table.c.full_cpe == cpe_or_package) | (table.c.full_cpe == v6_cpe),
+                )
+            else:
+                query = query.where(table.c.full_cpe == cpe_or_package)
         else:
+            normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
             query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                (table.c.package_name == normalized_pkg) & (table.c.full_cpe == ""),
             )
             if ecosystem:
                 query = query.where(table.c.ecosystem == ecosystem)
@@ -400,13 +444,14 @@ class Store(Strategy):
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
 
-                # configure SQLAlchemy engine with SQLite pragmas
+                # configure SQLAlchemy engine with SQLite pragmas for read-only performance
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA query_only = ON")
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection
@@ -419,7 +464,7 @@ class Store(Strategy):
         return self._thread_local.conn, self._thread_local.table
 
     def cleanup_thread_connections(self) -> None:
-        """clean up thread-local connections for the current thread"""
+        """clean up thread-local connections for the current thread, then dispose the engine."""
         if hasattr(self._thread_local, "conn"):
             try:
                 self.logger.debug("closing grype-db fixdates database")
@@ -433,6 +478,11 @@ class Store(Strategy):
                     delattr(self._thread_local, "conn")
                 if hasattr(self._thread_local, "table"):
                     delattr(self._thread_local, "table")
+
+        # dispose the engine to close all pooled connections from any thread
+        if self.engine:
+            self.engine.dispose()
+            self.engine = None
 
     def __enter__(self) -> "Store":
         return self

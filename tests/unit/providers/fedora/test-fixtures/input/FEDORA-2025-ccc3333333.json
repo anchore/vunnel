@@ -1,0 +1,40 @@
+{
+  "alias": "FEDORA-2025-ccc3333333",
+  "display_name": "",
+  "title": "libxml2-2.12.10-1.fc40",
+  "notes": "Security fix for libxml2",
+  "severity": "medium",
+  "type": "security",
+  "status": "stable",
+  "date_submitted": "2025-03-20 10:00:00",
+  "date_modified": "2025-03-21 08:00:00",
+  "date_stable": "2025-03-29 12:00:00",
+  "date_pushed": "2025-03-29 12:00:00",
+  "date_testing": "2025-03-21 03:00:00",
+  "date_approved": null,
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2025-ccc3333333",
+  "release": {
+    "name": "F40",
+    "version": "40",
+    "id_prefix": "FEDORA"
+  },
+  "bugs": [
+    {
+      "bug_id": 2346509,
+      "security": true,
+      "title": "CVE-2024-56171 libxml2: Use-After-Free in libxml2 [fedora-40]"
+    },
+    {
+      "bug_id": 2346522,
+      "security": true,
+      "title": "CVE-2025-24928 libxml2: Stack-based buffer overflow in xmlSnprintfElements of libxml2 [fedora-40]"
+    }
+  ],
+  "builds": [
+    {
+      "nvr": "libxml2-2.12.10-1.fc40",
+      "type": "rpm",
+      "epoch": 0
+    }
+  ]
+}

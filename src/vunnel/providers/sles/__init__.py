@@ -57,7 +57,12 @@ class Provider(provider.Provider):
 
     @classmethod
     def tags(cls) -> list[str]:
-        return ["vulnerability", "os"]
+        return [
+            "vulnerability",
+            "os",
+            # this generates a large dataset and historically can take a while to process (long wall clock time)
+            "large",
+        ]
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
