@@ -60,7 +60,7 @@ class Provider(provider.Provider):
         with timer(self.name(), self.logger):
             # TODO: use of last_updated as NVD provider does to avoid downloading all
             # vulnerability data from the source and make incremental updates instead
-            with self.results_writer() as writer:
+            with self.results_writer() as writer, self.parser:
                 for vuln_id, record in self.parser.get():
                     writer.write(
                         identifier=vuln_id.lower(),
