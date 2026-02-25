@@ -505,6 +505,28 @@ def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Lo
         logger.error(f"could not find a Name for parsed cve: {asdict(parsed_cve)}")
         return []
 
+    # Build a set of (bare_codename, package) pairs where an ESM variant confirms the
+    # package is not affected. When the main (bare codename) entry is "needs-triage",
+    # we can infer that the package is also not affected on the base release, avoiding
+    # false-positive match-all constraints in grype.
+    #
+    # We only consider entries where the version field is NOT a version string (i.e. it's
+    # a textual reason like "code not present" or empty). Entries with version strings like
+    # "5.4.0-1005.5" mean "fixed at this version" — older versions may still be vulnerable.
+    _esm_prefixes = ("esm-apps/", "esm-infra/", "esm-infra-legacy/")
+    esm_not_affected = set()
+    for ip in parsed_cve.ignored_patches:
+        if ip.status == "not-affected":
+            # Skip entries where the version field looks like an actual package version —
+            # those indicate a fix version, not a blanket "not affected" determination.
+            if ip.version and ip.version[:1].isdigit():
+                continue
+            for prefix in _esm_prefixes:
+                if ip.distro.startswith(prefix):
+                    bare = ip.distro[len(prefix) :]
+                    esm_not_affected.add((bare, ip.package))
+                    break
+
     for p in parsed_cve.patches:
         namespace_name = map_namespace(p.distro)
 
@@ -538,6 +560,16 @@ def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Lo
         # We currently want to mark end-of-support records with no previously known fix as vulnerable, hence the
         # or check_merge step here.
         if check_state(p.status) or check_merge(p):
+            # If the patch is needs-triage but a corresponding ESM entry confirms
+            # the package is not affected, skip emitting a FixedIn record. This
+            # prevents false-positive match-all constraints for packages where
+            # Ubuntu's ESM review determined the vulnerable code is not present.
+            if p.status == "needs-triage" and (p.distro, p.package) in esm_not_affected:
+                logger.debug(
+                    f"skipping needs-triage entry for {parsed_cve.name} {p.distro}/{p.package}: ESM variant confirms not-affected",
+                )
+                continue
+
             pkg = FixedIn()
             pkg.Name = p.package
 
