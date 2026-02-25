@@ -146,12 +146,13 @@ class Workspace:
     def input_path(self) -> str:
         return os.path.join(self.path, "input")
 
-    def create(self) -> None:
-        if not os.path.exists(self.input_path):
-            self.logger.debug(f"creating input workspace {self.input_path!r}")
-            os.makedirs(self.input_path)
-        else:
-            self.logger.debug(f"using existing input workspace {self.input_path!r}")
+    def create(self, create_input: bool = True) -> None:
+        if create_input:
+            if not os.path.exists(self.input_path):
+                self.logger.debug(f"creating input workspace {self.input_path!r}")
+                os.makedirs(self.input_path)
+            else:
+                self.logger.debug(f"using existing input workspace {self.input_path!r}")
 
         if not os.path.exists(self.results_path):
             self.logger.debug(f"creating results workspace {self.results_path!r}")

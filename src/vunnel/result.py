@@ -8,7 +8,7 @@ import shutil
 import threading
 import time
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import orjson
 import sqlalchemy as db
@@ -19,6 +19,32 @@ if TYPE_CHECKING:
 
     from .schema import Schema
     from .workspace import Workspace
+
+
+class ReaderProtocol(Protocol):
+    """Protocol defining the interface for result readers."""
+
+    def ids(self, pattern: str = "*", literal_filter: str | None = None) -> Generator[str]:
+        """Yield result identifiers, optionally filtered.
+
+        Args:
+            pattern: glob pattern (kept for API compatibility, "*" = all)
+            literal_filter: case-insensitive substring to filter by
+        """
+        ...
+
+    def read(self, identifier: str) -> Envelope | None:
+        """Read a single record by identifier, returning None if not found."""
+        ...
+
+    def __enter__(self) -> ReaderProtocol: ...
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None: ...
 
 
 class ResultStatePolicy(str, enum.Enum):
@@ -301,6 +327,67 @@ class Writer:
         self.wrote += 1
 
 
+def _glob_to_sql_like(pattern: str) -> str:
+    """Convert a simple glob pattern (with * for wildcards) to SQL LIKE pattern.
+
+    Only supports prefix/suffix wildcards (e.g., 'CVE-2023-*', '*-0001', '*2023*').
+    """
+    # escape SQL LIKE special characters (% and _) in the non-wildcard parts
+    escaped = pattern.replace("%", r"\%").replace("_", r"\_")
+    # convert glob wildcards to SQL LIKE wildcards
+    return escaped.replace("*", "%")
+
+
+class FlatFileReader:
+    def __init__(self, results_path: str):
+        self.results_path = results_path
+
+    def ids(self, pattern: str = "*", literal_filter: str | None = None) -> Generator[str]:
+        """Yield result identifiers, optionally filtered.
+
+        Args:
+            pattern: glob pattern ("*" = all)
+            literal_filter: case-insensitive substring to filter by
+        """
+        import glob as glob_module  # noqa: PLC0415
+
+        if literal_filter:
+            # iterate all files and filter by substring (can't glob for substrings)
+            file_pattern = os.path.join(self.results_path, "**", "*.json")
+            for file_path in sorted(glob_module.glob(file_pattern, recursive=True)):
+                rel_path = os.path.relpath(file_path, self.results_path)
+                identifier = rel_path[:-5]  # strip .json
+                if literal_filter.lower() in identifier.lower():
+                    yield identifier
+        else:
+            # use glob pattern for filtering
+            file_pattern = os.path.join(self.results_path, "**", f"{pattern}.json")
+            for file_path in sorted(glob_module.glob(file_pattern, recursive=True)):
+                if file_path.endswith(".json"):
+                    rel_path = os.path.relpath(file_path, self.results_path)
+                    yield rel_path[:-5]  # strip .json
+
+    def read(self, identifier: str) -> Envelope | None:
+        """Read a single record by identifier, returning None if not found."""
+        file_path = os.path.join(self.results_path, f"{identifier}.json")
+        if not os.path.exists(file_path):
+            return None
+        with open(file_path, "rb") as f:
+            data = orjson.loads(f.read())
+            return Envelope(schema=data["schema"], identifier=data["identifier"], item=data["item"])
+
+    def __enter__(self) -> FlatFileReader:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        pass
+
+
 class SQLiteReader:
     def __init__(self, sqlite_db_path: str, table_name: str = "results"):
         self.db_path = sqlite_db_path
@@ -309,14 +396,41 @@ class SQLiteReader:
         self.engine: db.engine.Engine | None = None
         self.table: db.Table | None = None
 
-    def read(self, identifier: str) -> dict[str, Any] | None:
-        conn, table = self.connection()
-        with conn.begin():
-            result = conn.execute(table.select().where(table.c.id == identifier.lower())).first()
-            if not result:
-                return None
+    def ids(self, pattern: str = "*", literal_filter: str | None = None) -> Generator[str]:
+        """Yield result identifiers, optionally filtered.
 
-            return orjson.loads(result.record)
+        Args:
+            pattern: glob pattern (kept for API compatibility, "*" = all)
+            literal_filter: case-insensitive substring to filter by
+        """
+        conn, table = self.connection()
+        # no explicit transaction needed for read-only operations
+
+        if literal_filter:
+            # case-insensitive substring match using LIKE
+            like_pattern = f"%{literal_filter}%"
+            results = conn.execute(
+                db.select(table.c.id).where(db.func.lower(table.c.id).like(db.func.lower(like_pattern))),
+            )
+        elif pattern == "*":
+            # no filter, return all
+            results = conn.execute(db.select(table.c.id))
+        else:
+            # convert glob pattern to SQL LIKE and filter at db level
+            like_pattern = _glob_to_sql_like(pattern)
+            results = conn.execute(db.select(table.c.id).where(table.c.id.like(like_pattern)))
+
+        for r in results:
+            yield r.id
+
+    def read(self, identifier: str) -> Envelope | None:
+        """Read a single record by identifier, returning None if not found."""
+        conn, table = self.connection()
+        # no explicit transaction needed for read-only operations
+        result = conn.execute(table.select().where(table.c.id == identifier)).first()
+        if not result:
+            return None
+        return Envelope(**orjson.loads(result.record))
 
     def each(self) -> Generator[Envelope]:
         conn, table = self.connection()
@@ -357,3 +471,59 @@ class SQLiteReader:
             self.conn = None
             self.engine = None
             self.table = None
+
+
+class Reader:
+    """Context manager for reading results from a workspace."""
+
+    def __init__(
+        self,
+        workspace: Workspace,
+        logger: logging.Logger | None = None,
+    ):
+        self.workspace = workspace
+        if not logger:
+            logger = logging.getLogger("results-reader")
+        self.logger = logger
+
+        # auto-detect store strategy
+        self._strategy = self._detect_strategy()
+        self._store: ReaderProtocol | None = None
+
+    def _detect_strategy(self) -> StoreStrategy:
+        """Detect store type based on presence of results.db file."""
+        db_path = os.path.join(self.workspace.results_path, "results.db")
+        return StoreStrategy.SQLITE if os.path.exists(db_path) else StoreStrategy.FLAT_FILE
+
+    @property
+    def store(self) -> ReaderProtocol:
+        if self._store is None:
+            raise RuntimeError("Reader not initialized - use as context manager")
+        return self._store
+
+    def __enter__(self) -> Reader:
+        if self._strategy == StoreStrategy.SQLITE:
+            db_path = os.path.join(self.workspace.results_path, "results.db")
+            self._store = SQLiteReader(db_path)
+        else:
+            self._store = FlatFileReader(self.workspace.results_path)
+        self._store.__enter__()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        if self._store:
+            self._store.__exit__(exc_type, exc_val, exc_tb)
+            self._store = None
+
+    def ids(self, pattern: str = "*", literal_filter: str | None = None) -> Generator[str]:
+        """Yield result identifiers, optionally filtered."""
+        return self.store.ids(pattern, literal_filter=literal_filter)
+
+    def read(self, identifier: str) -> Envelope | None:
+        """Read a single record by identifier."""
+        return self.store.read(identifier)

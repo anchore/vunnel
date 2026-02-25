@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import os
 from unittest.mock import MagicMock
 
@@ -785,3 +786,482 @@ def test_list_tag_invalid_negation() -> None:
     res = runner.invoke(cli.cli, ["list", "--tag", "!"])
     assert res.exit_code != 0
     assert "invalid tag" in res.output.lower()
+
+
+class TestWorkspaceSelect:
+    def test_basic_select_flat_file(self, helpers, tmpdir, monkeypatch) -> None:
+        from vunnel import workspace as ws_module
+
+        data_path = helpers.local_dir("test-fixtures/data-1")
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {data_path}")
+
+        output_path = str(tmpdir.join("output"))
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "wolfi", "-i", ".*", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify output structure
+        dest_ws = ws_module.Workspace(root=output_path, name="wolfi")
+        assert os.path.exists(dest_ws.results_path)
+        assert not os.path.exists(dest_ws.input_path)
+        assert os.path.exists(dest_ws.metadata_path)
+
+    def test_select_with_pattern_filter(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace with known results
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("CVE-2023-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0001"}})
+            writer.write("CVE-2023-0002", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0002"}})
+            writer.write("CVE-2024-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2024-0001"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "CVE-2023-.*", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify only CVE-2023 results are in the output
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+
+        assert ids == ["CVE-2023-0001", "CVE-2023-0002"]
+
+    def test_select_with_sqlite_source(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace with sqlite store
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.SQLITE,
+        ) as writer:
+            writer.write("CVE-2023-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0001"}})
+            writer.write("CVE-2023-0002", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0002"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="sqlite",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", ".*", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify results in output
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+
+        assert ids == ["CVE-2023-0001", "CVE-2023-0002"]
+
+    def test_select_with_sqlite_output(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("CVE-2023-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0001"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", ".*", "--store", "sqlite", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify sqlite file exists
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        db_path = os.path.join(dest_ws.results_path, "results.db")
+        assert os.path.exists(db_path)
+
+    def test_invalid_regex(self, tmpdir, monkeypatch) -> None:
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write("root: ./data")
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "nvd", "-i", "[invalid", str(tmpdir.join("output"))],
+        )
+        assert res.exit_code != 0
+        assert "invalid regex" in res.output.lower()
+
+    def test_missing_source_workspace(self, tmpdir, monkeypatch) -> None:
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {tmpdir.join('nonexistent')}")
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "nvd", "-i", ".*", str(tmpdir.join("output"))],
+        )
+        # should succeed but skip the missing provider
+        assert res.exit_code == 0
+
+    def test_multiple_providers(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create two source workspaces
+        source_root = str(tmpdir.join("source"))
+
+        for provider_name in ["provider-a", "provider-b"]:
+            source_ws = ws_module.Workspace(root=source_root, name=provider_name, create=True)
+            with result_module.Writer(
+                source_ws,
+                result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+                store_strategy=result_module.StoreStrategy.FLAT_FILE,
+            ) as writer:
+                writer.write(f"{provider_name}-CVE-0001", schema.OSSchema(), {"Vulnerability": {"id": f"{provider_name}-CVE-0001"}})
+
+            source_ws.record_state(
+                version=1,
+                distribution_version=1,
+                timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+                urls=[],
+                store="flat-file",
+            )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "provider-a", "-p", "provider-b", "-i", ".*", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify both providers are in output
+        for provider_name in ["provider-a", "provider-b"]:
+            dest_ws = ws_module.Workspace(root=output_path, name=provider_name)
+            assert os.path.exists(dest_ws.results_path)
+
+    def test_replace_flag(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace with two results
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("CVE-2023-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0001"}})
+            writer.write("CVE-2023-0002", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0002"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        # first run - select only CVE-2023-0001
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "CVE-2023-0001", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify first run result
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+        assert ids == ["CVE-2023-0001"]
+
+        # second run with --replace - select only CVE-2023-0002
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "CVE-2023-0002", "--replace", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify only the new selection is in output (replace removed old one)
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+
+        assert ids == ["CVE-2023-0002"]
+
+    def test_case_insensitive_matching(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace with lowercase IDs (like rhel provider)
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("rhel:6/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+            writer.write("rhel:7/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+            writer.write("rhel:6/cve-2024-12345", schema.OSSchema(), {"Vulnerability": {"id": "cve-2024-12345"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        # search with uppercase pattern - should match lowercase IDs
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "CVE-2021-30473", output_path],
+        )
+        assert res.exit_code == 0
+
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+
+        assert ids == ["rhel:6/cve-2021-30473", "rhel:7/cve-2021-30473"]
+
+    def test_substring_matching(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace with nested IDs
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("rhel:6/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+            writer.write("rhel:7/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+            writer.write("nvd/CVE-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2021-30473"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        # search with pattern that appears in middle of ID (not prefix)
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "cve-2021-30473", output_path],
+        )
+        assert res.exit_code == 0
+
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+
+        # should match all IDs containing the pattern (case-insensitive)
+        assert ids == ["nvd/CVE-2021-30473", "rhel:6/cve-2021-30473", "rhel:7/cve-2021-30473"]
+
+    def test_anchored_pattern(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace with different prefixes
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("rhel:6/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+            writer.write("rhel:7/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+            writer.write("debian:10/cve-2021-30473", schema.OSSchema(), {"Vulnerability": {"id": "cve-2021-30473"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        # use anchored pattern to select only rhel:6 results
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "^rhel:6/", output_path],
+        )
+        assert res.exit_code == 0
+
+        dest_ws = ws_module.Workspace(root=output_path, name="test-provider")
+        reader = result_module.FlatFileReader(dest_ws.results_path)
+        ids = sorted(reader.ids())
+
+        # should only match rhel:6 IDs
+        assert ids == ["rhel:6/cve-2021-30473"]
+
+    def test_dry_run(self, tmpdir, monkeypatch) -> None:
+        from vunnel import result as result_module, schema, workspace as ws_module
+
+        envs = {"NVD_API_KEY": "secret", "GITHUB_TOKEN": "secret"}
+        monkeypatch.setattr(os, "environ", envs)
+
+        # create source workspace
+        source_root = str(tmpdir.join("source"))
+        source_ws = ws_module.Workspace(root=source_root, name="test-provider", create=True)
+
+        with result_module.Writer(
+            source_ws,
+            result_state_policy=result_module.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result_module.StoreStrategy.FLAT_FILE,
+        ) as writer:
+            writer.write("CVE-2023-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0001"}})
+            writer.write("CVE-2023-0002", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2023-0002"}})
+            writer.write("CVE-2024-0001", schema.OSSchema(), {"Vulnerability": {"id": "CVE-2024-0001"}})
+
+        source_ws.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+            urls=[],
+            store="flat-file",
+        )
+
+        config = tmpdir.join("vunnel.yaml")
+        config.write(f"root: {source_root}")
+
+        output_path = str(tmpdir.join("output"))
+
+        runner = CliRunner()
+        res = runner.invoke(
+            cli.cli,
+            ["-c", str(config), "workspace-select", "-p", "test-provider", "-i", "CVE-2023", "--dry-run", output_path],
+        )
+        assert res.exit_code == 0
+
+        # verify output shows matching IDs
+        assert "test-provider: CVE-2023-0001" in res.output
+        assert "test-provider: CVE-2023-0002" in res.output
+        assert "CVE-2024-0001" not in res.output
+
+        # verify no output directory was created
+        assert not os.path.exists(output_path)

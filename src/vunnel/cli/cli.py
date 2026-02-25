@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime
 import enum
 import json
 import logging
+import os
+import re
 import sys
 from dataclasses import dataclass
 from importlib.metadata import version
@@ -13,7 +16,7 @@ import click
 import yaml
 
 from vunnel import __name__ as package_name
-from vunnel import provider, providers
+from vunnel import provider, providers, result, workspace
 from vunnel.cli import config
 
 
@@ -307,3 +310,162 @@ def list_providers(cfg: config.Application, tags: tuple[str, ...], output_format
     else:
         for p in provider_names:
             print(p)
+
+
+# fixed timestamp: Sept 16, 1987 midnight UTC (indicates synthetic/derived data)
+SYNTHETIC_TIMESTAMP = datetime.datetime(1987, 9, 16, 0, 0, 0, tzinfo=datetime.UTC)
+
+
+def _extract_literal_substring(pattern: str) -> str | None:
+    """Extract the longest literal substring from a regex for pre-filtering.
+
+    Returns None if no useful literal substring can be extracted.
+    """
+    # find all contiguous literal character sequences
+    literals = []
+    current: list[str] = []
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+        if c in r".*+?^${}[]|()\\":
+            if current:
+                literals.append("".join(current))
+                current = []
+        else:
+            current.append(c)
+        i += 1
+    if current:
+        literals.append("".join(current))
+
+    # return the longest literal substring (most selective for filtering)
+    if literals:
+        return max(literals, key=len)
+    return None
+
+
+@cli.command(name="workspace-select", help="select results by ID pattern into a new workspace")
+@click.option(
+    "--provider",
+    "-p",
+    "provider_names",
+    multiple=True,
+    required=True,
+    help="provider name(s) to select from (can repeat)",
+)
+@click.option(
+    "--id",
+    "-i",
+    "id_pattern",
+    required=True,
+    help="regex pattern to match result identifiers",
+)
+@click.option(
+    "--replace",
+    is_flag=True,
+    default=False,
+    help="replace existing results at output path (default: append)",
+)
+@click.option(
+    "--store",
+    "store_strategy",
+    type=click.Choice(["flat-file", "sqlite"]),
+    default="flat-file",
+    help="output storage format (default: flat-file)",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="show matching IDs without writing results",
+)
+@click.argument("output_path", type=click.Path())
+@click.pass_obj
+def workspace_select(  # noqa: C901, PLR0913
+    cfg: config.Application,
+    provider_names: tuple[str, ...],
+    id_pattern: str,
+    replace: bool,
+    store_strategy: str,
+    dry_run: bool,
+    output_path: str,
+) -> None:
+    """Select results by ID pattern into a new workspace."""
+    # compile regex with case-insensitive flag
+    # auto-wrap pattern with .* if not anchored for substring matching
+    try:
+        effective_pattern = id_pattern
+        if not effective_pattern.startswith("^") and not effective_pattern.startswith(".*"):
+            effective_pattern = ".*" + effective_pattern
+        if not effective_pattern.endswith("$") and not effective_pattern.endswith(".*"):
+            effective_pattern = effective_pattern + ".*"
+
+        regex = re.compile(effective_pattern, re.IGNORECASE)
+    except re.error as e:
+        raise click.ClickException(f"invalid regex pattern: {e}") from e
+
+    # extract literal substring for efficient pre-filtering at the data layer
+    literal_substring = _extract_literal_substring(id_pattern)
+
+    store_strat = result.StoreStrategy(store_strategy)
+
+    for provider_name in provider_names:
+        source_workspace = workspace.Workspace(root=cfg.root, name=provider_name)
+
+        # check if source workspace exists
+        if not os.path.exists(source_workspace.results_path):
+            logging.warning(f"source workspace not found for provider {provider_name!r}, skipping")
+            continue
+
+        if dry_run:
+            # dry-run mode: just show matching IDs without writing
+            matched_count = 0
+            with result.Reader(source_workspace) as reader:
+                for identifier in reader.ids(literal_filter=literal_substring):
+                    if regex.search(identifier):
+                        print(f"{provider_name}: {identifier}")
+                        matched_count += 1
+
+            logging.info(f"would select {matched_count} results from {provider_name!r}")  # noqa: S608
+            continue
+
+        # create destination workspace (results only, no input)
+        dest_workspace = workspace.Workspace(root=output_path, name=provider_name)
+        dest_workspace.create(create_input=False)
+
+        # determine policy based on --replace flag
+        policy = result.ResultStatePolicy.DELETE_BEFORE_WRITE if replace else result.ResultStatePolicy.KEEP
+
+        matched_count = 0
+        with (
+            result.Reader(source_workspace) as reader,
+            result.Writer(
+                dest_workspace,
+                result_state_policy=policy,
+                store_strategy=store_strat,
+            ) as writer,
+        ):
+            # prepare the store (handles DELETE_BEFORE_WRITE by clearing results)
+            writer.store.prepare()
+
+            # use literal substring for efficient pre-filtering, then apply regex
+            for identifier in reader.ids(literal_filter=literal_substring):
+                if regex.search(identifier):
+                    envelope = reader.read(identifier)
+                    if envelope is None:
+                        logging.warning(f"failed to read result {identifier!r}, skipping")
+                        continue
+                    writer.store.store(identifier, envelope)
+                    writer.wrote += 1
+                    matched_count += 1
+
+        logging.info(f"selected {matched_count} results from {provider_name!r}")
+
+        # record workspace state
+        dest_workspace.record_state(
+            version=1,
+            distribution_version=1,
+            timestamp=SYNTHETIC_TIMESTAMP,
+            urls=[],
+            store=str(store_strat.value),
+            stale=True,
+        )
