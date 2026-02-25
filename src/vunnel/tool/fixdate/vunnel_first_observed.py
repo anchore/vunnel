@@ -14,6 +14,14 @@ from .ecosystem import normalize_package_name
 from .finder import Result
 
 
+class _StoreThreadLocal(threading.local):
+    """thread-local storage for per-thread SQLAlchemy connections and table references."""
+
+    conn: db.engine.Connection | None = None
+    table: db.Table | None = None
+    pending_operations: int = 0
+
+
 @dataclass
 class FixDate:
     """
@@ -37,13 +45,13 @@ class Store:
         self.db_path = Path(ws.results_path) / "observed-fix-dates.db"
         self.logger = logging.getLogger("fixes-" + self.provider)
         self.engine: db.engine.Engine | None = None
-        self._thread_local = threading.local()
+        self._thread_local = _StoreThreadLocal()
         self.batch_size = batch_size
 
     @property
     def _pending_operations(self) -> int:
         """Get pending operation count for the current thread."""
-        return getattr(self._thread_local, "pending_operations", 0)
+        return self._thread_local.pending_operations
 
     @_pending_operations.setter
     def _pending_operations(self, value: int) -> None:
@@ -225,7 +233,7 @@ class Store:
     def _get_connection(self) -> tuple[db.engine.Connection, db.Table]:
         """get or create thread-local SQLAlchemy connection and table"""
 
-        if not hasattr(self._thread_local, "conn") or not hasattr(self._thread_local, "table"):
+        if self._thread_local.conn is None or self._thread_local.table is None:
             # create engine once if it doesn't exist
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
@@ -257,7 +265,7 @@ class Store:
 
     def cleanup_thread_connections(self) -> None:
         """clean up thread-local connections for the current thread, then dispose the engine."""
-        if hasattr(self._thread_local, "conn"):
+        if self._thread_local.conn is not None:
             try:
                 self.logger.debug("closing vunnel fixdates database")
                 self._thread_local.conn.execute(db.text("VACUUM"))
@@ -267,10 +275,8 @@ class Store:
                 self.logger.exception("error closing vunnel fixdates database connection")
             finally:
                 # clear the thread-local storage
-                if hasattr(self._thread_local, "conn"):
-                    delattr(self._thread_local, "conn")
-                if hasattr(self._thread_local, "table"):
-                    delattr(self._thread_local, "table")
+                self._thread_local.conn = None
+                self._thread_local.table = None
 
         # dispose the engine to close all pooled connections from any thread
         if self.engine:

@@ -110,6 +110,12 @@ class FlatFileStore(Store):
         pass
 
 
+class _SQLiteStoreThreadLocal(threading.local):
+    """thread-local storage for per-thread SQLAlchemy connections."""
+
+    conn: db.engine.Connection | None = None
+
+
 class SQLiteStore(Store):
     filename = "results.db"
     temp_filename = "results.db.tmp"
@@ -120,12 +126,14 @@ class SQLiteStore(Store):
         self.engine: db.engine.Engine | None = None
         self.write_location = write_location
         self.batch_size = batch_size
-        self._thread_local = threading.local()
+        self._thread_local = _SQLiteStoreThreadLocal()
         self._pending_records: list[dict[str, Any]] = []
         self._total_submitted = 0
         self._closed = False
         self._lock = threading.Lock()
         self._engine_lock = threading.Lock()
+        # not thread-local: Table objects are immutable metadata descriptors safe to share across threads,
+        # and access is serialized by _engine_lock in _ensure_engine_and_table().
         self._table: db.Table | None = None
         if self.write_location:
             self.filename = os.path.basename(self.write_location)
@@ -155,7 +163,7 @@ class SQLiteStore(Store):
     def connection(self) -> tuple[db.engine.Connection, db.Table]:
         """get or create a thread-local connection and shared table."""
         engine, table = self._ensure_engine_and_table()
-        if not hasattr(self._thread_local, "conn") or self._thread_local.conn is None:
+        if self._thread_local.conn is None:
             self._thread_local.conn = engine.connect()
         return self._thread_local.conn, table
 
@@ -266,10 +274,16 @@ class SQLiteStore(Store):
             self._flush_unlocked()
 
         # checkpoint WAL to fold all data into the main DB file, then close.
-        # This ensures no data is left only in the -wal file before we move the .db
-        if hasattr(self._thread_local, "conn") and self._thread_local.conn is not None:
-            with self._thread_local.conn.begin():
-                self._thread_local.conn.execute(db.text("PRAGMA wal_checkpoint(TRUNCATE)"))
+        # This ensures no data is left only in the -wal file before we move the .db.
+        # Run via the raw DBAPI connection to avoid SQLAlchemy's transaction management --
+        # a checkpoint inside a BEGIN block will report "busy" and silently fail to truncate.
+        if self._thread_local.conn is not None:
+            raw_conn = self._thread_local.conn.connection.dbapi_connection
+            if raw_conn is None:
+                raise RuntimeError("expected a DBAPI connection but got None")
+            cursor = raw_conn.cursor()
+            cursor.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            cursor.close()
             self._thread_local.conn.close()
             self._thread_local.conn = None
 
