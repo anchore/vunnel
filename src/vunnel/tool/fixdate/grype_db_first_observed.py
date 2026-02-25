@@ -57,6 +57,13 @@ if TYPE_CHECKING:
     from oras.container import Container as container_type
 
 
+class _StoreThreadLocal(threading.local):
+    """thread-local storage for per-thread SQLAlchemy connections and table references."""
+
+    conn: db.engine.Connection | None = None
+    table: db.Table | None = None
+
+
 class _ProgressLoggingOrasClient(oras.client.OrasClient):
     """ORAS client wrapper that logs download progress at debug level."""
 
@@ -138,7 +145,7 @@ class Store(Strategy):
         self.digest_path = self.db_path.with_suffix(".db.digest")
         self.logger = logging.getLogger("grype-db-fixes-" + self.provider)
         self.engine: db.engine.Engine | None = None
-        self._thread_local = threading.local()
+        self._thread_local = _StoreThreadLocal()
         self._not_found = False
         self._downloaded = False
 
@@ -439,7 +446,7 @@ class Store(Strategy):
     def _get_connection(self) -> tuple[db.engine.Connection, db.Table]:
         """get or create thread-local SQLAlchemy connection and table"""
         # get thread-local connection and table, or create them if they don't exist
-        if not hasattr(self._thread_local, "conn") or not hasattr(self._thread_local, "table"):
+        if self._thread_local.conn is None or self._thread_local.table is None:
             # create engine once if it doesn't exist
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
@@ -465,7 +472,7 @@ class Store(Strategy):
 
     def cleanup_thread_connections(self) -> None:
         """clean up thread-local connections for the current thread, then dispose the engine."""
-        if hasattr(self._thread_local, "conn"):
+        if self._thread_local.conn is not None:
             try:
                 self.logger.debug("closing grype-db fixdates database")
                 self._thread_local.conn.close()
@@ -474,10 +481,8 @@ class Store(Strategy):
                 self.logger.exception("error closing grype-db fixdates database connection")
             finally:
                 # clear the thread-local storage
-                if hasattr(self._thread_local, "conn"):
-                    delattr(self._thread_local, "conn")
-                if hasattr(self._thread_local, "table"):
-                    delattr(self._thread_local, "table")
+                self._thread_local.conn = None
+                self._thread_local.table = None
 
         # dispose the engine to close all pooled connections from any thread
         if self.engine:
