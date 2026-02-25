@@ -444,13 +444,14 @@ class Store(Strategy):
             if not self.engine:
                 self.engine = db.create_engine(f"sqlite:///{self.db_path}")
 
-                # configure SQLAlchemy engine with SQLite pragmas
+                # configure SQLAlchemy engine with SQLite pragmas for read-only performance
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA query_only = ON")
-                    cursor.execute("PRAGMA cache_size=1000")
-                    cursor.execute("PRAGMA temp_store=memory")
+                    cursor.execute("PRAGMA cache_size=10000")  # ~40MB cache
+                    cursor.execute("PRAGMA temp_store=MEMORY")
+                    cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
             # create thread-local connection
@@ -463,7 +464,7 @@ class Store(Strategy):
         return self._thread_local.conn, self._thread_local.table
 
     def cleanup_thread_connections(self) -> None:
-        """clean up thread-local connections for the current thread"""
+        """clean up thread-local connections for the current thread, then dispose the engine."""
         if hasattr(self._thread_local, "conn"):
             try:
                 self.logger.debug("closing grype-db fixdates database")
@@ -477,6 +478,11 @@ class Store(Strategy):
                     delattr(self._thread_local, "conn")
                 if hasattr(self._thread_local, "table"):
                     delattr(self._thread_local, "table")
+
+        # dispose the engine to close all pooled connections from any thread
+        if self.engine:
+            self.engine.dispose()
+            self.engine = None
 
     def __enter__(self) -> "Store":
         return self
