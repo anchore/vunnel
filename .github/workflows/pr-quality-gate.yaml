@@ -12,14 +12,23 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pr-quality-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   select-providers:
-    runs-on: runs-on=${{ github.run_id }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
       multicore-providers: ${{ steps.split-providers.outputs.multicore-providers }}
       other-providers: ${{ steps.split-providers.outputs.other-providers }}
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
@@ -54,7 +63,7 @@ jobs:
           echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 
   validate-provider-multicore:
-    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=32/volume=80gb:gp3/family=r8+m8+r7+r6i+r6a+m7+m6i+m6a
+    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=16/ram=32+64/family=c6gd+c5ad+m6gd+c7gd+c5d/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     timeout-minutes: 480
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.multicore-providers != '[]'
@@ -69,6 +78,11 @@ jobs:
       packages: read
 
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
@@ -91,9 +105,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate-provider:
-    # I/O-bound workload (download JSON → transform → write SQLite), so use storage-optimized
-    # instances with local NVMe for better IOPS
-    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=2+4/ram=16+32/family=i7ie+i7i
+    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     timeout-minutes: 480
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.other-providers != '[]'
@@ -108,6 +120,11 @@ jobs:
       packages: read
 
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
@@ -130,13 +147,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   evaluate-quality-gate:
-    runs-on: runs-on=${{ github.run_id }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     needs:
       - validate-provider
       - validate-provider-multicore
       - select-providers
     if: ${{ always() }}
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - env:
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
           VALIDATION_MULTICORE_STATUS: ${{ needs.validate-provider-multicore.result }}

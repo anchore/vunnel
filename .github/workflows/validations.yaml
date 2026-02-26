@@ -16,10 +16,15 @@ jobs:
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Static-Analysis:
     name: "Static Analysis"
-    runs-on: runs-on=${{ github.run_id }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     permissions:
       contents: read
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
@@ -37,10 +42,15 @@ jobs:
           cd tests/quality && make validate-test-tool-versions
 
   Discover-Test-Envs:
-    runs-on: runs-on=${{ github.run_id }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           persist-credentials: false
@@ -56,7 +66,7 @@ jobs:
 
   Test:
     needs: Discover-Test-Envs
-    runs-on: runs-on=${{ github.run_id }}-test-${{ strategy.job-index }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}-test-${{ strategy.job-index }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     permissions:
       contents: read
     strategy:
@@ -64,6 +74,11 @@ jobs:
       matrix:
         toxenv: ${{ fromJson(needs.Discover-Test-Envs.outputs.envs) }}
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
@@ -86,10 +101,15 @@ jobs:
   # as well as the release.yaml workflow
   Test-Gate:
     if: ${{ always() }}
-    runs-on: runs-on=${{ github.run_id }}/runner=small
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     name: Test Gate
     needs: [Test]
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - env:
           TEST_RESULT: ${{ needs.Test.result }}
         run: |
@@ -100,7 +120,7 @@ jobs:
           fi
 
   Publish-PreProd:
-    runs-on: runs-on=${{ github.run_id }}/runner=release
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     needs: [Static-Analysis, Test]
     if: github.ref == 'refs/heads/main'
     permissions:
@@ -108,6 +128,11 @@ jobs:
       # package write permission is needed for publishing commit images
       packages: write
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
