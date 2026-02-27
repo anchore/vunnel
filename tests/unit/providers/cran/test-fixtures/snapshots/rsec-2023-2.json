@@ -1,0 +1,67 @@
+{
+  "identifier": "rsec-2023-2",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "CRAN",
+          "name": "readxl"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2023-07-13",
+                    "kind": "advisory",
+                    "version": "1.4.2"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "1.4.1"
+              },
+              {
+                "fixed": "1.4.2"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ],
+        "versions": [
+          "1.4.1"
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2021-27836"
+    ],
+    "details": "The readxl R package is exposed to a vulnerability owing to its underlying use of libxls library version 1.6.2. The vulnerability originates in the xls_getWorkSheet function within xls.c in libxls. Attackers can exploit this flaw by utilizing a specially crafted XLS file, leading to a Denial of Service (DoS) attack.",
+    "id": "RSEC-2023-2",
+    "modified": "2025-05-16T00:12:44Z",
+    "published": "2023-07-13T02:46:57.600Z",
+    "references": [
+      {
+        "type": "ADVISORY",
+        "url": "https://github.com/RConsortium/r-advisory-database/blob/main/vulns/readxl/RSEC-2023-2.yaml"
+      },
+      {
+        "type": "WEB",
+        "url": "https://osv.dev/vulnerability/RSEC-2023-2"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/tidyverse/readxl/issues/679"
+      },
+      {
+        "type": "WEB",
+        "url": "https://readxl.tidyverse.org/news/index.html#readxl-142"
+      }
+    ],
+    "summary": "Denial of Service (DoS) vulnerability"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.6.1.json"
+}

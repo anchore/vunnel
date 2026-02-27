@@ -1,0 +1,65 @@
+{
+  "identifier": "rsec-2023-3",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "CRAN",
+          "name": "jsonlite"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2023-07-18",
+                    "kind": "advisory",
+                    "version": "1.8.8"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0.9.12"
+              },
+              {
+                "fixed": "1.8.8"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ],
+        "versions": [
+          "0.9.12",
+          "0.9.13"
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2023-33460"
+    ],
+    "details": "The jsonlite R package is exposed to a vulnerability due to its use of yajl library version 2.1.0. The vulnerability originates from the yajl_tree_parse function within yajl. Attackers can exploit this flaw to cause a memory leak, which will result in out-of-memory in server and lead to a crash.",
+    "id": "RSEC-2023-3",
+    "modified": "2025-05-16T00:12:44Z",
+    "published": "2023-07-18T04:37:21.600Z",
+    "references": [
+      {
+        "type": "ADVISORY",
+        "url": "https://github.com/RConsortium/r-advisory-database/blob/main/vulns/jsonlite/RSEC-2023-3.yaml"
+      },
+      {
+        "type": "WEB",
+        "url": "https://osv.dev/vulnerability/RSEC-2023-3"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/jeroen/jsonlite/pull/421"
+      }
+    ],
+    "schema_version": "1.6.1",
+    "summary": "Memory leak vulnerability"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.6.1.json"
+}

@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/vulnerability.db
+      version: feat-osv-fixes-etc+import-db=build/vulnerability.db
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
+      version: feat-osv-fixes-etc+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
       takes: SBOM
       label: reference
 
@@ -47,7 +47,7 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
+  version: grype-osv
 
 tests:
 
@@ -456,3 +456,12 @@ tests:
       - nvd:cpe
     validations:
       - *default-validations
+
+  - provider: cran
+    images:
+      - docker.io/anchore/test_images:r-packages-2f30eae@sha256:ba8a2263b89b5852fb7d41a662969d1f5d68b9020cca64f0a64a4505ce67fbfe
+    expected_namespaces:
+      - cran:language:R
+    validations:
+      - <<: *default-validations
+        max_year: 2025
