@@ -394,15 +394,15 @@ class TestStore:
         store._get_connection()
 
         # verify thread-local storage exists
-        assert hasattr(store._thread_local, "conn")
-        assert hasattr(store._thread_local, "table")
+        assert store._thread_local.conn is not None
+        assert store._thread_local.table is not None
 
         # cleanup connections
         store.cleanup_thread_connections()
 
         # verify thread-local storage is cleared
-        assert not hasattr(store._thread_local, "conn")
-        assert not hasattr(store._thread_local, "table")
+        assert store._thread_local.conn is None
+        assert store._thread_local.table is None
 
     def test_batch_commit_performance(self, tmpdir, mocker):
         """test that commits are batched for performance"""
