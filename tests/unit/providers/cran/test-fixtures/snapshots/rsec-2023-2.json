@@ -45,6 +45,14 @@
     "published": "2023-07-13T02:46:57.600Z",
     "references": [
       {
+        "type": "ADVISORY",
+        "url": "https://github.com/RConsortium/r-advisory-database/blob/main/vulns/readxl/RSEC-2023-2.yaml"
+      },
+      {
+        "type": "WEB",
+        "url": "https://osv.dev/vulnerability/RSEC-2023-2"
+      },
+      {
         "type": "WEB",
         "url": "https://github.com/tidyverse/readxl/issues/679"
       },

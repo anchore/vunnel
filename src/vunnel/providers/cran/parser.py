@@ -95,6 +95,26 @@ class Parser:
                         existing_aliases.append(cve)
                 vuln_entry["aliases"] = existing_aliases
 
+        # Prepend canonical references. grype-db uses the first reference URL as the
+        # dataSource field, so the advisory database link should come first.
+        canonical_refs: list[dict[str, str]] = []
+        affected = vuln_entry.get("affected")
+        if affected:
+            package_name = affected[0].get("package", {}).get("name")
+            if package_name:
+                advisory_url = self.git_url.removesuffix(".git")
+                canonical_refs.append({
+                    "type": "ADVISORY",
+                    "url": f"{advisory_url}/blob/{self.git_branch}/vulns/{package_name}/{vuln_id}.yaml",
+                })
+        canonical_refs.append({
+            "type": "WEB",
+            "url": f"https://osv.dev/vulnerability/{vuln_id}",
+        })
+
+        existing_refs = vuln_entry.get("references") or []
+        vuln_entry["references"] = canonical_refs + existing_refs
+
         return vuln_id, vuln_schema, vuln_entry
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
