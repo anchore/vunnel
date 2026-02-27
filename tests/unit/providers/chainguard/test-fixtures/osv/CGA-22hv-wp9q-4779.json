@@ -1,0 +1,70 @@
+{
+  "modified": "2026-02-24T13:07:08Z",
+  "id": "CGA-22hv-wp9q-4779",
+  "related": [
+    "CVE-2026-24398",
+    "GHSA-r354-f388-2fhh"
+  ],
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Chainguard",
+        "name": "langfuse-3-worker",
+        "purl": "pkg:apk/chainguard/langfuse-3-worker"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "3.153.0-r0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "Chainguard",
+        "name": "langfuse-fips-3-worker",
+        "purl": "pkg:apk/chainguard/langfuse-fips-3-worker"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "3.152.0-r0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "Wolfi",
+        "name": "langfuse-3-worker",
+        "purl": "pkg:apk/wolfi/langfuse-3-worker"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "3.153.0-r0"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
