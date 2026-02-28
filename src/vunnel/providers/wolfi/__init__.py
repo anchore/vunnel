@@ -22,6 +22,12 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    # When True, Wolfi vulnerability data is sourced from the Chainguard OSV feed
+    # (packages.cgr.dev/chainguard/osv/) which includes both Chainguard and Wolfi packages
+    # in each advisory record. In this mode the wolfi provider emits nothing — run the
+    # chainguard provider instead to get Wolfi data.
+    # When False (default), use the legacy secdb format from packages.wolfi.dev/os/security.json.
+    use_osv: bool = False
 
 
 class Provider(provider.Provider):
@@ -36,19 +42,19 @@ class Provider(provider.Provider):
             config = Config()
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
-
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
-            workspace=self.workspace,
-            url=self._url,
-            namespace=self._namespace,
-            download_timeout=self.config.request_timeout,
-            logger=self.logger,
-        )
-
-        # this provider requires the previous state from former runs
-        provider.disallow_existing_input_policy(config.runtime)
+        if not config.use_osv:
+            self.parser = Parser(
+                workspace=self.workspace,
+                url=self._url,
+                namespace=self._namespace,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
+            provider.disallow_existing_input_policy(config.runtime)
+        else:
+            self.parser = None
 
     @classmethod
     def name(cls) -> str:
@@ -60,8 +66,15 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
+            if self.config.use_osv:
+                self.logger.info(
+                    "wolfi use_osv=True: Wolfi data is included in the chainguard OSV feed — "
+                    "run the chainguard provider to get Wolfi vulnerability data. "
+                    "This provider emits nothing in OSV mode."
+                )
+                return [self._url], 0
+
             with self.results_writer() as writer, self.parser:
-                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
                 for release, vuln_dict in self.parser.get():
                     for vuln_id, record in vuln_dict.items():
                         writer.write(

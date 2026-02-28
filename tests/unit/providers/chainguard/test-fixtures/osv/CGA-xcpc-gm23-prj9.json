@@ -1,0 +1,90 @@
+{
+  "modified": "2026-02-20T00:00:00Z",
+  "id": "CGA-xcpc-gm23-prj9",
+  "related": [
+    "CVE-2025-68121",
+    "GHSA-qgxr-kfqx-v5q9"
+  ],
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Chainguard",
+        "name": "syncthing",
+        "purl": "pkg:apk/chainguard/syncthing"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "2.0.14-r1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "Chainguard",
+        "name": "syncthing-fips",
+        "purl": "pkg:apk/chainguard/syncthing-fips"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "2.0.14-r1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "Chainguard",
+        "name": "syncthing-compat",
+        "purl": "pkg:apk/chainguard/syncthing-compat"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package": {
+        "ecosystem": "Wolfi",
+        "name": "syncthing",
+        "purl": "pkg:apk/wolfi/syncthing"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "2.0.14-r1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

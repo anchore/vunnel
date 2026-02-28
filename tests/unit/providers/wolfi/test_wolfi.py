@@ -216,6 +216,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
         input_fixture="test-fixtures/input",
     )
     c = Config()
+    c.use_osv = False
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
@@ -225,6 +226,27 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
     assert workspace.result_schemas_valid(require_entries=True)
 
 
+def test_provider_osv_mode_defers_to_chainguard(helpers, disable_get_requests):
+    """
+    With use_osv=True the wolfi provider emits nothing and
+    defers to the chainguard provider, which now covers Wolfi packages via the
+    shared Chainguard OSV feed. Verify that no result entries are written and
+    that no HTTP requests are attempted (the chainguard provider handles those).
+    """
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    c = Config()
+    assert c.use_osv is False, "use_osv should default to False (secdb)"
+    c.use_osv = True  # opt into OSV mode for this test
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    # disable_get_requests will raise if any HTTP call is made
+    urls, count = p.update(None)
+
+    assert count == 0
+    assert workspace.num_result_entries() == 0
+
+
 def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(
         name=Provider.name(),
@@ -232,6 +254,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     )
 
     c = Config()
+    c.use_osv = False
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(
