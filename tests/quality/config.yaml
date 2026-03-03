@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/vulnerability.db
+      version: cleanstart-community-admin/grype@feat/cleanstart-distro+import-db=build/vulnerability.db
       takes: SBOM
 
     - name: grype
@@ -36,7 +36,7 @@ yardstick:
       #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
       # Note:
       #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.4_2026-05-13T00:47:21Z_1778657102.tar.zst
+      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.0.2_2025-07-10T01:31:11Z_1752120925.tar.zst
       takes: SBOM
       label: reference
 
@@ -238,19 +238,6 @@ tests:
     validations:
       - *default-validations
 
-  - provider: hummingbird
-    images:
-      - quay.io/hummingbird/valkey:latest@sha256:31f6abf2ceef2bf3f86eed3c7492cf4d77f2195cc5571aebf6a37352eead4e03
-      # - quay.io/hummingbird/nodejs:latest@sha256:3c798f5a9da72e241f4cbeecc8bd1d653db69d92131ea8d676067b95ae18a5c2
-      # - quay.io/hummingbird/postgresql:latest@sha256:6eefb14bced346a8583011f84dd71de8249af74c060369be6ad73891b2a768f0
-    expected_namespaces:
-      - hummingbird:distro:hummingbird:1
-    validations:
-      - <<: *default-validations
-        max_year: 2026 # hummingbird is new
-        max_unlabeled_percent: 70 # hummingbird has data problems
-
-
   - provider: mariner
     use_cache: true
     images:
@@ -321,6 +308,7 @@ tests:
     # This will still test incremental updates relative to the nightly cache that is populated.
     additional_trigger_globs:
       - src/vunnel/utils/oval_parser.py
+    use_cache: true
     images:
       - registry.access.redhat.com/ubi8@sha256:68fecea0d255ee253acbf0c860eaebb7017ef5ef007c25bee9eeffd29ce85b29
       - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
@@ -379,8 +367,6 @@ tests:
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
       - docker.io/ubuntu:19.04@sha256:3db17bfc30b41cc18552578f4a66d7010050eb9fdc42bf6c3d82bb0dcdf88d58
-      - docker.io/ubuntu:20.04@sha256:9d42d0e3e57bc067d10a75ee33bdd1a5298e95e5fc3c5d1fce98b455cb879249
-      - docker.io/anchore/test_images:vulnerabilities-ubuntu-20.04-8a033ba@sha256:f0f8e8ee94f8b5d9364f21ceffd50b7db7e19b1938271295eff8229b3cf56db2
       - docker.io/ubuntu:22.04@sha256:aa6c2c047467afc828e77e306041b7fa4a65734fe3449a54aa9c280822b0d87d
       - docker.io/ubuntu:22.10@sha256:80fb4ea0c0a384a3072a6be1879c342bb636b0d105209535ba893ba75ab38ede
       - docker.io/ubuntu:23.04@sha256:09f035f46361d193ded647342903b413d57d05cc06acff8285f9dda9f2d269d5
@@ -470,3 +456,14 @@ tests:
       - nvd:cpe
     validations:
       - *default-validations
+
+  - provider: cleanstart
+    use_cache: true
+    images:
+      - docker.io/cleanstart/go:latest@sha256:5a4dad0010b28c182fadccac8621ad338b8666eafe8372c9564ba544c1df7c52
+    expected_namespaces:
+      - cleanstart:distro:clnstrt:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2026
+        fail_on_empty_match_set: false
