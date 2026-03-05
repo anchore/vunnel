@@ -268,6 +268,10 @@ class Parser:
             cve_id = entry.get("cve_id")
             if not cve_id:
                 continue
+            # BDSA records (probably Black Duck Security Advisories) have no public URL
+            # and are skipped.
+            if cve_id.lower().startswith("bdsa"):
+                continue
             cve_map.setdefault(cve_id, []).append(entry)
 
         namespace = f"photon:{photon_version}"

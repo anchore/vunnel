@@ -46,5 +46,13 @@
     "aff_ver": "NA",
     "res_ver": "NA",
     "status": "Fixed"
+  },
+  {
+    "cve_id": "BDSA-2025-0719",
+    "pkg": "krb5-devel",
+    "cve_score": 7.5,
+    "aff_ver": "all versions before 1.17-15.ph4 are vulnerable",
+    "res_ver": "1.17-15.ph4",
+    "status": "Fixed"
   }
 ]
