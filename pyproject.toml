@@ -52,6 +52,7 @@ style = "semver"
 
 [tool.uv]
 trusted-publishing = "always"
+exclude-newer = "1 week"
 
 [tool.pytest.ini_options]
 addopts = "-vv --color=yes"
