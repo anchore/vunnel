@@ -314,22 +314,19 @@ class Parser:
         pkg_name: str,
         cve_map: dict[str, Any],
     ) -> dict[str, dict[str, Any]]:
-        """Convert RapidFort advisory to vunnel OSSchema vulnerability records."""
+        """Convert RapidFort advisory to vunnel OSSchema vulnerability records.
+
+        Uses grype-compatible namespace format: provider:distro:distroType:version
+        (e.g. rapidfort:distro:ubuntu:22.04) so grype can match distro-based vulns.
+        """
         vuln_dict: dict[str, dict[str, Any]] = {}
         version_format = version_formats.get(os_name.lower(), "dpkg")
-        ecosystem = f"{namespace}:{os_name}:{os_version}"
+        ecosystem = f"{namespace}:distro:{os_name}:{os_version}"
 
         for cve_id, cve_entry in cve_map.items():
             vid, entry = self._get_valid_cve_entry(cve_id, cve_entry)
             if not vid:
                 continue
-
-            vuln_record = self._get_or_create_vuln_record(
-                vuln_dict=vuln_dict,
-                vid=vid,
-                cve_entry=entry,
-                ecosystem=ecosystem,
-            )
 
             vuln_record = self._get_or_create_vuln_record(
                 vuln_dict=vuln_dict,
@@ -398,7 +395,7 @@ class Parser:
         namespace_vulns: dict[str, dict[str, dict[str, Any]]] = {}
 
         for os_name, version, pkg_name, cve_map in self._load():
-            ns = f"{namespace}:{os_name}:{version}"
+            ns = f"{namespace}:distro:{os_name}:{version}"
             normalized = self._normalize(os_name, version, pkg_name, cve_map)
             self._merge_into_namespace(namespace_vulns, ns, normalized)
 
