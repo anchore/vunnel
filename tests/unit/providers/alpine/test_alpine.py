@@ -385,3 +385,47 @@ nginx:
         dnsmasq_entry = next((f for f in fixed_in_list if f["Name"] == "dnsmasq"), None)
         assert dnsmasq_entry is not None
         assert dnsmasq_entry["Version"] == "0"
+
+    def test_rejection_overrides_secfix_for_same_package(
+        self, tmpdir, auto_fake_fixdate_finder,
+    ):
+        """Test that when the same CVE+package has both a secfix and a rejection, the rejection wins."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        p = Parser(workspace=ws)
+
+        # secdb has zlib with a real fix for CVE-2026-22184
+        secdb_data = {
+            "main": {
+                "distroversion": "v3.23",
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "zlib",
+                            "secfixes": {
+                                "1.3.2-r0": ["CVE-2026-22184"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        # rejections say CVE-2026-22184 doesn't affect zlib on Alpine at all
+        rejections_yaml = """zlib:
+  - CVE-2026-22184
+"""
+        rejections_dir = os.path.join(ws.input_path, "security-rejections")
+        os.makedirs(rejections_dir, exist_ok=True)
+        with open(os.path.join(rejections_dir, "main.yaml"), "w") as fp:
+            fp.write(rejections_yaml)
+
+        vuln_records = p._normalize("3.23", secdb_data)
+
+        assert "CVE-2026-22184" in vuln_records
+        fixed_in_list = vuln_records["CVE-2026-22184"]["Vulnerability"]["FixedIn"]
+
+        # There should be exactly one FixedIn entry: the NAK (version "0")
+        # The secfix (1.3.2-r0) should have been removed by the rejection
+        assert len(fixed_in_list) == 1
+        assert fixed_in_list[0]["Name"] == "zlib"
+        assert fixed_in_list[0]["Version"] == "0"
