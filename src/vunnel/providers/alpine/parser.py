@@ -240,6 +240,14 @@ class Parser:
         for dbtype, data in dbtype_data_dict.items():
             self.logger.info(f"processing {release}:{dbtype}")
 
+            # build a lookup of rejected (package, cve) pairs so we can skip
+            # secfix entries for CVEs that Alpine has determined do not apply
+            rejected_pairs = set()
+            for pkg_name, cve_ids in self.rejections.get(dbtype).items():
+                for cve_id in cve_ids:
+                    if re.match("^CVE-.*", cve_id):
+                        rejected_pairs.add((pkg_name, cve_id))
+
             if data["packages"]:
                 for el in data["packages"]:
                     pkg_el = el["pkg"]
@@ -257,6 +265,11 @@ class Parser:
                         for vid in vids:
                             if not re.match("^CVE-.*", vid):
                                 # skip non-CVE records
+                                continue
+
+                            # skip secfix entries for rejected CVEs; the NAK
+                            # will be emitted by _process_rejections instead
+                            if (pkg, vid) in rejected_pairs:
                                 continue
 
                             if vid not in vuln_dict:
