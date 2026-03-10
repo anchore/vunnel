@@ -35,7 +35,7 @@ def test_overrides_disabled(mock_requests, tmpdir):
         url="http://localhost:8080/failed",
         workspace=workspace.Workspace(tmpdir, "test", create=True),
     )
-    subject.__filepaths_by_cve__ = {"CVE-2020-0000": '{"fail": true}'}
+    subject.__data_by_cve__ = {"CVE-2020-0000": {"fail": True}}
 
     # ensure requests.get is not called
     subject.download()
@@ -59,3 +59,10 @@ def test_overrides_enabled(mock_requests, overrides_tar, tmpdir):
 
     assert subject.cve("CVE-2011-0022") is not None
     assert subject.cves() == ["CVE-2011-0022"]
+
+    # verify the data is cached in memory — subsequent calls must not re-read files
+    assert subject.__data_by_cve__ is not None
+    assert "CVE-2011-0022" in subject.__data_by_cve__
+    first_call_data = subject.cve("CVE-2011-0022")
+    second_call_data = subject.cve("CVE-2011-0022")
+    assert first_call_data is second_call_data  # same object, no re-parse
