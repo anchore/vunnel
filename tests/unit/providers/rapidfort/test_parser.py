@@ -90,10 +90,10 @@ class TestNormalize:
             fixed_in_sorted[1]["VulnerableRange"]
         )
 
-    def test_schema_uses_availability_not_available(
+    def test_fix_availability_field_present(
         self, tmpdir, auto_fake_fixdate_finder
     ):
-        """Output must use 'Availability' field per schema-1.1.0.json, not 'Available'."""
+        """Output must include 'Available' field (matching grype OSFixedIn struct and all other providers)."""
         ws = workspace.Workspace(tmpdir, "test", create=True)
         parser = Parser(workspace=ws)
 
@@ -112,10 +112,9 @@ class TestNormalize:
         record = vuln_dict["CVE-2020-8169"]
         fixed_in = record["Vulnerability"]["FixedIn"]
         assert len(fixed_in) == 1
-        assert "Availability" in fixed_in[0], "Schema requires 'Availability' not 'Available'"
-        assert "Available" not in fixed_in[0], "Must not use 'Available' (schema mismatch)"
-        assert fixed_in[0]["Availability"]["Date"] == "2024-01-01"
-        assert fixed_in[0]["Availability"]["Kind"] == "first-observed"
+        assert "Available" in fixed_in[0], "Must use 'Available' to match grype OSFixedIn struct"
+        assert fixed_in[0]["Available"]["Date"] == "2024-01-01"
+        assert fixed_in[0]["Available"]["Kind"] == "first-observed"
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
