@@ -21,7 +21,7 @@ class GitRevision:
 
 class GitWrapper:
     _check_cmd_ = "git --version"
-    _clone_cmd_ = "git clone -b {branch} {src} {dest}"
+    _clone_cmd_ = "git clone --depth=1 -b {branch} {src} {dest}"
 
     def __init__(
         self,
