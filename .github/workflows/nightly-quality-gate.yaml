@@ -22,12 +22,12 @@ jobs:
       multicore-providers: ${{ steps.split-providers.outputs.multicore-providers }}
       other-providers: ${{ steps.split-providers.outputs.other-providers }}
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@742bf56072eb4845a0f94b3394673e4903c90ff0 #v2.1.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -69,12 +69,12 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@742bf56072eb4845a0f94b3394673e4903c90ff0 #v2.1.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -108,12 +108,12 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@742bf56072eb4845a0f94b3394673e4903c90ff0 #v2.1.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -142,7 +142,7 @@ jobs:
       - validate-provider-multicore
     if: ${{ always() && !cancelled() }}
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@742bf56072eb4845a0f94b3394673e4903c90ff0 #v2.1.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
