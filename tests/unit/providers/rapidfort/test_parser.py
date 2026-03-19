@@ -14,7 +14,7 @@ class TestEventsToRangePairs:
         events = [{"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.1"}]
         pairs = _events_to_range_pairs(events)
         assert len(pairs) == 1
-        assert pairs[0] == (">= 7.68.0, < 7.68.0-1ubuntu2.1", "7.68.0-1ubuntu2.1")
+        assert pairs[0] == (">= 7.68.0, < 7.68.0-1ubuntu2.1", "7.68.0-1ubuntu2.1", None)
 
     def test_multi_range_cve_2022_22576(self):
         """CVE-2022-22576 has two events (two branches: 7.68.0 and 7.81.0)."""
@@ -24,8 +24,8 @@ class TestEventsToRangePairs:
         ]
         pairs = _events_to_range_pairs(events)
         assert len(pairs) == 2
-        assert pairs[0] == (">= 7.68.0, < 7.68.0-1ubuntu2.10", "7.68.0-1ubuntu2.10")
-        assert pairs[1] == (">= 7.81.0, < 7.81.0-1ubuntu1.1", "7.81.0-1ubuntu1.1")
+        assert pairs[0] == (">= 7.68.0, < 7.68.0-1ubuntu2.10", "7.68.0-1ubuntu2.10", None)
+        assert pairs[1] == (">= 7.81.0, < 7.81.0-1ubuntu1.1", "7.81.0-1ubuntu1.1", None)
 
     def test_deduplication(self):
         """Duplicate events should be deduplicated."""
@@ -40,13 +40,25 @@ class TestEventsToRangePairs:
         events = [{"introduced": "7.68.0"}]
         pairs = _events_to_range_pairs(events)
         assert len(pairs) == 1
-        assert pairs[0] == (">= 7.68.0", "None")
+        assert pairs[0] == (">= 7.68.0", "None", None)
 
     def test_fixed_only(self):
         events = [{"fixed": "7.68.0-1ubuntu2.1"}]
         pairs = _events_to_range_pairs(events)
         assert len(pairs) == 1
-        assert pairs[0] == ("< 7.68.0-1ubuntu2.1", "7.68.0-1ubuntu2.1")
+        assert pairs[0] == ("< 7.68.0-1ubuntu2.1", "7.68.0-1ubuntu2.1", None)
+
+    def test_identifier_is_preserved_and_part_of_dedup_key(self):
+        events = [
+            {"introduced": "0", "fixed": "7.78.0-4.fc36", "identifier": "fc36"},
+            {"introduced": "0", "fixed": "7.81.0-3.fc37", "identifier": "fc37"},
+            {"introduced": "0", "fixed": "7.78.0-4.fc36", "identifier": "fc36"},
+        ]
+        pairs = _events_to_range_pairs(events)
+        assert pairs == [
+            (">= 0, < 7.78.0-4.fc36", "7.78.0-4.fc36", "fc36"),
+            (">= 0, < 7.81.0-3.fc37", "7.81.0-3.fc37", "fc37"),
+        ]
 
 
 class TestNormalize:
@@ -85,6 +97,12 @@ class TestNormalize:
         assert fixed_in_sorted[0]["VulnerableRange"] == ">= 7.68.0, < 7.68.0-1ubuntu2.10", (
             fixed_in_sorted[0]["VulnerableRange"]
         )
+        assert fixed_in_sorted[0]["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "curl",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/ubuntu/curl.json",
+            },
+        ]
         assert fixed_in_sorted[1]["Version"] == "7.81.0-1ubuntu1.1"
         assert fixed_in_sorted[1]["VulnerableRange"] == ">= 7.81.0, < 7.81.0-1ubuntu1.1", (
             fixed_in_sorted[1]["VulnerableRange"]
@@ -115,6 +133,69 @@ class TestNormalize:
         assert "Available" in fixed_in[0], "Must use 'Available' to match grype OSFixedIn struct"
         assert fixed_in[0]["Available"]["Date"] == "2024-01-01"
         assert fixed_in[0]["Available"]["Kind"] == "first-observed"
+
+    def test_redhat_events_keep_outer_os_version_and_per_range_identifier(
+        self, tmpdir, auto_fake_fixdate_finder
+    ):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2014-0139": {
+                "cve_id": "CVE-2014-0139",
+                "description": "Test description",
+                "severity": "LOW",
+                "events": [
+                    {"introduced": "0", "identifier": "el9"},
+                    {"introduced": "0", "fixed": "7.78.0-4.fc36", "identifier": "fc36"},
+                    {"introduced": "0", "fixed": "7.81.0-3.fc37", "identifier": "fc37"},
+                ],
+            },
+        }
+
+        with parser:
+            vuln_dict = parser._normalize("redhat", "el9", "curl", cve_map)
+
+        record = vuln_dict["CVE-2014-0139"]
+        assert record["Vulnerability"]["NamespaceName"] == "rapidfort-redhat:el9"
+
+        fixed_in = sorted(
+            record["Vulnerability"]["FixedIn"],
+            key=lambda x: (x["Identifier"], x["Version"]),
+        )
+
+        assert len(fixed_in) == 3
+        assert fixed_in[0]["Identifier"] == "el9"
+        assert fixed_in[0]["NamespaceName"] == "rapidfort-redhat:el9"
+        assert fixed_in[0]["VersionFormat"] == "rpm"
+        assert fixed_in[0]["Version"] == "None"
+        assert fixed_in[0]["VulnerableRange"] == ">= 0"
+        assert fixed_in[0]["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "curl",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+            },
+            {
+                "ID": "release-identifier:el9",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+            },
+        ]
+        assert fixed_in[1]["Identifier"] == "fc36"
+        assert fixed_in[1]["Version"] == "7.78.0-4.fc36"
+        assert fixed_in[1]["VulnerableRange"] == ">= 0, < 7.78.0-4.fc36"
+        assert fixed_in[1]["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "curl",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+            },
+            {
+                "ID": "release-identifier:fc36",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+            },
+        ]
+        assert fixed_in[2]["Identifier"] == "fc37"
+        assert fixed_in[2]["Version"] == "7.81.0-3.fc37"
+        assert fixed_in[2]["VulnerableRange"] == ">= 0, < 7.81.0-3.fc37"
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):

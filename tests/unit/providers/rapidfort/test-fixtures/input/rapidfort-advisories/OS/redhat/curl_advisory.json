@@ -1,0 +1,30 @@
+{
+    "package_name": "curl",
+    "advisory": {
+        "el9": {
+            "CVE-2014-0139": {
+                "cve_id": "CVE-2014-0139",
+                "title": "cURL and libcurl wildcard certificate validation issue",
+                "description": "cURL and libcurl before 7.36.0 may recognize a wildcard IP address in the certificate Common Name field, allowing spoofing of arbitrary SSL servers.",
+                "severity": "LOW",
+                "status": "open",
+                "events": [
+                    {
+                        "introduced": "0",
+                        "identifier": "el9"
+                    },
+                    {
+                        "introduced": "0",
+                        "fixed": "7.78.0-4.fc36",
+                        "identifier": "fc36"
+                    },
+                    {
+                        "introduced": "0",
+                        "fixed": "7.81.0-3.fc37",
+                        "identifier": "fc37"
+                    }
+                ]
+            }
+        }
+    }
+}
