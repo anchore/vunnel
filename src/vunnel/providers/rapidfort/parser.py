@@ -1,7 +1,7 @@
 """RapidFort security advisories parser.
 
 Reads RapidFort advisory data and normalizes to vunnel OSSchema format.
-Supports Ubuntu (dpkg) and Alpine (apk).
+Supports Ubuntu (dpkg), Alpine (apk), and Red Hat (rpm).
 
 Supports two input formats:
 1. Vuln-list format: {os}/{version}/{package}.json with package_name, distro_version, advisories
@@ -15,7 +15,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
-import orjson
+import orjson # type: ignore
 
 from vunnel.tool import fixdate
 from vunnel.utils import vulnerability
@@ -32,17 +32,18 @@ namespace = "rapidfort"
 default_repo_url = "https://github.com/rapidfort/security-advisories.git"
 repo_branch = "main"
 repo_os_path = "OS"  # OS/{osName}/{package}.json (source format)
-default_supported_oses = ("ubuntu", "alpine")
+default_supported_oses = ("ubuntu", "alpine", "redhat")
 
 # Version format per base OS
 version_formats = {
     "ubuntu": "dpkg",
     "alpine": "apk",
+    "redhat": "rpm",
 }
 
 
-def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]]:
-    """Convert RapidFort events into (range_str, fix_version) tuples.
+def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str, str | None]]:
+    """Convert RapidFort events into (range_str, fix_version, identifier) tuples.
 
     Mirrors GHSA vulnerableVersionRange semantics:
     - introduced + fixed => ">= introduced, < fixed"
@@ -51,35 +52,59 @@ def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]
 
     Deduplicates while preserving order.
     """
-    seen: set[tuple[str, str]] = set()
-    result: list[tuple[str, str]] = []
+    seen: set[tuple[str, str, str | None]] = set()
+    result: list[tuple[str, str, str | None]] = []
 
     for ev in events:
         if not isinstance(ev, dict):
             continue
         introduced = ev.get("introduced")
         fixed = ev.get("fixed")
+        identifier = ev.get("identifier")
+        if identifier is not None:
+            identifier = str(identifier)
 
         if introduced and fixed:
             range_str = f">= {introduced}, < {fixed}"
             fix_version = str(fixed)
-            key = (str(introduced), str(fixed))
+            key = (str(introduced), str(fixed), identifier)
         elif introduced:
             range_str = f">= {introduced}"
             fix_version = "None"
-            key = (str(introduced), "")
+            key = (str(introduced), "", identifier)
         elif fixed:
             range_str = f"< {fixed}"
             fix_version = str(fixed)
-            key = ("", str(fixed))
+            key = ("", str(fixed), identifier)
         else:
             continue
 
         if key not in seen:
             seen.add(key)
-            result.append((range_str, fix_version))
+            result.append((range_str, fix_version, identifier))
 
     return result
+
+
+def _advisory_url(os_name: str, pkg_name: str) -> str:
+    return f"https://github.com/rapidfort/security-advisories/tree/main/OS/{os_name}/{pkg_name}.json"
+
+
+def _vendor_advisory(os_name: str, pkg_name: str, identifier: str | None) -> dict[str, Any]:
+    advisory_summary: list[dict[str, str]] = [
+        {"ID": pkg_name, "Link": _advisory_url(os_name, pkg_name)},
+    ]
+    if identifier:
+        advisory_summary.append(
+            {
+                "ID": f"release-identifier:{identifier}",
+                "Link": _advisory_url(os_name, pkg_name),
+            },
+        )
+    return {
+        "NoAdvisory": False,
+        "AdvisorySummary": advisory_summary,
+    }
 
 
 class Parser:
@@ -275,6 +300,7 @@ class Parser:
     def _build_fixed_in_elements(
         self,
         vid: str,
+        os_name: str,
         pkg_name: str,
         cve_entry: dict[str, Any],
         ecosystem: str,
@@ -285,14 +311,17 @@ class Parser:
         range_pairs = _events_to_range_pairs(events)
 
         fixed_elements: list[dict[str, Any]] = []
-        for range_str, fix_version in range_pairs:
+        for range_str, fix_version, identifier in range_pairs:
             fixed_el = {
                 "Name": pkg_name,
                 "NamespaceName": ecosystem,
                 "VersionFormat": version_format,
                 "Version": fix_version,
                 "VulnerableRange": range_str,
+                "VendorAdvisory": _vendor_advisory(os_name, pkg_name, identifier),
             }
+            if identifier:
+                fixed_el["Identifier"] = identifier
 
             availability = self._get_fix_availability(
                 vid=vid,
@@ -345,6 +374,7 @@ class Parser:
 
             for fixed_el in self._build_fixed_in_elements(
                 vid=vid,
+                os_name=os_name,
                 pkg_name=pkg_name,
                 cve_entry=entry,
                 ecosystem=ecosystem,
