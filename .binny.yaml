@@ -2,7 +2,7 @@ tools:
   # we want to use a pinned version of binny to manage the toolchain (so binny manages itself!)
   - name: binny
     version:
-      want: v0.10.1
+      want: v0.12.0
     method: github-release
     with:
       repo: anchore/binny
@@ -10,7 +10,7 @@ tools:
   # used for running all local and CI tasks
   - name: task
     version:
-      want: v3.45.5
+      want: v3.49.1
     method: github-release
     with:
       repo: go-task/task
@@ -34,7 +34,7 @@ tools:
   # used at release to generate the changelog
   - name: crane
     version:
-      want: v0.20.7
+      want: v0.21.3
     method: github-release
     with:
       repo: google/go-containerregistry
@@ -42,7 +42,7 @@ tools:
   # used in quality gate to pull cached provider data
   - name: oras
     version:
-      want: v1.3.0
+      want: v1.3.1
     method: github-release
     with:
       repo: oras-project/oras
