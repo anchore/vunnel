@@ -191,7 +191,7 @@ class Parser:
 
     def _load(self) -> Generator[tuple[str, str, str, dict[str, Any]]]:
         """Yield (os_name, os_version, package_name, cve_map) from OS/{os}/{package}.json."""
-        base_dir = os.path.join(self._checkout_dest, "OS")
+        base_dir = os.path.join(self._checkout_dest, repo_os_path)
 
         if not os.path.isdir(base_dir):
             self.logger.warning("RapidFort OS root not found: %s", base_dir)
@@ -199,32 +199,6 @@ class Parser:
 
         for os_name in self.supported_oses:
             yield from self._load_os(base_dir, os_name)
-
-    def _parse_vulnlist_file(
-        self,
-        file_path: str,
-        os_name: str,
-        version: str,
-    ) -> Generator[tuple[str, str, str, dict[str, Any]]]:
-        """Parse vuln-list format: package_name, distro_version, advisories."""
-        try:
-            with open(file_path, "rb") as f:
-                data = orjson.loads(f.read())
-        except Exception:
-            self.logger.warning("Failed to parse %s", file_path, exc_info=True)
-            return
-
-        pkg_name = data.get("package_name") or data.get("packageName")
-        if not pkg_name:
-            self.logger.warning("Missing package_name in %s, skipping", file_path)
-            return
-
-        advisories = data.get("advisories") or data.get("Advisories")
-        if not isinstance(advisories, dict):
-            return
-
-        distro_version = data.get("distro_version") or data.get("distroVersion") or version
-        yield os_name, str(distro_version), pkg_name, advisories
 
     def _get_valid_cve_entry(
         self,
@@ -302,13 +276,11 @@ class Parser:
         vid: str,
         os_name: str,
         pkg_name: str,
-        cve_entry: dict[str, Any],
+        range_pairs: list[tuple[str, str, str | None]],
         ecosystem: str,
         version_format: str,
     ) -> list[dict[str, Any]]:
-        """Build FixedIn entries from advisory events."""
-        events = cve_entry.get("events") or []
-        range_pairs = _events_to_range_pairs(events)
+        """Build FixedIn entries from pre-computed advisory event range pairs."""
 
         fixed_elements: list[dict[str, Any]] = []
         for range_str, fix_version, identifier in range_pairs:
@@ -358,13 +330,6 @@ class Parser:
             if not vid:
                 continue
 
-            vuln_record = self._get_or_create_vuln_record(
-                vuln_dict=vuln_dict,
-                vid=vid,
-                cve_entry=entry,
-                ecosystem=ecosystem,
-            )
-
             # Build FixedIn from events (one per introduced/fixed pair, like GHSA)
             events = cve_entry.get("events") or []
             range_pairs = _events_to_range_pairs(events)
@@ -372,11 +337,18 @@ class Parser:
             if not range_pairs:
                 continue
 
+            vuln_record = self._get_or_create_vuln_record(
+                vuln_dict=vuln_dict,
+                vid=vid,
+                cve_entry=entry,
+                ecosystem=ecosystem,
+            )
+
             for fixed_el in self._build_fixed_in_elements(
                 vid=vid,
                 os_name=os_name,
                 pkg_name=pkg_name,
-                cve_entry=entry,
+                range_pairs=range_pairs,
                 ecosystem=ecosystem,
                 version_format=version_format,
             ):
