@@ -196,6 +196,16 @@ class TestNormalize:
         assert fixed_in[2]["Identifier"] == "fc37"
         assert fixed_in[2]["Version"] == "7.81.0-3.fc37"
         assert fixed_in[2]["VulnerableRange"] == ">= 0, < 7.81.0-3.fc37"
+        assert fixed_in[2]["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "curl",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+            },
+            {
+                "ID": "release-identifier:fc37",
+                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+            },
+        ]
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
@@ -244,3 +254,102 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     p.update(None)
 
     ws.assert_result_snapshots()
+
+
+class TestMergeIntoNamespace:
+    """Tests for _merge_into_namespace: same CVE in multiple packages."""
+
+    def test_same_cve_in_two_packages_merges_fixed_in(self, tmpdir, auto_fake_fixdate_finder):
+        """Same CVE appearing in curl and libcurl4 must produce one record with two FixedIn entries."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2022-22576": {
+                "cve_id": "CVE-2022-22576",
+                "description": "Test",
+                "severity": "HIGH",
+                "events": [{"introduced": "1.0.0", "fixed": "1.0.1"}],
+            },
+        }
+
+        ns = "rapidfort-ubuntu:20.04"
+        namespace_vulns: dict = {}
+
+        with parser:
+            curl_vulns = parser._normalize("ubuntu", "20.04", "curl", cve_map)
+            libcurl_vulns = parser._normalize("ubuntu", "20.04", "libcurl4", cve_map)
+
+        parser._merge_into_namespace(namespace_vulns, ns, curl_vulns)
+        parser._merge_into_namespace(namespace_vulns, ns, libcurl_vulns)
+
+        assert len(namespace_vulns[ns]) == 1, "same CVE must produce one vuln record"
+        fixed_in = namespace_vulns[ns]["CVE-2022-22576"]["Vulnerability"]["FixedIn"]
+        assert len(fixed_in) == 2, "FixedIn must have one entry per package"
+        package_names = {f["Name"] for f in fixed_in}
+        assert package_names == {"curl", "libcurl4"}
+
+    def test_distinct_cves_are_not_merged(self, tmpdir, auto_fake_fixdate_finder):
+        """Different CVEs in the same package must remain as separate records."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map_a = {
+            "CVE-2022-00001": {
+                "cve_id": "CVE-2022-00001",
+                "severity": "HIGH",
+                "events": [{"introduced": "1.0.0", "fixed": "1.0.1"}],
+            },
+        }
+        cve_map_b = {
+            "CVE-2022-00002": {
+                "cve_id": "CVE-2022-00002",
+                "severity": "LOW",
+                "events": [{"introduced": "2.0.0", "fixed": "2.0.1"}],
+            },
+        }
+
+        ns = "rapidfort-ubuntu:20.04"
+        namespace_vulns: dict = {}
+
+        with parser:
+            vulns_a = parser._normalize("ubuntu", "20.04", "curl", cve_map_a)
+            vulns_b = parser._normalize("ubuntu", "20.04", "curl", cve_map_b)
+
+        parser._merge_into_namespace(namespace_vulns, ns, vulns_a)
+        parser._merge_into_namespace(namespace_vulns, ns, vulns_b)
+
+        assert len(namespace_vulns[ns]) == 2, "distinct CVEs must remain as separate records"
+
+
+class TestMapSeverity:
+    """Tests for _map_severity helper."""
+
+    def test_known_severities_case_insensitive(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity("critical") == "Critical"
+        assert parser._map_severity("HIGH") == "High"
+        assert parser._map_severity("medium") == "Medium"
+        assert parser._map_severity("Low") == "Low"
+        assert parser._map_severity("NEGLIGIBLE") == "Negligible"
+
+    def test_unknown_on_none(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity(None) == "Unknown"
+
+    def test_unknown_on_empty_string(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity("") == "Unknown"
+
+    def test_unknown_on_unrecognized_value(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity("invalid") == "Unknown"
+        assert parser._map_severity("NONE") == "Unknown"
