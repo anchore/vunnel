@@ -14,10 +14,6 @@
     "CVE-2025-32464",
     "GHSA-frg5-h47x-75j9"
   ],
-  "related": [
-    "CVE-2025-32464",
-    "GHSA-frg5-h47x-75j9"
-  ],
   "references": [
     {
       "type": "ADVISORY",

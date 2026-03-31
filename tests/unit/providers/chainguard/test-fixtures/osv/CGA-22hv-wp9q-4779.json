@@ -14,10 +14,6 @@
     "CVE-2026-24398",
     "GHSA-r354-f388-2fhh"
   ],
-  "related": [
-    "CVE-2026-24398",
-    "GHSA-r354-f388-2fhh"
-  ],
   "references": [
     {
       "type": "ADVISORY",

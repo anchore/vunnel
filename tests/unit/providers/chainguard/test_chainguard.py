@@ -169,28 +169,10 @@ def test_osv_record_identifiers(osv_provider):
     assert "CGA-xcpc-gm23-prj9" in ids_found
 
 
-def test_osv_related_ids_preserved(osv_provider):
-    """
-    Chainguard CGA records carry CVE/GHSA IDs in 'related', not 'aliases'.
-    Verify the field is preserved in the emitted record so that downstream
-    processors (grype-db) can map them to aliases.
-    """
-    p, workspace = osv_provider
-    p.update(None)
-
-    haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
-
-    assert haproxy_record is not None
-    assert "related" in haproxy_record
-    assert "CVE-2025-32464" in haproxy_record["related"]
-    assert "GHSA-frg5-h47x-75j9" in haproxy_record["related"]
-
-
 def test_osv_upstream_ids_preserved(osv_provider):
     """
     OSV 1.7.0 introduces 'upstream' field for distro advisories to reference
-    the original CVE/GHSA IDs. Verify both 'upstream' and 'related' fields
-    are preserved so downstream processors can use either.
+    the original CVE/GHSA IDs.
     """
     p, workspace = osv_provider
     p.update(None)
@@ -198,13 +180,9 @@ def test_osv_upstream_ids_preserved(osv_provider):
     haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
 
     assert haproxy_record is not None
-    # upstream field (per OSV 1.7.0 spec, semantically correct for distro advisories)
     assert "upstream" in haproxy_record
     assert "CVE-2025-32464" in haproxy_record["upstream"]
     assert "GHSA-frg5-h47x-75j9" in haproxy_record["upstream"]
-    # related field (backwards compatibility)
-    assert "related" in haproxy_record
-    assert haproxy_record["upstream"] == haproxy_record["related"]
 
 
 def test_osv_both_ecosystems_in_single_record(osv_provider):
