@@ -35,7 +35,9 @@ class Config:
 
 class Provider(provider.Provider):
     _secdb_schema = schema.OSSchema()
-    _osv_schema = schema.OSVSchema(version="1.7.0")
+    # _osv_schema defines the baseline major version for compatibility checks.
+    # The actual schema version used per-record comes from the record's schema_version field.
+    _osv_schema = schema.OSVSchema()
 
     __schema__ = _secdb_schema
     __distribution_version__ = int(__schema__.major_version)
@@ -70,6 +72,24 @@ class Provider(provider.Provider):
     @classmethod
     def tags(cls) -> list[str]:
         return ["vulnerability", "os"]
+
+    @classmethod
+    def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
+        """
+        Check if a record's schema version is compatible with this provider.
+
+        Returns an OSVSchema for the given version if compatible (same major version),
+        or None if incompatible. This allows records with different minor/patch versions
+        (e.g., 1.7.0, 1.7.5) to coexist in the feed while rejecting breaking changes.
+
+        The returned schema is used in the result envelope, so each record's envelope
+        URL matches its declared schema_version. This follows the pattern used by
+        the Rocky and Alma providers.
+        """
+        candidate = schema.OSVSchema(schema_version)
+        if candidate.major_version == cls._osv_schema.major_version:
+            return candidate
+        return None
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
@@ -136,9 +156,21 @@ class Provider(provider.Provider):
                         f"Chainguard OSV record {record_id} at {record_url} contains invalid JSON: {e}"
                     ) from e
 
+                # Use the record's declared schema_version for the envelope. This allows
+                # the feed to contain records with different minor versions (e.g., 1.7.0 and
+                # 1.7.5) while ensuring the envelope schema URL matches each record's version.
+                vuln_schema_version = record.get("schema_version", "")
+                vuln_schema = self.compatible_schema(vuln_schema_version)
+                if not vuln_schema:
+                    self.logger.warning(
+                        f"skipping vulnerability {record_id} with schema version {vuln_schema_version} "
+                        f"as is incompatible with provider schema version {self._osv_schema.version}",
+                    )
+                    continue
+
                 writer.write(
                     identifier=record_id.lower(),
-                    schema=self._osv_schema,
+                    schema=vuln_schema,
                     payload=record,
                 )
 

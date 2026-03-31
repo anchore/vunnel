@@ -284,10 +284,10 @@ def test_osv_nak_entry(osv_provider):
     assert real_fixed == "2.0.14-r1"
 
 
-def test_osv_purl_preserved(osv_provider):
+def test_osv_purl_with_arch_preserved(osv_provider):
     """
-    PURL fields must be preserved in the affected list so grype-db can use
-    them for package type detection.
+    PURL fields with architecture qualifiers must be preserved in the
+    affected list. The enriched feed includes ?arch= qualifiers.
     """
     p, workspace = osv_provider
     p.update(None)
@@ -296,13 +296,188 @@ def test_osv_purl_preserved(osv_provider):
 
     assert haproxy_record is not None
     by_name = {a["package"]["name"]: a for a in haproxy_record["affected"]}
-    assert by_name["haproxy-2.2"]["package"]["purl"] == "pkg:apk/chainguard/haproxy-2.2"
-    assert by_name["haproxy-3.0"]["package"]["purl"] == "pkg:apk/wolfi/haproxy-3.0"
+
+    # Chainguard package with arch qualifier
+    assert "?arch=x86_64" in by_name["haproxy-2.2"]["package"]["purl"]
+    # Wolfi package with arch qualifier
+    assert "?arch=aarch64" in by_name["haproxy-3.0"]["package"]["purl"]
+
+
+def test_osv_purl_without_arch_preserved(osv_provider):
+    """
+    PURL fields without architecture qualifiers must also be preserved.
+    Not all packages have arch-specific builds.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
+
+    assert haproxy_record is not None
+    by_name = {a["package"]["name"]: a for a in haproxy_record["affected"]}
+
+    # haproxy-3.1 has no arch qualifier in the fixture
+    assert "haproxy-3.1" in by_name
+    purl = by_name["haproxy-3.1"]["package"]["purl"]
+    assert purl == "pkg:apk/wolfi/haproxy-3.1"
+    assert "?arch=" not in purl
+
+
+def test_osv_summary_preserved(osv_provider):
+    """
+    The enriched OSV feed includes a one-line summary of the vulnerability.
+    Verify this field is preserved.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
+
+    assert haproxy_record is not None
+    assert "summary" in haproxy_record
+    assert "HAProxy" in haproxy_record["summary"]
+
+
+def test_osv_severity_preserved(osv_provider):
+    """
+    The enriched OSV feed includes CVSS severity scores.
+    Verify the severity array is preserved with proper structure.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
+
+    assert haproxy_record is not None
+    assert "severity" in haproxy_record
+    assert len(haproxy_record["severity"]) >= 1
+
+    severity = haproxy_record["severity"][0]
+    assert severity["type"] == "CVSS_V3"
+    assert severity["score"].startswith("CVSS:3.1/")
+
+
+def test_osv_references_preserved(osv_provider):
+    """
+    The enriched OSV feed includes references to upstream advisories.
+    Verify the references array is preserved.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
+
+    assert haproxy_record is not None
+    assert "references" in haproxy_record
+    assert len(haproxy_record["references"]) >= 1
+
+    # Check for NVD reference
+    nvd_refs = [r for r in haproxy_record["references"] if "nvd.nist.gov" in r["url"]]
+    assert len(nvd_refs) >= 1
+    assert nvd_refs[0]["type"] == "ADVISORY"
+
+
+def test_osv_ecosystem_specific_components_preserved(osv_provider):
+    """
+    The enriched OSV feed includes ecosystem_specific.components for
+    per-component tracking. Verify the structure is preserved.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    haproxy_record = _find_record_by_id(workspace, "CGA-224q-ccj5-2p53")
+
+    assert haproxy_record is not None
+
+    # Find the affected entry with ecosystem_specific
+    affected_with_components = [
+        a for a in haproxy_record["affected"]
+        if "ecosystem_specific" in a
+    ]
+    assert len(affected_with_components) >= 1
+
+    eco_specific = affected_with_components[0]["ecosystem_specific"]
+    assert "components" in eco_specific
+    assert len(eco_specific["components"]) >= 1
+
+    component = eco_specific["components"][0]
+    # Verify all required component fields are present
+    assert "advisory_id" in component
+    assert component["advisory_id"].startswith("CGA-")
+    assert "component_name" in component
+    assert "component_version" in component
+    assert "component_type" in component
+    assert "component_location" in component
+    assert "component_purl" in component
+    assert "status" in component
+
+
+def test_osv_component_types_preserved(osv_provider):
+    """
+    The enriched OSV feed supports multiple component types (apk, npm,
+    go-module, java-archive, etc.). Verify different types are preserved.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    # Check npm component in langfuse record
+    langfuse_record = _find_record_by_id(workspace, "CGA-22hv-wp9q-4779")
+    assert langfuse_record is not None
+
+    affected_with_components = [
+        a for a in langfuse_record["affected"]
+        if "ecosystem_specific" in a
+    ]
+    assert len(affected_with_components) >= 1
+
+    component = affected_with_components[0]["ecosystem_specific"]["components"][0]
+    assert component["component_type"] == "npm"
+    assert component["component_purl"].startswith("pkg:npm/")
+
+    # Check go-module component in syncthing record
+    syncthing_record = _find_record_by_id(workspace, "CGA-xcpc-gm23-prj9")
+    assert syncthing_record is not None
+
+    affected_with_components = [
+        a for a in syncthing_record["affected"]
+        if "ecosystem_specific" in a and a["package"]["name"] == "syncthing"
+    ]
+    assert len(affected_with_components) >= 1
+
+    component = affected_with_components[0]["ecosystem_specific"]["components"][0]
+    assert component["component_type"] == "go-module"
+    assert component["component_purl"].startswith("pkg:golang/")
+
+
+def test_osv_component_status_not_affected_with_justification(osv_provider):
+    """
+    Components with status='not_affected' must include a justification.
+    This corresponds to false-positive determinations in the v2 advisory model.
+    """
+    p, workspace = osv_provider
+    p.update(None)
+
+    syncthing_record = _find_record_by_id(workspace, "CGA-xcpc-gm23-prj9")
+    assert syncthing_record is not None
+
+    # Find the syncthing-compat entry which has a not_affected component
+    compat_affected = [
+        a for a in syncthing_record["affected"]
+        if a["package"]["name"] == "syncthing-compat" and "ecosystem_specific" in a
+    ]
+    assert len(compat_affected) == 1
+
+    component = compat_affected[0]["ecosystem_specific"]["components"][0]
+    assert component["status"] == "not_affected"
+    assert "justification" in component
+    assert component["justification"] == "VULNERABLE_CODE_NOT_PRESENT"
+    # Optional note field
+    assert "note" in component
 
 
 def test_osv_schema_url_in_envelope(osv_provider):
     """
-    Verify the envelope schema URL points to the OSV 1.7.0 schema, not the
+    Verify the envelope schema URL points to the OSV schema, not the
     OS/secdb schema. This is what grype-db uses to route records to the
     correct processor.
     """
@@ -314,9 +489,6 @@ def test_osv_schema_url_in_envelope(osv_provider):
             envelope = json.load(f)
         assert "/osv/" in envelope["schema"], (
             f"expected OSV schema URL, got: {envelope['schema']}"
-        )
-        assert "1.7.0" in envelope["schema"], (
-            f"expected OSV 1.7.0 schema URL, got: {envelope['schema']}"
         )
         assert "/os/" not in envelope["schema"], (
             f"got secdb schema URL instead of OSV: {envelope['schema']}"
@@ -507,7 +679,7 @@ def test_osv_index_entry_not_dict_crashes(osv_workspace, monkeypatch):
 
 def test_osv_schema_version_in_record(osv_provider):
     """
-    Verify that records include schema_version field set to 1.7.0.
+    Verify that records include schema_version field.
     """
     p, workspace = osv_provider
     p.update(None)
@@ -516,9 +688,60 @@ def test_osv_schema_version_in_record(osv_provider):
         with open(rf) as f:
             envelope = json.load(f)
         record = envelope["item"]
-        assert record.get("schema_version") == "1.7.0", (
-            f"expected schema_version 1.7.0, got: {record.get('schema_version')}"
-        )
+        assert "schema_version" in record, "expected schema_version field in record"
+
+
+def test_osv_incompatible_schema_version_skipped(osv_workspace, monkeypatch, caplog):
+    """
+    Records with an incompatible major version (e.g., 2.0.0) should be skipped
+    with a warning, not crash.
+    """
+    from vunnel.utils import http_wrapper
+    import logging
+
+    # Create a mock that returns one compatible and one incompatible record
+    def mock_get(url, *args, **kwargs):
+        resp = MagicMock()
+        if "all.json" in url:
+            resp.content = b'[{"id": "CGA-compat"}, {"id": "CGA-incompat"}]'
+        elif "CGA-compat" in url:
+            resp.content = json.dumps({
+                "schema_version": "1.7.0",
+                "id": "CGA-compat",
+                "modified": "2026-01-01T00:00:00Z",
+                "affected": []
+            }).encode()
+        elif "CGA-incompat" in url:
+            resp.content = json.dumps({
+                "schema_version": "2.0.0",
+                "id": "CGA-incompat",
+                "modified": "2026-01-01T00:00:00Z",
+                "affected": []
+            }).encode()
+        else:
+            raise RuntimeError(f"unexpected URL: {url}")
+        return resp
+
+    monkeypatch.setattr(http_wrapper, "get", mock_get)
+
+    c = Config()
+    c.use_osv = True
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=osv_workspace.root, config=c)
+
+    with caplog.at_level(logging.WARNING):
+        p.update(None)
+
+    # Only the compatible record should be written
+    result_files = list(osv_workspace.result_files())
+    assert len(result_files) == 1
+
+    with open(result_files[0]) as f:
+        envelope = json.load(f)
+    assert envelope["item"]["id"] == "CGA-compat"
+
+    # Should have logged a warning about the incompatible record
+    assert any("CGA-incompat" in msg and "2.0.0" in msg for msg in caplog.messages)
 
 
 # ---------------------------------------------------------------------------
