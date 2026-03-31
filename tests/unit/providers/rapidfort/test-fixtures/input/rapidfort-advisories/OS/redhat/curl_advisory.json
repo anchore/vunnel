@@ -1,7 +1,7 @@
 {
     "package_name": "curl",
     "advisory": {
-        "el9": {
+        "9": {
             "CVE-2014-0139": {
                 "cve_id": "CVE-2014-0139",
                 "title": "cURL and libcurl wildcard certificate validation issue",

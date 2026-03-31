@@ -154,10 +154,10 @@ class TestNormalize:
         }
 
         with parser:
-            vuln_dict = parser._normalize("redhat", "el9", "curl", cve_map)
+            vuln_dict = parser._normalize("redhat", "9", "curl", cve_map)
 
         record = vuln_dict["CVE-2014-0139"]
-        assert record["Vulnerability"]["NamespaceName"] == "rapidfort-redhat:el9"
+        assert record["Vulnerability"]["NamespaceName"] == "rapidfort-redhat:9"
 
         fixed_in = sorted(
             record["Vulnerability"]["FixedIn"],
@@ -166,7 +166,7 @@ class TestNormalize:
 
         assert len(fixed_in) == 3
         assert fixed_in[0]["Identifier"] == "el9"
-        assert fixed_in[0]["NamespaceName"] == "rapidfort-redhat:el9"
+        assert fixed_in[0]["NamespaceName"] == "rapidfort-redhat:9"
         assert fixed_in[0]["VersionFormat"] == "rpm"
         assert fixed_in[0]["Version"] == "None"
         assert fixed_in[0]["VulnerableRange"] == ">= 0"
