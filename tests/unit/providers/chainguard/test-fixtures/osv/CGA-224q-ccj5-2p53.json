@@ -1,6 +1,12 @@
 {
-  "modified": "2026-01-07T00:00:00Z",
+  "schema_version": "1.7.0",
   "id": "CGA-224q-ccj5-2p53",
+  "published": "2026-01-07T00:00:00Z",
+  "modified": "2026-01-07T00:00:00Z",
+  "upstream": [
+    "CVE-2025-32464",
+    "GHSA-frg5-h47x-75j9"
+  ],
   "related": [
     "CVE-2025-32464",
     "GHSA-frg5-h47x-75j9"

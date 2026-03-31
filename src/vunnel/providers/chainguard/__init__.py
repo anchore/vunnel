@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 import orjson
+import requests
 
 from vunnel import provider, result, schema
 from vunnel.utils import http_wrapper as http, timer
@@ -27,18 +28,19 @@ class Config:
     # granularity for both Chainguard and Wolfi ecosystems. When False (default), use the
     # legacy secdb format from packages.cgr.dev/chainguard/security.json.
     use_osv: bool = False
+    # Base URL for the OSV feed. The index is fetched from {osv_base_url}/all.json
+    # and individual records from {osv_base_url}/{id}.json.
+    osv_base_url: str = "https://packages.cgr.dev/chainguard/osv"
 
 
 class Provider(provider.Provider):
     _secdb_schema = schema.OSSchema()
-    _osv_schema = schema.OSVSchema()
+    _osv_schema = schema.OSVSchema(version="1.7.0")
 
     __schema__ = _secdb_schema
     __distribution_version__ = int(__schema__.major_version)
 
     _secdb_url = "https://packages.cgr.dev/chainguard/security.json"
-    _osv_index_url = "https://packages.cgr.dev/chainguard/osv/all.json"
-    _osv_record_url_template = "https://packages.cgr.dev/chainguard/osv/{id}.json"
     _namespace = "chainguard"
 
     def __init__(self, root: str, config: Config | None = None):
@@ -77,29 +79,70 @@ class Provider(provider.Provider):
                 return self._update_secdb()
 
     def _update_osv(self) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            self.logger.info(f"downloading Chainguard OSV index from {self._osv_index_url}")
-            resp = http.get(self._osv_index_url, self.logger, timeout=self.config.request_timeout)
+        base_url = self.config.osv_base_url.rstrip("/")
+        index_url = f"{base_url}/all.json"
+
+        # Fetch the index first. If this fails, the feed is fundamentally unusable.
+        self.logger.info(f"downloading Chainguard OSV index from {index_url}")
+        try:
+            resp = http.get(index_url, self.logger, timeout=self.config.request_timeout)
             index = orjson.loads(resp.content)
+        except requests.RequestException as e:
+            raise RuntimeError(f"failed to fetch Chainguard OSV index from {index_url}: {e}") from e
+        except orjson.JSONDecodeError as e:
+            raise RuntimeError(f"Chainguard OSV index at {index_url} contains invalid JSON: {e}") from e
 
-            self.logger.info(f"fetching {len(index)} Chainguard OSV records")
-            for entry in index:
+        # The index must be a list of entries. A dict, null, or other type indicates
+        # a malformed feed that would silently produce zero results if not caught.
+        if not isinstance(index, list):
+            raise RuntimeError(
+                f"Chainguard OSV index at {index_url} has invalid structure: "
+                f"expected a list, got {type(index).__name__}"
+            )
+
+        self.logger.info(f"fetching {len(index)} Chainguard OSV records")
+
+        with self.results_writer() as writer:
+            for i, entry in enumerate(index):
+                # Each entry must be a dict with an "id" field. Validate both
+                # to catch malformed feeds early with clear error messages.
+                if not isinstance(entry, dict):
+                    raise RuntimeError(
+                        f"Chainguard OSV index entry {i} has invalid type: "
+                        f"expected dict, got {type(entry).__name__}. Entry contents: {entry!r}"
+                    )
+                if "id" not in entry:
+                    raise RuntimeError(
+                        f"Chainguard OSV index entry {i} is missing required 'id' field. "
+                        f"Entry contents: {entry}"
+                    )
                 record_id = entry["id"]
-                record_url = self._osv_record_url_template.format(id=record_id)
+                record_url = f"{base_url}/{record_id}.json"
 
+                # Fetch and parse the record. Any failure here is fatal - we cannot
+                # produce a partial feed with missing entries, as downstream consumers
+                # would have no way to know data is missing.
                 try:
                     record_resp = http.get(record_url, self.logger, timeout=self.config.request_timeout)
+                except requests.RequestException as e:
+                    raise RuntimeError(
+                        f"failed to fetch Chainguard OSV record {record_id} from {record_url}: {e}"
+                    ) from e
+
+                try:
                     record = orjson.loads(record_resp.content)
+                except orjson.JSONDecodeError as e:
+                    raise RuntimeError(
+                        f"Chainguard OSV record {record_id} at {record_url} contains invalid JSON: {e}"
+                    ) from e
 
-                    writer.write(
-                        identifier=record_id.lower(),
-                        schema=self._osv_schema,
-                        payload=record,
-                    )
-                except Exception:
-                    self.logger.exception(f"failed to fetch Chainguard OSV record {record_id}")
+                writer.write(
+                    identifier=record_id.lower(),
+                    schema=self._osv_schema,
+                    payload=record,
+                )
 
-        return [self._osv_index_url], len(writer)
+        return [index_url], len(writer)
 
     def _update_secdb(self) -> tuple[list[str], int]:
         with self.results_writer() as writer, self.parser:

@@ -1,6 +1,12 @@
 {
-  "modified": "2026-02-24T13:07:08Z",
+  "schema_version": "1.7.0",
   "id": "CGA-22hv-wp9q-4779",
+  "published": "2026-02-24T13:07:08Z",
+  "modified": "2026-02-24T13:07:08Z",
+  "upstream": [
+    "CVE-2026-24398",
+    "GHSA-r354-f388-2fhh"
+  ],
   "related": [
     "CVE-2026-24398",
     "GHSA-r354-f388-2fhh"
