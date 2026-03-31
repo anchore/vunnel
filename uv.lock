@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.13, <3.15"
 
 [options]
-exclude-newer = "2026-03-23T22:12:32.243631923Z"
+exclude-newer = "2026-03-24T15:54:10.325076278Z"
 exclude-newer-span = "P1W"
 
 [[package]]
@@ -1371,11 +1371,11 @@ wheels = [
 
 [[package]]
 name = "types-python-dateutil"
-version = "2.9.0.20260302"
+version = "2.9.0.20260323"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/06/7d/4eb84ea2d4ea72b14f180ed2a5c2e7ac3c8e9fd425f7d69a6516cf127f3b/types_python_dateutil-2.9.0.20260302.tar.gz", hash = "sha256:05a3580c790e6ccad228411ed45245ed739c81e78ba49b1cfdbeb075f42bcab0", size = 16885, upload-time = "2026-03-02T04:02:05.012Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e9/02/f72df9ef5ffc4f959b83cb80c8aa03eb8718a43e563ecd99ccffe265fa89/types_python_dateutil-2.9.0.20260323.tar.gz", hash = "sha256:a107aef5841db41ace381dbbbd7e4945220fc940f7a72172a0be5a92d9ab7164", size = 16897, upload-time = "2026-03-23T04:15:14.829Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/91/80dca6ca3da5078de2a808b648aec2a27c83b3dee1b832ae394a683ebe51/types_python_dateutil-2.9.0.20260302-py3-none-any.whl", hash = "sha256:6e7e65e190fb78c267e58a7426b00f0dd41a6dfb02c12aab910263cfa0bcc3ca", size = 18334, upload-time = "2026-03-02T04:02:04.01Z" },
+    { url = "https://files.pythonhosted.org/packages/92/c1/b661838b97453e699a215451f2e22cee750eaaf4ea4619b34bdaf01221a4/types_python_dateutil-2.9.0.20260323-py3-none-any.whl", hash = "sha256:a23a50a07f6eb87e729d4cb0c2eb511c81761eeb3f505db2c1413be94aae8335", size = 18433, upload-time = "2026-03-23T04:15:13.683Z" },
 ]
 
 [[package]]
