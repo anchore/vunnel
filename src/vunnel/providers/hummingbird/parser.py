@@ -58,48 +58,84 @@ class Parser:
         with open(path) as fh:
             doc = json.load(fh)
 
-        # collect the set of hummingbird product IDs from the product tree
-        hb_product_ids = self._find_hummingbird_product_ids(doc)
-        if not hb_product_ids:
-            return None
-
-        cve_id = os.path.splitext(os.path.basename(path))[0]
-
-        subsetted = self._subset_document(doc, hb_product_ids)
+        subsetted = self._subset_document(doc)
         if subsetted is None:
             return None
 
+        cve_id = os.path.splitext(os.path.basename(path))[0]
         return cve_id, subsetted
 
-    # ── product tree inspection ───────────────────────────────────────
+    # ── subsetting ────────────────────────────────────────────────────
 
-    def _find_hummingbird_product_ids(self, doc: dict) -> set[str]:
-        """Walk the product tree and return all product_ids that are hummingbird-related.
+    def _subset_document(self, doc: dict) -> dict | None:
+        """Create a valid CSAF VEX document containing only hummingbird data.
 
-        A product is hummingbird-related if:
-        - It has a CPE matching the hummingbird prefix, OR
-        - It appears in a relationship where relates_to_product_reference is a hummingbird product
+        The approach works in layers, each derived from the previous:
+
+        1. Find hummingbird platform product IDs by CPE-matching branches.
+        2. Keep only relationships where relates_to_product_reference is a
+           hummingbird platform. Collect the composite IDs and bare package
+           references from those kept relationships.
+        3. Prune branches to keep platform branches + package branches that
+           are referenced by kept relationships.
+        4. Filter vulnerability fields (product_status, remediations, scores,
+           etc.) using only the composite relationship IDs + platform IDs.
         """
         product_tree = doc.get("product_tree", {})
 
-        # pass 1: find direct hummingbird product ids from branches
-        hb_ids: set[str] = set()
-        self._collect_hb_ids_from_branches(product_tree.get("branches", []), hb_ids)
+        # step 1: find hummingbird platform IDs from branch CPEs
+        platform_ids: set[str] = set()
+        self._collect_platform_ids(product_tree.get("branches", []), platform_ids)
+        if not platform_ids:
+            return None
 
-        if not hb_ids:
-            return set()
+        # step 2: keep relationships where the platform is hummingbird
+        kept_relationships = []
+        composite_ids: set[str] = set()  # e.g. "hummingbird-1:python3.11"
+        package_refs: set[str] = set()  # e.g. "python3.11" (bare branch product_ids)
 
-        # pass 2: find relationship-derived product ids (e.g. package-in-platform)
         for rel in product_tree.get("relationships", []):
-            if rel.get("relates_to_product_reference") in hb_ids or rel.get("product_reference") in hb_ids:
-                fpn = rel.get("full_product_name", {})
-                pid = fpn.get("product_id")
-                if pid:
-                    hb_ids.add(pid)
+            if rel.get("relates_to_product_reference") not in platform_ids:
+                continue
+            kept_relationships.append(rel)
+            fpn_id = rel.get("full_product_name", {}).get("product_id")
+            if fpn_id:
+                composite_ids.add(fpn_id)
+            prod_ref = rel.get("product_reference")
+            if prod_ref:
+                package_refs.add(prod_ref)
 
-        return hb_ids
+        # the set of IDs that can appear in product_status, remediations, etc.
+        filter_ids = platform_ids | composite_ids
 
-    def _collect_hb_ids_from_branches(self, branches: list[dict], hb_ids: set[str]) -> None:
+        # step 3: prune branches — keep platforms and referenced packages
+        branch_ids = platform_ids | package_refs
+        pruned_branches = self._prune_branches(product_tree.get("branches", []), branch_ids)
+
+        # step 4: subset vulnerabilities using filter_ids
+        subsetted_vulns = []
+        for vuln in doc.get("vulnerabilities", []):
+            sv = self._subset_vulnerability(vuln, filter_ids)
+            if sv is not None:
+                subsetted_vulns.append(sv)
+
+        if not subsetted_vulns:
+            return None
+
+        out = copy.deepcopy(doc)
+        out["product_tree"] = {}
+        if pruned_branches:
+            out["product_tree"]["branches"] = pruned_branches
+        if kept_relationships:
+            out["product_tree"]["relationships"] = kept_relationships
+        out["vulnerabilities"] = subsetted_vulns
+
+        return out
+
+    # ── helpers ────────────────────────────────────────────────────────
+
+    def _collect_platform_ids(self, branches: list[dict], platform_ids: set[str]) -> None:
+        """Recursively find branch product IDs that have a hummingbird CPE."""
         for branch in branches:
             product = branch.get("product")
             if product:
@@ -107,60 +143,19 @@ class Parser:
                 if _is_hummingbird_cpe(helper.get("cpe")):
                     pid = product.get("product_id")
                     if pid:
-                        hb_ids.add(pid)
-            self._collect_hb_ids_from_branches(branch.get("branches", []), hb_ids)
+                        platform_ids.add(pid)
+            self._collect_platform_ids(branch.get("branches", []), platform_ids)
 
-    # ── subsetting ────────────────────────────────────────────────────
-
-    def _subset_document(self, doc: dict, hb_product_ids: set[str]) -> dict | None:
-        """Create a valid CSAF VEX document containing only hummingbird data."""
-        out = copy.deepcopy(doc)
-
-        # subset product tree
-        out["product_tree"] = self._subset_product_tree(doc["product_tree"], hb_product_ids)
-
-        # subset vulnerabilities
-        out["vulnerabilities"] = self._subset_vulnerabilities(doc.get("vulnerabilities", []), hb_product_ids)
-
-        # drop vulns that ended up empty
-        out["vulnerabilities"] = [v for v in out["vulnerabilities"] if v is not None]
-
-        if not out["vulnerabilities"]:
-            return None
-
-        return out
-
-    def _subset_product_tree(self, product_tree: dict, hb_product_ids: set[str]) -> dict:
-        result: dict = {}
-
-        # subset branches: keep branches that lead to a hummingbird product
-        if "branches" in product_tree:
-            result["branches"] = self._prune_branches(product_tree["branches"], hb_product_ids)
-
-        # subset relationships: keep only those where the full_product_name.product_id is hummingbird
-        if "relationships" in product_tree:
-            result["relationships"] = [
-                rel
-                for rel in product_tree["relationships"]
-                if rel.get("full_product_name", {}).get("product_id") in hb_product_ids
-            ]
-
-        return result
-
-    def _prune_branches(self, branches: list[dict], hb_product_ids: set[str]) -> list[dict]:
-        """Recursively prune branches, keeping only paths that lead to a hummingbird product."""
+    def _prune_branches(self, branches: list[dict], keep_ids: set[str]) -> list[dict]:
+        """Recursively prune branches, keeping only paths that lead to a product in keep_ids."""
         kept = []
         for branch in branches:
-            # check if this branch directly has a hummingbird product
             product = branch.get("product")
-            is_hb = False
-            if product and product.get("product_id") in hb_product_ids:
-                is_hb = True
+            is_kept = product is not None and product.get("product_id") in keep_ids
 
-            # recurse into children
-            pruned_children = self._prune_branches(branch.get("branches", []), hb_product_ids)
+            pruned_children = self._prune_branches(branch.get("branches", []), keep_ids)
 
-            if is_hb or pruned_children:
+            if is_kept or pruned_children:
                 new_branch = {k: v for k, v in branch.items() if k != "branches"}
                 if pruned_children:
                     new_branch["branches"] = pruned_children
@@ -168,10 +163,7 @@ class Parser:
 
         return kept
 
-    def _subset_vulnerabilities(self, vulnerabilities: list[dict], hb_product_ids: set[str]) -> list[dict | None]:
-        return [self._subset_vulnerability(v, hb_product_ids) for v in vulnerabilities]
-
-    def _subset_vulnerability(self, vuln: dict, hb_product_ids: set[str]) -> dict | None:
+    def _subset_vulnerability(self, vuln: dict, filter_ids: set[str]) -> dict | None:
         out = {}
 
         # copy scalar / metadata fields as-is
@@ -185,7 +177,7 @@ class Parser:
             filtered_ps = {}
             for status_key in ("fixed", "known_affected", "known_not_affected", "under_investigation"):
                 if status_key in ps:
-                    filtered = [pid for pid in ps[status_key] if pid in hb_product_ids]
+                    filtered = [pid for pid in ps[status_key] if pid in filter_ids]
                     if filtered:
                         filtered_ps[status_key] = filtered
             if not filtered_ps:
@@ -194,21 +186,21 @@ class Parser:
 
         # filter remediations
         if "remediations" in vuln:
-            out["remediations"] = self._filter_by_product_ids(vuln["remediations"], hb_product_ids)
+            out["remediations"] = self._filter_by_product_ids(vuln["remediations"], filter_ids)
 
         # filter threats
         if "threats" in vuln:
-            out["threats"] = self._filter_by_product_ids(vuln["threats"], hb_product_ids)
+            out["threats"] = self._filter_by_product_ids(vuln["threats"], filter_ids)
 
         # filter flags
         if "flags" in vuln:
-            out["flags"] = self._filter_by_product_ids(vuln["flags"], hb_product_ids)
+            out["flags"] = self._filter_by_product_ids(vuln["flags"], filter_ids)
 
         # filter scores
         if "scores" in vuln:
             filtered_scores = []
             for score in vuln["scores"]:
-                products = [p for p in score.get("products", []) if p in hb_product_ids]
+                products = [p for p in score.get("products", []) if p in filter_ids]
                 if products:
                     s = copy.deepcopy(score)
                     s["products"] = products
@@ -218,12 +210,12 @@ class Parser:
 
         return out
 
-    def _filter_by_product_ids(self, items: list[dict], hb_product_ids: set[str]) -> list[dict]:
-        """Filter a list of objects that have a product_ids field, keeping only hummingbird product IDs."""
+    def _filter_by_product_ids(self, items: list[dict], filter_ids: set[str]) -> list[dict]:
+        """Filter a list of objects that have a product_ids field."""
         result = []
         for item in items:
             pids = item.get("product_ids", [])
-            filtered = [pid for pid in pids if pid in hb_product_ids]
+            filtered = [pid for pid in pids if pid in filter_ids]
             if filtered:
                 new_item = copy.deepcopy(item)
                 new_item["product_ids"] = filtered
