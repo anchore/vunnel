@@ -128,9 +128,7 @@ class CSAFVEXClient:
         else:
             remote_mod = self._head_last_modified(archive_url)
             if remote_mod and remote_mod > self.archive_mod_time:
-                self.logger.info(
-                    f"remote archive is newer ({remote_mod}) than local ({self.archive_mod_time}) – re-downloading"
-                )
+                self.logger.info(f"remote archive is newer ({remote_mod}) than local ({self.archive_mod_time}) – re-downloading")
                 need_download = True
             else:
                 self.logger.info("archive is up to date")
