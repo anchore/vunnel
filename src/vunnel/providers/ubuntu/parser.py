@@ -42,7 +42,7 @@ _cve_filename_regex = re.compile("CVE-[0-9]+-[0-9]+")
 patch_states = {
     "DNE": False,  # Does Not Exist, the package is does not exist in a particular ubuntu release
     "needs-triage": True,  # Not yet determined if CVE affects package, consider all versions vulnerable until determination is made
-    "ignored": False,  # CVE does not affect the package or no updates (e.g. end-of-life) (NOTE: should still report?)
+    "ignored": True,  # Package is vulnerable but won't be fixed (e.g. end-of-life, no viable solution)
     "not-affected": False,  # The package is related to the issue, but not affected by it.
     "needed": True,  # Package is vuln and needs a fix. No version yet.
     "released": True,  # The package is affected and a fix has been released with the given version.

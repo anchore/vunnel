@@ -418,6 +418,70 @@ class TestUbuntuParser:
             f"(no ESM counterpart exists), got {len(fixed_gcc)}"
         )
 
+    def test_bare_ignored_produces_fixedin(self, fake_fixdate_finder):
+        """When a patch has status 'ignored' with no version/reason on an active
+        release, it should produce a FixedIn entry with Version='None' and
+        NoAdvisory=True. This covers the case where Ubuntu decides a CVE won't
+        be fixed (e.g. 'no viable solution') but the package is still vulnerable.
+
+        Uses normalized data from CVE-2016-2781. Key entries:
+          patches: jammy/coreutils: ignored (bare, no reason)
+                   noble/coreutils: ignored (bare, no reason)
+                   focal/coreutils: ignored (end of standard support)
+        """
+        fixture = os.path.join(self._location_, "normalized_CVE-2016-2781.json")
+        with open(fixture) as f:
+            parsed = CVEFile.from_dict(json.load(f))
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+
+        # jammy (bare ignored) should produce a FixedIn with NoAdvisory
+        jammy_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:22.04":
+                jammy_vuln = v
+                break
+
+        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
+        fixed_coreutils = [f for f in jammy_vuln.FixedIn if f.Name == "coreutils"]
+        assert len(fixed_coreutils) == 1, (
+            f"Expected bare-ignored coreutils on jammy to produce a FixedIn entry, got {len(fixed_coreutils)}"
+        )
+        assert fixed_coreutils[0].Version == "None", "Expected Version='None' for won't-fix entry"
+        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
+            "Expected NoAdvisory=True for ignored entry"
+        )
+
+        # noble (also bare ignored) should behave the same
+        noble_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:24.04":
+                noble_vuln = v
+                break
+
+        assert noble_vuln is not None, "Expected a vulnerability record for ubuntu:24.04 (noble)"
+        fixed_coreutils = [f for f in noble_vuln.FixedIn if f.Name == "coreutils"]
+        assert len(fixed_coreutils) == 1, (
+            f"Expected bare-ignored coreutils on noble to produce a FixedIn entry, got {len(fixed_coreutils)}"
+        )
+
+        # focal (ignored with EOL reason) should also produce a FixedIn via check_merge
+        focal_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:20.04":
+                focal_vuln = v
+                break
+
+        assert focal_vuln is not None, "Expected a vulnerability record for ubuntu:20.04 (focal)"
+        fixed_coreutils = [f for f in focal_vuln.FixedIn if f.Name == "coreutils"]
+        assert len(fixed_coreutils) == 1, (
+            f"Expected ignored (end of standard support) coreutils on focal to produce a FixedIn entry, "
+            f"got {len(fixed_coreutils)}"
+        )
+        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
+            "Expected NoAdvisory=True for ignored entry with EOL reason"
+        )
+
     def test_checkers(self):
         check_data = [
             (Patch(distro="natty", status="released", version="1.1"), False),
