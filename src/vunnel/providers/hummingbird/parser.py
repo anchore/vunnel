@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import copy
-import json
-import logging
 import os
-from collections.abc import Generator
+from typing import TYPE_CHECKING, Any
 
-from vunnel.workspace import Workspace
+import orjson
 
 from .csaf_client import CSAFVEXClient
+
+if TYPE_CHECKING:
+    import logging
+    from collections.abc import Generator
+
+    from vunnel.workspace import Workspace
 
 HUMMINGBIRD_CPE_PREFIX = "cpe:/a:redhat:hummingbird"
 
@@ -32,7 +36,7 @@ class Parser:
         self.max_workers = max_workers
         self.skip_download = skip_download
 
-    def get(self) -> Generator[tuple[str, dict], None, None]:
+    def get(self) -> Generator[tuple[str, dict[str, Any]]]:
         """Yield (cve_id, subsetted_csaf_dict) for each CVE that affects hummingbird."""
         client = CSAFVEXClient(
             workspace=self.workspace,
@@ -54,9 +58,9 @@ class Parser:
             if result is not None:
                 yield result
 
-    def _process_cve_file(self, path: str) -> tuple[str, dict] | None:
-        with open(path) as fh:
-            doc = json.load(fh)
+    def _process_cve_file(self, path: str) -> tuple[str, dict[str, Any]] | None:
+        with open(path, "rb") as fh:
+            doc = orjson.loads(fh.read())
 
         subsetted = self._subset_document(doc)
         if subsetted is None:
@@ -67,7 +71,7 @@ class Parser:
 
     # ── subsetting ────────────────────────────────────────────────────
 
-    def _subset_document(self, doc: dict) -> dict | None:
+    def _subset_document(self, doc: dict[str, Any]) -> dict[str, Any] | None:
         """Create a valid CSAF VEX document containing only hummingbird data.
 
         The approach works in layers, each derived from the previous:
@@ -90,34 +94,20 @@ class Parser:
             return None
 
         # step 2: keep relationships where the platform is hummingbird
-        kept_relationships = []
-        composite_ids: set[str] = set()  # e.g. "hummingbird-1:python3.11"
-        package_refs: set[str] = set()  # e.g. "python3.11" (bare branch product_ids)
-
-        for rel in product_tree.get("relationships", []):
-            if rel.get("relates_to_product_reference") not in platform_ids:
-                continue
-            kept_relationships.append(rel)
-            fpn_id = rel.get("full_product_name", {}).get("product_id")
-            if fpn_id:
-                composite_ids.add(fpn_id)
-            prod_ref = rel.get("product_reference")
-            if prod_ref:
-                package_refs.add(prod_ref)
+        kept_relationships, composite_ids, package_refs = self._collect_hummingbird_relationships(
+            product_tree.get("relationships", []),
+            platform_ids,
+        )
 
         # the set of IDs that can appear in product_status, remediations, etc.
         filter_ids = platform_ids | composite_ids
 
-        # step 3: prune branches — keep platforms and referenced packages
+        # step 3: prune branches - keep platforms and referenced packages
         branch_ids = platform_ids | package_refs
         pruned_branches = self._prune_branches(product_tree.get("branches", []), branch_ids)
 
         # step 4: subset vulnerabilities using filter_ids
-        subsetted_vulns = []
-        for vuln in doc.get("vulnerabilities", []):
-            sv = self._subset_vulnerability(vuln, filter_ids)
-            if sv is not None:
-                subsetted_vulns.append(sv)
+        subsetted_vulns = [sv for vuln in doc.get("vulnerabilities", []) if (sv := self._subset_vulnerability(vuln, filter_ids)) is not None]
 
         if not subsetted_vulns:
             return None
@@ -134,7 +124,30 @@ class Parser:
 
     # ── helpers ────────────────────────────────────────────────────────
 
-    def _collect_platform_ids(self, branches: list[dict], platform_ids: set[str]) -> None:
+    @staticmethod
+    def _collect_hummingbird_relationships(
+        relationships: list[dict[str, Any]],
+        platform_ids: set[str],
+    ) -> tuple[list[dict[str, Any]], set[str], set[str]]:
+        """Return (kept_relationships, composite_ids, package_refs) for hummingbird platforms."""
+        kept: list[dict[str, Any]] = []
+        composite_ids: set[str] = set()
+        package_refs: set[str] = set()
+
+        for rel in relationships:
+            if rel.get("relates_to_product_reference") not in platform_ids:
+                continue
+            kept.append(rel)
+            fpn_id = rel.get("full_product_name", {}).get("product_id")
+            if fpn_id:
+                composite_ids.add(fpn_id)
+            prod_ref = rel.get("product_reference")
+            if prod_ref:
+                package_refs.add(prod_ref)
+
+        return kept, composite_ids, package_refs
+
+    def _collect_platform_ids(self, branches: list[dict[str, Any]], platform_ids: set[str]) -> None:
         """Recursively find branch product IDs that have a hummingbird CPE."""
         for branch in branches:
             product = branch.get("product")
@@ -146,7 +159,7 @@ class Parser:
                         platform_ids.add(pid)
             self._collect_platform_ids(branch.get("branches", []), platform_ids)
 
-    def _prune_branches(self, branches: list[dict], keep_ids: set[str]) -> list[dict]:
+    def _prune_branches(self, branches: list[dict[str, Any]], keep_ids: set[str]) -> list[dict[str, Any]]:
         """Recursively prune branches, keeping only paths that lead to a product in keep_ids."""
         kept = []
         for branch in branches:
@@ -163,7 +176,7 @@ class Parser:
 
         return kept
 
-    def _subset_vulnerability(self, vuln: dict, filter_ids: set[str]) -> dict | None:
+    def _subset_vulnerability(self, vuln: dict[str, Any], filter_ids: set[str]) -> dict[str, Any] | None:
         out = {}
 
         # copy scalar / metadata fields as-is
@@ -172,45 +185,49 @@ class Parser:
                 out[key] = vuln[key]
 
         # filter product_status lists
-        if "product_status" in vuln:
-            ps = vuln["product_status"]
-            filtered_ps = {}
-            for status_key in ("fixed", "known_affected", "known_not_affected", "under_investigation"):
-                if status_key in ps:
-                    filtered = [pid for pid in ps[status_key] if pid in filter_ids]
-                    if filtered:
-                        filtered_ps[status_key] = filtered
-            if not filtered_ps:
-                return None
-            out["product_status"] = filtered_ps
+        filtered_ps = self._filter_product_status(vuln.get("product_status", {}), filter_ids)
+        if not filtered_ps:
+            return None
+        out["product_status"] = filtered_ps
 
-        # filter remediations
-        if "remediations" in vuln:
-            out["remediations"] = self._filter_by_product_ids(vuln["remediations"], filter_ids)
-
-        # filter threats
-        if "threats" in vuln:
-            out["threats"] = self._filter_by_product_ids(vuln["threats"], filter_ids)
-
-        # filter flags
-        if "flags" in vuln:
-            out["flags"] = self._filter_by_product_ids(vuln["flags"], filter_ids)
+        # filter list-of-dicts fields that have product_ids
+        for key in ("remediations", "threats", "flags"):
+            if key in vuln:
+                filtered = self._filter_by_product_ids(vuln[key], filter_ids)
+                if filtered:
+                    out[key] = filtered
 
         # filter scores
         if "scores" in vuln:
-            filtered_scores = []
-            for score in vuln["scores"]:
-                products = [p for p in score.get("products", []) if p in filter_ids]
-                if products:
-                    s = copy.deepcopy(score)
-                    s["products"] = products
-                    filtered_scores.append(s)
+            filtered_scores = self._filter_scores(vuln["scores"], filter_ids)
             if filtered_scores:
                 out["scores"] = filtered_scores
 
         return out
 
-    def _filter_by_product_ids(self, items: list[dict], filter_ids: set[str]) -> list[dict]:
+    @staticmethod
+    def _filter_product_status(ps: dict[str, Any], filter_ids: set[str]) -> dict[str, Any]:
+        filtered_ps = {}
+        for status_key in ("fixed", "known_affected", "known_not_affected", "under_investigation"):
+            if status_key in ps:
+                filtered = [pid for pid in ps[status_key] if pid in filter_ids]
+                if filtered:
+                    filtered_ps[status_key] = filtered
+        return filtered_ps
+
+    @staticmethod
+    def _filter_scores(scores: list[dict[str, Any]], filter_ids: set[str]) -> list[dict[str, Any]]:
+        result = []
+        for score in scores:
+            products = [p for p in score.get("products", []) if p in filter_ids]
+            if products:
+                s = copy.deepcopy(score)
+                s["products"] = products
+                result.append(s)
+        return result
+
+    @staticmethod
+    def _filter_by_product_ids(items: list[dict[str, Any]], filter_ids: set[str]) -> list[dict[str, Any]]:
         """Filter a list of objects that have a product_ids field."""
         result = []
         for item in items:

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
-import shutil
-
+import orjson
 import pytest
 
 from vunnel import result
@@ -33,14 +31,14 @@ class TestParser:
     @pytest.fixture()
     def sample_doc(self, helpers):
         path = helpers.local_dir("test-fixtures/input/advisories/2026/cve-2026-12345.json")
-        with open(path) as f:
-            return json.load(f)
+        with open(path, "rb") as f:
+            return orjson.loads(f.read())
 
     def test_subset_skips_non_hummingbird_cve(self, helpers):
         """A CVE with no hummingbird products should be skipped entirely."""
         path = helpers.local_dir("test-fixtures/input/advisories/2026/cve-2026-99999.json")
-        with open(path) as f:
-            doc = json.load(f)
+        with open(path, "rb") as f:
+            doc = orjson.loads(f.read())
         p = Parser(workspace=None, logger=_make_logger(), skip_download=True)
         result = p._subset_document(doc)
         assert result is None

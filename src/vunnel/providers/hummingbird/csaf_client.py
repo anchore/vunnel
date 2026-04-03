@@ -3,13 +3,20 @@ from __future__ import annotations
 import concurrent.futures
 import contextlib
 import csv
-import logging
+import email.utils
 import os
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+import requests
 
 from vunnel.utils import http_wrapper as http
 from vunnel.utils.archive import extract
-from vunnel.workspace import Workspace
+
+if TYPE_CHECKING:
+    import logging
+
+    from vunnel.workspace import Workspace
 
 VEX_FEED_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/vex-feed/archive_latest.txt"
 
@@ -101,11 +108,7 @@ class CSAFVEXClient:
 
     def _head_last_modified(self, url: str) -> datetime | None:
         """HEAD the URL and return Last-Modified as a tz-aware datetime, or None."""
-        import email.utils
-
-        import requests
-
-        resp = requests.head(url, timeout=30)  # noqa: S113
+        resp = requests.head(url, timeout=30)
         resp.raise_for_status()
         lm = resp.headers.get("Last-Modified")
         if lm:
@@ -123,12 +126,12 @@ class CSAFVEXClient:
         # decide whether we need to (re-)download the archive
         need_download = False
         if self.archive_mod_time is None:
-            self.logger.info("no local timestamp found – downloading archive")
+            self.logger.info("no local timestamp found - downloading archive")
             need_download = True
         else:
             remote_mod = self._head_last_modified(archive_url)
             if remote_mod and remote_mod > self.archive_mod_time:
-                self.logger.info(f"remote archive is newer ({remote_mod}) than local ({self.archive_mod_time}) – re-downloading")
+                self.logger.info(f"remote archive is newer ({remote_mod}) than local ({self.archive_mod_time}) - re-downloading")
                 need_download = True
             else:
                 self.logger.info("archive is up to date")
