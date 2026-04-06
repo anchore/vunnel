@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import orjson
 import pytest
 
 from vunnel import result
 from vunnel.providers.hummingbird import Config, Provider
 from vunnel.providers.hummingbird.parser import Parser
+from vunnel.utils.csaf_types import from_path
 
 
 @pytest.fixture()
@@ -17,31 +17,19 @@ class TestParser:
     """Unit tests for the CSAF VEX subsetting logic."""
 
     @pytest.fixture()
-    def parser(self, helpers, mock_input_path):
-        workspace = helpers.provider_workspace_helper(
-            name="hummingbird",
-            input_fixture=mock_input_path,
-        )
-        return Parser(
-            workspace=workspace,
-            logger=Provider.__new__(Provider).__class__.__mro__[0].__new__(Provider).__class__.__mro__[0],
-            skip_download=True,
-        )
-
-    @pytest.fixture()
     def sample_doc(self, helpers):
         path = helpers.local_dir("test-fixtures/input/advisories/2026/cve-2026-12345.json")
-        with open(path, "rb") as f:
-            return orjson.loads(f.read())
+        return from_path(path)
 
-    def test_subset_skips_non_hummingbird_cve(self, helpers):
-        """A CVE with no hummingbird products should be skipped entirely."""
+    @pytest.fixture()
+    def non_hb_doc(self, helpers):
         path = helpers.local_dir("test-fixtures/input/advisories/2026/cve-2026-99999.json")
-        with open(path, "rb") as f:
-            doc = orjson.loads(f.read())
+        return from_path(path)
+
+    def test_subset_skips_non_hummingbird_cve(self, non_hb_doc):
+        """A CVE with no hummingbird products should be skipped entirely."""
         p = Parser(workspace=None, logger=_make_logger(), skip_download=True)
-        result = p._subset_document(doc)
-        assert result is None
+        assert p._subset_document(non_hb_doc) is None
 
     def test_subset_keeps_hummingbird_products(self, sample_doc):
         """Subsetting should keep hummingbird platform and package branches."""
@@ -49,11 +37,8 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        # verify product tree has hummingbird platform branch
-        branch_ids = _collect_branch_product_ids(result["product_tree"]["branches"])
+        branch_ids = {b.product.product_id for b in result.product_tree.product_branches() if b.product}
         assert "hummingbird-1" in branch_ids
-
-        # verify package branches with PURLs are preserved
         assert "testpkg-0:1.2.3-1.hum1.src" in branch_ids
         assert "otherpkg" in branch_ids
 
@@ -63,11 +48,9 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        rel_ids = {r["full_product_name"]["product_id"] for r in result["product_tree"]["relationships"]}
-        # hummingbird relationships kept
+        rel_ids = {r.full_product_name.product_id for r in result.product_tree.relationships}
         assert "hummingbird-1:testpkg-0:1.2.3-1.hum1.src" in rel_ids
         assert "hummingbird-1:otherpkg" in rel_ids
-        # RHEL relationship filtered
         assert "rhel-9:otherpkg" not in rel_ids
 
     def test_subset_filters_product_status(self, sample_doc):
@@ -76,13 +59,11 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        vuln = result["vulnerabilities"][0]
-        ps = vuln["product_status"]
-
-        assert ps["fixed"] == ["hummingbird-1:testpkg-0:1.2.3-1.hum1.src"]
-        assert ps["known_not_affected"] == ["hummingbird-1:otherpkg"]
-        # RHEL known_affected should be gone
-        assert "known_affected" not in ps
+        ps = result.vulnerabilities[0].product_status
+        assert ps is not None
+        assert ps.fixed == ["hummingbird-1:testpkg-0:1.2.3-1.hum1.src"]
+        assert ps.known_not_affected == ["hummingbird-1:otherpkg"]
+        assert ps.known_affected == []
 
     def test_subset_filters_scores(self, sample_doc):
         """Scores should only reference hummingbird product IDs."""
@@ -90,8 +71,7 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        vuln = result["vulnerabilities"][0]
-        score_products = vuln["scores"][0]["products"]
+        score_products = result.vulnerabilities[0].scores[0].products
         assert "rhel-9:otherpkg" not in score_products
         assert "hummingbird-1:testpkg-0:1.2.3-1.hum1.src" in score_products
         assert "hummingbird-1:otherpkg" in score_products
@@ -102,9 +82,8 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        vuln = result["vulnerabilities"][0]
-        rem = vuln["remediations"][0]
-        assert rem["product_ids"] == ["hummingbird-1:testpkg-0:1.2.3-1.hum1.src"]
+        rem = result.vulnerabilities[0].remediations[0]
+        assert rem.product_ids == ["hummingbird-1:testpkg-0:1.2.3-1.hum1.src"]
 
     def test_subset_removes_rhel_branches(self, sample_doc):
         """RHEL platform branch should not survive pruning."""
@@ -112,7 +91,7 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        branch_ids = _collect_branch_product_ids(result["product_tree"]["branches"])
+        branch_ids = {b.product.product_id for b in result.product_tree.product_branches() if b.product}
         assert "rhel-9" not in branch_ids
 
     def test_subset_preserves_purls(self, sample_doc):
@@ -121,7 +100,7 @@ class TestParser:
         result = p._subset_document(sample_doc)
         assert result is not None
 
-        purls = _collect_branch_purls(result["product_tree"]["branches"])
+        purls = {b.purl() for b in result.product_tree.product_branches() if b.purl()}
         assert "pkg:rpm/redhat/testpkg@1.2.3-1.hum1?arch=src" in purls
         assert "pkg:rpm/redhat/otherpkg" in purls
 
@@ -129,7 +108,7 @@ class TestParser:
 class TestProviderSchema:
     """Integration test: run the provider end-to-end and validate result schema."""
 
-    def test_provider_schema(self, helpers, mock_input_path, monkeypatch):
+    def test_provider_schema(self, helpers, mock_input_path):
         workspace = helpers.provider_workspace_helper(
             name="hummingbird",
             input_fixture=mock_input_path,
@@ -155,7 +134,6 @@ class TestProviderSchema:
         c.runtime.skip_download = True
         p = Provider(root=workspace.root, config=c)
 
-        # if any HTTP request is made, this will raise
         monkeypatch.setattr("vunnel.utils.http_wrapper.get", _fail_on_http)
 
         p.update(None)
@@ -179,26 +157,3 @@ class _NullLogger:
 
 def _make_logger():
     return _NullLogger()
-
-
-def _collect_branch_product_ids(branches: list[dict]) -> set[str]:
-    ids = set()
-    for b in branches:
-        p = b.get("product")
-        if p and p.get("product_id"):
-            ids.add(p["product_id"])
-        ids |= _collect_branch_product_ids(b.get("branches", []))
-    return ids
-
-
-def _collect_branch_purls(branches: list[dict]) -> set[str]:
-    purls = set()
-    for b in branches:
-        p = b.get("product")
-        if p:
-            helper = p.get("product_identification_helper", {})
-            purl = helper.get("purl")
-            if purl:
-                purls.add(purl)
-        purls |= _collect_branch_purls(b.get("branches", []))
-    return purls

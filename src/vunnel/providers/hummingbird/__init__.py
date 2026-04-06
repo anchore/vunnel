@@ -62,11 +62,11 @@ class Provider(provider.Provider):
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
             with self.results_writer() as writer:
-                for cve_id, record in self.parser.get():
+                for cve_id, csaf_doc in self.parser.get():
                     writer.write(
                         identifier=os.path.join(self._namespace, cve_id),
                         schema=self.__schema__,
-                        payload=record,
+                        payload=csaf_doc.to_dict(),
                     )
 
             return self.urls, len(writer)
