@@ -9,7 +9,6 @@ import orjson
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
