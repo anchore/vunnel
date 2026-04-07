@@ -238,6 +238,17 @@ tests:
     validations:
       - *default-validations
 
+  - provider: hummingbird
+    images:
+      - quay.io/hummingbird/valkey:latest@sha256:31f6abf2ceef2bf3f86eed3c7492cf4d77f2195cc5571aebf6a37352eead4e03
+      - quay.io/hummingbird/nodejs:latest@sha256:3c798f5a9da72e241f4cbeecc8bd1d653db69d92131ea8d676067b95ae18a5c2
+      - quay.io/hummingbird/postgresql:latest@sha256:6eefb14bced346a8583011f84dd71de8249af74c060369be6ad73891b2a768f0
+    expected_namespaces:
+      - hummingbird:distro:hummingbird:1
+    validations:
+      - <<: *default-validations
+        max_year: 2026 # hummingbird is new
+
   - provider: mariner
     use_cache: true
     images:
