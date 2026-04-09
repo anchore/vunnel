@@ -1,0 +1,25 @@
+{
+  "alias": "FEDORA-EPEL-2017-a8886eb42e",
+  "display_name": "",
+  "title": "cross-binutils-2.27-9.el7.1 cross-gcc-4.8.5-16.el7.1",
+  "notes": "Rebase cross-gcc and cross-binutils",
+  "type": "security",
+  "status": "stable",
+  "severity": "low",
+  "date_submitted": "2017-05-18 15:31:15",
+  "date_modified": "2017-07-14 09:50:29",
+  "date_stable": "2017-08-18 13:16:11",
+  "date_pushed": "2017-08-18 13:16:11",
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-EPEL-2017-a8886eb42e",
+  "release": {"name": "EPEL-7", "version": "7", "id_prefix": "FEDORA-EPEL"},
+  "bugs": [
+    {"bug_id": 1162582, "security": true, "title": "CVE-2014-8501 cross-binutils: binutils: out-of-bounds write when parsing specially crafted PE executable [epel-all]"},
+    {"bug_id": 1162605, "security": true, "title": "CVE-2014-8502 cross-binutils: binutils: heap overflow in objdump [epel-all]"},
+    {"bug_id": 1162618, "security": true, "title": "CVE-2014-8503 cross-binutils: binutils: stack overflow in objdump when parsing specially crafted ihex file [epel-all]"},
+    {"bug_id": 1162629, "security": true, "title": "CVE-2014-8504 cross-binutils: binutils: stack overflow in the SREC parser [epel-all]"}
+  ],
+  "builds": [
+    {"nvr": "cross-binutils-2.27-9.el7.1", "type": "rpm", "epoch": 0},
+    {"nvr": "cross-gcc-4.8.5-16.el7.1", "type": "rpm", "epoch": 0}
+  ]
+}

@@ -16,7 +16,7 @@ def is_rpm_module_purl(purl: PackageURL) -> bool:
     return bool(isinstance(purl.qualifiers, dict) and purl.qualifiers.get("rpmmod"))
 
 
-def resolve_module_name_from_purl(purl: PackageURL) -> str:
+def resolve_module_name_from_purl(purl: PackageURL) -> str | None:
     if purl.type == "rpmmod":
         # The prior redhat module purl looked like pkg:rpmmod/redhat/ruby@2.5:8090020230627084142:b46abd14
         # and we want ruby:2.5 back from that
@@ -28,9 +28,19 @@ def resolve_module_name_from_purl(purl: PackageURL) -> str:
             mod_version = mod_version.split(":")[0]
         return f"{purl.name}:{mod_version}"
 
-    # The newer format with an rpmmod qualifier on an rpm purl looks like pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14,
-    # so we can just take the purl components directly
-    return f"{purl.name}:{purl.version}"
+    # The newer format with an rpmmod qualifier on an rpm purl looks like pkg:rpm/redhat/ruby@2.5?rpmmod=ruby:2.5:8090020230627084142:b46abd14
+    # Extract the rpmmod qualifier which contains the module stream information
+    if isinstance(purl.qualifiers, dict) and "rpmmod" in purl.qualifiers:
+        rpmmod = purl.qualifiers["rpmmod"]
+        # rpmmod format: "ruby:3.1:8090020240311122605:a75119d5"
+        # We want: "ruby:3.1" (name:stream)
+        if ":" in rpmmod:
+            parts = rpmmod.split(":")
+            if len(parts) >= 2:
+                return f"{parts[0]}:{parts[1]}"
+        return rpmmod
+
+    return None
 
 
 class CSAFParser:
@@ -60,57 +70,48 @@ class CSAFParser:
         """
         Given a CSAF document and a full product ID, return the platform, module, name, and version identified
         by the product ID. This essentially de-references a string like
-        "AppStream-8.8.0.Z.MAIN.EUS:ruby:2.7:8080020230427102918:63b34585:rubygems-devel-0:3.1.6-139.module+el8.8.0+18745+f1bef313.noarch"
+        "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.src.rpm-ruby:2.7"
         Into it's component information: this is a RHEL 8 package, from the ruby:2.7 module, and the package is
-        is rubygems at version 0:3.1.6-139.module+el8.8.0+18745+f1bef313.
+        ruby at version 0:2.7.8-139.module+el8.8.0+18745+f1bef313.
+
+        For FPIs without modules, the format is simply:
+        "AppStream-9.2.0.Z.EUS:sudo-0:1.9.5p2-9.el9_2.2.x86_64"
 
         It would be tempting to simply parse this information out of the string full product ID, but this is challenging because
-        There are a variable number of :, since : is used to separate both elements of the product ID and elements of the module
+        there are a variable number of :, since : is used to separate both elements of the product ID and elements of the package
         version, for example, and multiple numbers of -, since - is allowed in package names and is used to separate parts of the
         package version. Therefore, rely on relationships encoded in the document structure to parse this.
 
-        The convention is that a full product ID takes the from {platform}:{module}:{package} where there is
-        a module and {platform}:{package} where there is not. The document contains a relationship structure
-        that allows unambiguous parsing of the parent child relationships, which is what is employed instead
-        of attempting to parse the full product ID only from the single string.
+        The FPI format has changed over time:
+        - Old format: {platform}:{package}.rpm-{module}
+        - New format: {platform}:{package}::{module}
+        Rather than parsing these varying formats, we extract module information from the PURL which is stable.
         """
 
         # The CSAF document only associates purls with ID segments, but associates fixes with full product IDs.
-        # That is, given a string like "{platform}:{module}:{package}" or "{platform}:{package}" extract the
-        # "{package}" part and ask the CSAF Doc for the associated PURL in order to unambiguously parse a name
-        # and version from the PURL.
+        # That is, given a string like "{platform}:{package}.rpm-{module}" or "{platform}:{package}::{module}"
+        # extract the "{package}" part and ask the CSAF Doc for the associated PURL in order to unambiguously
+        # parse name, version, and module information from the PURL.
 
-        # First, get the parents of the product ID.
-        # Every full product ID has at least a parent, and possibly a grandparent.
-        # If there is no grandparent, the parent is the platform. If there is a grandparent, the parent is the module
-        # and the grandparent is the platform.
         module = None
-        plat_or_module = doc.product_tree.parent(fpi)
-        if not plat_or_module:
-            return None, None, None, None
-        plat = doc.product_tree.parent(plat_or_module)
-        if plat:
-            module = plat_or_module.removeprefix(f"{plat}:")
-            package = fpi.removeprefix(f"{plat}:{module}:")
-        else:
-            plat = plat_or_module
-            package = fpi.removeprefix(f"{plat}:")
-
         version = None
         name = None
+        plat = doc.product_tree.parent(fpi)
+        if not plat:
+            return None, None, None, None
+        package = fpi.removeprefix(f"{plat}:")
 
         purl = doc.product_tree.purl_for_product_id(package)
-
         if purl:
             parsed_purl = PackageURL.from_string(purl)
-            if is_rpm_module_purl(parsed_purl):
-                # fpi is a module, not a member of a module; return None; the next pass will find a member of the module if one matches
-                return None, None, None, None
-            # vunnel fixed versions start with an epoch, which is not part of the PURL version, but instead
-            # stored in the PURL qualifiers. If the PURL has an epoch, prepend it to the version.
             epoch = parsed_purl.qualifiers.get("epoch", "0") if isinstance(parsed_purl.qualifiers, dict) else "0"
             version = f"{epoch}:{parsed_purl.version}"
             name = parsed_purl.name
+
+            # Extract module information from PURL instead of parsing FPI string
+            # This is robust to FPI format changes (old: .rpm-, new: ::)
+            if is_rpm_module_purl(parsed_purl):
+                module = resolve_module_name_from_purl(parsed_purl)
         else:
             self.logger.trace(f"no purl for {package} from {fpi}")  # type: ignore[attr-defined]
 
@@ -123,16 +124,6 @@ class CSAFParser:
             self.logger.trace(f"no platform cpe for {plat} from {fpi}")  # type: ignore[attr-defined]
             # this product cannot be attributed to any vunnel namespace, so drop it.
             return None, None, None, None
-
-        if module:
-            # If there is a module, get its unambiguous name and version by finding the PURL for the module
-            mod_purl = doc.product_tree.purl_for_product_id(module)
-            if mod_purl:
-                parsed_mod_purl = PackageURL.from_string(mod_purl)
-                module = resolve_module_name_from_purl(parsed_mod_purl)
-                self.logger.trace(f"module: {module} for {fpi} by {mod_purl}")  # type: ignore[attr-defined]
-            else:
-                self.logger.trace(f"no module purl for {module} from {fpi}")  # type: ignore[attr-defined]
 
         # This is enuogh information to compare to an affected release and decide that
         # the patch is about the same package whose vulnerability is mentioned in the CSAF document.

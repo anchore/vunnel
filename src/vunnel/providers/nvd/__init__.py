@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.providers.nvd.manager import Manager
+from vunnel.utils import timer
 
 if TYPE_CHECKING:
     import datetime
@@ -21,7 +22,7 @@ class Config:
     )
     request_timeout: int = 125
     request_retry_count: int = 10
-    api_key: Optional[str] = "env:NVD_API_KEY"  # noqa: UP007
+    api_key: str | None = "env:NVD_API_KEY"
     overrides_url: str = "https://github.com/anchore/nvd-data-overrides/archive/refs/heads/main.tar.gz"
     overrides_enabled: bool = False
 
@@ -82,16 +83,26 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "nvd"
 
-    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            for identifier, record in self.manager.get(
-                skip_if_exists=self.config.runtime.skip_if_exists,
-                last_updated=last_updated,
-            ):
-                writer.write(
-                    identifier=identifier.lower(),
-                    schema=self.__schema__,
-                    payload=record,
-                )
+    @classmethod
+    def tags(cls) -> list[str]:
+        return [
+            "vulnerability",
+            "incremental",
+            # this generates a large dataset and historically can take a while to process (long wall clock time)
+            "large",
+        ]
 
-        return self.manager.urls, len(writer)
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.manager:
+                for identifier, record in self.manager.get(
+                    skip_if_exists=self.config.runtime.skip_if_exists,
+                    last_updated=last_updated,
+                ):
+                    writer.write(
+                        identifier=identifier.lower(),
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+
+            return self.manager.urls, len(writer)

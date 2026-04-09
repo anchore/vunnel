@@ -10,10 +10,15 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils.vulnerability import build_reference_links, vulnerability_element
 
+from .rejections import SecurityRejections
+
 if TYPE_CHECKING:
+    from types import TracebackType
+
     import requests
 
     from vunnel import workspace
@@ -53,14 +58,20 @@ class Parser:
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
     _security_reference_url_ = "https://security.alpinelinux.org/vuln"
 
-    def __init__(
+    _rejections_url_ = "https://gitlab.alpinelinux.org/alpine/security/security-rejections/-/raw/master"
+
+    def __init__(  # noqa: PLR0913
         self,
         workspace: workspace.Workspace,
+        fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
         download_timeout: int = 125,
         url: str | None = None,
         security_reference_url: str | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.source_dir_path = os.path.join(
             workspace.input_path,
@@ -74,10 +85,24 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self._urls = set()
+        self._workspace = workspace
+        self.rejections = SecurityRejections(
+            url=Parser._rejections_url_,
+            workspace=workspace,
+            logger=logger,
+            download_timeout=download_timeout,
+        )
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     @property
     def urls(self) -> list[str]:
-        return list(self._urls)
+        return [*self._urls, *self.rejections.urls]
 
     def build_reference_links(self, vulnerability_id: str) -> list[str]:
         urls = []
@@ -97,6 +122,9 @@ class Parser:
             shutil.rmtree(self.source_dir_path)
         if os.path.exists(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz")):
             os.remove(os.path.join(self.secdb_dir_path, "alpine-secdb-master.tar.gz"))
+
+        self.fixdater.download()
+        self.rejections.download()
 
         links = []
         try:
@@ -212,15 +240,23 @@ class Parser:
         for dbtype, data in dbtype_data_dict.items():
             self.logger.info(f"processing {release}:{dbtype}")
 
+            # build a lookup of rejected (package, cve) pairs so we can skip
+            # secfix entries for CVEs that Alpine has determined do not apply
+            rejected_pairs = set()
+            for pkg_name, cve_ids in self.rejections.get(dbtype).items():
+                for cve_id in cve_ids:
+                    if re.match("^CVE-.*", cve_id):
+                        rejected_pairs.add((pkg_name, cve_id))
+
             if data["packages"]:
                 for el in data["packages"]:
                     pkg_el = el["pkg"]
 
                     pkg = pkg_el["name"]
-                    for pkg_version in pkg_el["secfixes"]:
+                    for fix_version in pkg_el["secfixes"]:
                         vids = []
-                        if pkg_el["secfixes"][pkg_version]:
-                            for rawvid in pkg_el["secfixes"][pkg_version]:
+                        if pkg_el["secfixes"][fix_version]:
+                            for rawvid in pkg_el["secfixes"][fix_version]:
                                 tmp = rawvid.split()
                                 for newvid in tmp:
                                     if newvid not in vids:
@@ -229,6 +265,11 @@ class Parser:
                         for vid in vids:
                             if not re.match("^CVE-.*", vid):
                                 # skip non-CVE records
+                                continue
+
+                            # skip secfix entries for rejected CVEs; the NAK
+                            # will be emitted by _process_rejections instead
+                            if (pkg, vid) in rejected_pairs:
                                 continue
 
                             if vid not in vuln_dict:
@@ -249,14 +290,64 @@ class Parser:
 
                             # SET UP fixedins
                             fixed_el = {}
+                            ecosystem = f"{namespace}:{release}"
                             fixed_el["VersionFormat"] = "apk"
-                            fixed_el["NamespaceName"] = namespace + ":" + str(release)
+                            fixed_el["NamespaceName"] = ecosystem
                             fixed_el["Name"] = pkg
-                            fixed_el["Version"] = pkg_version
+                            fixed_el["Version"] = fix_version
+
+                            candidate = self.fixdater.best(
+                                vuln_id=str(vid),
+                                cpe_or_package=pkg,
+                                fix_version=fix_version,
+                                ecosystem=ecosystem,
+                            )
+                            if candidate:
+                                available = {
+                                    "Date": candidate.date.isoformat(),
+                                    "Kind": candidate.kind,
+                                }
+
+                                fixed_el["Available"] = available
 
                             vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
+            # Process security-rejections for this db_type
+            self._process_rejections(vuln_dict, dbtype, release)
+
         return vuln_dict
+
+    def _process_rejections(self, vuln_dict: dict, dbtype: str, release: str) -> None:
+        """
+        Process security-rejections for a db_type, emitting FixedIn entries with Version: "0" (NAK).
+        """
+        rejections = self.rejections.get(dbtype)
+        for pkg, cve_ids in rejections.items():
+            for vid in cve_ids:
+                if not re.match("^CVE-.*", vid):
+                    continue
+
+                if vid not in vuln_dict:
+                    vuln_dict[vid] = copy.deepcopy(vulnerability_element)
+                    vuln_record = vuln_dict[vid]
+                    reference_links = self.build_reference_links(vid)
+
+                    vuln_record["Vulnerability"]["Name"] = str(vid)
+                    vuln_record["Vulnerability"]["NamespaceName"] = f"{namespace}:{release}"
+
+                    if reference_links:
+                        vuln_record["Vulnerability"]["Link"] = reference_links[0]
+                    vuln_record["Vulnerability"]["Severity"] = "Unknown"
+                else:
+                    vuln_record = vuln_dict[vid]
+
+                fixed_el = {
+                    "VersionFormat": "apk",
+                    "NamespaceName": f"{namespace}:{release}",
+                    "Name": pkg,
+                    "Version": "0",
+                }
+                vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
 
     def get(self):
         """

@@ -22,18 +22,26 @@ import logging
 import os
 import time
 from decimal import Decimal, DecimalException
+from typing import TYPE_CHECKING
 
 import requests
-from cvss import CVSS3
-from cvss.exceptions import CVSS3MalformedError
+from cvss import CVSS3, CVSS4
+from cvss.exceptions import CVSS3MalformedError, CVSS4MalformedError
 
 from vunnel import utils
+from vunnel.tool import fixdate
 from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
+    from vunnel.workspace import Workspace
 
 # this is the ecosystem in GHSA to a syft package type
 ecosystem_map = {
     "COMPOSER": "composer",
+    "ERLANG": "erlang",
     "GO": "go",
     "MAVEN": "java",
     "NPM": "npm",
@@ -51,14 +59,18 @@ GITHUB_RATE_LIMIT_RESET_HEADER = "x-ratelimit-reset"
 
 
 class Parser:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        workspace,
-        token,
-        download_timeout=125,
-        api_url="https://api.github.com/graphql",
-        logger=None,
+        workspace: Workspace,
+        token: str,
+        fixdater: fixdate.Finder | None = None,
+        download_timeout: int = 125,
+        api_url: str = "https://api.github.com/graphql",
+        logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.db = db.connection(workspace.input_path, serializer="json")
         self.download_timeout = download_timeout
         self.api_url = api_url
@@ -69,15 +81,22 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-    def _download(self, vuln_cursor=None):
-        if not self.token:
-            raise ValueError("Github token must be defined")
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
 
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
+    def _download(self, vuln_cursor=None):
         """
         Download the advisories from Github via the GraphQL API, using a cursor
         if it was defined in the class. Advisories stay in memory until
         persisted later in the process.
         """
+        if not self.token:
+            raise ValueError("Github token must be defined")
+
         query = graphql_advisories(timestamp=self.timestamp, cursor=self.cursor, vuln_cursor=vuln_cursor)
 
         return get_query(self.token, query, self.download_timeout, self.api_url)
@@ -159,12 +178,14 @@ class Parser:
                 current_vulnerabilities = node_data.get("vulnerabilities", {}).get("nodes", [])
                 current_vulnerabilities.extend(extra_vulnerabilities)
 
-            parsed = NodeParser(node_data, logger=self.logger).parse()
+            parsed = NodeParser(node_data, self.fixdater, logger=self.logger).parse()
             advisories.append(parsed)
 
         return advisories
 
     def get(self):
+        self.fixdater.download()
+
         # determine if a run was completed by looking for a timestamp
         metadata = self.db.get_metadata()
 
@@ -180,7 +201,7 @@ class Parser:
 
         # Process everything that was persisted first
         for node_data in self.db.get_all():
-            yield NodeParser(node_data.load(), logger=self.logger).parse()
+            yield NodeParser(node_data.load(), self.fixdater, logger=self.logger).parse()
 
         while has_cursor:
             # download graphql data as json, if the timestamp is present, then the
@@ -376,9 +397,15 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
               classification
               summary
               severity
-              cvss {
-                score
-                vectorString
+              cvssSeverities {
+                cvssV3 {
+                    score
+                    vectorString
+                }
+                cvssV4 {
+                    score
+                    vectorString
+                }
               }
               identifiers {
                 type
@@ -457,9 +484,15 @@ def graphql_advisories(cursor=None, timestamp=None, vuln_cursor=None):
           classification
           summary
           severity
-          cvss {{
-            score
-            vectorString
+          cvssSeverities {{
+            cvssV3 {{
+              score
+              vectorString
+            }}
+            cvssV4 {{
+              score
+              vectorString
+            }}
           }}
           identifiers {{
             type
@@ -503,7 +536,7 @@ class NodeParser(dict):
     __parsers__ = (
         "_classification",
         "_severity",
-        "_cvss",
+        "_cvss_severities",
         "_fixedin",
         "_summary",
         "_url",
@@ -511,9 +544,11 @@ class NodeParser(dict):
         "_published",
         "_updated",
         "_withdrawn",
+        "_references",
     )
 
-    def __init__(self, data, logger=None):
+    def __init__(self, data: dict, fixdater: fixdate.Finder, logger: logging.Logger | None = None):
+        self.fixdater = fixdater
         self.description = None
         self.identifier = None
         self.summary = None
@@ -566,7 +601,7 @@ class NodeParser(dict):
         severity = self.data.get("severity")
         self["Severity"] = severity_map.get(severity, "Unknown")
 
-    def _make_cvss(self, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
+    def _make_legacy_cvss(self, cvss_vector: str, vulnerability_id: str) -> CVSS | None:
         try:
             cvss_vector = cvss_vector.removesuffix("/")
             cvss3_obj = CVSS3(cvss_vector)
@@ -584,7 +619,7 @@ class NodeParser(dict):
             )
         except (CVSS3MalformedError, DecimalException, AttributeError):
             self.logger.exception(
-                "error transforming CVSS vector %s, skipping it for %s",
+                "error transforming CVSS v3 vector %s, skipping it for %s",
                 cvss_vector,
                 vulnerability_id,
             )
@@ -592,14 +627,70 @@ class NodeParser(dict):
 
         return cvss_object
 
-    def _cvss(self):
-        cvss = self.data.get("cvss")
+    def _make_cvss_v3(self, cvss_vector: str, vulnerability_id: str) -> dict | None:
+        try:
+            cvss_vector = cvss_vector.removesuffix("/")
+            cvss3_obj = CVSS3(cvss_vector)
+            cvss_object = {
+                "version": f"3.{cvss3_obj.minor_version}",
+                "vector": cvss_vector,
+            }
+        except (CVSS3MalformedError, DecimalException, AttributeError):
+            self.logger.exception(
+                "error transforming CVSS v3 vector %s, skipping it for %s",
+                cvss_vector,
+                vulnerability_id,
+            )
+            cvss_object = None
 
-        if cvss:
-            vector = cvss.get("vectorString")
+        return cvss_object
 
+    def _make_cvss_v4(self, cvss_vector: str, vulnerability_id: str) -> dict | None:
+        try:
+            cvss_vector = cvss_vector.removesuffix("/")
+            v4 = CVSS4(cvss_vector)
+            version = v4.clean_vector().split("/")[0].split(":")[1]
+            cvss_object = {
+                "version": version,
+                "vector": cvss_vector,
+            }
+        except (CVSS4MalformedError, DecimalException, AttributeError):
+            self.logger.exception(
+                "error transforming CVSS v4 vector %s, skipping it for %s",
+                cvss_vector,
+                vulnerability_id,
+            )
+            cvss_object = None
+
+        return cvss_object
+
+    def _make_cvss_severities(self, cvss_severities: dict, vulnerability_id: str) -> list:
+        result: list = []
+        v3 = cvss_severities.get("cvssV3")
+        if v3:
+            vector = v3.get("vectorString")
             if vector:
-                self["CVSS"] = self._make_cvss(vector, self.data.get("ghsaId"))
+                # legacy CVSS needs to stick around until v5 schema db updates stop
+                self["CVSS"] = self._make_legacy_cvss(vector, vulnerability_id)
+                cvss_v3 = self._make_cvss_v3(vector, vulnerability_id)
+                if cvss_v3:
+                    result.append(cvss_v3)
+
+        v4 = cvss_severities.get("cvssV4")
+        if v4:
+            vector = v4.get("vectorString")
+            if vector:
+                cvss_v4 = self._make_cvss_v4(vector, vulnerability_id)
+                if cvss_v4:
+                    result.append(cvss_v4)
+
+        return result
+
+    def _cvss_severities(self):
+        cvss_severities = self.data.get("cvssSeverities")
+
+        if cvss_severities:
+            self["cvss_severities"] = self._make_cvss_severities(cvss_severities, self.data.get("ghsaId"))
 
     def _fixedin(self):
         """
@@ -631,21 +722,35 @@ class NodeParser(dict):
                 self.ecosystems.add(ecosystem)
 
                 try:
-                    identifier = item.get("firstPatchedVersion", {}).get("identifier", "None")
+                    fix_version = item.get("firstPatchedVersion", {}).get("identifier", None)
                 except AttributeError:
-                    identifier = "None"
-                package_name = item.get("package", {}).get("name")
+                    fix_version = None
 
+                package_name = item.get("package", {}).get("name")
                 version_range = item.get("vulnerableVersionRange", "").replace(",", "")
-                self["FixedIn"].append(
-                    {
-                        "name": package_name,
-                        "identifier": identifier,
-                        "ecosystem": ecosystem,
-                        "namespace": f"github:{ecosystem}",
-                        "range": version_range,
-                    },
+
+                record = {
+                    "name": package_name,
+                    "identifier": fix_version or "None",
+                    "ecosystem": ecosystem,
+                    "namespace": f"github:{ecosystem}",
+                    "range": version_range,
+                }
+
+                vid = self.data.get("ghsaId")
+                result = self.fixdater.best(
+                    vuln_id=vid,
+                    cpe_or_package=package_name,
+                    fix_version=fix_version,
+                    ecosystem=ecosystem,
                 )
+                if result:
+                    record["available"] = {
+                        "date": result.date.isoformat(),
+                        "kind": result.kind,
+                    }
+
+                self["FixedIn"].append(record)
             else:
                 # Log vuln skipped for unknown ecosystem
                 self.logger.debug("dropping github vuln from unmapped ecosystem: %s", github_ecosystem)
@@ -661,6 +766,9 @@ class NodeParser(dict):
 
     def _withdrawn(self):
         self["withdrawn"] = self.data.get("withdrawnAt")
+
+    def _references(self):
+        self["references"] = self.data.get("references", [])
 
     def _url(self):
         """

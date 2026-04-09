@@ -11,7 +11,7 @@ from vunnel.providers.bitnami.parser import Parser
 
 @patch("vunnel.providers.bitnami.git.GitWrapper.clone_repo")
 @patch("vunnel.providers.bitnami.git.GitWrapper.delete_repo")
-def test_provider_schema(mock_git_delete, mock_git_clone, helpers):
+def test_provider_schema(mock_git_delete, mock_git_clone, helpers, auto_fake_fixdate_finder, disable_get_requests):
     mock_git_clone.return_value = None
     mock_git_delete.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
@@ -27,7 +27,7 @@ def test_provider_schema(mock_git_delete, mock_git_clone, helpers):
 
 @patch("vunnel.providers.bitnami.git.GitWrapper.clone_repo")
 @patch("vunnel.providers.bitnami.git.GitWrapper.delete_repo")
-def test_parser(mock_git_delete, mock_git_clone, helpers):
+def test_parser(mock_git_delete, mock_git_clone, helpers, disable_get_requests, auto_fake_fixdate_finder):
     mock_git_clone.return_value = None
     mock_git_delete.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
@@ -50,3 +50,18 @@ def test_parser(mock_git_delete, mock_git_clone, helpers):
                          ])
 def test_compatible_schema(schema_version, expected):
     assert Provider.compatible_schema(schema_version) == expected
+
+@patch("vunnel.providers.bitnami.git.GitWrapper.clone_repo")
+@patch("vunnel.providers.bitnami.git.GitWrapper.delete_repo")
+def test_provider_via_snapshot(mock_git_delete, mock_git_clone, helpers, auto_fake_fixdate_finder, disable_get_requests):
+    mock_git_clone.return_value = None
+    mock_git_delete.return_value = None
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+    mock_data_path = helpers.local_dir("test-fixtures")
+    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
+    p.update(None)
+
+    workspace.assert_result_snapshots()

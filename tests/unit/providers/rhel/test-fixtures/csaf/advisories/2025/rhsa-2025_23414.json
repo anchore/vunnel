@@ -1,0 +1,1557 @@
+{
+  "document": {
+    "aggregate_severity": {
+      "namespace": "https://access.redhat.com/security/updates/classification/",
+      "text": "Important"
+    },
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "text": "Copyright © Red Hat, Inc. All rights reserved.",
+      "tlp": {
+        "label": "WHITE",
+        "url": "https://www.first.org/tlp/"
+      }
+    },
+    "lang": "en",
+    "notes": [
+      {
+        "category": "summary",
+        "text": "An update for bind is now available for Red Hat Enterprise Linux 6 Extended Lifecycle Support  - EXTENSION.\n\nRed Hat Product Security has rated this update as having a security impact of Important. A Common Vulnerability Scoring System (CVSS) base score, which gives a detailed severity rating, is available for each vulnerability from the CVE link(s) in the References section.",
+        "title": "Topic"
+      },
+      {
+        "category": "general",
+        "text": "The Berkeley Internet Name Domain (BIND) is an implementation of the Domain Name System (DNS) protocols. BIND includes a DNS server (named); a resolver library (routines for applications to use when interfacing with DNS); and tools for verifying that the DNS server is operating correctly.\n\nSecurity Fix(es):\n\n* bind: DNS forwarders - cache poisoning vulnerability (CVE-2021-25220)\n\n* bind: Cache poisoning attacks with unsolicited RRs (CVE-2025-40778)\n\nFor more details about the security issue(s), including the impact, a CVSS score, acknowledgments, and other related information, refer to the CVE page(s) listed in the References section.",
+        "title": "Details"
+      },
+      {
+        "category": "legal_disclaimer",
+        "text": "This content is licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). If you distribute this content, or a modified version of it, you must provide attribution to Red Hat Inc. and provide a link to the original.",
+        "title": "Terms of Use"
+      }
+    ],
+    "publisher": {
+      "category": "vendor",
+      "contact_details": "https://access.redhat.com/security/team/contact/",
+      "issuing_authority": "Red Hat Product Security is responsible for vulnerability handling across all Red Hat products and services.",
+      "name": "Red Hat Product Security",
+      "namespace": "https://www.redhat.com"
+    },
+    "references": [
+      {
+        "category": "self",
+        "summary": "https://access.redhat.com/errata/RHSA-2025:23414",
+        "url": "https://access.redhat.com/errata/RHSA-2025:23414"
+      },
+      {
+        "category": "external",
+        "summary": "https://access.redhat.com/security/updates/classification/#important",
+        "url": "https://access.redhat.com/security/updates/classification/#important"
+      },
+      {
+        "category": "external",
+        "summary": "2064512",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2064512"
+      },
+      {
+        "category": "external",
+        "summary": "2405827",
+        "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2405827"
+      },
+      {
+        "category": "self",
+        "summary": "Canonical URL",
+        "url": "https://security.access.redhat.com/data/csaf/v2/advisories/2025/rhsa-2025_23414.json"
+      }
+    ],
+    "title": "Red Hat Security Advisory: bind security update",
+    "tracking": {
+      "current_release_date": "2025-12-18T11:16:21+00:00",
+      "generator": {
+        "date": "2025-12-18T11:16:21+00:00",
+        "engine": {
+          "name": "Red Hat SDEngine",
+          "version": "4.6.14"
+        }
+      },
+      "id": "RHSA-2025:23414",
+      "initial_release_date": "2025-12-17T00:17:06+00:00",
+      "revision_history": [
+        {
+          "date": "2025-12-17T00:17:06+00:00",
+          "number": "1",
+          "summary": "Initial version"
+        },
+        {
+          "date": "2025-12-17T00:17:06+00:00",
+          "number": "2",
+          "summary": "Last updated version"
+        },
+        {
+          "date": "2025-12-18T11:16:21+00:00",
+          "number": "3",
+          "summary": "Last generated version"
+        }
+      ],
+      "status": "final",
+      "version": "3"
+    }
+  },
+  "product_tree": {
+    "branches": [
+      {
+        "branches": [
+          {
+            "branches": [
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+                "product": {
+                  "name": "Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+                  "product_id": "6Server-ELS.EXTENSION",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/o:redhat:rhel_els:6"
+                  }
+                }
+              },
+              {
+                "category": "product_name",
+                "name": "Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+                "product": {
+                  "name": "Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+                  "product_id": "6Server-optional-ELS.EXTENSION",
+                  "product_identification_helper": {
+                    "cpe": "cpe:/o:redhat:rhel_els:6"
+                  }
+                }
+              }
+            ],
+            "category": "product_family",
+            "name": "Red Hat Enterprise Linux"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+                "product": {
+                  "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+                  "product_id": "bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind@9.8.2-0.68.rc1.el6_10.17?arch=src&epoch=32"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "src"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-chroot@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-libs@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-utils@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-debuginfo@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-devel@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                "product": {
+                  "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_id": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-sdb@9.8.2-0.68.rc1.el6_10.17?arch=x86_64&epoch=32"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "x86_64"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-libs@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-debuginfo@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-chroot@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-utils@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-devel@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                "product": {
+                  "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_id": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-sdb@9.8.2-0.68.rc1.el6_10.17?arch=i686&epoch=32"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "i686"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-chroot@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-libs@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-utils@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-debuginfo@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-devel@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                "product": {
+                  "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_id": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-sdb@9.8.2-0.68.rc1.el6_10.17?arch=s390x&epoch=32"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "s390x"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version",
+                "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                "product": {
+                  "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                  "product_id": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-libs@9.8.2-0.68.rc1.el6_10.17?arch=s390&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                "product": {
+                  "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                  "product_id": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-debuginfo@9.8.2-0.68.rc1.el6_10.17?arch=s390&epoch=32"
+                  }
+                }
+              },
+              {
+                "category": "product_version",
+                "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                "product": {
+                  "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                  "product_id": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+                  "product_identification_helper": {
+                    "purl": "pkg:rpm/redhat/bind-devel@9.8.2-0.68.rc1.el6_10.17?arch=s390&epoch=32"
+                  }
+                }
+              }
+            ],
+            "category": "architecture",
+            "name": "s390"
+          }
+        ],
+        "category": "vendor",
+        "name": "Red Hat"
+      }
+    ],
+    "relationships": [
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.src as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server -EXTENSION(v. 6 ELS-EXTENSION)",
+          "product_id": "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.src as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686"
+        },
+        "product_reference": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x"
+        },
+        "product_reference": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      },
+      {
+        "category": "default_component_of",
+        "full_product_name": {
+          "name": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64 as a component of Red Hat Enterprise Linux Server Optional -EXTENSION (v. 6 ELS -EXTENSION)",
+          "product_id": "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        },
+        "product_reference": "bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+        "relates_to_product_reference": "6Server-optional-ELS.EXTENSION"
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "acknowledgments": [
+        {
+          "names": [
+            "Baojun Liu",
+            "Chaoyi Lu",
+            "Xiang Li"
+          ],
+          "organization": "Network and Information Security Lab, Tsinghua University",
+          "summary": "Acknowledged by upstream."
+        },
+        {
+          "names": [
+            "Changgen Zou"
+          ],
+          "organization": "Qi An Xin Group Corp",
+          "summary": "Acknowledged by upstream."
+        }
+      ],
+      "cve": "CVE-2021-25220",
+      "cwe": {
+        "id": "CWE-444",
+        "name": "Inconsistent Interpretation of HTTP Requests ('HTTP Request/Response Smuggling')"
+      },
+      "discovery_date": "2022-03-16T00:00:00+00:00",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2064512"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A cache poisoning vulnerability was found in BIND when using forwarders. Bogus NS records supplied by the forwarders may be cached and used by name if it needs to recurse for any reason. This issue causes it to obtain and pass on potentially incorrect answers. This flaw allows a remote high privileged attacker to manipulate cache results with incorrect records, leading to queries made to the wrong servers, possibly resulting in false information received on the client's end.",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "bind: DNS forwarders - cache poisoning vulnerability",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "Versions of BIND shipped with Red Hat Enterprise Linux 8, 9 are affected, because vulnerable code is present in our code base. \n\nFor RHEL-9, DHCP uses the vulnerable BIND 9 libraries (bind-9.11.14) for some services. Hence, it is affected as well.\n\nAuthoritative - Only BIND 9 servers are not vulnerable to this flaw.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        ],
+        "known_not_affected": [
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+          "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+          "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        ]
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2021-25220"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2064512",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2064512"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2021-25220",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2021-25220"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2021-25220",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-25220"
+        },
+        {
+          "category": "external",
+          "summary": "https://kb.isc.org/docs/CVE-2021-25220",
+          "url": "https://kb.isc.org/docs/CVE-2021-25220"
+        }
+      ],
+      "release_date": "2022-03-16T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "date": "2025-12-17T00:17:06+00:00",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ],
+          "restart_required": {
+            "category": "none"
+          },
+          "url": "https://access.redhat.com/errata/RHSA-2025:23414"
+        },
+        {
+          "category": "workaround",
+          "details": "If applicable, modify your configuration to either remove all forwarding or all possibility of recursion. Depending on your use case, it may be possible to use other zone types to replace forward zones.",
+          "product_ids": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "NONE",
+            "baseScore": 6.8,
+            "baseSeverity": "MEDIUM",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "HIGH",
+            "scope": "CHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:N/I:H/A:N",
+            "version": "3.1"
+          },
+          "products": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ]
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Moderate"
+        }
+      ],
+      "title": "bind: DNS forwarders - cache poisoning vulnerability"
+    },
+    {
+      "cve": "CVE-2025-40778",
+      "cwe": {
+        "id": "CWE-347",
+        "name": "Improper Verification of Cryptographic Signature"
+      },
+      "discovery_date": "2025-10-22T15:07:23.729000+00:00",
+      "flags": [
+        {
+          "label": "vulnerable_code_not_present",
+          "product_ids": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ]
+        }
+      ],
+      "ids": [
+        {
+          "system_name": "Red Hat Bugzilla ID",
+          "text": "2405827"
+        }
+      ],
+      "notes": [
+        {
+          "category": "description",
+          "text": "A vulnerability exists in BIND’s DNS resolver logic that makes it overly permissive when accepting resource records (RRs) in responses. Under certain conditions, this flaw allows attackers to inject unsolicited or forged DNS records into the cache. This can be exploited to poison the resolver cache, redirecting clients to malicious domains or unauthorized servers.",
+          "title": "Vulnerability description"
+        },
+        {
+          "category": "summary",
+          "text": "bind: Cache poisoning attacks with unsolicited RRs",
+          "title": "Vulnerability summary"
+        },
+        {
+          "category": "other",
+          "text": "It is classified as Important rather than Critical because its impact is limited to cache poisoning within recursive resolvers and does not allow direct code execution, privilege escalation, or service disruption. The vulnerability affects the accuracy of DNS responses, but not the availability or confidentiality of systems. Additionally, DNSSEC-enabled deployments and restricted recursive access can significantly mitigate exploitation risks. Therefore, while the flaw can misdirect network traffic and compromise trust in name resolution, it does not directly compromise the underlying server or client systems, justifying an Important — but not Critical — severity rating.\n\nTechnical Analysis:\nThe issue arises because BIND fails to strictly validate unsolicited resource records accompanying legitimate DNS responses. This gap allows forged recursive resolvers to be cached as valid entries. Since the attack is remote, requires no authentication, and exploits a low-complexity vector, it is highly impactful in recursive resolver environments—especially those exposed to untrusted clients or open resolvers.",
+          "title": "Statement"
+        },
+        {
+          "category": "general",
+          "text": "The CVSS score(s) listed for this vulnerability do not reflect the associated product's status, and are included for informational purposes to better understand the severity of this vulnerability.",
+          "title": "CVSS score applicability"
+        }
+      ],
+      "product_status": {
+        "fixed": [
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        ],
+        "known_not_affected": [
+          "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+          "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+          "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+          "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+        ]
+      },
+      "references": [
+        {
+          "category": "self",
+          "summary": "Canonical URL",
+          "url": "https://access.redhat.com/security/cve/CVE-2025-40778"
+        },
+        {
+          "category": "external",
+          "summary": "RHBZ#2405827",
+          "url": "https://bugzilla.redhat.com/show_bug.cgi?id=2405827"
+        },
+        {
+          "category": "external",
+          "summary": "https://www.cve.org/CVERecord?id=CVE-2025-40778",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2025-40778"
+        },
+        {
+          "category": "external",
+          "summary": "https://nvd.nist.gov/vuln/detail/CVE-2025-40778",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-40778"
+        }
+      ],
+      "release_date": "2025-10-22T00:00:00+00:00",
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "date": "2025-12-17T00:17:06+00:00",
+          "details": "For details on how to apply this update, which includes the changes described in this advisory, refer to:\n\nhttps://access.redhat.com/articles/11258",
+          "product_ids": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ],
+          "restart_required": {
+            "category": "none"
+          },
+          "url": "https://access.redhat.com/errata/RHSA-2025:23414"
+        },
+        {
+          "category": "workaround",
+          "details": "While it is not possible to eliminate risk from this vulnerability, there are several options for reducing the risk. These include restricting recursive queries to trusted or internal networks only, and apply rate limiting or firewall rules to prevent excessive or repetitive requests. Enabling DNSSEC validation helps reject forged records, while isolating recursive resolvers from authoritative servers limits the impact of potential cache poisoning. Active monitoring of CPU usage, query volume, and cache anomalies can provide early warning of abuse or attacks.",
+          "product_ids": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ]
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "attackComplexity": "LOW",
+            "attackVector": "NETWORK",
+            "availabilityImpact": "NONE",
+            "baseScore": 8.6,
+            "baseSeverity": "HIGH",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "HIGH",
+            "privilegesRequired": "NONE",
+            "scope": "CHANGED",
+            "userInteraction": "NONE",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:N/I:H/A:N",
+            "version": "3.1"
+          },
+          "products": [
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.src",
+            "6Server-optional-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-chroot-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-debuginfo-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-devel-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-libs-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-sdb-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.i686",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.s390x",
+            "6Server-optional-ELS.EXTENSION:bind-utils-32:9.8.2-0.68.rc1.el6_10.17.x86_64"
+          ]
+        }
+      ],
+      "threats": [
+        {
+          "category": "impact",
+          "details": "Important"
+        }
+      ],
+      "title": "bind: Cache poisoning attacks with unsolicited RRs"
+    }
+  ]
+}

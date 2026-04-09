@@ -13,37 +13,43 @@ class OmitNoneORJSONModel(DataClassORJSONMixin):
 
 @dataclass
 class CVSS_V3(DataClassORJSONMixin):
-    attack_complexity: str = field(metadata=field_options(alias="attackComplexity"))
-    attack_vector: str = field(metadata=field_options(alias="attackVector"))
-    availability_impact: str = field(metadata=field_options(alias="availabilityImpact"))
+    # required per CVSS v3.0/v3.1 schema
     base_score: float = field(metadata=field_options(alias="baseScore"))
     base_severity: str = field(metadata=field_options(alias="baseSeverity"))
-    confidentiality_impact: str = field(metadata=field_options(alias="confidentialityImpact"))
-    integrity_impact: str = field(metadata=field_options(alias="integrityImpact"))
-    privileges_required: str = field(metadata=field_options(alias="privilegesRequired"))
-    scope: str = field(metadata=field_options(alias="scope"))
-    user_interaction: str = field(metadata=field_options(alias="userInteraction"))
     vector_string: str = field(metadata=field_options(alias="vectorString"))
     version: str = field(metadata=field_options(alias="version"))
+    # optional per spec (derivable from vector string)
+    attack_complexity: str | None = field(default=None, metadata=field_options(alias="attackComplexity"))
+    attack_vector: str | None = field(default=None, metadata=field_options(alias="attackVector"))
+    availability_impact: str | None = field(default=None, metadata=field_options(alias="availabilityImpact"))
+    confidentiality_impact: str | None = field(default=None, metadata=field_options(alias="confidentialityImpact"))
+    integrity_impact: str | None = field(default=None, metadata=field_options(alias="integrityImpact"))
+    privileges_required: str | None = field(default=None, metadata=field_options(alias="privilegesRequired"))
+    scope: str | None = field(default=None, metadata=field_options(alias="scope"))
+    user_interaction: str | None = field(default=None, metadata=field_options(alias="userInteraction"))
 
     class Config(BaseConfig):
         serialize_by_alias = True  # normal CSAF is snake_case, but embeds camelCase CVSS objects
+        omit_none = True
 
 
 @dataclass
 class CVSS_V2(DataClassORJSONMixin):
-    access_complexity: str = field(metadata=field_options(alias="accessComplexity"))
-    access_vector: str = field(metadata=field_options(alias="accessVector"))
-    authentication: str = field(metadata=field_options(alias="authentication"))
-    availability_impact: str = field(metadata=field_options(alias="availabilityImpact"))
+    # required per CVSS v2.0 schema
     base_score: float = field(metadata=field_options(alias="baseScore"))
-    confidentiality_impact: str = field(metadata=field_options(alias="confidentialityImpact"))
-    integrity_impact: str = field(metadata=field_options(alias="integrityImpact"))
     vector_string: str = field(metadata=field_options(alias="vectorString"))
     version: str = field(metadata=field_options(alias="version"))
+    # optional per spec (derivable from vector string)
+    access_complexity: str | None = field(default=None, metadata=field_options(alias="accessComplexity"))
+    access_vector: str | None = field(default=None, metadata=field_options(alias="accessVector"))
+    authentication: str | None = field(default=None, metadata=field_options(alias="authentication"))
+    availability_impact: str | None = field(default=None, metadata=field_options(alias="availabilityImpact"))
+    confidentiality_impact: str | None = field(default=None, metadata=field_options(alias="confidentialityImpact"))
+    integrity_impact: str | None = field(default=None, metadata=field_options(alias="integrityImpact"))
 
     class Config(BaseConfig):
         serialize_by_alias = True  # normal CSAF is snake_case, but embeds camelCase CVSS objects
+        omit_none = True
 
 
 @dataclass
@@ -112,7 +118,7 @@ class Score(OmitNoneORJSONModel):
 class Vulnerability(OmitNoneORJSONModel):
     title: str
     cve: str
-    cwe: str | None = None
+    cwe: CWE | None = None
     discovery_date: str | None = None
     flags: list[Flag] = field(default_factory=list)
     ids: list[VulnID] = field(default_factory=list)
@@ -174,17 +180,17 @@ class Branch(OmitNoneORJSONModel):
             return self.product.product_id
         return None
 
-    def product_branches(self) -> IterGenerator["Branch", None, None]:
+    def product_branches(self) -> IterGenerator["Branch"]:
         yield self
         for b in self.branches:
             yield from b.product_branches()
 
-    def product_version_branches(self) -> IterGenerator["Branch", None, None]:
+    def product_version_branches(self) -> IterGenerator["Branch"]:
         for b in self.product_branches():
             if b.category == "product_version":
                 yield b
 
-    def product_name_branches(self) -> IterGenerator["Branch", None, None]:
+    def product_name_branches(self) -> IterGenerator["Branch"]:
         for b in self.product_branches():
             if b.category == "product_name":
                 yield b
@@ -215,7 +221,7 @@ class ProductTree(OmitNoneORJSONModel):
             if purl and pid:
                 self.product_id_to_purl[pid] = purl
 
-    def product_branches(self) -> IterGenerator[Branch, None, None]:
+    def product_branches(self) -> IterGenerator[Branch]:
         for b in self.branches:
             yield from b.product_branches()
 
@@ -285,16 +291,16 @@ class Tracking(OmitNoneORJSONModel):
 
 @dataclass
 class Document(OmitNoneORJSONModel):
-    aggregate_severity: AggregateSeverity
     category: str
     csaf_version: str
-    distribution: Distribution
-    lang: str
-    notes: list[Note]
     publisher: Publisher
-    references: list[Reference]
     title: str
     tracking: Tracking
+    aggregate_severity: AggregateSeverity | None = None
+    distribution: Distribution | None = None
+    lang: str | None = None
+    notes: list[Note] = field(default_factory=list)
+    references: list[Reference] = field(default_factory=list)
 
 
 @dataclass

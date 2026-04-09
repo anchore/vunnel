@@ -1,0 +1,22 @@
+{
+  "alias": "FEDORA-2014-15583",
+  "display_name": "",
+  "title": "drupal7-7.34-1.fc21",
+  "notes": "Drupal 7.34 security update",
+  "type": "security",
+  "status": "stable",
+  "severity": "unspecified",
+  "date_submitted": "2014-11-20 13:40:29",
+  "date_modified": "2014-11-22 16:15:51",
+  "date_stable": "2014-12-06 10:05:03",
+  "date_pushed": "2014-12-06 10:05:03",
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2014-15583",
+  "release": {"name": "F21", "version": "21", "id_prefix": "FEDORA"},
+  "bugs": [
+    {"bug_id": 1166101, "security": true, "title": "CVE-2012-6662 drupal7: jquery-ui: XSS vulnerability in default content in Tooltip widget [fedora-all]"},
+    {"bug_id": 1166249, "security": true, "title": "CVE-2014-9015 drupal7: drupal: session hijacking vulnerability (SA-CORE-2014-006) [fedora-all]"},
+    {"bug_id": 1166254, "security": true, "title": "CVE-2014-9016 drupal7: Denial of service in password hashing API (SA-CORE-2014-006)"},
+    {"bug_id": 1166256, "security": true, "title": "CVE-2014-9016 drupal7: Denial of service in password hashing API (SA-CORE-2014-006) [fedora-all]"}
+  ],
+  "builds": [{"nvr": "drupal7-7.34-1.fc21", "type": "rpm", "epoch": 0}]
+}

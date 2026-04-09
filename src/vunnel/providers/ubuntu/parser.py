@@ -12,10 +12,13 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
+
 from .git import GitWrapper
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -39,7 +42,7 @@ _cve_filename_regex = re.compile("CVE-[0-9]+-[0-9]+")
 patch_states = {
     "DNE": False,  # Does Not Exist, the package is does not exist in a particular ubuntu release
     "needs-triage": True,  # Not yet determined if CVE affects package, consider all versions vulnerable until determination is made
-    "ignored": False,  # CVE does not affect the package or no updates (e.g. end-of-life) (NOTE: should still report?)
+    "ignored": True,  # Package is vulnerable but won't be fixed (e.g. end-of-life, no viable solution)
     "not-affected": False,  # The package is related to the issue, but not affected by it.
     "needed": True,  # Package is vuln and needs a fix. No version yet.
     "released": True,  # The package is affected and a fix has been released with the given version.
@@ -87,6 +90,7 @@ ubuntu_version_names = {
     "noble": "24.04",
     "oracular": "24.10",
     "plucky": "25.04",
+    "questing": "25.10",
 }
 
 # driver workspace
@@ -152,6 +156,13 @@ class FixedIn(JsonifierMixin):
         self.VersionFormat = None
         self.Version = None
         self.VendorAdvisory = None
+        self.Available = None
+
+
+class FixAvailability(JsonifierMixin):
+    def __init__(self):
+        self.Date = None
+        self.Kind = None
 
 
 class Severity(enum.IntEnum):
@@ -471,7 +482,7 @@ def parse_severity_from_priority(cve: CVEFile) -> Severity:
     return getattr(Severity, severity)
 
 
-def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # noqa: C901, PLR0912
+def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Logger | None = None):  # noqa: C901, PLR0912, PLR0915
     """
     Maps a parsed CVE dict into a Vulnerability object.
 
@@ -493,6 +504,28 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
     if not (parsed_cve.name):
         logger.error(f"could not find a Name for parsed cve: {asdict(parsed_cve)}")
         return []
+
+    # Build a set of (bare_codename, package) pairs where an ESM variant confirms the
+    # package is not affected. When the main (bare codename) entry is "needs-triage",
+    # we can infer that the package is also not affected on the base release, avoiding
+    # false-positive match-all constraints in grype.
+    #
+    # We only consider entries where the version field is NOT a version string (i.e. it's
+    # a textual reason like "code not present" or empty). Entries with version strings like
+    # "5.4.0-1005.5" mean "fixed at this version" — older versions may still be vulnerable.
+    _esm_prefixes = ("esm-apps/", "esm-infra/", "esm-infra-legacy/")
+    esm_not_affected = set()
+    for ip in parsed_cve.ignored_patches:
+        if ip.status == "not-affected":
+            # Skip entries where the version field looks like an actual package version —
+            # those indicate a fix version, not a blanket "not affected" determination.
+            if ip.version and ip.version[:1].isdigit():
+                continue
+            for prefix in _esm_prefixes:
+                if ip.distro.startswith(prefix):
+                    bare = ip.distro[len(prefix) :]
+                    esm_not_affected.add((bare, ip.package))
+                    break
 
     for p in parsed_cve.patches:
         namespace_name = map_namespace(p.distro)
@@ -527,6 +560,16 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
         # We currently want to mark end-of-support records with no previously known fix as vulnerable, hence the
         # or check_merge step here.
         if check_state(p.status) or check_merge(p):
+            # If the patch is needs-triage but a corresponding ESM entry confirms
+            # the package is not affected, skip emitting a FixedIn record. This
+            # prevents false-positive match-all constraints for packages where
+            # Ubuntu's ESM review determined the vulnerable code is not present.
+            if p.status == "needs-triage" and (p.distro, p.package) in esm_not_affected:
+                logger.debug(
+                    f"skipping needs-triage entry for {parsed_cve.name} {p.distro}/{p.package}: ESM variant confirms not-affected",
+                )
+                continue
+
             pkg = FixedIn()
             pkg.Name = p.package
 
@@ -545,6 +588,18 @@ def map_parsed(parsed_cve: CVEFile, logger: logging.Logger | None = None):  # no
                     )
                     continue
                     # Strange condition where a release was done but no version found. In this case, we'll omit the FixedIn record.
+
+                result = fixdater.best(
+                    vuln_id=r.Name,
+                    cpe_or_package=pkg.Name,
+                    fix_version=pkg.Version,
+                    ecosystem=r.NamespaceName,
+                )
+                if result:
+                    fa = FixAvailability()
+                    fa.Date = result.date.isoformat()
+                    fa.Kind = result.kind
+                    pkg.Available = fa
 
             else:
                 pkg.Version = "None"
@@ -630,6 +685,7 @@ class Parser:
     def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
+        fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
         additional_versions: dict[str, str] | None = None,
         enable_rev_history: bool = True,
@@ -637,6 +693,9 @@ class Parser:
         git_url: str = default_git_url,
         git_branch: str = default_git_branch,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.vc_workspace = os.path.join(workspace.input_path, self._vc_working_dir)
         # TODO: tech debt: this should use the results workspace with the correct schema-aware envelope
         self.norm_workspace = os.path.join(workspace.input_path, self._normalized_cve_dir)
@@ -653,7 +712,16 @@ class Parser:
         self.enable_rev_history = enable_rev_history
         self._max_workers = max_workers
 
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
     def fetch(self, skip_if_exists=False):
+        self.fixdater.download()
+
         # setup merged workspace
         if not os.path.exists(self.norm_workspace):
             os.makedirs(self.norm_workspace)
@@ -673,7 +741,7 @@ class Parser:
         # load merged state and map it to vulnerabilities
         self.logger.info("begin loading processed CVE content and transforming into vulnerabilities")
         for merged_cve in self._merged_cve_iterator():
-            yield from map_parsed(merged_cve, self.logger)
+            yield from map_parsed(merged_cve, self.fixdater, self.logger)
         self.logger.info("finish loading processed CVE content and transforming into vulnerabilities")
 
     def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):  # noqa: C901
@@ -718,7 +786,7 @@ class Parser:
                     futures.append(future)
 
             # wait for all the futures to complete
-            done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
+            done, _not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
 
             if len(done) > 0 and len(done) != len(futures):
                 future = done.pop()
@@ -804,7 +872,7 @@ class Parser:
         if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
             os.remove(os.path.join(self.norm_workspace, cve_id))
 
-    def _merged_cve_iterator(self) -> Generator[CVEFile, None, None]:
+    def _merged_cve_iterator(self) -> Generator[CVEFile]:
         for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
                 cve = orjson.loads(fp.read())

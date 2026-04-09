@@ -1,0 +1,37 @@
+{
+  "identifier": "avg-9999",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "arbitrary filesystem access",
+      "FixedIn": [
+        {
+          "Available": null,
+          "Module": "",
+          "Name": "pam",
+          "NamespaceName": "arch:rolling",
+          "VendorAdvisory": {
+            "AdvisorySummary": [],
+            "NoAdvisory": false
+          },
+          "Version": "None",
+          "VersionFormat": "pacman",
+          "VulnerableRange": null
+        }
+      ],
+      "Link": "https://security.archlinux.org/AVG-9999",
+      "Metadata": {
+        "CVE": [
+          {
+            "Link": "https://nvd.nist.gov/vuln/detail/CVE-2025-6020",
+            "Name": "CVE-2025-6020"
+          }
+        ]
+      },
+      "Name": "AVG-9999",
+      "NamespaceName": "arch:rolling",
+      "Severity": "Medium"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}

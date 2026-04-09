@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/grype-db.tar.zst
+      version: main+import-db=build/vulnerability.db
       takes: SBOM
 
     - name: grype
@@ -52,6 +52,7 @@ grype_db:
 tests:
 
   - provider: alpine
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -79,12 +80,14 @@ tests:
       - alpine:distro:alpine:3.19
       - alpine:distro:alpine:3.20
       - alpine:distro:alpine:3.21
+      - alpine:distro:alpine:3.22
       - alpine:distro:alpine:edge
       - nvd:cpe # alpine lists fixes to NVD entries, so NVD entries are also expected
     validations:
       - *default-validations
 
   - provider: echo
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -96,6 +99,7 @@ tests:
       - *default-validations
 
   - provider: amazon
+    use_cache: true
     validations:
       - <<: *default-validations
         # TODO: docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
@@ -110,7 +114,18 @@ tests:
       - amazon:distro:amazonlinux:2022
       - amazon:distro:amazonlinux:2023
 
+  - provider: arch
+    use_cache: true
+    images:
+      - docker.io/anchore/test_images@sha256:a933b27534e5c911e2c660f7090aa497dee763fbbcb214a37207c2320cfedd98
+    expected_namespaces:
+      - arch:distro:archlinux:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2023
+
   - provider: chainguard
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -124,6 +139,17 @@ tests:
     validations:
       - *default-validations
 
+  - provider: chainguard-libraries
+    use_cache: true
+    additional_providers:
+      - name: github
+        use_cache: true
+    images:
+      - ghcr.io/chainguard-images/scanner-test:python-library-aiohttp-chainguard@sha256:046b2c1b2df1e496eb3abf9e21224ffd879d92abc2bd57401456764d9aa8ddf1
+    validations:
+      - <<: *default-validations
+        max_year: 2025
+
   - provider: debian
     # ideally we would not use cache, however, the in order to test if we are properly keeping the processing
     # of legacy information that is in the debian data cache (for debian 7, 8, and 9) we must test with
@@ -131,7 +157,7 @@ tests:
     use_cache: true
     images:
       - docker.io/debian:7@sha256:81e88820a7759038ffa61cff59dfcc12d3772c3a2e75b7cfe963c952da2ad264
-      - docker.io/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
+      - ghcr.io/anchore/test-images/bitnami/spark:3.2.4-debian-11-r8@sha256:267d5a6345636710b4b57b7fe981c9760203e7e092c705416310ea30a9806d74
     expected_namespaces:
       - debian:distro:debian:7
       - debian:distro:debian:8
@@ -140,9 +166,43 @@ tests:
       - debian:distro:debian:11
       - debian:distro:debian:12
       - debian:distro:debian:13
+      - debian:distro:debian:14
       - debian:distro:debian:unstable
 
+  - provider: fedora
+    use_cache: true
+    images:
+      - docker.io/fedora:40@sha256:2b0571b74dee5d891610276601c6680d622686113488076e7b35c18b455ce879
+    expected_namespaces:
+      - fedora:distro:fedora:21
+      - fedora:distro:fedora:22
+      - fedora:distro:fedora:23
+      - fedora:distro:fedora:24
+      - fedora:distro:fedora:25
+      - fedora:distro:fedora:26
+      - fedora:distro:fedora:27
+      - fedora:distro:fedora:28
+      - fedora:distro:fedora:29
+      - fedora:distro:fedora:30
+      - fedora:distro:fedora:31
+      - fedora:distro:fedora:32
+      - fedora:distro:fedora:33
+      - fedora:distro:fedora:34
+      - fedora:distro:fedora:35
+      - fedora:distro:fedora:36
+      - fedora:distro:fedora:37
+      - fedora:distro:fedora:38
+      - fedora:distro:fedora:39
+      - fedora:distro:fedora:40
+      - fedora:distro:fedora:41
+      - fedora:distro:fedora:42
+      - fedora:distro:fedora:43
+    validations:
+      - <<: *default-validations
+        max_year: 2024
+
   - provider: github
+    use_cache: true
     additional_providers:
       # we need to convert GHSAs to CVEs so that we can filter based on date
       - name: nvd
@@ -178,7 +238,21 @@ tests:
     validations:
       - *default-validations
 
+  - provider: hummingbird
+    images:
+      - quay.io/hummingbird/valkey:latest@sha256:31f6abf2ceef2bf3f86eed3c7492cf4d77f2195cc5571aebf6a37352eead4e03
+      - quay.io/hummingbird/nodejs:latest@sha256:3c798f5a9da72e241f4cbeecc8bd1d653db69d92131ea8d676067b95ae18a5c2
+      - quay.io/hummingbird/postgresql:latest@sha256:6eefb14bced346a8583011f84dd71de8249af74c060369be6ad73891b2a768f0
+    expected_namespaces:
+      - hummingbird:distro:hummingbird:1
+    validations:
+      - <<: *default-validations
+        max_year: 2026 # hummingbird is new
+        max_unlabeled_percent: 25
+
+
   - provider: mariner
+    use_cache: true
     images:
       - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
       - docker.io/anchore/test_images:azurelinux3-63671fe@sha256:2d761ba36575ddd4e07d446f4f2a05448298c20e5bdcd3dedfbbc00f9865240d
@@ -192,6 +266,7 @@ tests:
         candidate_tool_label: custom-db
 
   - provider: minimos
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -209,6 +284,8 @@ tests:
         candidate_tool_label: custom-db
 
   - provider: nvd
+    # building nvd without cache takes ~3 hours
+    use_cache: true
     images:
       - docker.io/busybox:1.28.1@sha256:2107a35b58593c58ec5f4e8f2c4a70d195321078aebfadfbfb223a2ff4a4ed21
     expected_namespaces:
@@ -217,6 +294,7 @@ tests:
       - *default-validations
 
   - provider: oracle
+    use_cache: true
     additional_trigger_globs:
       - src/vunnel/utils/oval_parser.py
     images:
@@ -228,6 +306,7 @@ tests:
       - oracle:distro:oraclelinux:7
       - oracle:distro:oraclelinux:8
       - oracle:distro:oraclelinux:9
+      - oracle:distro:oraclelinux:10
     validations:
       - <<: *default-validations
         # TODO: docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728
@@ -237,6 +316,7 @@ tests:
         fail_on_empty_match_set: false
 
   - provider: rhel
+    use_cache: true
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
     # This will still test incremental updates relative to the nightly cache that is populated.
     additional_trigger_globs:
@@ -259,8 +339,10 @@ tests:
       - redhat:distro:redhat:7
       - redhat:distro:redhat:8
       - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
 
   - provider: sles
+    use_cache: true
     additional_trigger_globs:
       - src/vunnel/utils/oval_v2.py
 
@@ -287,6 +369,7 @@ tests:
       - sles:distro:sles:15.4
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
+      - sles:distro:sles:15.7
     validations:
       - *default-validations
 
@@ -297,6 +380,8 @@ tests:
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
       - docker.io/ubuntu:19.04@sha256:3db17bfc30b41cc18552578f4a66d7010050eb9fdc42bf6c3d82bb0dcdf88d58
+      - docker.io/ubuntu:20.04@sha256:9d42d0e3e57bc067d10a75ee33bdd1a5298e95e5fc3c5d1fce98b455cb879249
+      - docker.io/anchore/test_images:vulnerabilities-ubuntu-20.04-8a033ba@sha256:f0f8e8ee94f8b5d9364f21ceffd50b7db7e19b1938271295eff8229b3cf56db2
       - docker.io/ubuntu:22.04@sha256:aa6c2c047467afc828e77e306041b7fa4a65734fe3449a54aa9c280822b0d87d
       - docker.io/ubuntu:22.10@sha256:80fb4ea0c0a384a3072a6be1879c342bb636b0d105209535ba893ba75ab38ede
       - docker.io/ubuntu:23.04@sha256:09f035f46361d193ded647342903b413d57d05cc06acff8285f9dda9f2d269d5
@@ -326,10 +411,12 @@ tests:
       - ubuntu:distro:ubuntu:23.10
       - ubuntu:distro:ubuntu:24.04
       - ubuntu:distro:ubuntu:24.10
+      - ubuntu:distro:ubuntu:25.04
     validations:
       - *default-validations
 
   - provider: wolfi
+    use_cache: true
     additional_providers:
       - name: nvd
         use_cache: true
@@ -360,6 +447,50 @@ tests:
       - openeuler:distro:openeuler:24.03-lts
       - openeuler:distro:openeuler:24.03-lts-sp1
       - openeuler:distro:openeuler:24.03-lts-sp2
+    validations:
+      - *default-validations
 
+  - provider: alma
+    use_cache: true
+    additional_providers:
+      - name: rhel
+        use_cache: true
+    images:
+      - docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+      - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
+    expected_namespaces:
+      - almalinux:distro:almalinux:8
+      - almalinux:distro:almalinux:9
+      - almalinux:distro:almalinux:10
+      - redhat:distro:redhat:8
+      - redhat:distro:redhat:9
+      - redhat:distro:redhat:10
+    validations:
+      - <<: *default-validations
+        max_year: 2022
+        candidate_tool_label: custom-db
+
+  - provider: photon
+    use_cache: true
+    images:
+      - docker.io/anchore/test_images:photon4-bcdb8f0@sha256:1fcd94525a47fa3fb959e6c82fec473df477d256fbb520ab4d06b69769e52470
+    expected_namespaces:
+      - photon:distro:photon:3.0
+      - photon:distro:photon:4.0
+      - photon:distro:photon:5.0
+    validations:
+      - <<: *default-validations
+        max_year: 2024
+
+  - provider: secureos
+    use_cache: true
+    additional_providers:
+      - name: nvd
+        use_cache: true
+    images:
+      - registry.replicated.com/library/grype-test:20250106@sha256:3339bcd874d21fa3ca5bd20636e793c0c33bd71ace3a18a9a3b3d147b91dd000
+    expected_namespaces:
+      - secureos:distro:secureos:rolling
+      - nvd:cpe
     validations:
       - *default-validations

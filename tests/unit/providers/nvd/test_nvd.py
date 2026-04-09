@@ -81,7 +81,7 @@ def test_require_override_configuration(overrides_enabled, overrides_url, should
         ("test-fixtures/single-entry.json", 1),
     ],
 )
-def test_provider_schema(helpers, mock_data_path, expected_written_entries, disable_get_requests, mocker):
+def test_provider_schema(helpers, mock_data_path, expected_written_entries, disable_get_requests, mocker, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=nvd.Provider.name())
     mock_data_path = helpers.local_dir(mock_data_path)
 
@@ -106,7 +106,7 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries, disa
         ("test-fixtures/full-page.json",),
     ],
 )
-def test_provider_via_snapshot(helpers, mock_data_path, disable_get_requests, mocker):
+def test_provider_via_snapshot(helpers, mock_data_path, disable_get_requests, mocker, auto_fake_fixdate_finder):
     snapshot_name = os.path.basename(mock_data_path).split(".")[0]
 
     workspace = helpers.provider_workspace_helper(

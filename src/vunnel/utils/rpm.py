@@ -166,7 +166,7 @@ def rpm_ver_cmp(a: str | None, b: str | None) -> int:  # noqa: C901,PLR0912,PLR0
         # This is a greedy consumption from the src string. so l_a/l_b will be truncated from the front to
         # construct the a/b_seg
         is_num, a_seg = greedy_find_block(l_a)
-        b_is_num, b_seg = greedy_find_block(l_b, is_num)
+        _b_is_num, b_seg = greedy_find_block(l_b, is_num)
 
         # this cannot happen, as we previously tested to make sure that
         # the first string has a non-null segment

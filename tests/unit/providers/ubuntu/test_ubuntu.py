@@ -281,16 +281,206 @@ class TestUbuntuParser:
             got = parse_multiline_keyvalue(header, split_lines)
             assert got == result
 
-    def test_mapper(self):
+    def test_mapper(self, fake_fixdate_finder):
         with open(self._data_) as f:
             parsed = parse_cve_file("CVE-2017-9996", f.readlines())
 
         parsed.name = "CVE-TEST-123"
-        vulns = map_parsed(parsed)
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
         for i in vulns:
             j = i.json()
             print(json.dumps(j))
             assert j != {"FixedIn": [{}, {}]}
+
+    def test_esm_not_affected_suppresses_needs_triage(self, fake_fixdate_finder):
+        """When a needs-triage patch has a corresponding ESM ignored_patch with
+        not-affected status, map_parsed should NOT emit a FixedIn entry for that
+        package+namespace. This prevents false positives where grype would
+        otherwise match all versions due to the empty constraint from needs-triage.
+
+        Uses normalized data from CVE-2023-5752 (literal output of the merge
+        pipeline). Key entries in that file:
+          patches:         focal/python-pip: needs-triage
+          ignored_patches: esm-apps/focal/python-pip: not-affected (code not present)
+        """
+        fixture = os.path.join(self._location_, "normalized_CVE-2023-5752.json")
+        with open(fixture) as f:
+            parsed = CVEFile.from_dict(json.load(f))
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+
+        # Find the ubuntu:20.04 (focal) vulnerability record
+        focal_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:20.04":
+                focal_vuln = v
+                break
+
+        # The focal record should either not exist or have an empty FixedIn list,
+        # because the ESM data tells us the code is not present.
+        if focal_vuln is not None:
+            fixed_pip = [f for f in focal_vuln.FixedIn if f.Name == "python-pip"]
+            assert fixed_pip == [], (
+                f"Expected no FixedIn for python-pip on focal because esm-apps/focal says not-affected, "
+                f"but got: {[f.json() for f in fixed_pip]}"
+            )
+
+        # Verify jammy (not-affected in patches) still gets a record with empty FixedIn
+        jammy_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:22.04":
+                jammy_vuln = v
+                break
+        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
+        jammy_pip = [f for f in jammy_vuln.FixedIn if f.Name == "python-pip"]
+        assert jammy_pip == [], "jammy python-pip is not-affected, should have no FixedIn entry"
+
+    def test_esm_not_affected_version_string_does_not_suppress(self, fake_fixdate_finder):
+        """When the ESM not-affected entry has a version string (e.g. a kernel
+        version like 4.4.0-2.16), the needs-triage entry should NOT be
+        suppressed. Version strings are ambiguous — they document the archive
+        version, but we can't be sure the determination applies to all versions.
+
+        Uses normalized data from CVE-2021-43057. Key entries:
+          patches:         xenial/linux: needs-triage
+          ignored_patches: esm-infra/xenial/linux: not-affected (4.4.0-2.16)
+        """
+        fixture = os.path.join(self._location_, "normalized_CVE-2021-43057.json")
+        with open(fixture) as f:
+            parsed = CVEFile.from_dict(json.load(f))
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+
+        xenial_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:16.04":
+                xenial_vuln = v
+                break
+
+        assert xenial_vuln is not None, "Expected a vulnerability record for ubuntu:16.04 (xenial)"
+        fixed_linux = [f for f in xenial_vuln.FixedIn if f.Name == "linux"]
+        assert len(fixed_linux) == 1, (
+            f"Expected needs-triage linux on xenial to still produce a FixedIn entry "
+            f"(ESM has version string, not a textual reason), got {len(fixed_linux)}"
+        )
+
+    def test_esm_needs_triage_does_not_suppress(self, fake_fixdate_finder):
+        """When the ESM entry itself is needs-triage (not a definitive
+        determination), the base needs-triage entry should NOT be suppressed.
+
+        Uses normalized data from CVE-2002-2439. Key entries:
+          patches:         jammy/gcc-arm-none-eabi: needs-triage
+          ignored_patches: esm-apps/jammy/gcc-arm-none-eabi: needs-triage
+        """
+        fixture = os.path.join(self._location_, "normalized_CVE-2002-2439.json")
+        with open(fixture) as f:
+            parsed = CVEFile.from_dict(json.load(f))
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+
+        jammy_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:22.04":
+                jammy_vuln = v
+                break
+
+        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
+        fixed_gcc = [f for f in jammy_vuln.FixedIn if f.Name == "gcc-arm-none-eabi"]
+        assert len(fixed_gcc) == 1, (
+            f"Expected needs-triage gcc-arm-none-eabi on jammy to still produce a FixedIn entry "
+            f"(ESM is also needs-triage, not a definitive determination), got {len(fixed_gcc)}"
+        )
+
+    def test_no_esm_counterpart_does_not_suppress(self, fake_fixdate_finder):
+        """When there is no ESM counterpart at all for a needs-triage entry,
+        it should NOT be suppressed.
+
+        Uses normalized data from CVE-2002-2439. Key entries:
+          patches:         questing/gcc-arm-none-eabi: needs-triage
+          ignored_patches: (no esm-*/questing entry for gcc-arm-none-eabi)
+        """
+        fixture = os.path.join(self._location_, "normalized_CVE-2002-2439.json")
+        with open(fixture) as f:
+            parsed = CVEFile.from_dict(json.load(f))
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+
+        questing_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:25.10":
+                questing_vuln = v
+                break
+
+        assert questing_vuln is not None, "Expected a vulnerability record for ubuntu:25.10 (questing)"
+        fixed_gcc = [f for f in questing_vuln.FixedIn if f.Name == "gcc-arm-none-eabi"]
+        assert len(fixed_gcc) == 1, (
+            f"Expected needs-triage gcc-arm-none-eabi on questing to still produce a FixedIn entry "
+            f"(no ESM counterpart exists), got {len(fixed_gcc)}"
+        )
+
+    def test_bare_ignored_produces_fixedin(self, fake_fixdate_finder):
+        """When a patch has status 'ignored' with no version/reason on an active
+        release, it should produce a FixedIn entry with Version='None' and
+        NoAdvisory=True. This covers the case where Ubuntu decides a CVE won't
+        be fixed (e.g. 'no viable solution') but the package is still vulnerable.
+
+        Uses normalized data from CVE-2016-2781. Key entries:
+          patches: jammy/coreutils: ignored (bare, no reason)
+                   noble/coreutils: ignored (bare, no reason)
+                   focal/coreutils: ignored (end of standard support)
+        """
+        fixture = os.path.join(self._location_, "normalized_CVE-2016-2781.json")
+        with open(fixture) as f:
+            parsed = CVEFile.from_dict(json.load(f))
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+
+        # jammy (bare ignored) should produce a FixedIn with NoAdvisory
+        jammy_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:22.04":
+                jammy_vuln = v
+                break
+
+        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
+        fixed_coreutils = [f for f in jammy_vuln.FixedIn if f.Name == "coreutils"]
+        assert len(fixed_coreutils) == 1, (
+            f"Expected bare-ignored coreutils on jammy to produce a FixedIn entry, got {len(fixed_coreutils)}"
+        )
+        assert fixed_coreutils[0].Version == "None", "Expected Version='None' for won't-fix entry"
+        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
+            "Expected NoAdvisory=True for ignored entry"
+        )
+
+        # noble (also bare ignored) should behave the same
+        noble_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:24.04":
+                noble_vuln = v
+                break
+
+        assert noble_vuln is not None, "Expected a vulnerability record for ubuntu:24.04 (noble)"
+        fixed_coreutils = [f for f in noble_vuln.FixedIn if f.Name == "coreutils"]
+        assert len(fixed_coreutils) == 1, (
+            f"Expected bare-ignored coreutils on noble to produce a FixedIn entry, got {len(fixed_coreutils)}"
+        )
+
+        # focal (ignored with EOL reason) should also produce a FixedIn via check_merge
+        focal_vuln = None
+        for v in vulns:
+            if v.NamespaceName == "ubuntu:20.04":
+                focal_vuln = v
+                break
+
+        assert focal_vuln is not None, "Expected a vulnerability record for ubuntu:20.04 (focal)"
+        fixed_coreutils = [f for f in focal_vuln.FixedIn if f.Name == "coreutils"]
+        assert len(fixed_coreutils) == 1, (
+            f"Expected ignored (end of standard support) coreutils on focal to produce a FixedIn entry, "
+            f"got {len(fixed_coreutils)}"
+        )
+        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
+            "Expected NoAdvisory=True for ignored entry with EOL reason"
+        )
 
     def test_checkers(self):
         check_data = [
@@ -535,7 +725,7 @@ def hydrate_git_repo(tmpdir, helpers):
         #         └── cve-2022-41861.json
     ],
 )
-def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker):
+def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker, auto_fake_fixdate_finder):
     path = hydrate_git_repo(mock_data_path)
 
     c = ubuntu.Config()
@@ -550,7 +740,7 @@ def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_wri
     assert ws.result_schemas_valid(require_entries=expected_written_entries > 0)
 
 
-def test_provider_via_snapshot(helpers, hydrate_git_repo, mocker):
+def test_provider_via_snapshot(helpers, hydrate_git_repo, mocker, auto_fake_fixdate_finder):
     path = hydrate_git_repo("test-fixtures/repo-fast-export")
 
     c = ubuntu.Config()

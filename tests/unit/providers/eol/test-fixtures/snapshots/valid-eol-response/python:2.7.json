@@ -1,0 +1,21 @@
+{
+  "identifier": "python:2.7",
+  "item": {
+    "codename": "Legacy",
+    "eolFrom": "2020-01-01",
+    "identifiers": [
+      {
+        "id": "cpe:2.3:a:python:python:*:*:*:*:*:*:*:*",
+        "type": "cpe"
+      }
+    ],
+    "isEol": true,
+    "isLts": false,
+    "isMaintained": false,
+    "label": "2.7 (Legacy)",
+    "name": "2.7",
+    "product": "python",
+    "releaseDate": "2010-07-03"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json"
+}

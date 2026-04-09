@@ -5,19 +5,29 @@ on:
 
   # run 5 AM (UTC) daily
   schedule:
-    - cron:  '0 5 * * *'
+    - cron: "0 5 * * *"
 
 permissions:
   contents: read
 
-jobs:
+concurrency:
+  group: nightly-quality-gate
+  cancel-in-progress: true
 
+jobs:
   select-providers:
-    runs-on: ubuntu-22.04
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
+      multicore-providers: ${{ steps.split-providers.outputs.multicore-providers }}
+      other-providers: ${{ steps.split-providers.outputs.other-providers }}
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -36,18 +46,74 @@ jobs:
           echo $content
           echo "providers=$content" >> $GITHUB_OUTPUT
 
-  validate-provider:
-    runs-on: ubuntu-22.04
+      - name: Split providers by concurrency needs
+        id: split-providers
+        run: |
+          cd tests/quality
+          # use vunnel's tag system to split providers by concurrency needs
+          multicore_providers=$(make all-providers TAG=multicore)
+          other_providers=$(make all-providers TAG='!multicore')
+          echo "multicore-providers=$multicore_providers" >> $GITHUB_OUTPUT
+          echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
+
+  validate-provider-multicore:
+    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=16/ram=32+64/family=c6gd+c5ad+m6gd+c7gd+c5d/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    timeout-minutes: 480
     needs: select-providers
+    if: needs.select-providers.outputs.multicore-providers != '[]'
     strategy:
       matrix:
-        provider: ${{fromJson(needs.select-providers.outputs.providers)}}
+        provider: ${{fromJson(needs.select-providers.outputs.multicore-providers)}}
       fail-fast: false
     permissions:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+          # we need submodules for the quality gate to work (requires vulnerability-match-labels repo)
+          submodules: true
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+        with:
+          go: true
+
+      - name: Run quality gate
+        uses: ./.github/actions/quality-gate
+        with:
+          provider: ${{ matrix.provider }}
+        env:
+          # needed as a secret for the github provider
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  validate-provider:
+    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    timeout-minutes: 480
+    needs: select-providers
+    if: needs.select-providers.outputs.other-providers != '[]'
+    strategy:
+      matrix:
+        provider: ${{fromJson(needs.select-providers.outputs.other-providers)}}
+      fail-fast: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -70,27 +136,55 @@ jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Nightly-Quality-Gate:
-    runs-on: ubuntu-22.04
-    needs: validate-provider
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    needs:
+      - validate-provider
+      - validate-provider-multicore
     if: ${{ always() && !cancelled() }}
     steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
       # based on https://docs.github.com/en/actions/learn-github-actions/contexts#job-context
       # the valid result values are: success, failure, cancelled
       - env:
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
+          VALIDATION_MULTICORE_STATUS: ${{ needs.validate-provider-multicore.result }}
         run: |
           echo "Validations Status: $VALIDATION_STATUS"
-          if [ "$VALIDATION_STATUS" != "success" ]; then
+          echo "Validations Multicore Status: $VALIDATION_MULTICORE_STATUS"
+          # allow "skipped" status since empty matrices result in skipped jobs
+          case "$VALIDATION_STATUS" in
+            success|skipped) ;;
+            *) fail=1 ;;
+          esac
+          case "$VALIDATION_MULTICORE_STATUS" in
+            success|skipped) ;;
+            *) fail=1 ;;
+          esac
+          if [ "$fail" = 1 ]; then
             echo "🔴 Quality gate FAILED! 😭"
             exit 1
           fi
           echo "🟢 Quality gate passed!"
 
-      - uses: 8398a7/action-slack@1750b5085f3ec60384090fb7c52965ef822e869e #v3.18.0
+      - name: Notify Slack on failure
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
         if: ${{ failure() }}
         with:
-          status: ${{ job.status }}
-          fields: repo,workflow,action,eventName
-          text: "Vunnel nightly quality gate has failed: https://github.com/anchore/vunnel/actions/workflows/nightly-quality-gate.yaml"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_TOOLBOX_WEBHOOK_URL }}
+          webhook: ${{ secrets.SLACK_TOOLBOX_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "Vunnel nightly quality gate has failed"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: |
+                    *Vunnel nightly quality gate has failed*
+                    • Repo: `${{ github.repository }}`
+                    • Workflow: `${{ github.workflow }}`
+                    • Event: `${{ github.event_name }}`
+                    • <https://github.com/anchore/vunnel/actions/workflows/nightly-quality-gate.yaml|View Workflow>

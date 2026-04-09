@@ -1,0 +1,35 @@
+{
+  "alias": "FEDORA-2025-ddd4444444",
+  "display_name": "java-17-openjdk security update",
+  "title": "java-17-openjdk-17.0.14.0.7-1.fc40",
+  "notes": "January 2025 CPU update",
+  "severity": "important",
+  "type": "security",
+  "status": "stable",
+  "date_submitted": "2025-01-20 10:00:00",
+  "date_modified": null,
+  "date_stable": "2025-01-25 12:00:00",
+  "date_pushed": "2025-01-25 12:00:00",
+  "date_testing": "2025-01-21 03:00:00",
+  "date_approved": null,
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2025-ddd4444444",
+  "release": {
+    "name": "F40",
+    "version": "40",
+    "id_prefix": "FEDORA"
+  },
+  "bugs": [
+    {
+      "bug_id": 2000001,
+      "security": true,
+      "title": "CVE-2025-9999 java-17-openjdk: vulnerability in JVM [fedora-40]"
+    }
+  ],
+  "builds": [
+    {
+      "nvr": "java-17-openjdk-17.0.14.0.7-1.fc40",
+      "type": "rpm",
+      "epoch": 1
+    }
+  ]
+}

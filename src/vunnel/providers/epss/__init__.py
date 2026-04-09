@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .manager import Manager
 
@@ -50,13 +51,18 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "epss"
 
-    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            for vuln_id, record in self.manager.get():
-                writer.write(
-                    identifier=vuln_id.lower(),  # type: ignore[union-attr]
-                    schema=self.__schema__,
-                    payload=record,
-                )
+    @classmethod
+    def tags(cls) -> list[str]:
+        return ["auxiliary"]
 
-        return self.manager.urls, len(writer)
+    def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer:
+                for vuln_id, record in self.manager.get():
+                    writer.write(
+                        identifier=vuln_id.lower(),  # type: ignore[union-attr]
+                        schema=self.__schema__,
+                        payload=record,
+                    )
+
+            return self.manager.urls, len(writer)

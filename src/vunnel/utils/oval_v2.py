@@ -64,6 +64,7 @@ class OVALParserConfig:
     description_xpath_query: str = "{0}metadata/{0}description"
     cve_xpath_query: str = "{0}metadata/{0}advisory/{0}cve"
     criteria_xpath_query: str = "{0}criteria"
+    issued_date_xpath_query: str = "{0}metadata/{0}advisory/{0}issued"
 
 
 @dataclass
@@ -148,7 +149,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
         criteria_element = xml_element.find(config.criteria_xpath_query.format(oval_ns))
         results = []
 
-        if not criteria_element:
+        if criteria_element is None or len(criteria_element) == 0:
             return results
 
         operator = criteria_element.attrib.get("operator")

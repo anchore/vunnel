@@ -1,0 +1,35 @@
+{
+  "identifier": "chainguard-libraries:pypi/CGA-48gh-376r-gw73",
+  "item": {
+    "document": {
+      "last_updated": "2025-08-29T22:13:16.561Z",
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:pypi/joblib@1.0.0%2Bcgr.1"
+          }
+        }
+      ],
+      "status": "fixed",
+      "timestamp": "2025-08-29T22:13:16.561Z",
+      "vulnerability": {
+        "@id": "https://images.chainguard.dev/security/CGA-48gh-376r-gw73",
+        "aliases": [
+          "CVE-2022-21797",
+          "GHSA-6hrg-qmvc-2xh8"
+        ],
+        "name": "CGA-48gh-376r-gw73"
+      }
+    },
+    "fixes": [
+      {
+        "available": {
+          "date": "2025-08-29",
+          "kind": "advisory"
+        },
+        "product": "pkg:pypi/joblib@1.0.0%2Bcgr.1"
+      }
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/annotated-openvex/schema-1.0.0.json"
+}

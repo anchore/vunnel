@@ -6,12 +6,17 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
+from vunnel.utils import osv
+
+from .git import GitWrapper
+
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
-from .git import GitWrapper
 
 namespace = "bitnami"
 
@@ -20,7 +25,15 @@ class Parser:
     _git_src_url_ = "https://github.com/bitnami/vulndb.git"
     _git_src_branch_ = "main"
 
-    def __init__(self, ws: Workspace, logger: logging.Logger | None = None):
+    def __init__(
+        self,
+        ws: Workspace,
+        fixdater: fixdate.Finder | None = None,
+        logger: logging.Logger | None = None,
+    ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
+        self.fixdater = fixdater
         self.workspace = ws
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
@@ -36,7 +49,14 @@ class Parser:
             logger=self.logger,
         )
 
-    def _load(self) -> Generator[dict[str, Any], None, None]:
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
+
+    def _load(self) -> Generator[dict[str, Any]]:
         self.logger.info("loading data from git repository")
 
         vuln_data_dir = os.path.join(self.workspace.input_path, "vulndb", "data")
@@ -57,12 +77,15 @@ class Parser:
         vuln_schema = vuln_entry["schema_version"]
         return vuln_id, vuln_schema, vuln_entry
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
 
+        self.fixdater.download()
+
         # Load the data from the git repository
         for vuln_entry in self._load():
             # Normalize the loaded data
+            osv.patch_fix_date(vuln_entry, self.fixdater)
             yield self._normalize(vuln_entry)

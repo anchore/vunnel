@@ -1,4 +1,9 @@
 rules:
+  unpinned-uses:
+    config:
+      policies:
+        # anchore/workflows is an internal repository; using @main is acceptable
+        anchore/*: any
   template-injection:
     ignore:
       # Allow provider name in step names for debugging purposes

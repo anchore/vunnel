@@ -8,7 +8,7 @@ import os
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 from vunnel.utils import archive, hasher
@@ -17,6 +17,9 @@ from vunnel.utils import http_wrapper as http
 from . import distribution, result, workspace
 from . import schema as schema_def
 from .result import ResultStatePolicy
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
 class OnErrorAction(str, enum.Enum):
@@ -73,9 +76,10 @@ class RuntimeConfig:
     # skip downloading any data; useful for working on a provider with a slow download step
     skip_download: bool = False
 
-    import_results_host: Optional[str] = None  # noqa: UP007 - breaks mashumaro
-    import_results_path: Optional[str] = None  # noqa: UP007 - breaks mashumaro
-    import_results_enabled: Optional[bool] = None  # noqa: UP007 - breaks mashumaro
+    import_results_host: str | None = None
+    import_results_path: str | None = None
+    import_results_enabled: bool | None = None
+    user_agent: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.existing_input, InputStatePolicy):
@@ -133,6 +137,12 @@ class Provider(abc.ABC):
         if runtime_cfg.skip_download and not self.__class__.supports_skip_download():
             self.logger.warning(f"skip_download is not supported by {self.name()}")
 
+    def __enter__(self) -> Provider:
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        return None
+
     @classmethod
     def version(cls) -> int:
         return cls.__version__ + (cls.distribution_version() - 1)
@@ -150,6 +160,11 @@ class Provider(abc.ABC):
         provider itself (which is valid during processing, but not strictly interpreting results)."""
         workspace_version = int(schema_def.ProviderStateSchema().major_version)
         return (workspace_version - 1) + cls.__distribution_version__
+
+    @classmethod
+    def schema(cls) -> schema_def.Schema | None:
+        """Return the schema object for this provider, or None if not defined."""
+        return getattr(cls, "__schema__", None)
 
     @classmethod
     @abc.abstractmethod
@@ -361,3 +376,23 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
     archive.extract(archive_path, unarchive_path)
 
     return unarchive_path
+
+
+@runtime_checkable
+class HasTags(Protocol):
+    """Protocol for providers that support tags/labels."""
+
+    @classmethod
+    def tags(cls) -> list[str]:
+        """Return a list of tag names for this provider."""
+        ...
+
+
+def get_provider_tags(provider_cls: type[Provider]) -> list[str]:
+    """Safely retrieve tags from a provider class.
+
+    Returns an empty list if the provider doesn't implement tags.
+    """
+    if isinstance(provider_cls, HasTags):
+        return provider_cls.tags()
+    return []

@@ -6,13 +6,14 @@ import json
 import logging
 import sys
 from dataclasses import dataclass
+from importlib.metadata import version
 from typing import Any
 
 import click
 import yaml
 
 from vunnel import __name__ as package_name
-from vunnel import providers
+from vunnel import provider, providers
 from vunnel.cli import config
 
 
@@ -22,7 +23,7 @@ from vunnel.cli import config
 @click.version_option(package_name=package_name, message="%(prog)s %(version)s")
 @click.pass_context
 def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
-    import logging.config
+    import logging.config  # noqa: PLC0415 - intentional: avoid polluting logging state when vunnel is used as a library
 
     # TODO: config parsing
     ctx.obj = config.load(path=config_path)
@@ -83,6 +84,8 @@ def cli(ctx: click.core.Context, verbose: bool, config_path: str) -> None:
             },
         },
     )
+
+    logging.debug("vunnel@%s", version("vunnel"))
 
     providers.load_plugins()
 
@@ -149,14 +152,14 @@ def show_config(cfg: config.Application) -> None:
 @click.option("--skip-download", is_flag=True, help="skip downloading data", default=False)
 @click.pass_obj
 def run_provider(cfg: config.Application, provider_name: str, skip_download: bool) -> None:
-    logging.info(f"running {provider_name} provider")
+    logging.info(f"running {provider_name} provider in {cfg.root}")
     config = cfg.providers.get(provider_name)
     # technically config has type Any | None, so double check to appease mypy
     if config and config.runtime and hasattr(config.runtime, "skip_download"):
         config.runtime.skip_download = skip_download
 
-    provider = providers.create(provider_name, cfg.root, config=config)
-    provider.run()
+    with providers.create(provider_name, cfg.root, config=config) as provider:
+        provider.run()
 
 
 @cli.command(name="clear", help="clear provider state")
@@ -171,13 +174,13 @@ def clear_provider(cfg: config.Application, provider_names: str, _input: bool, r
     for provider_name in provider_names:
         logging.info(f"clearing {provider_name} provider state")
 
-        provider = providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name))
-        if not _input and not result:
-            provider.workspace.clear()
-        elif _input:
-            provider.workspace.clear_input()
-        elif result:
-            provider.workspace.clear_results()
+        with providers.create(provider_name, cfg.root, config=cfg.providers.get(provider_name)) as provider:
+            if not _input and not result:
+                provider.workspace.clear()
+            elif _input:
+                provider.workspace.clear_input()
+            elif result:
+                provider.workspace.clear_results()
 
 
 @cli.command(name="status", help="describe current provider state")
@@ -220,15 +223,14 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
     results = {}
     for _idx, name in enumerate(selected_names):
         try:
-            provider = providers.create(name, cfg.root, config=cfg.providers.get(name))
-
-            state = provider.workspace.state()
-            if not state:
-                raise FileNotFoundError("no state found")
-            results[name] = CurrentState(
-                count=state.result_count(provider.workspace.path),
-                date=state.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            )
+            with providers.create(name, cfg.root, config=cfg.providers.get(name)) as provider:
+                state = provider.workspace.state()
+                if not state:
+                    raise FileNotFoundError("no state found")
+                results[name] = CurrentState(
+                    count=state.result_count(provider.workspace.path),
+                    date=state.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                )
         except FileNotFoundError:
             if not show_empty:
                 continue
@@ -263,7 +265,45 @@ def status_provider(cfg: config.Application, provider_names: str, show_empty: bo
 
 
 @cli.command(name="list", help="list available providers")
+@click.option(
+    "--tag",
+    "-t",
+    "tags",
+    multiple=True,
+    help="filter by tag (can repeat). Prefix with '!' to exclude (e.g., -t !auxiliary)",
+)
+@click.option(
+    "--output",
+    "-o",
+    "output_format",
+    type=click.Choice(["list", "json"]),
+    default="list",
+    help="output format",
+)
 @click.pass_obj
-def list_providers(cfg: config.Application) -> None:
-    for p in providers.names():
-        print(p)
+def list_providers(cfg: config.Application, tags: tuple[str, ...], output_format: str) -> None:
+    try:
+        provider_names = providers.providers_with_tags(list(tags)) if tags else providers.names()
+    except ValueError as e:
+        raise click.ClickException(str(e)) from e
+
+    if output_format == "json":
+        output: dict[str, list[dict[str, Any]]] = {"providers": []}
+        for name in provider_names:
+            cls = providers.provider_class(name)
+            schema = cls.schema()
+            output["providers"].append(
+                {
+                    "name": name,
+                    "version": cls.version(),
+                    "schema": {
+                        "name": schema.name if schema else "",
+                        "version": schema.version if schema else "",
+                    },
+                    "tags": provider.get_provider_tags(cls),
+                },
+            )
+        print(json.dumps(output, indent=2))  # noqa: TID251
+    else:
+        for p in provider_names:
+            print(p)

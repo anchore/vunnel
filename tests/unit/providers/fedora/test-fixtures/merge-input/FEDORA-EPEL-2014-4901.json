@@ -1,0 +1,22 @@
+{
+  "alias": "FEDORA-EPEL-2014-4901",
+  "display_name": "",
+  "title": "mingw-binutils-2.25-1.el7",
+  "notes": "Fix various CVEs",
+  "type": "security",
+  "status": "stable",
+  "severity": "unspecified",
+  "date_submitted": "2014-12-23 14:51:04",
+  "date_modified": "2014-12-31 17:23:29",
+  "date_stable": "2015-01-09 02:59:54",
+  "date_pushed": "2015-01-09 02:59:54",
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-EPEL-2014-4901",
+  "release": {"name": "EPEL-7", "version": "7", "id_prefix": "FEDORA-EPEL"},
+  "bugs": [
+    {"bug_id": 1162583, "security": true, "title": "CVE-2014-8501 mingw-binutils: binutils: out-of-bounds write when parsing specially crafted PE executable [epel-all]"},
+    {"bug_id": 1162606, "security": true, "title": "CVE-2014-8502 mingw-binutils: binutils: heap overflow in objdump [epel-all]"},
+    {"bug_id": 1162619, "security": true, "title": "CVE-2014-8503 mingw-binutils: binutils: stack overflow in objdump when parsing specially crafted ihex file [epel-all]"},
+    {"bug_id": 1162630, "security": true, "title": "CVE-2014-8504 mingw-binutils: binutils: stack overflow in the SREC parser [epel-all]"}
+  ],
+  "builds": [{"nvr": "mingw-binutils-2.25-1.el7", "type": "rpm", "epoch": 0}]
+}

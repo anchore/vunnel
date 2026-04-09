@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 from cvss import CVSS3
-from tqdm import tqdm
 
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import vulnerability
@@ -85,7 +84,7 @@ class Parser:
         # download all cve files, for example, `2025/csaf-openeuler-cve-2025-0237.json`
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = {executor.submit(self._fetch_and_write_cve, file): file for file in files}
-            for future in tqdm(as_completed(futures), total=len(files), desc=f"Downloading {self.namespace} CVE files"):
+            for future in as_completed(futures):
                 file = futures[future]
                 # record all stored file paths
                 if future.result():

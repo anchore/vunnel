@@ -1,0 +1,21 @@
+{
+  "alias": "FEDORA-2023-6d4055d482",
+  "display_name": "",
+  "title": "httpd-2.4.55-1.fc36",
+  "notes": "new version 2.4.55",
+  "type": "security",
+  "status": "stable",
+  "severity": "medium",
+  "date_submitted": "2023-01-25 20:12:03",
+  "date_modified": null,
+  "date_stable": "2023-02-03 01:39:02",
+  "date_pushed": "2023-02-03 01:39:02",
+  "url": "https://bodhi.fedoraproject.org/updates/FEDORA-2023-6d4055d482",
+  "release": {"name": "F36", "version": "36", "id_prefix": "FEDORA"},
+  "bugs": [
+    {"bug_id": 2162094, "security": true, "title": "CVE-2022-37436 httpd: mod_proxy: HTTP response splitting [fedora-all]"},
+    {"bug_id": 2162098, "security": true, "title": "CVE-2006-20001 httpd: mod_dav: out-of-bounds read/write of zero byte [fedora-all]"},
+    {"bug_id": 2162100, "security": true, "title": "CVE-2022-36760 httpd: mod_proxy_ajp: possible request smuggling [fedora-all]"}
+  ],
+  "builds": [{"nvr": "httpd-2.4.55-1.fc36", "type": "rpm", "epoch": 0}]
+}

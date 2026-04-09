@@ -28,7 +28,7 @@ def path_traversal_tar(tmpdir):
     return tar
 
 
-@patch("requests.get")
+@patch("vunnel.providers.nvd.overrides.http.get")
 def test_overrides_disabled(mock_requests, tmpdir):
     subject = overrides.NVDOverrides(
         enabled=False,
@@ -46,7 +46,7 @@ def test_overrides_disabled(mock_requests, tmpdir):
     assert subject.cves() == []
 
 
-@patch("requests.get")
+@patch("vunnel.providers.nvd.overrides.http.get")
 def test_overrides_enabled(mock_requests, overrides_tar, tmpdir):
     mock_requests.return_value = MagicMock(status_code=200, iter_content=lambda: [open(overrides_tar, "rb").read()])
     subject = overrides.NVDOverrides(

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as ET
 
+from vunnel.utils import date
 from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
@@ -126,7 +127,7 @@ def _parse_severity(def_element, oval_ns, vuln_id: str, config: Config) -> str:
     return severity
 
 
-def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912
+def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912, C901
     oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
 
     def_version = def_element.attrib["version"]
@@ -174,16 +175,20 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
             v["Vulnerability"]["Metadata"]["CVE"] = cves
 
         if ns_pkgs_dict and ns_name in ns_pkgs_dict:
-            v["Vulnerability"]["FixedIn"] = [
-                {
+            fixed_in_list = []
+            for x in ns_pkgs_dict[ns_name]:
+                fixed_el = {
                     "Name": x[0],
                     "Version": x[1],
                     "Module": x[2],
                     "VersionFormat": "rpm",  # hard code version format for now
                     "NamespaceName": ns_name,
                 }
-                for x in ns_pkgs_dict[ns_name]
-            ]
+                # add Available object if fix version exists and issued date is available
+                if x[1] != "None" and issued:
+                    fixed_el["Available"] = {"Date": date.normalize_date(issued), "Kind": "advisory"}
+                fixed_in_list.append(fixed_el)
+            v["Vulnerability"]["FixedIn"] = fixed_in_list
         else:
             logger.warning(f"No affected packages found for {name}, this is unusual")
 

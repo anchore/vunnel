@@ -6,7 +6,8 @@ import os
 import shutil
 import sqlite3
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Optional
+from importlib import metadata
+from typing import TYPE_CHECKING
 
 import orjson
 import xxhash
@@ -17,7 +18,6 @@ from vunnel import utils
 from vunnel.utils import hasher
 
 if TYPE_CHECKING:
-    import types
     from collections.abc import Generator
 
 METADATA_FILENAME = "metadata.json"
@@ -40,24 +40,14 @@ class State(DataClassDictMixin):
     version: int = 1
     distribution_version: int = 1
     processor: str | None = None
-    listing: Optional[File] = None  # noqa:UP007  # why use Optional? mashumaro does not support this on python 3.9
+    listing: File | None = None
     schema: schema_def.Schema = field(default_factory=schema_def.ProviderStateSchema)
     stale: bool = False
 
     def __post_init__(self) -> None:
         if not self.processor:
-            metadata: types.ModuleType
             package_name = "vunnel"
-            version = "dev"
             try:
-                from importlib import metadata
-            except ImportError:
-                # Python < 3.8
-                import importlib_metadata as metadata
-
-            try:
-                if not metadata:
-                    raise metadata.PackageNotFoundError
                 version = metadata.version(package_name)
             except metadata.PackageNotFoundError:
                 version = "unknown"
@@ -95,7 +85,7 @@ class State(DataClassDictMixin):
 
         return metadata_path
 
-    def result_files(self, root: str) -> Generator[File, File, None]:
+    def result_files(self, root: str) -> Generator[File, File]:
         if self.listing:
             full_path = os.path.join(root, self.listing.path)
             with open(full_path) as f:
@@ -108,10 +98,17 @@ class State(DataClassDictMixin):
             full_path = os.path.join(root, self.listing.path)
             with open(full_path) as f:
                 for _digest, filepath in (line.split() for line in f.readlines()):
-                    if filepath.endswith(".db"):
+                    if filepath.endswith("results.db"):
                         # open up the sqlite db and count the records in the "results" table
-                        with sqlite3.connect(os.path.join(root, filepath)) as db:
-                            count += db.execute("SELECT COUNT(*) FROM results").fetchone()[0]
+                        db_path = os.path.join(root, filepath)
+                        if os.path.exists(db_path):
+                            with sqlite3.connect(db_path) as db:
+                                query = "SELECT COUNT(*) FROM results"
+                                result = db.execute(query).fetchone()
+                                count += result[0]
+                        # if file doesn't exist, treat as regular file
+                        else:
+                            count += 1
                     else:
                         count += 1
 

@@ -1,0 +1,86 @@
+{
+  "result": [
+    {
+      "name": "python",
+      "identifiers": [
+        {"type": "cpe", "id": "cpe:2.3:a:python:python:*:*:*:*:*:*:*:*"}
+      ],
+      "releases": [
+        {
+          "name": "3.12",
+          "codename": "Stable",
+          "label": "3.12 (Stable)",
+          "releaseDate": "2023-10-02",
+          "isLts": false,
+          "isEol": false,
+          "eolFrom": "2028-10-01",
+          "isMaintained": true
+        },
+        {
+          "name": "3.11",
+          "codename": "Feature Complete",
+          "label": "3.11 (Feature Complete)",
+          "releaseDate": "2022-10-24",
+          "isLts": false,
+          "isEol": false,
+          "eolFrom": "2027-10-24",
+          "isMaintained": true
+        },
+        {
+          "name": "2.7",
+          "codename": "Legacy",
+          "label": "2.7 (Legacy)",
+          "releaseDate": "2010-07-03",
+          "isLts": false,
+          "isEol": true,
+          "eolFrom": "2020-01-01",
+          "isMaintained": false
+        }
+      ]
+    },
+    {
+      "name": "ubuntu",
+      "identifiers": [
+        {"type": "cpe", "id": "cpe:2.3:o:canonical:ubuntu_linux:*:*:*:*:*:*:*:*"}
+      ],
+      "releases": [
+        {
+          "name": "24.04",
+          "codename": "Noble Numbat",
+          "label": "24.04 LTS (Noble Numbat)",
+          "releaseDate": "2024-04-25",
+          "isLts": true,
+          "isEol": false,
+          "eolFrom": "2029-04-25",
+          "isEoas": false,
+          "eoasFrom": "2034-04-25",
+          "isMaintained": true
+        },
+        {
+          "name": "22.04",
+          "codename": "Jammy Jellyfish",
+          "label": "22.04 LTS (Jammy Jellyfish)",
+          "releaseDate": "2022-04-21",
+          "isLts": true,
+          "isEol": false,
+          "eolFrom": "2027-04-21",
+          "isEoas": false,
+          "eoasFrom": "2032-04-21",
+          "isMaintained": true
+        },
+        {
+          "name": "18.04",
+          "codename": "Bionic Beaver",
+          "label": "18.04 LTS (Bionic Beaver)",
+          "releaseDate": "2018-04-26",
+          "isLts": true,
+          "isEol": true,
+          "eolFrom": "2023-04-26",
+          "isEoas": true,
+          "eoasFrom": "2028-04-26",
+          "isMaintained": false
+        }
+      ]
+    }
+  ]
+}

@@ -5,8 +5,11 @@ import contextlib
 import copy
 import logging
 import os
+import queue
 import re
+import threading
 from collections import namedtuple
+from datetime import UTC
 from datetime import datetime as dt
 from decimal import Decimal as D
 from typing import TYPE_CHECKING
@@ -17,11 +20,14 @@ from dateutil import parser as dt_parser
 
 from vunnel import utils
 from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import rpm
 from vunnel.utils.vulnerability import vulnerability_element
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     import requests
 
     from .rhsa_provider import RHSAProvider
@@ -39,6 +45,7 @@ class Parser:
     __cve_rhel_product_name_base__ = "Red Hat Enterprise Linux"
     __rhel_release_pattern__ = re.compile(__cve_rhel_product_name_base__ + r"\s*(\d+)$")
     __rhel_eus_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+\.\d+) Extended Update Support")
+    __rhel_els_pattern__ = re.compile(r"Red Hat Enterprise Linux (\d+) Extended Lifecycle Support")
     __summary_url__ = "https://access.redhat.com/hydra/rest/securitydata/cve.json"
     __last_synced_filename__ = "last_synced"
     __cve_download_error_filename__ = "failed_cves"
@@ -54,8 +61,10 @@ class Parser:
     def __init__(  # noqa: PLR0913
         self,
         workspace,
+        fixdater: fixdate.Finder | None = None,
         download_timeout=None,
         max_workers=None,
+        csaf_max_workers: int | None = None,
         full_sync_interval=None,
         skip_namespaces=None,
         rhsa_provider_type=None,
@@ -64,10 +73,14 @@ class Parser:
         skip_download: bool = False,
     ):
         self.workspace = workspace
+        if not fixdater:
+            fixdater = fixdate.default_finder(workspace)
+        self.fixdater = fixdater
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
         self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
         self.download_timeout = download_timeout if isinstance(download_timeout, int) else 125
         self.max_workers = max_workers if isinstance(max_workers, int) else 4
+        self.csaf_max_workers = csaf_max_workers if csaf_max_workers is not None else 16
         self.full_sync_interval = full_sync_interval if isinstance(full_sync_interval, int) else 2
         self.skip_namespaces = skip_namespaces if isinstance(skip_namespaces, list) else ["rhel:3", "rhel:4"]
         self.rhsa_dict = None
@@ -81,6 +94,13 @@ class Parser:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download_minimal_cves(self, page, limit=1000):
         path_params = {"per_page": str(limit), "page": page, "product": self.__cve_rhel_product_name_base__}
@@ -190,7 +210,7 @@ class Parser:
         :return:
         """
 
-        now = dt.utcnow()  # noqa: DTZ003
+        now = dt.now(UTC)
 
         # setup workspace for full cves
         full_cve_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)
@@ -228,6 +248,11 @@ class Parser:
         )
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
+
+        if self.skip_download:
+            self.logger.warning("skip download requested, but fix date finder does not support skipping download")
+        else:
+            self.fixdater.download()
 
         count = self._download_minimal_cve_pages()
 
@@ -346,7 +371,13 @@ class Parser:
                 self.logger.warning("skip download requested, but OVAL RHSA provider does not support skipping download")
             self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
         elif self.rhsa_provider_type.lower() == "csaf":
-            self.rhsa_provider = CSAFRHSAProvider(self.workspace, self.download_timeout, self.logger, self.skip_download)
+            self.rhsa_provider = CSAFRHSAProvider(
+                self.workspace,
+                self.download_timeout,
+                self.logger,
+                self.skip_download,
+                self.csaf_max_workers,
+            )
 
     @staticmethod
     def _get_name_version(package):
@@ -635,6 +666,7 @@ class Parser:
 
     def _parse_platform(self, product_name: str | None) -> str | None:
         is_eus = False
+        is_els = False
         match = re.match(
             self.__rhel_release_pattern__,
             product_name,
@@ -644,14 +676,38 @@ class Parser:
                 self.__rhel_eus_pattern__,
                 product_name,
             )
-            if not match:
-                return None
-            is_eus = True
+            if match:
+                is_eus = True
+            else:
+                match = re.match(
+                    self.__rhel_els_pattern__,
+                    product_name,
+                )
+                if match:
+                    is_els = True
+                else:
+                    return None
 
         platform = match.group(1)
         if platform and is_eus:
             platform = f"{platform}+eus"
+        elif platform and is_els:
+            platform = f"{platform}+els"
         return platform
+
+    def _get_base_platform(self, platform: str) -> str | None:
+        """Extract base major version from extended support platform.
+
+        Examples:
+            "8.6+eus" -> "8"
+            "6+els" -> "6"
+            "8" -> None (already base)
+        """
+        if "+eus" in platform:
+            return platform.split(".")[0]
+        if "+els" in platform:
+            return platform.replace("+els", "")
+        return None
 
     def _parse_cvss3(self, cvss3: dict | None) -> RHELCVSS3 | None:
         if not cvss3:
@@ -736,7 +792,33 @@ class Parser:
 
                 platform_artifacts[item.platform].append(item)
 
+            # Infer base platform records when only extended support channels have data
+            inferred_base_records: dict[str, list[FixedIn]] = {}
             for platform, artifacts in platform_artifacts.items():
+                base_platform = self._get_base_platform(platform)
+                if not base_platform or base_platform in platform_artifacts:
+                    continue
+                if f"{namespace}:{base_platform}" in self.skip_namespaces:
+                    continue
+                if base_platform not in inferred_base_records:
+                    inferred_base_records[base_platform] = []
+                for artifact in artifacts:
+                    inferred_base_records[base_platform].append(
+                        FixedIn(
+                            platform=base_platform,
+                            package=artifact.package,
+                            version="None",
+                            module=artifact.module,
+                            advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
+                        ),
+                    )
+
+            for base_platform, records in inferred_base_records.items():
+                platform_artifacts[base_platform] = records
+
+            for platform, artifacts in platform_artifacts.items():
+                if "+els" in platform:
+                    continue
                 ns = f"{namespace}:{platform}"
 
                 # if len(artifacts) == 1 and artifacts[0].advisory.severity and artifacts[0].advisory.severity != sev:
@@ -768,28 +850,80 @@ class Parser:
                                 },
                             )
 
-                    v["Vulnerability"]["FixedIn"].append(
-                        {
-                            "Name": artifact.package,
-                            "Version": artifact.version,
-                            "Module": artifact.module,
-                            "VersionFormat": "rpm",  # hard code version format for now
-                            "NamespaceName": ns,
-                            "VendorAdvisory": a,
-                        },
+                    fix_version = artifact.version
+                    package_name = artifact.package
+
+                    record = {
+                        "Name": package_name,
+                        "Version": fix_version or "None",
+                        "Module": artifact.module,
+                        "VersionFormat": "rpm",  # hard code version format for now
+                        "NamespaceName": ns,
+                        "VendorAdvisory": a,
+                    }
+
+                    result = self.fixdater.best(
+                        vuln_id=cve_id,
+                        cpe_or_package=package_name,
+                        fix_version=fix_version,
+                        ecosystem=ns,
+                        # TODO: consider getting issued date from CSAF or OVAL data as possible candidate
+                        # candidates=[]
                     )
+                    if result:
+                        record["Available"] = {
+                            "date": result.date.isoformat(),
+                            "kind": result.kind,
+                        }
+
+                    v["Vulnerability"]["FixedIn"].append(record)
 
                 results.append(NamespacePayload(namespace=ns, payload=v))
 
         return results
 
-    def _process_full_cve(self, cve_id, cve_file_path):
+    def _read_cve_file(self, cve_id: str, cve_file_path: str) -> tuple[str, dict]:
+        """Read CVE file from disk. This runs in parallel in the producer threads."""
         with open(cve_file_path, encoding="utf-8") as fp:
             content = orjson.loads(fp.read())
+        return cve_id, content
 
-        return self._parse_cve(cve_id, content)
+    def _start_cve_reader_producer(
+        self,
+        full_dir: str,
+        cve_queue: queue.Queue[tuple[str, dict] | None],
+        read_errors: list[tuple[str, Exception]],
+    ) -> threading.Thread:
+        """Start a background thread that reads CVE files in parallel and enqueues them."""
+
+        def producer() -> None:
+            try:
+                cve_ids = sorted(os.listdir(full_dir))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                    future_to_cve = {executor.submit(self._read_cve_file, cve_id, os.path.join(full_dir, cve_id)): cve_id for cve_id in cve_ids}
+                    for future in concurrent.futures.as_completed(future_to_cve):
+                        cve_id = future_to_cve[future]
+                        try:
+                            result = future.result()
+                            cve_queue.put(result)  # blocks if queue is full
+                        except Exception as e:
+                            self.logger.exception(f"error reading CVE file {cve_id}")
+                            read_errors.append((cve_id, e))
+            finally:
+                cve_queue.put(None)  # sentinel signals end of data
+
+        producer_thread = threading.Thread(target=producer, daemon=True)
+        producer_thread.start()
+        return producer_thread
 
     def get(self, skip_if_exists=False):
+        """
+        Process CVE files using a multi-producer single-consumer pattern.
+
+        Producer threads read CVE files from disk in parallel and enqueue them.
+        The consumer (main thread) processes them sequentially, which serializes
+        all fixdater.best() calls to avoid SQLite "database is locked" errors.
+        """
         try:
             # initialize rhsa data
             self._init_rhsa_data(skip_if_exists=skip_if_exists)
@@ -802,24 +936,33 @@ class Parser:
             # normalize cve files
             self.logger.debug(f"normalizing CVEs from {full_dir}")
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_cve_dict = {
-                    executor.submit(
-                        self._process_full_cve,
-                        cve_id=cve_id,
-                        cve_file_path=os.path.join(full_dir, cve_id),
-                    ): cve_id
-                    for cve_id in sorted(os.listdir(full_dir))
-                }
+            # MPSC pattern: parallel file reads, sequential processing
+            # The queue holds (cve_id, content) tuples; None signals completion
+            cve_queue: queue.Queue[tuple[str, dict] | None] = queue.Queue(maxsize=100)
+            read_errors: list[tuple[str, Exception]] = []
 
-                for future in concurrent.futures.as_completed(future_cve_dict):
-                    cve_id = future_cve_dict[future]
-                    try:
-                        results = future.result()
-                        for item in results:
-                            yield item.namespace, cve_id, item.payload
-                    except Exception:
-                        self.logger.exception(f"ignoring error processing {cve_id}. May retry on next iteration")
+            # Start producer in background thread
+            producer_thread = self._start_cve_reader_producer(full_dir, cve_queue, read_errors)
+
+            # Consumer: drain queue and process sequentially (single-threaded)
+            # This includes fixdater.best() calls which write to the database
+            while True:
+                item = cve_queue.get()
+                if item is None:
+                    break
+                cve_id, content = item
+                try:
+                    results = self._parse_cve(cve_id, content)
+                    for result in results:
+                        yield result.namespace, cve_id, result.payload
+                except Exception:
+                    self.logger.exception(f"ignoring error processing {cve_id}. May retry on next iteration")
+
+            producer_thread.join()
+
+            if read_errors:
+                self.logger.warning(f"encountered {len(read_errors)} errors during CVE file reading")
+
         finally:
             # clear memory for rhsa dict
             if self.rhsa_dict:

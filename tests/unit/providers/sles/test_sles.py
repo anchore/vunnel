@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+from datetime import datetime
 
 import defusedxml.ElementTree as ET
 import pytest
@@ -21,7 +22,8 @@ from vunnel.utils.oval_v2 import (
     VersionParser,
     iter_parse_vulnerability_file,
 )
-from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixedIn, Vulnerability, VendorAdvisory
+from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics, FixAvailability, FixedIn, Vulnerability, VendorAdvisory
+from vunnel.tool import fixdate
 
 
 class TestSLESVulnerabilityParser:
@@ -150,6 +152,7 @@ class TestSLESParser:
                         Version="0:4.12.14-150.72.1",
                         Module=None,
                         VendorAdvisory=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     )
                 ],
                 Metadata={},
@@ -179,6 +182,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5-server",
@@ -188,6 +192,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5",
@@ -197,6 +202,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5-32bit",
@@ -206,6 +212,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5-client",
@@ -215,6 +222,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5-devel",
@@ -224,6 +232,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5-plugin-preauth-otp",
@@ -233,6 +242,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                     FixedIn(
                         Name="krb5-plugin-preauth-pkinit",
@@ -242,6 +252,7 @@ class TestSLESParser:
                         Module="",
                         VendorAdvisory=VendorAdvisory(NoAdvisory=False, AdvisorySummary=[]),
                         VulnerableRange=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     ),
                 ],
                 Metadata={},
@@ -273,6 +284,7 @@ class TestSLESParser:
                         Version="0:4.12.14-197.89.2",
                         Module=None,
                         VendorAdvisory=None,
+                        Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
                     )
                 ],
                 Metadata={},
@@ -347,7 +359,9 @@ class TestSLESParser:
         actual = Parser._release_resolver(test_input, "NA")
         assert sorted(actual) == sorted(expected)
 
-    def test_transform_oval_vulnerabilities(self, parsed_vulnerabilities, helpers):
+    def test_transform_oval_vulnerabilities(self, parsed_vulnerabilities, helpers, auto_fake_fixdate_finder):
+        workspace = helpers.provider_workspace_helper(name=Provider.name())
+
         mock_data_path = helpers.local_dir("test-fixtures/suse_truncated.xml")
 
         parser_factory = OVALParserFactory(
@@ -366,14 +380,16 @@ class TestSLESParser:
             parser_factory=parser_factory,
         )
 
-        actual = Parser._transform_oval_vulnerabilities("15", parsed_dict)
+        p = Parser(workspace=workspace, allow_versions=["15"], logger=None)
+
+        actual = p._transform_oval_vulnerabilities("15", parsed_dict)
         actual.sort(key=lambda x: x.NamespaceName)
         parsed_vulnerabilities.sort(key=lambda x: x.NamespaceName)
 
         assert actual == parsed_vulnerabilities
 
 
-def test_provider_schema(helpers, disable_get_requests, monkeypatch):
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config(allow_versions=["15"])
@@ -394,7 +410,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch):
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch):
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     c = Config()

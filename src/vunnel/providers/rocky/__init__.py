@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
+from vunnel.utils import timer
 
 from .parser import Parser
 
@@ -34,7 +35,6 @@ class Provider(provider.Provider):
         self.config = config
         self.logger.debug(f"config: {config}")
 
-        self.schema = self.__schema__
         self.parser = Parser(
             ws=self.workspace,
             logger=self.logger,
@@ -49,6 +49,10 @@ class Provider(provider.Provider):
         return "rocky"
 
     @classmethod
+    def tags(cls) -> list[str]:
+        return ["vulnerability", "os"]
+
+    @classmethod
     def supports_skip_download(cls) -> bool:
         return True
 
@@ -60,20 +64,21 @@ class Provider(provider.Provider):
         return None
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        with self.results_writer() as writer:
-            for vuln_id, vuln_schema_version, record in self.parser.get():
-                vuln_schema = self.compatible_schema(vuln_schema_version)
-                if not vuln_schema:
-                    self.logger.warning(
-                        f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
-                        f"as is incompatible with provider schema version {self.schema.version}",
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer, self.parser:
+                for vuln_id, vuln_schema_version, record in self.parser.get():
+                    vuln_schema = self.compatible_schema(vuln_schema_version)
+                    if not vuln_schema:
+                        self.logger.warning(
+                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
+                            f"as is incompatible with provider schema version {self.__schema__.version}",
+                        )
+                        continue
+                    writer.write(
+                        identifier=vuln_id.lower(),
+                        schema=vuln_schema,
+                        payload=record,
                     )
-                    continue
-                writer.write(
-                    identifier=vuln_id.lower(),
-                    schema=vuln_schema,
-                    payload=record,
-                )
-        if len(writer) == 0 and self.config.runtime.skip_download:
-            raise RuntimeError("download skipped on empty workspace")
-        return self.parser.urls, len(writer)
+            if len(writer) == 0 and self.config.runtime.skip_download:
+                raise RuntimeError("download skipped on empty workspace")
+            return self.parser.urls, len(writer)

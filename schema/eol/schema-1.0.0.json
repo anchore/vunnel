@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/eol/schema-1.0.0.json",
+  "type": "object",
+  "title": "EOL Record",
+  "description": "End-of-life data from endoflife.date API (ProductRelease schema)",
+  "required": [
+    "product",
+    "name"
+  ],
+  "properties": {
+    "product": {
+      "type": "string",
+      "description": "Product name (added by vunnel)"
+    },
+    "identifiers": {
+      "type": "array",
+      "description": "Product identifiers such as CPE, purl, repology (added by vunnel from parent Product)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Identifier type (e.g., cpe, purl, repology)"
+          },
+          "id": {
+            "type": "string",
+            "description": "Identifier value"
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ]
+      }
+    },
+    "name": {
+      "type": "string",
+      "description": "Name of the product release cycle."
+    },
+    "codename": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Codename of the product release cycle.\nThis field is null when the release cycle does not have a codename, or when the information is not known.\n"
+    },
+    "label": {
+      "type": "string",
+      "description": "Label of the product release cycle."
+    },
+    "releaseDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Release date of the release cycle."
+    },
+    "isLts": {
+      "type": "boolean",
+      "description": "Whether the product release cycle receives long-term support (LTS)."
+    },
+    "ltsFrom": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Start date of the LTS phase for the release cycle.\nThis field is null when the isLts field is set to false, when the LTS phase does not start later than the release date, or when the date is not known.\n"
+    },
+    "isEoas": {
+      "type": "boolean",
+      "description": "Whether the active support phase is over for the release cycle.\nThis field is not provided when the product does not have an active support phase.\n"
+    },
+    "eoasFrom": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "End of active support date for the release cycle.\nThis field is not provided when the product does not have an active support phase. It is null when the date is not known.\n"
+    },
+    "isEol": {
+      "type": "boolean",
+      "description": "Whether the release cycle is EOL."
+    },
+    "eolFrom": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "End of life date for the release cycle.\nThis field is null when the date is not known.\n"
+    },
+    "isDiscontinued": {
+      "type": "boolean",
+      "description": "Whether the release cycle is discontinued.\nThis field is mainly used for hardware, it is not provided when not applicable.\n"
+    },
+    "discontinuedFrom": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Discontinuation date for the release cycle.\nThis field is mainly used for hardware, it is not provided when not applicable. It is null when the date is not known.\n"
+    },
+    "isEoes": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Whether the extended support phase is over for the release cycle.\nThis field is not provided when the product does not have an extended support phase. This field is null when the release cycle is not eligible for extended support.\n"
+    },
+    "eoesFrom": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "End of extended support date for the release cycle.\nThis field is not provided when the product does not have an extended support phase. It is null when the release cycle is not eligible for extended support or when the date is not known.\n"
+    },
+    "isMaintained": {
+      "type": "boolean",
+      "description": "Whether this release cycle still have some level of support.\nThis can be any level of support, even extended support.\n"
+    },
+    "latest": {
+      "type": "null",
+      "description": "Latest version for this release cycle.\nThis field is null when this release cycle does not have a latest version documented.\n"
+    },
+    "custom": {
+      "type": "null",
+      "description": "Custom fields for the product release cycle.\nThis field is null when the product does not declare at least one custom fields.\n"
+    }
+  },
+  "additionalProperties": true
+}
