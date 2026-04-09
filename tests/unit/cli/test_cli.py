@@ -517,6 +517,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   openeuler:
+    rsync_base_url: rsync://repo.openeuler.openatom.cn
     runtime:
       existing_input: keep
       existing_results: delete-before-write

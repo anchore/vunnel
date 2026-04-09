@@ -20,6 +20,7 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
+    rsync_base_url: str = "rsync://repo.openeuler.openatom.cn"
 
 
 class Provider(provider.Provider):
@@ -39,6 +40,7 @@ class Provider(provider.Provider):
         self.parser = Parser(
             workspace=self.workspace,
             namespace=self._namespace,
+            rsync_base_url=self.config.rsync_base_url,
             logger=self.logger,
             skip_download=self.config.runtime.skip_download,
         )

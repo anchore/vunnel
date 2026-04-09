@@ -18,18 +18,20 @@ _RPM_FILENAME_RE = re.compile(r"^(.+)-([^-]+)-([^-]+)\.([^.]+)\.rpm$")
 
 
 class Parser:
-    _rsync_src = "rsync://repo.openeuler.openatom.cn/openeuler/security/data/csaf/cve/"
+    _rsync_path = "/openeuler/security/data/csaf/cve/"
     _vuln_dir = "csaf/cve"
 
     def __init__(
         self,
         workspace: workspace.Workspace,
         namespace: str,
+        rsync_base_url: str = "rsync://repo.openeuler.openatom.cn",
         logger: logging.Logger | None = None,
         skip_download: bool = False,
     ):
         self.advisories_dir_path = Path(workspace.input_path) / self._vuln_dir
         self.namespace = namespace
+        self.rsync_url = rsync_base_url.rstrip("/") + self._rsync_path
         self.skip_download = skip_download
         self.cves: list[str] = []
 
@@ -46,7 +48,7 @@ class Parser:
             "--partial",
             "--progress",
             "--delete",
-            self._rsync_src,
+            self.rsync_url,
             str(self.advisories_dir_path) + "/",
         ]
         self.logger.info(f"running: {' '.join(cmd)}")
