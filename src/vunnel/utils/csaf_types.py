@@ -1,5 +1,6 @@
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
+from typing import Any
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -311,7 +312,7 @@ class CSAFDoc(OmitNoneORJSONModel):
     vulnerabilities: list[Vulnerability] = field(default_factory=list)
 
     @classmethod
-    def __pre_deserialize__(cls, d: dict) -> dict:
+    def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
         """Resolve $ref pointers that some upstream CSAF producers (e.g. openEuler)
         emit instead of inline arrays. All observed references point to
         ``$.vulnerabilities[N].product_status.fixed``; we dereference them so that

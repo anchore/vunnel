@@ -72,7 +72,7 @@ class Parser:
         for branch in doc.product_tree.product_branches():
             _maybe_set_purl(branch)
 
-    def get(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def get(self) -> Generator[tuple[str, dict[str, Any]]]:
         if self.skip_download:
             self.logger.info("skipping download, using existing data")
         else:
