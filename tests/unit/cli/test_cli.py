@@ -517,8 +517,6 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   openeuler:
-    parallelism: 8
-    request_timeout: 125
     runtime:
       existing_input: keep
       existing_results: delete-before-write

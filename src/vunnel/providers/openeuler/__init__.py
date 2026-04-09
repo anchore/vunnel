@@ -20,12 +20,10 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    request_timeout: int = 125
-    parallelism: int = 8
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
+    __schema__ = schema.CSAFVEXSchema()
     __distribution_version__ = int(__schema__.major_version)
     _url = "https://repo.openeuler.org/security/data/csaf/cve"
     _namespace = "openeuler"
@@ -40,11 +38,9 @@ class Provider(provider.Provider):
 
         self.parser = Parser(
             workspace=self.workspace,
-            max_workers=self.config.parallelism,
-            url=self._url,
             namespace=self._namespace,
-            download_timeout=self.config.request_timeout,
             logger=self.logger,
+            skip_download=self.config.runtime.skip_download,
         )
 
         # this provider requires the previous state from former runs
@@ -54,14 +50,18 @@ class Provider(provider.Provider):
     def name(cls) -> str:
         return "openeuler"
 
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with self.results_writer() as writer:
-            for namespace, vuln_id, vuln_dict in self.parser.get():
-                namespace = namespace.lower()
-                vuln_id = vuln_id.lower()
+            for cve_id, csaf_doc in self.parser.get():
                 writer.write(
-                    identifier=os.path.join(namespace, vuln_id),
+                    identifier=os.path.join(self._namespace, cve_id),
                     schema=self.__schema__,
-                    payload=vuln_dict,
+                    payload=csaf_doc,
                 )
+            if len(writer) == 0 and self.config.runtime.skip_download:
+                raise RuntimeError("skip download used on empty workspace")
         return [self._url], len(writer)
