@@ -72,7 +72,7 @@ class Parser:
         id_objects = response.json()
 
         # Extract and validate ID strings from each object
-        all_ids = [obj["id"] for obj in id_objects]
+        all_ids = [obj["id"].strip() for obj in id_objects]
         valid_ids = [osv_id for osv_id in all_ids if self._is_valid_osv_id(osv_id)]
 
         invalid_count = len(all_ids) - len(valid_ids)
