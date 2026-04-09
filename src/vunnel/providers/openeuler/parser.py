@@ -25,7 +25,9 @@ class Parser:
         self,
         workspace: workspace.Workspace,
         namespace: str,
-        rsync_base_url: str = "rsync://repo.openeuler.openatom.cn",
+        # see https://www.openeuler.org/en/mirror/list/ for documentation
+        # on the rsync commands used and for available mirrors
+        rsync_base_url: str = "rsync://root@repo.openeuler.openatom.cn",
         logger: logging.Logger | None = None,
         skip_download: bool = False,
     ):

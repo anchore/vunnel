@@ -20,7 +20,7 @@ class Config:
             existing_results=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
         ),
     )
-    rsync_base_url: str = "rsync://repo.openeuler.openatom.cn"
+    rsync_base_url: str = "rsync://root@repo.openeuler.openatom.cn"
 
 
 class Provider(provider.Provider):
