@@ -248,6 +248,8 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2026 # hummingbird is new
+        max_unlabeled_percent: 25
+
 
   - provider: mariner
     use_cache: true
