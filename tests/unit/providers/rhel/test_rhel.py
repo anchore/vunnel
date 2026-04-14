@@ -690,6 +690,47 @@ class TestParser:
         assert fixed_in.version == "None"
         assert fixed_in.advisory.wont_fix is True
 
+    def test_parse_package_state_not_affected_with_module(self, tmpdir):
+        """A 'Not affected' entry with RPM modularity (e.g. python38:3.8/python-lxml)
+        should emit a FixedIn with version '0' and the module preserved."""
+        cve = {
+            "name": "CVE-2099-0001",
+            "package_state": [
+                {
+                    "product_name": "Red Hat Enterprise Linux 8",
+                    "fix_state": "Not affected",
+                    "package_name": "python38:3.8/python-lxml",
+                    "cpe": "cpe:/o:redhat:enterprise_linux:8",
+                },
+                {
+                    "product_name": "Red Hat Enterprise Linux 8",
+                    "fix_state": "Not affected",
+                    "package_name": "python-lxml",
+                    "cpe": "cpe:/o:redhat:enterprise_linux:8",
+                },
+            ],
+        }
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        results = driver._parse_package_state(cve["name"], cve)
+
+        assert len(results) == 2
+
+        # modular entry
+        modular = [r for r in results if r.module == "python38:3.8"]
+        assert len(modular) == 1
+        assert modular[0].package == "python-lxml"
+        assert modular[0].platform == "8"
+        assert modular[0].version == "0"
+        assert modular[0].advisory.wont_fix is False
+
+        # non-modular entry
+        bare = [r for r in results if r.module is None]
+        assert len(bare) == 1
+        assert bare[0].package == "python-lxml"
+        assert bare[0].platform == "8"
+        assert bare[0].version == "0"
+        assert bare[0].advisory.wont_fix is False
+
     def test_parse_cve(self, tmpdir, mock_cve, auto_fake_fixdate_finder):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
