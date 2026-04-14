@@ -771,7 +771,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 70
+    assert workspace.num_result_entries() == 74
     # < test results directory >
     # ├── rhel:5
     # │   ├── cve-2017-3509.json
@@ -787,6 +787,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
     # │   ├── cve-2017-3533.json
     # │   ├── cve-2017-3539.json
     # │   ├── cve-2017-3544.json
+    # │   ├── cve-2019-25059.json
     # │   ├── cve-2020-16587.json
     # │   ├── cve-2020-16588.json
     # │   ├── cve-2021-20298.json
@@ -806,6 +807,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
     # │   ├── cve-2017-3533.json
     # │   ├── cve-2017-3539.json
     # │   ├── cve-2017-3544.json
+    # │   ├── cve-2019-25059.json
     # │   ├── cve-2020-16587.json
     # │   ├── cve-2020-16588.json
     # │   ├── cve-2021-20298.json
@@ -821,6 +823,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
     # ├── rhel:8
     # │   ├── cve-2019-25059.json
     # │   ├── cve-2020-16587.json
+    # │   ├── cve-2020-16588.json
     # │   ├── cve-2021-20298.json
     # │   ├── cve-2021-20299.json
     # │   ├── cve-2022-1921.json
@@ -828,6 +831,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
     # │   ├── cve-2022-1923.json
     # │   ├── cve-2022-1924.json
     # │   ├── cve-2022-1925.json
+    # │   ├── cve-2022-2309.json
     # │   ├── cve-2023-4863.json
     # │   ├── cve-2023-5129.json
     # │   └── cve-2023-5217.json

@@ -650,9 +650,18 @@ class Parser:
                             advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
                         ),
                     )
+                elif state in ["Not affected"]:
+                    affected.append(
+                        FixedIn(
+                            platform=platform,
+                            package=package_name,
+                            version="0",
+                            module=module,
+                            advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        ),
+                    )
                 elif state in [
                     "New",
-                    "Not affected",
                     "Under investigation",
                 ]:
                     continue
