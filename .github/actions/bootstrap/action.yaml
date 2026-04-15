@@ -4,7 +4,7 @@ inputs:
   go-version:
     description: "Go version to install"
     required: true
-    default: "1.25.x"
+    default: "1.26.2"
   python-version:
     description: "Python version to install"
     required: true
@@ -30,24 +30,19 @@ inputs:
   bootstrap-apt-packages:
     description: "Space delimited list of tools to install via apt"
     default: ""
-
 runs:
   using: "composite"
   steps:
-
     - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c #v6.4.0
       with:
         go-version: ${{ inputs.go-version }}
         check-latest: true
-
     - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
       with:
         enable-cache: true
-
     - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: ${{ inputs.python-version }}
-
     - name: Restore tool cache
       id: tool-cache
       if: inputs.tools == 'true'
@@ -55,12 +50,10 @@ runs:
       with:
         path: ${{ github.workspace }}/.tmp
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
-
     - name: (cache-miss) Bootstrap tools
       if: steps.tool-cache.outputs.cache-hit != 'true' && inputs.tools == 'true'
       shell: bash
       run: make bootstrap
-
     - name: Install apt packages
       if: inputs.bootstrap-apt-packages != ''
       shell: bash
@@ -72,11 +65,9 @@ runs:
         if [ ${#packages[@]} -gt 0 ]; then
           DEBIAN_FRONTEND=noninteractive sudo apt update && sudo -E apt install -y "${packages[@]}"
         fi
-
     - name: Install project + dependencies
       shell: bash
       run: uv sync --all-extras --dev
-
     - name: Restore tox cache
       id: cache-tox
       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
