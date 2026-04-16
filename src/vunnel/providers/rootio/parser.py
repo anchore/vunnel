@@ -123,6 +123,14 @@ class Parser:
                 package["ecosystem"] = ecosystem[5:]  # Strip "Root:" prefix
                 self.logger.debug(f"normalized ecosystem: {ecosystem} -> {package['ecosystem']}")
 
+        # Map "upstream" field to standard OSV "aliases" field.
+        # The Root IO API uses "upstream" to list the upstream CVE IDs that a rootio patch fixes,
+        # but the OSV schema (and grype-db) uses "aliases". Without this mapping, grype-db cannot
+        # link rootio NAK records to their corresponding standard CVE IDs.
+        upstream = vuln_entry.get("upstream", [])
+        if upstream and not vuln_entry.get("aliases"):
+            vuln_entry["aliases"] = upstream
+
         # Set database_specific metadata to mark as advisory for grype-db
         # This is critical for grype-db to emit unaffectedPackageHandles for the NAK pattern
         if "database_specific" not in vuln_entry:
