@@ -64,6 +64,7 @@ class Providers:
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
     rhel: providers.rhel.Config = field(default_factory=providers.rhel.Config)
     rocky: providers.rocky.Config = field(default_factory=providers.rocky.Config)
+    rootio: providers.rootio.Config = field(default_factory=providers.rootio.Config)
     secureos: providers.secureos.Config = field(default_factory=providers.secureos.Config)
     sles: providers.sles.Config = field(default_factory=providers.sles.Config)
     ubuntu: providers.ubuntu.Config = field(default_factory=providers.ubuntu.Config)
