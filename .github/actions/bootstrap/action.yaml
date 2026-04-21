@@ -46,7 +46,7 @@ runs:
     - name: Restore tool cache
       id: tool-cache
       if: inputs.tools == 'true'
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: ${{ github.workspace }}/.tmp
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
@@ -70,7 +70,7 @@ runs:
       run: uv sync --all-extras --dev
     - name: Restore tox cache
       id: cache-tox
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: .tox
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('tox.ini') }}
