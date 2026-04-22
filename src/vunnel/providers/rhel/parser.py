@@ -12,7 +12,7 @@ from collections import namedtuple
 from datetime import UTC
 from datetime import datetime as dt
 from decimal import Decimal as D
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import orjson
 from cvss import CVSS3
@@ -598,9 +598,21 @@ class Parser:
 
         return package_name, module
 
+    # Maps fix_state values to (version, wont_fix, target_list_key) where target_list_key
+    # selects which list the FixedIn is appended to ("affected" or "out_of_support").
+    # States not present here are skipped.
+    _fix_state_map_: ClassVar[dict[str, tuple[str, bool, str]]] = {
+        "Affected": ("None", False, "affected"),
+        "Fix deferred": ("None", False, "affected"),
+        "Will not fix": ("None", True, "affected"),
+        "Out of support scope": ("None", True, "out_of_support"),
+        "Not affected": ("0", False, "affected"),
+    }
+
     def _parse_package_state(self, cve_id: str, content) -> list[FixedIn]:
         affected: list[FixedIn] = []
         out_of_support: list[FixedIn] = []  # Track items out of support to be able to add them if others are affected
+        lists = {"affected": affected, "out_of_support": out_of_support}
         pss = content.get("package_state", [])
 
         for item in pss:
@@ -620,45 +632,20 @@ class Parser:
                     continue
 
                 state = item.get("fix_state", None)
-                if state in ["Affected", "Fix deferred"]:
-                    affected.append(
+                mapping = self._fix_state_map_.get(state)
+                if mapping:
+                    version, wont_fix, target = mapping
+                    lists[target].append(
                         FixedIn(
                             platform=platform,
                             package=package_name,
-                            version="None",
+                            version=version,
                             module=module,
-                            advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                            advisory=Advisory(wont_fix=wont_fix, rhsa_id=None, link=None, severity=None),
                         ),
                     )
-                elif state in ["Will not fix"]:
-                    affected.append(
-                        FixedIn(
-                            platform=platform,
-                            package=package_name,
-                            version="None",
-                            module=module,
-                            advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
-                        ),
-                    )
-                elif state in ["Out of support scope"]:
-                    out_of_support.append(
-                        FixedIn(
-                            platform=platform,
-                            package=package_name,
-                            version="None",
-                            module=module,
-                            advisory=Advisory(wont_fix=True, rhsa_id=None, link=None, severity=None),
-                        ),
-                    )
-                elif state in [
-                    "New",
-                    "Not affected",
-                    "Under investigation",
-                ]:
-                    continue
-                else:
+                elif state not in ("New", "Under investigation"):
                     self.logger.debug(f"{state!r} is an unknown state")
-                    continue
             except Exception:
                 self.logger.exception(f"error parsing {cve_id} package state entity: {item}")
 
