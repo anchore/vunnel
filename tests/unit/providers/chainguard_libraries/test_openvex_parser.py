@@ -146,6 +146,20 @@ class TestOpenVEXParser:
                 {'baz': {'document': {'vulnerability': {'name': 'baz'}, "products": [{'identifiers': {'purl': 'pkg:pypi/joblib@1.0.0%2Bcgr.1'}}]}, 'fixes': [{'product': 'pkg:pypi/joblib@1.0.0%2Bcgr.1', 'available': {'date': datetime.date(2024, 1, 1), 'kind': 'first-observed'}}]}},
                 id="encoded-purl-without-plus",
             ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'CGA-h58v-r9f2-vjq7'}, "products": [{'identifiers': {'purl': 'pkg:maven/org.springframework.security/spring-security-taglibs@5.7.14-0.cgr.1'}}]}
+                ]},
+                {'CGA-h58v-r9f2-vjq7': {'document': {'vulnerability': {'name': 'CGA-h58v-r9f2-vjq7'}, "products": [{'identifiers': {'purl': 'pkg:maven/org.springframework.security/spring-security-taglibs@5.7.14-0.cgr.1'}}]}, 'fixes': [{'product': 'pkg:maven/org.springframework.security/spring-security-taglibs@5.7.14-0.cgr.1', 'available': {'date': datetime.date(2024, 1, 1), 'kind': 'first-observed'}}]}},
+                id="maven-purl-with-cgr",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'bar'}, "products": [{'identifiers': {'purl': 'pkg:maven/org.springframework/spring-core@6.0.0'}}]}
+                ]},
+                {'bar': {'document': {'vulnerability': {'name': 'bar'}, "products": []}, 'fixes': []}},
+                id="ignore-non-chainguard-maven-purls",
+            ),
         ],
     )
     def test_normalize(self, openvex_parser, test_data, expected, auto_fake_fixdate_finder):
