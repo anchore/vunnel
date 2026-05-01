@@ -18,6 +18,7 @@ from typing import Any
 import click
 import mergedeep
 import oras.client
+import oras.defaults
 import requests
 import yaml
 from mashumaro.mixins.dict import DataClassDictMixin
@@ -32,6 +33,48 @@ from yardstick.cli.config import (
 from vunnel import providers as vunnel_providers
 
 BIN_DIR = "./bin"
+
+
+class _ProgressLoggingOrasClient(oras.client.OrasClient):
+    """ORAS client wrapper that logs download progress at info level."""
+
+    def download_blob(self, container: object, digest: str, outfile: str) -> str:
+        """Override download_blob to report progress while pulling cache artifacts."""
+        try:
+            outdir = os.path.dirname(outfile)
+            if outdir:
+                os.makedirs(outdir, exist_ok=True)
+
+            with self.get_blob(container, digest, stream=True) as r:
+                r.raise_for_status()
+
+                total_size = int(r.headers.get("content-length", 0))
+                downloaded = 0
+                last_logged_bucket = -1
+
+                with open(outfile, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+
+                            if total_size > 0:
+                                # log at ~25% intervals
+                                bucket = int((downloaded / total_size) * 4)
+                                if bucket > last_logged_bucket:
+                                    pct = min(bucket * 25, 100)
+                                    downloaded_mb = downloaded / (1024 * 1024)
+                                    total_mb = total_size / (1024 * 1024)
+                                    logging.info(f"  pulling... {downloaded_mb:.1f} / {total_mb:.1f} MB ({pct}%)")
+                                    last_logged_bucket = bucket
+
+        except Exception as e:
+            if digest == oras.defaults.blank_hash:
+                return os.devnull
+            raise e
+        return outfile
+
+
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
 GRYPE_DB = f"{BIN_DIR}/grype-db"
 
@@ -720,7 +763,7 @@ def build_db(cfg: Config):
     shutil.rmtree(build_dir, ignore_errors=True)
 
     # fetch cache for other providers
-    oras_client = oras.client.OrasClient()
+    oras_client = _ProgressLoggingOrasClient()
     github_token = os.environ.get("GITHUB_TOKEN")
     if github_token:
         oras_client.login(hostname="ghcr.io", username="token", password=github_token)
