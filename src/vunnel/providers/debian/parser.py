@@ -387,11 +387,16 @@ class Parser:
                             if "fixed_version" in distro_record:
                                 fixed_el["Version"] = distro_record["fixed_version"]
                                 if distro_record["fixed_version"] == "0":
-                                    # version == 0 should mean that the
-                                    # package was determined to not be
-                                    # vulnerable in the distro namespace
-                                    # (from reviewing
-                                    # https://security-tracker.debian.org/tracker/)
+                                    # version == 0 means the package was determined
+                                    # to not be vulnerable in this distro namespace.
+                                    # Emit an explicit "not affected" FixedIn so
+                                    # downstream consumers can distinguish this from
+                                    # "no data available".
+                                    fixed_el["VendorAdvisory"] = {
+                                        "NoAdvisory": False,
+                                        "AdvisorySummary": [],
+                                    }
+                                    vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
                                     skip_fixedin = True
                             else:
                                 fixed_el["Version"] = "None"

@@ -47,6 +47,11 @@ class TestParser:
                 "CVE-2024-7592": { "fixed_version": "3.8.20" },
                 "CVE-2024-9287": { "fixed_version": "3.9.21" }
             },
+            "systemd": {
+                "CVE-2023-26604": { "fixed_version": "247.1-2" },
+                "TEMP-0000000-1B6B4D": { "fixed_version": "257.9-1~deb13u1+e3" },
+                "TEMP-0000000-7EA18F": { "fixed_version": "257.9-1~deb13u1+e4" },
+            },
         }
 
 
@@ -90,6 +95,11 @@ class TestParser:
                 "CVE-2024-7592": { "fixed_version": "3.8.20" },
                 "CVE-2024-9287": { "fixed_version": "3.9.21" }
             },
+            "systemd": {
+                "CVE-2023-26604": { "fixed_version": "247.1-2" },
+                "TEMP-0000000-1B6B4D": { "fixed_version": "257.9-1~deb13u1+e3" },
+                "TEMP-0000000-7EA18F": { "fixed_version": "257.9-1~deb13u1+e4" },
+            },
         }
         return release, data
 
@@ -125,6 +135,7 @@ class TestParser:
                 "CVE-2022-42919",
                 "CVE-2022-45061",
                 "CVE-2023-24329",
+                "CVE-2023-26604",
                 "CVE-2023-27043",
                 "CVE-2023-36632",
                 "CVE-2023-40217",
@@ -134,6 +145,9 @@ class TestParser:
                 "CVE-2024-9287",
             ],
         )
+        # verify TEMP-* IDs were filtered out
+        assert "TEMP-0000000-1B6B4D" not in vuln_records
+        assert "TEMP-0000000-7EA18F" not in vuln_records
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):

@@ -294,9 +294,9 @@ class TestUbuntuParser:
 
     def test_esm_not_affected_suppresses_needs_triage(self, fake_fixdate_finder):
         """When a needs-triage patch has a corresponding ESM ignored_patch with
-        not-affected status, map_parsed should NOT emit a FixedIn entry for that
-        package+namespace. This prevents false positives where grype would
-        otherwise match all versions due to the empty constraint from needs-triage.
+        not-affected status, map_parsed should emit a version="0" FixedIn entry
+        for that package+namespace instead of the match-all constraint that
+        needs-triage would normally produce.
 
         Uses normalized data from CVE-2023-5752 (literal output of the merge
         pipeline). Key entries in that file:
@@ -316,16 +316,14 @@ class TestUbuntuParser:
                 focal_vuln = v
                 break
 
-        # The focal record should either not exist or have an empty FixedIn list,
-        # because the ESM data tells us the code is not present.
-        if focal_vuln is not None:
-            fixed_pip = [f for f in focal_vuln.FixedIn if f.Name == "python-pip"]
-            assert fixed_pip == [], (
-                f"Expected no FixedIn for python-pip on focal because esm-apps/focal says not-affected, "
-                f"but got: {[f.json() for f in fixed_pip]}"
-            )
+        # The focal record should have a version="0" FixedIn for python-pip,
+        # signaling "not affected" to downstream consumers.
+        assert focal_vuln is not None, "Expected a vulnerability record for ubuntu:20.04 (focal)"
+        fixed_pip = [f for f in focal_vuln.FixedIn if f.Name == "python-pip"]
+        assert len(fixed_pip) == 1, f"Expected exactly one FixedIn for python-pip on focal, got: {[f.json() for f in fixed_pip]}"
+        assert fixed_pip[0].Version == "0", f"Expected version '0' (not-affected), got: {fixed_pip[0].Version}"
 
-        # Verify jammy (not-affected in patches) still gets a record with empty FixedIn
+        # Verify jammy (not-affected in patches) also gets a version="0" FixedIn
         jammy_vuln = None
         for v in vulns:
             if v.NamespaceName == "ubuntu:22.04":
@@ -333,7 +331,8 @@ class TestUbuntuParser:
                 break
         assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
         jammy_pip = [f for f in jammy_vuln.FixedIn if f.Name == "python-pip"]
-        assert jammy_pip == [], "jammy python-pip is not-affected, should have no FixedIn entry"
+        assert len(jammy_pip) == 1, f"Expected exactly one FixedIn for python-pip on jammy, got: {[f.json() for f in jammy_pip]}"
+        assert jammy_pip[0].Version == "0", f"Expected version '0' (not-affected), got: {jammy_pip[0].Version}"
 
     def test_esm_not_affected_version_string_does_not_suppress(self, fake_fixdate_finder):
         """When the ESM not-affected entry has a version string (e.g. a kernel

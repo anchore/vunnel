@@ -86,6 +86,10 @@ class Parser:
         vuln_dict = {}
         for package, package_cves in data.items():
             for cve_id, cve_info in package_cves.items():
+                # skip Debian temporary vulnerability IDs — these are auto-generated
+                # internal placeholders not meant for external reference
+                if cve_id.startswith("TEMP-"):
+                    continue
                 if cve_id not in vuln_dict:
                     record = copy.deepcopy(vulnerability.vulnerability_element)
                     record["Vulnerability"]["Name"] = cve_id

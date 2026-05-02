@@ -104,6 +104,7 @@ class Remediation(OmitNoneORJSONModel):
     category: str
     details: str
     product_ids: list[str]
+    date: str | None = None
     url: str | None = None
 
 

@@ -556,18 +556,37 @@ def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Lo
             r.NamespaceName = namespace_name
             vulns[namespace_name] = r
 
+        # Emit an explicit "not affected" FixedIn (version "0") so downstream consumers
+        # can distinguish "confirmed not affected" from "no data available".
+        if p.status == "not-affected":
+            pkg = FixedIn()
+            pkg.Name = p.package
+            pkg.Version = "0"
+            pkg.VendorAdvisory = {"NoAdvisory": False}
+            pkg.VersionFormat = "dpkg"
+            pkg.NamespaceName = namespace_name
+            r.FixedIn.append(pkg)
+            continue
+
         # If the patch status is one we care about, make the FixedIn record, else skip it but create CVE records
         # We currently want to mark end-of-support records with no previously known fix as vulnerable, hence the
         # or check_merge step here.
         if check_state(p.status) or check_merge(p):
             # If the patch is needs-triage but a corresponding ESM entry confirms
-            # the package is not affected, skip emitting a FixedIn record. This
-            # prevents false-positive match-all constraints for packages where
-            # Ubuntu's ESM review determined the vulnerable code is not present.
+            # the package is not affected, emit an explicit "not affected" FixedIn
+            # (version "0") instead of the match-all constraint that needs-triage
+            # would normally produce.
             if p.status == "needs-triage" and (p.distro, p.package) in esm_not_affected:
                 logger.debug(
-                    f"skipping needs-triage entry for {parsed_cve.name} {p.distro}/{p.package}: ESM variant confirms not-affected",
+                    f"emitting not-affected for {parsed_cve.name} {p.distro}/{p.package}: ESM variant confirms not-affected",
                 )
+                pkg = FixedIn()
+                pkg.Name = p.package
+                pkg.Version = "0"
+                pkg.VendorAdvisory = {"NoAdvisory": False}
+                pkg.VersionFormat = "dpkg"
+                pkg.NamespaceName = namespace_name
+                r.FixedIn.append(pkg)
                 continue
 
             pkg = FixedIn()

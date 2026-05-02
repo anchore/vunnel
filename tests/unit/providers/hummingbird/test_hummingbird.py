@@ -84,6 +84,7 @@ class TestParser:
 
         rem = result.vulnerabilities[0].remediations[0]
         assert rem.product_ids == ["hummingbird-1:testpkg-0:1.2.3-1.hum1.src"]
+        assert rem.date == "2026-03-20T00:00:00+00:00"
 
     def test_subset_removes_rhel_branches(self, sample_doc):
         """RHEL platform branch should not survive pruning."""
