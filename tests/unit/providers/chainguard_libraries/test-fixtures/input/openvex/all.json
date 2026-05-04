@@ -7,6 +7,10 @@
     {
       "id": "pypi/urllib3.openvex.json",
       "modified": "2025-08-29T22:11:56.755Z"
+    },
+    {
+      "id": "maven/spring-security-web.openvex.json",
+      "modified": "2026-05-02T06:03:05.151Z"
     }
   ],
   "version": 1
