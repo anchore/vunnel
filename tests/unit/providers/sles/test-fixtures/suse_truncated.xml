@@ -298,6 +298,29 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
               </criteria>
           </criteria>
       </definition>
+    <definition id="oval:org.opensuse.security:def:202634073" version="1" class="vulnerability">
+      <metadata>
+        <title>CVE-2026-34073</title>
+        <affected family="unix">
+          <platform>SUSE Linux Enterprise Server 15</platform>
+        </affected>
+        <reference ref_id="Mitre CVE-2026-34073" ref_url="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-34073" source="CVE"/>
+        <reference ref_id="SUSE CVE-2026-34073" ref_url="https://www.suse.com/security/cve/CVE-2026-34073" source="SUSE CVE"/>
+        <description>cryptography is a package designed to expose cryptographic primitives and recipes to Python developers.</description>
+        <advisory from="security@suse.de">
+          <issued date="2026-04-02"/>
+          <updated date="2026-04-22"/>
+          <severity>Moderate</severity>
+          <cve impact="low" cvss3="3.7/CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N" href="https://www.suse.com/security/cve/CVE-2026-34073/">CVE-2026-34073</cve>
+        </advisory>
+      </metadata>
+      <criteria operator="AND">
+        <criteria operator="OR">
+          <criterion test_ref="oval:org.opensuse.security:tst:2009242640" comment="SUSE Linux Enterprise Server 15 is installed"/>
+        </criteria>
+        <criterion test_ref="oval:org.opensuse.security:tst:2009772119" comment="python3-cryptography is not affected"/>
+      </criteria>
+    </definition>
   </definitions>
   <tests>
     <rpminfo_test id="oval:org.opensuse.security:tst:2009302033" version="1" comment="sles-ltss-release is ==15" check="at least one" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -380,6 +403,18 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
           <object object_ref="oval:org.opensuse.security:obj:2009031042"></object>
           <state state_ref="oval:org.opensuse.security:ste:2009111500"></state>
       </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009334017" comment="kernel-default is ==0" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009030416"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009079458"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009333928" comment="kernel-source is ==0" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009030417"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009079458"></state>
+      </rpminfo_test>
+      <rpminfo_test id="oval:org.opensuse.security:tst:2009772119" comment="python3-cryptography is ==0" check="at least one" version="1">
+          <object object_ref="oval:org.opensuse.security:obj:2009046896"></object>
+          <state state_ref="oval:org.opensuse.security:ste:2009079458"></state>
+      </rpminfo_test>
   </tests>
   <objects>
     <rpminfo_object id="oval:org.opensuse.security:obj:2009049560" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -433,6 +468,12 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
       <rpminfo_object id="oval:org.opensuse.security:obj:2009031042" version="1">
           <name>krb5-server</name>
       </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009030417" version="1">
+          <name>kernel-source</name>
+      </rpminfo_object>
+      <rpminfo_object id="oval:org.opensuse.security:obj:2009046896" version="1">
+          <name>python3-cryptography</name>
+      </rpminfo_object>
   </objects>
   <state>
     <rpminfo_state id="oval:org.opensuse.security:ste:2009061809" version="1" xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#linux">
@@ -451,6 +492,9 @@ UG64TKDHFDLMRIRJQG/#QQHP7MDAGKGRMVUG64TKDHFDLMRIRJQG"></reference>
     </rpminfo_state>
       <rpminfo_state id="oval:org.opensuse.security:ste:2009111500" version="1">
           <evr operation="6">0:1.15.2-4.25</evr>
+      </rpminfo_state>
+      <rpminfo_state id="oval:org.opensuse.security:ste:2009079458" version="1">
+          <version operation="equals">0</version>
       </rpminfo_state>
   </state>
 </oval_definitions>

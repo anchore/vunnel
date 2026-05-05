@@ -41,6 +41,12 @@ namespace = "sles"
 PARSER_CONFIG = OVALParserConfig(
     platform_regex=re.compile(r"SUSE Linux Enterprise Server \d+.* is installed"),
     artifact_regex=re.compile(r".* is installed"),
+    # SUSE OVAL marks confirmed-not-affected packages with criterion comments
+    # like "python3-cryptography is not affected" (referencing an rpminfo_test
+    # whose state requires version == 0). Capture these so we can emit
+    # explicit "fixed at version 0" FixedIn entries for them — see the
+    # rhel/ubuntu/debian providers for the same convention.
+    not_affected_artifact_regex=re.compile(r".* is not affected"),
     source_url_xpath_query='{0}metadata/{0}reference[@source="SUSE CVE"]',
     severity_map={
         "low": "Low",
@@ -272,7 +278,7 @@ class Parser:
 
         return results
 
-    def _transform_oval_vulnerability(  # noqa: C901, PLR0913
+    def _transform_oval_vulnerability(  # noqa: C901, PLR0912, PLR0913
         self,
         major_version: str,
         vulnerability_obj: SLESOVALVulnerability,
@@ -367,6 +373,51 @@ class Parser:
                         Available=available,
                     ),
                 )
+
+            # Emit explicit "fixed at version 0" FixedIn entries for packages
+            # SUSE marks as not-affected. The criterion's referenced rpminfo_state
+            # already encodes "equals 0", so _get_name_and_version_from_test
+            # returns ("<pkg-name>", "0"); we just deduplicate against affected
+            # entries to avoid emitting both for the same (pkg, module) pair.
+            already_emitted = {(f.Name, f.Module) for f in fixes}
+            for test_id in impact_item.not_affected_test_ids:
+                pkg_name, pkg_version = self._get_name_and_version_from_test(
+                    test_id,
+                    tests_dict,
+                    artifacts_dict,
+                    versions_dict,
+                )
+                if not pkg_name or not pkg_version:
+                    self.logger.debug(
+                        "package name and or version invalid, skipping not-affected for %s",
+                        test_id,
+                    )
+                    continue
+                if pkg_version != "0":
+                    # Defensive: a not-affected criterion should reference a state
+                    # whose evr is "0". If SUSE ever changes the convention, log and
+                    # skip rather than silently emitting a different shape.
+                    self.logger.debug(
+                        "skipping not-affected entry for %s/%s with unexpected version %r",
+                        feed_ns,
+                        pkg_name,
+                        pkg_version,
+                    )
+                    continue
+                if (pkg_name, "") in already_emitted:
+                    continue
+                fixes.append(
+                    FixedIn(
+                        Name=pkg_name,
+                        NamespaceName=feed_ns,
+                        VersionFormat="rpm",
+                        Version="0",
+                        Module=None,
+                        VendorAdvisory=None,
+                        Available=None,
+                    ),
+                )
+                already_emitted.add((pkg_name, ""))
 
             # create the normalized vulnerability
             feed_obj = Vulnerability(
