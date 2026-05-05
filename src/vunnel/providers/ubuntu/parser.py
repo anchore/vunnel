@@ -797,7 +797,7 @@ class Parser:
 
             for d in [self._active_cve_dir, self._retired_cve_dir]:
                 cve_dir = os.path.join(vc_dir, d)
-                for cve_id in sorted(filter(lambda x: _cve_filename_regex.match(x), os.listdir(cve_dir))):
+                for cve_id in sorted(filter(_cve_filename_regex.match, os.listdir(cve_dir))):
                     f = os.path.join(cve_dir, cve_id)
                     cve_rel_path = "/".join([d, cve_id])
 
@@ -892,7 +892,7 @@ class Parser:
             os.remove(os.path.join(self.norm_workspace, cve_id))
 
     def _merged_cve_iterator(self) -> Generator[CVEFile]:
-        for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
+        for cve_id in filter(_cve_filename_regex.match, os.listdir(self.norm_workspace)):
             with open(os.path.join(self.norm_workspace, cve_id)) as fp:
                 cve = orjson.loads(fp.read())
                 yield CVEFile.from_dict(cve)

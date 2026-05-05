@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
-    security_advisories: dict[Any, str] = field(default_factory=lambda: amazon_security_advisories.copy())
+    security_advisories: dict[Any, str] = field(default_factory=amazon_security_advisories.copy)
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,

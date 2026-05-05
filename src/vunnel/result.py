@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .workspace import Workspace
 
 
-class ResultStatePolicy(str, enum.Enum):
+class ResultStatePolicy(str, enum.Enum):  # noqa: UP042
     KEEP = "keep"
     DELETE = "delete"
     DELETE_BEFORE_WRITE = "delete-before-write"  # treat like "KEEP" in error cases
@@ -68,7 +68,7 @@ class Store:
         raise NotImplementedError
 
 
-class StoreStrategy(str, enum.Enum):
+class StoreStrategy(str, enum.Enum):  # noqa: UP042
     FLAT_FILE = "flat-file"
     SQLITE = "sqlite"
 

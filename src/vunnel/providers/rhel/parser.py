@@ -536,7 +536,7 @@ class Parser:
                     ar_obj.version = final_v  # store the final_v in the object for future usage
                     ar_obj.module = final_m
 
-                    prev_ar_obj = final_ar_objs.get((ar_obj.name, ar_obj.platform, ar_obj.module), None)
+                    prev_ar_obj = final_ar_objs.get((ar_obj.name, ar_obj.platform, ar_obj.module))
                     if prev_ar_obj:
                         if rpm.compare_versions(prev_ar_obj.version, ar_obj.version) < 0:
                             self.logger.debug(
@@ -691,7 +691,7 @@ class Parser:
             "8" -> None (already base)
         """
         if "+eus" in platform:
-            return platform.split(".")[0]
+            return platform.split(".", maxsplit=1)[0]
         if "+els" in platform:
             return platform.replace("+els", "")
         return None
