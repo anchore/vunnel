@@ -459,6 +459,45 @@ tests:
       - <<: *default-validations
         max_year: 2024
 
+  - provider: rootio
+    # Root IO provides patched packages for multiple ecosystems
+    # Test images contain Root IO patched versions (rootio- prefix, _rootio_ version suffix)
+    additional_providers:
+      - name: nvd
+        use_cache: true
+      - name: ubuntu
+        use_cache: true
+      - name: debian
+        use_cache: true
+      - name: alpine
+        use_cache: true
+      - name: github
+        use_cache: true
+    images:
+      - docker.io/rootpublic/ubuntu:22.04@sha256:1390a26823a5a761dfbb7f591ae74a71afd8e23583a2f0c58dca6943b606f6d5
+      - docker.io/rootpublic/e2e-node-25-2-1-c6fxc:latest@sha256:3a736a874f1c7c32f464334606ab90d5257c42c6004ff845be6bbd3c485cdfcf
+      - docker.io/rootpublic/mqtt_exporter:v2.0.0@sha256:67bb26efe170cdc61de6c68f4a2688c47917d45493342fff80ba0c89070d819a
+      - docker.io/rootpublic/e2e-rootio-alpine-test:latest@sha256:b823ef9ab7b0b03018b33b2886df3881dd2dded8b5ec2a77833b3e21bcacf9ba
+    expected_namespaces:
+      # Root IO namespaces (per grype-db implementation)
+      - rootio:distro:ubuntu:22.04
+      - rootio:distro:debian:12
+      - rootio:distro:alpine:3.18
+      - rootio:distro:alpine:3.23
+      # Upstream provider namespaces (for NAK pattern verification)
+      - ubuntu:distro:ubuntu:22.04
+      - debian:distro:debian:12
+      - alpine:distro:alpine:3.18
+      - alpine:distro:alpine:3.23
+      - nvd:cpe
+      # GitHub advisory namespaces (source of positive language matches; rootio NAKs suppress FPs)
+      - github:language:javascript
+      - github:language:python
+      - github:language:java
+    validations:
+      - <<: *default-validations
+        candidate_tool_label: custom-db
+
   - provider: secureos
     use_cache: true
     additional_providers:
