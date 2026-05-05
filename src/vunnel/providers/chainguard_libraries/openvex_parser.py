@@ -241,6 +241,7 @@ class OpenVEXParser:
         """
         d = {
             "pypi": "+cgr.",
+            "maven": ".cgr.",
         }
         new_products = []
         for product in statement.get("products", []):
