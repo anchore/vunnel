@@ -91,6 +91,7 @@ ubuntu_version_names = {
     "oracular": "24.10",
     "plucky": "25.04",
     "questing": "25.10",
+    "resolute": "26.04",
 }
 
 # driver workspace
