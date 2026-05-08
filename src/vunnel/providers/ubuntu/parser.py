@@ -36,6 +36,10 @@ _patch_state_regex = re.compile(r"\s*(\S+)(\s+.+)?\s*")
 _indent_line_regex = re.compile(r"\s+\S+\s*")
 _package_priority_regex = re.compile(r"\s*Priority_(\S+)\s*:\s+(\S+)\s*")
 _cve_filename_regex = re.compile("CVE-[0-9]+-[0-9]+")
+# Notes section uses the format "<author>> <text>" on the first line of each note,
+# with continuation lines indented further than the author line. The author may be
+# omitted, in which case the line is just "> <text>" or "<text>".
+_note_author_regex = re.compile(r"^(\S+)?>\s?(.*)$")
 
 # Per the Ubuntu README in the security tracker BZR repo:
 # Maps the state name to whether it indicates a package is vulnerable
@@ -187,6 +191,19 @@ class Patch:
 
 
 @dataclass
+class Note:
+    """A single analyst note from the Ubuntu security tracker Notes: section.
+
+    Each note has an optional author (the Canonical analyst's launchpad
+    username) and a text body. Multiple notes may appear under one Notes:
+    block; this dataclass represents one.
+    """
+
+    text: str
+    author: str | None = None
+
+
+@dataclass
 class CVEFile:
     # Keep this naming for now to preserve compatibility with legacy
     name: str
@@ -196,6 +213,7 @@ class CVEFile:
     git_last_processed_rev: str | None = None
     references: list[str] | None = None
     description: str | None = None
+    notes: list[Note] = field(default_factory=list)
 
     @staticmethod
     def from_dict(d: dict[str, Any]):
@@ -206,6 +224,7 @@ class CVEFile:
         git_last_processed_rev = d.get("git_last_processed_rev")
         references = d.get("references", d.get("References"))
         description = d.get("description", d.get("Description"))
+        notes = [Note(**n) for n in d.get("notes", d.get("Notes", []))]
         return CVEFile(
             name=name,
             priority=priority,
@@ -214,6 +233,7 @@ class CVEFile:
             git_last_processed_rev=git_last_processed_rev,
             references=references,
             description=description,
+            notes=notes,
         )
 
 
@@ -338,6 +358,55 @@ def parse_simple_keyvalue(expected_key: str, lines: list[str]) -> str:
     return value
 
 
+def parse_notes(header: str, lines: list[str]) -> list[Note]:
+    """
+    Parse a Notes: section into a list of Note objects.
+
+    The upstream tracker format for each note is::
+
+        Notes:
+         author> first line of the note
+          continuation of that note (indented further than the author line)
+         author2> another note's first line
+
+    The author prefix is optional; lines without an author prefix are treated as
+    a continuation of the most recent note. If there is no preceding author line,
+    they form an authorless note.
+
+    Returns an empty list if the section is empty or absent.
+    """
+    check_header(header, lines)
+
+    notes: list[Note] = []
+    current_author: str | None = None
+    current_text: list[str] = []
+
+    while lines and _indent_line_regex.match(lines[0]):
+        raw = lines.pop(0)
+        # strip only leading whitespace; trailing whitespace gets cleaned per-line
+        stripped = raw.lstrip().rstrip()
+        if not stripped:
+            continue
+
+        m = _note_author_regex.match(stripped)
+        if m:
+            # finalize the note in progress before starting a new one
+            if current_text:
+                notes.append(Note(author=current_author, text=" ".join(current_text).strip()))
+                current_text = []
+            current_author = m.group(1) or None
+            first_line = m.group(2).strip()
+            if first_line:
+                current_text.append(first_line)
+        else:
+            current_text.append(stripped)
+
+    if current_text:
+        notes.append(Note(author=current_author, text=" ".join(current_text).strip()))
+
+    return notes
+
+
 def parse_multiline_keyvalue(header: str, lines: list[str]) -> str:
     """
     Parse a header plus multiple lines (to an empty line) into a single string, stripping newlines
@@ -440,6 +509,8 @@ def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
                 parsed.references = parse_list(section, lines)
             elif section == "Description":
                 parsed.description = parse_multiline_keyvalue(section, lines)
+            elif section == "Notes":
+                parsed.notes = parse_notes(section, lines)
             elif section == "Priority":
                 parsed.priority = parse_simple_keyvalue(section, lines)
             else:
@@ -554,6 +625,12 @@ def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Lo
             r.Link = ubuntu_cve_url.format(r.Name)
             r.FixedIn = []
             r.NamespaceName = namespace_name
+            # Carry along any analyst notes from the upstream Notes: section
+            # so downstream consumers (e.g. grype) can surface them next to
+            # findings. Only set the attribute when notes are present so
+            # existing record shapes are preserved when the section is empty.
+            if parsed_cve.notes:
+                r.Notes = [{"author": n.author, "text": n.text} for n in parsed_cve.notes]
             vulns[namespace_name] = r
 
         # Emit an explicit "not affected" FixedIn (version "0") so downstream consumers

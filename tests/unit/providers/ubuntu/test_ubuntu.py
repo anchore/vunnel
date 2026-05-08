@@ -9,22 +9,25 @@ import sys
 from dataclasses import asdict
 
 import pytest
+
 from vunnel import result, workspace
 from vunnel.providers import ubuntu
 from vunnel.providers.ubuntu.parser import (
     CVEFile,
+    Note,
     Parser,
     Patch,
+    Severity,
     check_merge,
     check_patch,
     map_parsed,
     parse_cve_file,
     parse_list,
     parse_multiline_keyvalue,
+    parse_notes,
     parse_severity_from_priority,
     parse_simple_keyvalue,
     patch_states,
-    Severity,
     ubuntu_version_names,
 )
 
@@ -33,6 +36,7 @@ class TestUbuntuParser:
     _location_ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__), "test-fixtures"))
     _data_ = os.path.join(_location_, "example_ubuntu_cve")
     _weird_data_ = os.path.join(_location_, "weird_example_cve")
+    _notes_data_ = os.path.join(_location_, "example_ubuntu_cve_with_notes")
     _workspace_ = "/tmp/ubuntu"
 
     # @classmethod
@@ -250,6 +254,112 @@ class TestUbuntuParser:
 
         print(result)
 
+    def test_parse_notes_empty(self):
+        """An empty Notes: section should yield an empty list."""
+        # Body terminates because the next line ("Bugs:") is not indented and
+        # so does not match _indent_line_regex.
+        text = "Notes:\nBugs:\n"
+        lines = text.splitlines()
+        got = parse_notes("Notes", lines)
+        assert got == []
+
+    def test_parse_notes_single_authored(self):
+        """A single authored note with continuation lines should be joined."""
+        text = "Notes:\n mdeslaur> first line of the note\n  second line continues\n  third line\nBugs:\n"
+        lines = text.splitlines()
+        got = parse_notes("Notes", lines)
+        assert got == [Note(author="mdeslaur", text="first line of the note second line continues third line")]
+
+    def test_parse_notes_multiple_authors_and_authorless(self):
+        """Multiple notes should be split on the author> marker, including authorless ones."""
+        text = "Notes:\n mdeslaur> First note\n  spans two lines\n > Priority reason:\n  results in a backdoor\n sbeattie> A short one\nMitigation:\n"
+        lines = text.splitlines()
+        got = parse_notes("Notes", lines)
+        assert got == [
+            Note(author="mdeslaur", text="First note spans two lines"),
+            Note(author=None, text="Priority reason: results in a backdoor"),
+            Note(author="sbeattie", text="A short one"),
+        ]
+
+    def test_parse_cve_with_notes_fixture(self):
+        """Parsing a fixture with a populated Notes: block should produce CVEFile.notes."""
+        with open(self._notes_data_) as f:
+            data = f.readlines()
+
+        result = parse_cve_file("CVE-2024-3094", data)
+
+        assert result.notes == [
+            Note(
+                author="mdeslaur",
+                text=(
+                    "The affected version of xz-utils was only in noble-proposed, and "
+                    "was removed before migrating to noble itself. No released "
+                    "versions of Ubuntu were affected by this issue."
+                ),
+            ),
+            Note(author=None, text="Priority reason: Results in a backdoor in sshd"),
+        ]
+
+    def test_parse_cve_empty_notes_fixture(self):
+        """The original example fixture has Notes: empty — notes should be []."""
+        with open(self._data_) as f:
+            data = f.readlines()
+        result = parse_cve_file("CVE-2017-9996", data)
+        assert result.notes == []
+
+    def test_notes_round_trip_through_dataclass_dict(self):
+        """A CVEFile with notes should survive an asdict/from_dict round trip."""
+        from dataclasses import asdict as _asdict
+
+        original = CVEFile(
+            name="CVE-9999-0001",
+            notes=[
+                Note(author="mdeslaur", text="A note"),
+                Note(author=None, text="An authorless note"),
+            ],
+        )
+
+        restored = CVEFile.from_dict(_asdict(original))
+        assert restored.notes == original.notes
+
+    def test_mapper_emits_notes_when_present(self, fake_fixdate_finder):
+        """When parsed CVE has notes, the JSON output should include them."""
+        with open(self._notes_data_) as f:
+            parsed = parse_cve_file("CVE-2024-3094", f.readlines())
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+        assert vulns, "expected at least one Vulnerability record"
+        for v in vulns:
+            j = v.json()
+            assert "Notes" in j, f"expected Notes key on namespace {v.NamespaceName}"
+            assert j["Notes"] == [
+                {
+                    "author": "mdeslaur",
+                    "text": (
+                        "The affected version of xz-utils was only in noble-proposed, and "
+                        "was removed before migrating to noble itself. No released "
+                        "versions of Ubuntu were affected by this issue."
+                    ),
+                },
+                {"author": None, "text": "Priority reason: Results in a backdoor in sshd"},
+            ]
+
+    def test_mapper_omits_notes_when_absent(self, fake_fixdate_finder):
+        """When parsed CVE has no notes, the JSON output should not include a Notes key.
+
+        This preserves backward compatibility with the existing record shape and
+        avoids unnecessary churn in downstream consumers when the Notes section
+        is empty (the common case).
+        """
+        with open(self._data_) as f:
+            parsed = parse_cve_file("CVE-2017-9996", f.readlines())
+
+        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
+        assert vulns, "expected at least one Vulnerability record"
+        for v in vulns:
+            j = v.json()
+            assert "Notes" not in j, f"did not expect Notes key on namespace {v.NamespaceName}"
+
     def test_simple_multiline_parser(self):
         data = {
             """Description:
@@ -413,8 +523,7 @@ class TestUbuntuParser:
         assert questing_vuln is not None, "Expected a vulnerability record for ubuntu:25.10 (questing)"
         fixed_gcc = [f for f in questing_vuln.FixedIn if f.Name == "gcc-arm-none-eabi"]
         assert len(fixed_gcc) == 1, (
-            f"Expected needs-triage gcc-arm-none-eabi on questing to still produce a FixedIn entry "
-            f"(no ESM counterpart exists), got {len(fixed_gcc)}"
+            f"Expected needs-triage gcc-arm-none-eabi on questing to still produce a FixedIn entry (no ESM counterpart exists), got {len(fixed_gcc)}"
         )
 
     def test_bare_ignored_produces_fixedin(self, fake_fixdate_finder):
@@ -443,13 +552,9 @@ class TestUbuntuParser:
 
         assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
         fixed_coreutils = [f for f in jammy_vuln.FixedIn if f.Name == "coreutils"]
-        assert len(fixed_coreutils) == 1, (
-            f"Expected bare-ignored coreutils on jammy to produce a FixedIn entry, got {len(fixed_coreutils)}"
-        )
+        assert len(fixed_coreutils) == 1, f"Expected bare-ignored coreutils on jammy to produce a FixedIn entry, got {len(fixed_coreutils)}"
         assert fixed_coreutils[0].Version == "None", "Expected Version='None' for won't-fix entry"
-        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
-            "Expected NoAdvisory=True for ignored entry"
-        )
+        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, "Expected NoAdvisory=True for ignored entry"
 
         # noble (also bare ignored) should behave the same
         noble_vuln = None
@@ -460,9 +565,7 @@ class TestUbuntuParser:
 
         assert noble_vuln is not None, "Expected a vulnerability record for ubuntu:24.04 (noble)"
         fixed_coreutils = [f for f in noble_vuln.FixedIn if f.Name == "coreutils"]
-        assert len(fixed_coreutils) == 1, (
-            f"Expected bare-ignored coreutils on noble to produce a FixedIn entry, got {len(fixed_coreutils)}"
-        )
+        assert len(fixed_coreutils) == 1, f"Expected bare-ignored coreutils on noble to produce a FixedIn entry, got {len(fixed_coreutils)}"
 
         # focal (ignored with EOL reason) should also produce a FixedIn via check_merge
         focal_vuln = None
@@ -474,12 +577,9 @@ class TestUbuntuParser:
         assert focal_vuln is not None, "Expected a vulnerability record for ubuntu:20.04 (focal)"
         fixed_coreutils = [f for f in focal_vuln.FixedIn if f.Name == "coreutils"]
         assert len(fixed_coreutils) == 1, (
-            f"Expected ignored (end of standard support) coreutils on focal to produce a FixedIn entry, "
-            f"got {len(fixed_coreutils)}"
+            f"Expected ignored (end of standard support) coreutils on focal to produce a FixedIn entry, got {len(fixed_coreutils)}"
         )
-        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
-            "Expected NoAdvisory=True for ignored entry with EOL reason"
-        )
+        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, "Expected NoAdvisory=True for ignored entry with EOL reason"
 
     def test_checkers(self):
         check_data = [
@@ -642,7 +742,7 @@ class TestUbuntuParser:
             parse_severity_from_priority(cve)
 
 
-@pytest.fixture()
+@pytest.fixture
 def hydrate_git_repo(tmpdir, helpers):
     def run(cmd, **kwargs):
         subprocess.run(shlex.split(cmd), **kwargs, stderr=sys.stderr, stdout=sys.stdout)
