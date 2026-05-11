@@ -3,6 +3,7 @@ from __future__ import annotations
 import glob
 import logging
 import os
+import threading
 from typing import TYPE_CHECKING, Any
 
 from orjson import loads
@@ -35,7 +36,8 @@ class NVDOverrides:
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        self.__filepaths_by_cve__: dict[str, str] | None = None
+        self.__data_by_cve__: dict[str, Any] | None = None
+        self._lock = threading.Lock()
 
     @property
     def url(self) -> str:
@@ -59,33 +61,32 @@ class NVDOverrides:
     def _extract_path(self) -> str:
         return os.path.join(self.workspace.input_path, self.__extract_name__)
 
-    def _build_files_by_cve(self) -> dict[str, Any]:
-        filepaths_by_cve__: dict[str, str] = {}
+    def _build_data_by_cve(self) -> dict[str, Any]:
+        data: dict[str, Any] = {}
         for path in glob.glob(os.path.join(self._extract_path, "**/data/**/", "CVE-*.json"), recursive=True):
             cve_id = os.path.basename(path).removesuffix(".json").upper()
-            filepaths_by_cve__[cve_id] = path
+            with open(path) as f:
+                data[cve_id] = loads(f.read())
+        return data
 
-        return filepaths_by_cve__
+    def _ensure_loaded(self) -> dict[str, Any]:
+        if self.__data_by_cve__ is None:
+            with self._lock:
+                if self.__data_by_cve__ is None:
+                    self.__data_by_cve__ = self._build_data_by_cve()
+        data = self.__data_by_cve__
+        if data is None:
+            raise RuntimeError("_build_data_by_cve returned None unexpectedly")
+        return data
 
     def cve(self, cve_id: str) -> dict[str, Any] | None:
         if not self.enabled:
             return None
 
-        if self.__filepaths_by_cve__ is None:
-            self.__filepaths_by_cve__ = self._build_files_by_cve()
-
-        # TODO: implement in-memory index
-        path = self.__filepaths_by_cve__.get(cve_id.upper())
-        if path and os.path.exists(path):
-            with open(path) as f:
-                return loads(f.read())
-        return None
+        return self._ensure_loaded().get(cve_id.upper())
 
     def cves(self) -> list[str]:
         if not self.enabled:
             return []
 
-        if self.__filepaths_by_cve__ is None:
-            self.__filepaths_by_cve__ = self._build_files_by_cve()
-
-        return list(self.__filepaths_by_cve__.keys())
+        return list(self._ensure_loaded().keys())
