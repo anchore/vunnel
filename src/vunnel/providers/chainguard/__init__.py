@@ -21,11 +21,8 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    secdb_url: str = "env:VUNNEL_CHAINGUARD_SECDB_URL"
-    
-    def __post_init__(self) -> None:
-        if self.secdb_url.startswith("env:"):
-            self.secdb_url = os.environ.get(self.secdb_url[4:], "https://packages.cgr.dev/chainguard/security.json")
+    # Override with VUNNEL_PROVIDERS_CHAINGUARD_SECDB_URL
+    secdb_url: str = "https://packages.cgr.dev/chainguard/security.json"
 
 
 class Provider(provider.Provider):
@@ -73,4 +70,4 @@ class Provider(provider.Provider):
                             payload=record,
                         )
 
-            return [self._secdb_url], len(writer)
+            return [self.config.secdb_url], len(writer)
