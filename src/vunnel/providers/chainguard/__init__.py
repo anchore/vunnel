@@ -21,14 +21,17 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    secdb_url: str = "env:VUNNEL_CHAINGUARD_SECDB_URL"
+    
+    def __post_init__(self) -> None:
+        if self.secdb_url.startswith("env:"):
+            self.secdb_url = os.environ.get(self.secdb_url[4:], "https://packages.cgr.dev/chainguard/security.json")
 
 
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
-    _secdb_url = "env:VUNNEL_CHAINGUARD_SECDB_URL"
-    _url_default = "https://packages.cgr.dev/chainguard/security.json"
     _namespace = "chainguard"
 
     def __init__(self, root: str, config: Config | None = None):
@@ -39,13 +42,9 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        # if the environment variable is set, override the default URL (this is primarily for testing purposes)
-        if self._secdb_url.startswith("env:"):
-            self._secdb_url = os.environ.get(self._secdb_url[4:], self._url_default)
-
         self.parser = Parser(
             workspace=self.workspace,
-            url=self._secdb_url,
+            url=config.secdb_url,
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
