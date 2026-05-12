@@ -9,8 +9,7 @@ on:
       # custom types...
       - labeled
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: pr-quality-gate-${{ github.event.pull_request.number }}
@@ -19,6 +18,8 @@ concurrency:
 jobs:
   select-providers:
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    permissions:
+      contents: read
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
       multicore-providers: ${{ steps.split-providers.outputs.multicore-providers }}

@@ -167,9 +167,7 @@ class TestSLESParser:
                     CVSS(
                         version="3.0",
                         vector_string="CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
-                        base_metrics=CVSSBaseMetrics(
-                            base_score=3.7, exploitability_score=2.2, impact_score=1.4, base_severity="Low"
-                        ),
+                        base_metrics=CVSSBaseMetrics(base_score=3.7, exploitability_score=2.2, impact_score=1.4, base_severity="Low"),
                         status="N/A",
                     )
                 ],
@@ -285,6 +283,44 @@ class TestSLESParser:
                         Module=None,
                         VendorAdvisory=None,
                         Available=FixAvailability(Date=datetime(2021, 4, 30), Kind="advisory"),
+                    )
+                ],
+                Metadata={},
+            ),
+            # CVE-2026-34073: SUSE OVAL marks python3-cryptography as not affected on SLES 15
+            # (criterion comment "python3-cryptography is not affected", referencing an
+            # rpminfo_state with version operation="equals" value="0"). The provider should
+            # surface this as a "fixed at version 0" FixedIn so grype-db can produce an
+            # UnaffectedPackageHandle and grype's RPM matcher can fire an ownership ignore
+            # against the bundled PyPI cryptography package. Mirrors rhel/ubuntu/debian.
+            Vulnerability(
+                Name="CVE-2026-34073",
+                NamespaceName="sles:15",
+                Description="cryptography is a package designed to expose cryptographic primitives and recipes to Python developers.",
+                Severity="Medium",
+                Link="https://www.suse.com/security/cve/CVE-2026-34073",
+                CVSS=[
+                    CVSS(
+                        version="3.1",
+                        vector_string="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:N",
+                        base_metrics=CVSSBaseMetrics(
+                            base_score=3.7,
+                            exploitability_score=2.2,
+                            impact_score=1.4,
+                            base_severity="Low",
+                        ),
+                        status="N/A",
+                    )
+                ],
+                FixedIn=[
+                    FixedIn(
+                        Name="python3-cryptography",
+                        NamespaceName="sles:15",
+                        VersionFormat="rpm",
+                        Version="0",
+                        Module=None,
+                        VendorAdvisory=None,
+                        Available=None,
                     )
                 ],
                 Metadata={},
@@ -406,7 +442,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
 
     p.update(None)
 
-    assert 3 == workspace.num_result_entries()
+    assert 4 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
 
 

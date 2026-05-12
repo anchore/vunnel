@@ -15,7 +15,7 @@ import re
 import xml.etree.ElementTree as ET  # nosec (this is only used to get the definition for Element, which is not in defusedxml)
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from defusedxml.ElementTree import iterparse
@@ -52,6 +52,14 @@ class OVALParserConfig:
 
     # severity
     severity_map: dict
+
+    # optional regex matching criterion comments that mark a package as
+    # explicitly not affected (separate from the standard "is installed"
+    # artifact criteria). When set, criteria matched by this regex are
+    # collected onto Impact.not_affected_test_ids; downstream transformers
+    # use this to emit "fixed at version 0" FixedIn entries that distinguish
+    # confirmed not-affected from a search miss.
+    not_affected_artifact_regex: re.Pattern | None = None
 
     # defaults
     # regexes
@@ -93,6 +101,12 @@ class Test(Parsed):
 class Impact:
     namespace_test_id: str
     affected_test_ids: list[str]
+    # Test ids whose criterion comment matched the parser config's
+    # not_affected_artifact_regex (e.g. SUSE OVAL "<pkg> is not affected").
+    # These are surfaced separately from affected_test_ids so transformers
+    # can produce explicit not-affected records (typically "fixed at
+    # version 0") without polluting the vulnerable-version pipeline.
+    not_affected_test_ids: list[str] = field(default_factory=list)
 
 
 class OVALElementParser(ABC):
@@ -200,7 +214,19 @@ class VulnerabilityParser(OVALElementParser, ABC):
             logger.exception("returning results early due to exception in _parse_sub_group")
             return results
 
-        if not test_ids:
+        not_affected_test_ids: list[str] = []
+        if config.not_affected_artifact_regex is not None:
+            try:
+                not_affected_test_ids = VulnerabilityParser._parse_sub_group(
+                    criteria_element[1],
+                    config,
+                    config.not_affected_artifact_regex,
+                )
+            except Exception:
+                logger.exception("ignoring exception while parsing not-affected sub-group")
+                not_affected_test_ids = []
+
+        if not test_ids and not not_affected_test_ids:
             return results
 
         for item in namespace_ids:
@@ -208,6 +234,7 @@ class VulnerabilityParser(OVALElementParser, ABC):
                 Impact(
                     namespace_test_id=item,
                     affected_test_ids=test_ids,
+                    not_affected_test_ids=not_affected_test_ids,
                 ),
             )
 
