@@ -28,7 +28,8 @@ class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
-    _url = "https://packages.wolfi.dev/os/security.json"
+    _secdb_url = "env:VUNNEL_WOLFI_SECDB_URL"
+    _url_default = "https://packages.wolfi.dev/os/security.json"
     _namespace = "wolfi"
 
     def __init__(self, root: str, config: Config | None = None):
@@ -39,9 +40,13 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
+        # if the environment variable is set, override the default URL (this is primarily for testing purposes)
+        if self._secdb_url.startswith("env:"):
+            self._secdb_url = os.environ.get(self._secdb_url[4:], self._url_default)
+
         self.parser = Parser(
             workspace=self.workspace,
-            url=self._url,
+            url=self._secdb_url,
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
@@ -70,4 +75,4 @@ class Provider(provider.Provider):
                             payload=record,
                         )
 
-            return [self._url], len(writer)
+            return [self._secdb_url], len(writer)
