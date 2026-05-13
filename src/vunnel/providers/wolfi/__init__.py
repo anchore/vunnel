@@ -22,13 +22,14 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    # Override with VUNNEL_PROVIDERS_WOLFI_SECDB_URL
+    secdb_url: str = "https://packages.wolfi.dev/os/security.json"
 
 
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
-    _url = "https://packages.wolfi.dev/os/security.json"
     _namespace = "wolfi"
 
     def __init__(self, root: str, config: Config | None = None):
@@ -41,7 +42,7 @@ class Provider(provider.Provider):
 
         self.parser = Parser(
             workspace=self.workspace,
-            url=self._url,
+            url=config.secdb_url,
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
@@ -70,4 +71,4 @@ class Provider(provider.Provider):
                             payload=record,
                         )
 
-            return [self._url], len(writer)
+            return [self.config.secdb_url], len(writer)
