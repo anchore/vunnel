@@ -73,7 +73,7 @@ def test_parser(helpers, disable_get_requests, auto_fake_fixdate_finder, mocker)
     assert vuln_tuples[0][1] == "1.6.1"
     assert vuln_tuples[1][0] == "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014"
     assert vuln_tuples[1][1] == "1.6.1"
-    assert vuln_tuples[2][0] == "ROOT-OS-UBUNTU-2004-CVE-2024-12345"
+    assert vuln_tuples[2][0] == "ROOT-OS-UBUNTU-2204-CVE-2025-68973"
     assert vuln_tuples[2][1] == "1.6.1"
     assert vuln_tuples[3][0] == "ROOT-APP-NPM-CVE-2022-25883"
     assert vuln_tuples[3][1] == "1.6.1"

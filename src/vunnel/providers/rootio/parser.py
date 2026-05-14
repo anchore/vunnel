@@ -9,6 +9,7 @@ import orjson
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
+from vunnel.utils import osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -79,8 +80,12 @@ class Parser:
         if invalid_count > 0:
             self.logger.warning(f"skipping {invalid_count} invalid OSV IDs")
 
-        # Save the full response to workspace for debugging/reproducibility
+        # Prepare workspace dirs once so the concurrent fetchers don't all
+        # race on os.makedirs.
         os.makedirs(self.workspace.input_path, exist_ok=True)
+        self._osv_dir = os.path.join(self.workspace.input_path, "osv")
+        os.makedirs(self._osv_dir, exist_ok=True)
+
         ids_file = os.path.join(self.workspace.input_path, "osv_ids.json")
         with open(ids_file, "wb") as f:
             f.write(orjson.dumps(id_objects))
@@ -96,10 +101,9 @@ class Parser:
 
         record = response.json()
 
-        # Save the record to workspace for reproducibility
-        record_dir = os.path.join(self.workspace.input_path, "osv")
-        os.makedirs(record_dir, exist_ok=True)
-        record_file = os.path.join(record_dir, f"{osv_id}.json")
+        # Save the raw record to workspace for reproducibility. Normalization
+        # happens later, so the on-disk copy is the verbatim API response.
+        record_file = os.path.join(self._osv_dir, f"{osv_id}.json")
         with open(record_file, "wb") as f:
             f.write(orjson.dumps(record))
 
@@ -123,11 +127,14 @@ class Parser:
                 package["ecosystem"] = ecosystem[5:]  # Strip "Root:" prefix
                 self.logger.debug(f"normalized ecosystem: {ecosystem} -> {package['ecosystem']}")
 
-        # Map "upstream" field to standard OSV "aliases" field.
-        # The Root IO API uses "upstream" to list the upstream CVE IDs that a rootio patch fixes,
-        # but the OSV schema (and grype-db) uses "aliases". Without this mapping, grype-db cannot
-        # link rootio NAK records to their corresponding standard CVE IDs.
-        upstream = vuln_entry.get("upstream", [])
+        # Map the Root IO-specific "upstream" field to the standard OSV "aliases" field.
+        # Root IO's API uses "upstream" to list the upstream CVE IDs that a rootio patch
+        # fixes; OSV 1.6.x (and grype-db) only knows "aliases". Without this mapping,
+        # grype-db can't link rootio NAK records to their upstream CVE IDs. We also drop
+        # the `upstream` key after copying — it isn't part of the OSV 1.6.x schema we
+        # declare, and leaving it in trips the schema validator on records that carry
+        # both fields (the common case in production data).
+        upstream = vuln_entry.pop("upstream", None)
         if upstream and not vuln_entry.get("aliases"):
             vuln_entry["aliases"] = upstream
 
@@ -143,9 +150,11 @@ class Parser:
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         """
-        Fetch and yield OSV records from Root IO API.
+        Fetch and yield OSV records from the Root IO API.
 
-        Downloads records concurrently for performance, then processes them sequentially.
+        Downloads run concurrently in a thread pool, but records are then
+        iterated in the order returned by the API listing so the yield order
+        is deterministic across runs.
 
         Yields:
             Tuples of (vulnerability_id, schema_version, record_dict)
@@ -153,10 +162,10 @@ class Parser:
         # Fetch the list of OSV IDs
         osv_ids = self._fetch_osv_ids()
 
-        # TEMPORARILY DISABLED: Download fixdate information for precise fix dates
-        # Note: Requires ghcr.io/anchore/grype-db-observed-fix-date/rootio to exist
-        # FIXME: Enable once Anchore creates the fixdate database for rootio
-        # self.fixdater.download()
+        # Download observed-fix-date data (if a remote artifact exists for this
+        # provider). Missing artifacts are tolerated — patch_fix_date will fall
+        # back to the advisory's `published` date as a low-quality candidate.
+        self.fixdater.download()
 
         # Download all OSV records concurrently
         self.logger.info(f"downloading {len(osv_ids)} OSV records with parallelism={self.parallelism}")
@@ -190,9 +199,10 @@ class Parser:
             try:
                 vuln_entry = records[osv_id]
 
-                # TEMPORARILY DISABLED: Apply fix date patching to add precise fix dates to ranges
-                # FIXME: Enable once Anchore creates the fixdate database for rootio
-                # osv.patch_fix_date(vuln_entry, self.fixdater)
+                # Stamp each range with `database_specific.anchore.fixes` so
+                # grype-db's OSV transformer (extractFixAvailability) can surface
+                # the fix-available date on the unaffected handle.
+                osv.patch_fix_date(vuln_entry, self.fixdater)
 
                 # Normalize and yield the record
                 yield self._normalize(vuln_entry)
