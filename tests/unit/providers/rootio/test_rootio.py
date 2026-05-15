@@ -148,16 +148,19 @@ def test_parser_normalize_with_unaffected_records(helpers, auto_fake_fixdate_fin
 
 
 def test_parser_validates_osv_ids(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):
-    """Test that parser validates and filters out malformed OSV IDs."""
+    """Test that parser validates and filters out malformed and synthetic OSV IDs."""
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    # Mock all.json with valid and invalid IDs
+    # Mock all.json with valid, malformed, and synthetic smoke-test IDs.
     mock_ids = [
         {"id": "ROOT-OS-ALPINE-318-CVE-2000-0548", "modified": "2024-01-15T00:00:00Z"},
         {"id": "ROOT-APP-NPM-", "modified": "2024-01-15T00:00:00Z"},  # Invalid: trailing dash
         {"id": "", "modified": "2024-01-15T00:00:00Z"},  # Invalid: empty
         {"id": "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014", "modified": "2025-01-10T00:00:00Z"},
         {"id": "ROOT-APP-PYPI-", "modified": "2024-01-15T00:00:00Z"},  # Invalid: trailing dash
+        # Synthetic Root IO smoke-test records (one per supported Ubuntu release).
+        {"id": "ROOT-OS-UBUNTU-2510-CVE-0000-0000", "modified": "2026-05-13T12:25:46Z"},
+        {"id": "ROOT-OS-UBUNTU-plucky-CVE-0000-0000", "modified": "2026-05-13T12:25:46Z"},
     ]
 
     def mock_http_get(url, logger, **kwargs):
@@ -168,15 +171,18 @@ def test_parser_validates_osv_ids(helpers, auto_fake_fixdate_finder, disable_get
     mocker.patch("vunnel.utils.http_wrapper.get", side_effect=mock_http_get)
 
     parser = Parser(ws=workspace, logger=None)
-    valid_ids = parser._fetch_osv_ids()
+    valid_objects = parser._fetch_osv_ids()
 
-    # Should only return the 2 valid IDs
-    assert len(valid_ids) == 2
+    # Only the two real records should remain.
+    valid_ids = [obj["id"] for obj in valid_objects]
+    assert len(valid_objects) == 2
     assert "ROOT-OS-ALPINE-318-CVE-2000-0548" in valid_ids
     assert "ROOT-OS-DEBIAN-bookworm-CVE-2025-53014" in valid_ids
     assert "ROOT-APP-NPM-" not in valid_ids
     assert "ROOT-APP-PYPI-" not in valid_ids
     assert "" not in valid_ids
+    assert "ROOT-OS-UBUNTU-2510-CVE-0000-0000" not in valid_ids
+    assert "ROOT-OS-UBUNTU-plucky-CVE-0000-0000" not in valid_ids
 
 
 @pytest.mark.parametrize(
@@ -191,6 +197,76 @@ def test_parser_validates_osv_ids(helpers, auto_fake_fixdate_finder, disable_get
 )
 def test_compatible_schema(schema_version, expected):
     assert Provider.compatible_schema(schema_version) == expected
+
+
+def test_parser_modified_timestamp_cache(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker, tmp_path):
+    """Records whose `modified` timestamp is unchanged should be served from the
+    workspace cache without a per-record HTTP call.
+
+    The cold-start case is the existing test_parser. This test focuses on the
+    steady-state: priming the workspace with osv_ids.json + input/osv/*.json
+    from a prior run, then running with an all.json where one record's
+    modified timestamp has advanced. Only that record should be re-fetched.
+    """
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    mock_data_path = helpers.local_dir("test-fixtures")
+
+    # Stage the workspace cache as if a prior run already happened: copy every
+    # fixture into input/osv/ and write a matching osv_ids.json so each
+    # record's "cached modified" matches the listing exactly.
+    fixtures_listing_path = os.path.join(mock_data_path, "all.json")
+    with open(fixtures_listing_path) as f:
+        listing = json.load(f)
+
+    osv_input_dir = os.path.join(workspace.input_dir, "osv")
+    os.makedirs(osv_input_dir, exist_ok=True)
+    for obj in listing:
+        osv_id = obj["id"]
+        src = os.path.join(mock_data_path, "osv", f"{osv_id}.json")
+        dst = os.path.join(osv_input_dir, f"{osv_id}.json")
+        with open(src) as srcf, open(dst, "w") as dstf:
+            dstf.write(srcf.read())
+    cached_ids_path = os.path.join(workspace.input_dir, "osv_ids.json")
+    with open(cached_ids_path, "w") as f:
+        json.dump(listing, f)
+
+    # Advance the `modified` timestamp on exactly one record in the listing
+    # we hand back over HTTP. The on-disk cached osv_ids.json still has the
+    # old timestamp, so the parser should treat just that one as "needs fetch".
+    advanced_id = "ROOT-APP-NPM-CVE-2022-25883"
+    new_listing = []
+    for obj in listing:
+        if obj["id"] == advanced_id:
+            new_listing.append({**obj, "modified": "2026-12-31T23:59:59Z"})
+        else:
+            new_listing.append(obj)
+
+    per_record_fetches = []
+
+    def mock_http_get(url, logger, **kwargs):
+        mock_response = mocker.Mock()
+        if url.endswith("/all.json"):
+            mock_response.json.return_value = new_listing
+        else:
+            osv_id = url.split("/")[-1].replace(".json", "")
+            per_record_fetches.append(osv_id)
+            osv_file = os.path.join(mock_data_path, "osv", f"{osv_id}.json")
+            with open(osv_file) as srcf:
+                mock_response.json.return_value = json.load(srcf)
+        return mock_response
+
+    mocker.patch("vunnel.utils.http_wrapper.get", side_effect=mock_http_get)
+
+    parser = Parser(ws=workspace, logger=None)
+    with parser:
+        vuln_tuples = list(parser.get())
+
+    # All 5 records yielded — both cached and freshly-fetched.
+    assert len(vuln_tuples) == 5
+    # Exactly one per-record HTTP call: the modified one.
+    assert per_record_fetches == [advanced_id], (
+        f"expected only {advanced_id} to be re-fetched, got {per_record_fetches}"
+    )
 
 
 def test_provider_via_snapshot(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
 from vunnel.utils import timer
+from vunnel.utils.concurrency import resolve_workers
 
 from .parser import Parser
 
@@ -22,7 +23,13 @@ class Config:
     )
     request_timeout: int = 125
     api_base_url: str = "https://api.root.io/external/osv"
-    parallelism: int = 10  # concurrent downloads for improved performance
+    # Concurrent per-record fetches. Root IO's CDN has no zip/tarball endpoint
+    # today (we investigated OSV.dev's mirror as a single-shot alternative and
+    # found it both incomplete and frozen on some records). The mitigation is
+    # the modified-timestamp cache in Parser.get(): a steady-state run only
+    # fetches the records whose `modified` advanced. Cold-start runs still
+    # pull ~14k records once, so we keep parallelism moderately high.
+    parallelism: int | str = "3x"
 
 
 class Provider(provider.Provider):
@@ -41,7 +48,7 @@ class Provider(provider.Provider):
             ws=self.workspace,
             api_base_url=config.api_base_url,
             download_timeout=config.request_timeout,
-            parallelism=config.parallelism,
+            parallelism=resolve_workers(config.parallelism),
             logger=self.logger,
         )
 

@@ -580,7 +580,7 @@ providers:
       user_agent: null
   rootio:
     api_base_url: https://api.root.io/external/osv
-    parallelism: 10
+    parallelism: 3x
     request_timeout: 125
     runtime:
       existing_input: keep
