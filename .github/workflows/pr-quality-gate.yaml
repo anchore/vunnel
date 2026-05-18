@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   select-providers:
-    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     permissions:
       contents: read
     outputs:
@@ -64,7 +64,7 @@ jobs:
           echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 
   validate-provider-multicore:
-    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=16/ram=32+64/family=c6gd+c5ad+m6gd+c7gd+c5d/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=16/ram=32+64/family=c6gd+c5ad+m6gd+c7gd+c5d/spot=price-capacity-optimized/retry=when-interrupted
     timeout-minutes: 480
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.multicore-providers != '[]'
@@ -94,8 +94,6 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
-        with:
-          go: true
 
       - name: Run quality gate
         uses: ./.github/actions/quality-gate
@@ -106,7 +104,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate-provider:
-    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted
     timeout-minutes: 480
     needs: select-providers
     if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.other-providers != '[]'
@@ -136,8 +134,6 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
-        with:
-          go: true
 
       - name: Run quality gate
         uses: ./.github/actions/quality-gate
@@ -148,7 +144,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   evaluate-quality-gate:
-    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     needs:
       - validate-provider
       - validate-provider-multicore
