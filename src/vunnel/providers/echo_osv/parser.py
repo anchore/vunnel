@@ -104,6 +104,22 @@ class Parser:
 
         vuln_schema = record.get("schema_version", "1.7.5")
 
+        # Mark as an advisory record so grype routes the affected ranges into
+        # the unaffected-package store (Echo ships patched builds of upstream
+        # PyPI/npm packages; treating these as "X is vulnerable" would false-
+        # positive every non-Echo consumer).
+        record.setdefault("database_specific", {}).setdefault("anchore", {})["record_type"] = "advisory"
+
+        # Merge OSV 1.7 `upstream` into `aliases` (deduped, preserving order).
+        # The live feed carries the patched-upstream CVE in `upstream`, but
+        # grype's OSV transformer only reads `aliases`/`related`; without this
+        # merge the unaffected record can't be cross-referenced to GHSA/NVD
+        # matches for the same CVE.
+        upstream = record.get("upstream") or []
+        if upstream:
+            existing = record.get("aliases") or []
+            record["aliases"] = list(dict.fromkeys([*existing, *upstream]))
+
         return vuln_id, vuln_schema, record
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:

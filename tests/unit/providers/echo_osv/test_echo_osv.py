@@ -48,6 +48,20 @@ class TestParser:
         # OS-only entry should be excluded
         assert "ECHO-003f-2632-599c" not in ids
 
+        # Every normalized record must carry the advisory marker so grype routes
+        # the ranges into the unaffected-package store rather than the affected one.
+        for _, _, record in results:
+            assert record["database_specific"]["anchore"]["record_type"] == "advisory"
+
+        # OSV 1.7 `upstream` must be merged into `aliases` so grype's OSV transformer
+        # (which only reads aliases/related) can cross-reference Echo's NAK to GHSA
+        # or NVD matches for the same CVE.
+        by_id = {r[0]: r[2] for r in results}
+        # ECHO-7db2-03aa-5591 has only `upstream` in the input — must surface as aliases
+        assert "CVE-2026-1703" in by_id["ECHO-7db2-03aa-5591"]["aliases"]
+        # ECHO-aa11-bb22-cc33 has only `aliases` in the input — must be preserved as-is
+        assert "CVE-2025-99999" in by_id["ECHO-aa11-bb22-cc33"]["aliases"]
+
     def test_echo_os_entries_stripped_from_mixed(self, tmpdir, auto_fake_fixdate_finder):
         """For entries with both Echo:PyPi and Echo ecosystems, only Echo:PyPi affected entries are kept."""
         ws = workspace.Workspace(tmpdir, "test", create=True)

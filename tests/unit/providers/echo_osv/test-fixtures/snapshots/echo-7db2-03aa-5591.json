@@ -37,6 +37,11 @@
     "aliases": [
       "CVE-2026-1703"
     ],
+    "database_specific": {
+      "anchore": {
+        "record_type": "advisory"
+      }
+    },
     "id": "ECHO-7db2-03aa-5591",
     "modified": "2026-03-26T11:54:03.165Z",
     "references": [
@@ -45,7 +50,10 @@
         "url": "https://advisory.echohq.com/cve/CVE-2026-1703"
       }
     ],
-    "schema_version": "1.7.5"
+    "schema_version": "1.7.5",
+    "upstream": [
+      "CVE-2026-1703"
+    ]
   },
   "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.5.json"
 }
