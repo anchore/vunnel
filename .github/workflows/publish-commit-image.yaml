@@ -1,0 +1,58 @@
+name: "Publish Commit Image"
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: publish-commit-image
+  cancel-in-progress: false
+
+jobs:
+  check-gate:
+    permissions:
+      checks: read # required for getting the status of specific check names
+    uses: anchore/workflows/.github/workflows/check-gate.yaml@8b2b1caf40e03933c6807e03b99e883e2ceb5ac8 # v0.4.0
+    with:
+      # these checks run in validations.yaml on every push to main.
+      # we do NOT want to publish a commit image if these have not passed on this commit.
+      checks: '["Static Analysis", "Test Gate"]'
+
+  # note: the name for this check is referenced in release.yaml (wait-for-preprod), do not change here without changing there
+  Publish-PreProd:
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
+    needs: [check-gate]
+    environment: preprod
+    permissions:
+      contents: read
+      # package write permission is needed for publishing commit images
+      packages: write
+    steps:
+      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+        if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
+        with:
+          metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+        with:
+          # in order to properly resolve the version from git
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Login to ghcr.io
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build assets
+        run: make build
+
+      - name: Publish commit image
+        run: make ci-publish-commit
