@@ -31,7 +31,7 @@ jobs:
       # these are checks that should be run on pull-request and merges to main.
       # we do NOT want to kick off a release if these have not been verified on main.
       # Please see the validations.yaml and nightly-quality-gate.yaml workflows for the names that should be used here.
-      checks: '["Static Analysis", "Test Gate"]'
+      checks: '["Static Analysis", "Test Gate", "Publish Pre-Prod"]'
 
   tag:
     needs: [check-gate, version-available]
@@ -78,21 +78,9 @@ jobs:
       - name: Publish to PyPI
         run: make ci-publish-pypi
 
-  wait-for-preprod:
-    needs: [tag]
-    permissions:
-      checks: read # required for getting the status of specific check names
-      contents: read # needed for using the wait-for-check action upstream
-    uses: anchore/workflows/.github/workflows/check-gate.yaml@15122524ced7906bfa9685eeae12e22647773ea6 # v0.6.0
-    with:
-      # this check name is defined as the github action job name (in .github/workflows/validations.yaml).
-      # We cannot promote to release without a successful preprod image.
-      checks: '["Publish-PreProd"]'
-
   release-docker:
     needs:
       - tag
-      - wait-for-preprod
     runs-on: ubuntu-latest
     permissions:
       contents: read

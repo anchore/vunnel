@@ -22,7 +22,8 @@ jobs:
       checks: '["Static Analysis", "Test Gate"]'
 
   # note: the name for this check is referenced in release.yaml (wait-for-preprod), do not change here without changing there
-  Publish-PreProd:
+  publish:
+    name: Publish Pre-Prod
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     needs: [check-gate]
     environment: preprod
