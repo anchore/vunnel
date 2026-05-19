@@ -36,32 +36,23 @@ jobs:
   tag:
     needs: [check-gate, version-available]
     runs-on: ubuntu-latest
+    # the release environment exposes DEPLOY_KEY, the SSH key authorized to push tags to this repo.
+    # GITHUB_TOKEN cannot push to branch-protected refs, so we authenticate via deploy key instead.
+    environment: release
     permissions:
-      contents: write
-      packages: write
-      issues: read
-      pull-requests: read
+      contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Tag release
-        env:
-          VERSION: ${{ github.event.inputs.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Validate version format
-          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Version must match pattern v*.*.* (e.g., v1.2.3)"
-            exit 1
-          fi
-          git config --global user.name "anchoreci"
-          git config --global user.email "anchoreci@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin --tags
+        uses: anchore/workflows/.github/actions/create-tag-via-deploy-key@b3e328b5ae31ba96297e2ed9a6124e5e6352a4c5 # v0.7.0
+        with:
+          tag: ${{ github.event.inputs.version }}
+          deploy-key: ${{ secrets.DEPLOY_KEY }}
 
   release-pypi:
     needs:
