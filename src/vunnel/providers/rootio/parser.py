@@ -181,18 +181,12 @@ class Parser:
         self.logger.trace("normalizing vulnerability data")  # type: ignore[attr-defined]
 
         # Extract the OSV record as-is (using OSV schema)
-        # Transformation to Grype-specific schema happens in grype-db
+        # Transformation to Grype-specific schema happens in grype-db. We keep the
+        # ecosystem field verbatim from the API (e.g. "Root:Ubuntu:22.04", "Root:npm")
+        # so the grype rootio strategy in grype-db owns the full mapping from
+        # rootio's raw shape to the grype data model.
         vuln_id = vuln_entry["id"]
         vuln_schema = vuln_entry["schema_version"]
-
-        # Transform ecosystem format: Root IO API returns "Root:Alpine:3.18" format,
-        # but grype-db expects "Alpine:3.18" (without "Root:" prefix)
-        for affected in vuln_entry.get("affected", []):
-            package = affected.get("package", {})
-            ecosystem = package.get("ecosystem", "")
-            if ecosystem.startswith("Root:"):
-                package["ecosystem"] = ecosystem[5:]  # Strip "Root:" prefix
-                self.logger.debug(f"normalized ecosystem: {ecosystem} -> {package['ecosystem']}")
 
         # Map the Root IO-specific "upstream" field to the standard OSV "aliases" field.
         # Root IO's API uses "upstream" to list the upstream CVE IDs that a rootio patch

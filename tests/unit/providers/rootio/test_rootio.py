@@ -81,8 +81,10 @@ def test_parser(helpers, disable_get_requests, auto_fake_fixdate_finder, mocker)
     assert vuln_tuples[4][1] == "1.6.1"
 
 
-def test_parser_normalize_with_root_prefix(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):
-    """Test that parser strips 'Root:' prefix from ecosystem field and sets advisory metadata."""
+def test_parser_normalize_preserves_root_prefix(helpers, auto_fake_fixdate_finder, disable_get_requests, mocker):
+    """Ecosystem strings are passed through verbatim; the grype rootio transformer owns the
+    Root:<ecosystem> mapping.
+    """
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     # Create a mock OSV record with "Root:" prefix (as returned by actual API)
@@ -105,10 +107,10 @@ def test_parser_normalize_with_root_prefix(helpers, auto_fake_fixdate_finder, di
     parser = Parser(ws=workspace, logger=None)
     vuln_id, schema_version, normalized_record = parser._normalize(mock_record)
 
-    # Verify the ecosystem was normalized
+    # Verify the ecosystem was preserved as-is (grype-side transformer handles the prefix)
     assert vuln_id == "ROOT-OS-ALPINE-318-CVE-2000-0548"
     assert schema_version == "1.6.0"
-    assert normalized_record["affected"][0]["package"]["ecosystem"] == "Alpine:3.18"  # Should be stripped
+    assert normalized_record["affected"][0]["package"]["ecosystem"] == "Root:Alpine:3.18"
 
     # Verify database_specific metadata is set for advisory type
     # This is critical for grype-db to emit unaffectedPackageHandles for NAK pattern
@@ -130,7 +132,7 @@ def test_parser_normalize_with_unaffected_records(helpers, auto_fake_fixdate_fin
         "affected": [
             {
                 "package": {
-                    "ecosystem": "Debian:bookworm",
+                    "ecosystem": "Root:Debian:12",
                     "name": "rootio-openssl"
                 }
             }
