@@ -1,0 +1,27 @@
+{
+  "id": "EUVD-2026-26868",
+  "enisaUuid": "98fbb849-7215-3e29-8a2a-f3d444f9caf3",
+  "description": "A vulnerability was determined in Totolink WA300 5.2cu.7112_B20190227. The exploit has been publicly disclosed.",
+  "datePublished": "May 4, 2026, 1:00:23 AM",
+  "dateUpdated": "May 4, 2026, 1:00:23 AM",
+  "baseScore": 8.7,
+  "baseScoreVersion": "4.0",
+  "baseScoreVector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P",
+  "references": "https://vuldb.com/vuln/360893\nhttps://www.totolink.net/\n",
+  "aliases": "CVE-2026-7717\n",
+  "assigner": "VulDB",
+  "epss": 0.0,
+  "enisaIdProduct": [
+    {
+      "id": "e189a071-a946-3936-9b23-0262a234ab7f",
+      "product": {"name": "WA300"},
+      "product_version": "5.2cu.7112_B20190227"
+    }
+  ],
+  "enisaIdVendor": [
+    {
+      "id": "a652aa57-7e17-325b-8c9a-147e17f47f96",
+      "vendor": {"name": "Totolink"}
+    }
+  ]
+}
