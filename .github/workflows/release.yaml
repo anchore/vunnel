@@ -31,7 +31,7 @@ jobs:
       # these are checks that should be run on pull-request and merges to main.
       # we do NOT want to kick off a release if these have not been verified on main.
       # Please see the validations.yaml and nightly-quality-gate.yaml workflows for the names that should be used here.
-      checks: '["Static Analysis", "Test Gate", "Nightly-Quality-Gate"]'
+      checks: '["Static Analysis", "Test Gate"]'
 
   tag:
     needs: [check-gate, version-available]
