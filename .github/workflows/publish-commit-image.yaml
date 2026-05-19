@@ -14,6 +14,7 @@ jobs:
   check-gate:
     permissions:
       checks: read # required for getting the status of specific check names
+      contents: read # needed for using the wait-for-check action upstream
     uses: anchore/workflows/.github/workflows/check-gate.yaml@15122524ced7906bfa9685eeae12e22647773ea6 # v0.6.0
     with:
       # these checks run in validations.yaml on every push to main.
