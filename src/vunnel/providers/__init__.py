@@ -11,6 +11,7 @@ from vunnel.providers import (
     arch,
     bitnami,
     chainguard,
+    cleanstart,
     chainguard_libraries,
     debian,
     echo,
@@ -41,6 +42,7 @@ from vunnel.provider import get_provider_tags
 _providers: dict[str, type[provider.Provider]] = {
     # vulnerability providers
     alma.Provider.name(): alma.Provider,
+    cleanstart.Provider.name(): cleanstart.Provider,
     alpine.Provider.name(): alpine.Provider,
     amazon.Provider.name(): amazon.Provider,
     arch.Provider.name(): arch.Provider,
