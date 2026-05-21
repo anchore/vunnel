@@ -602,6 +602,7 @@ providers:
       - '11'
       - '12'
       - '15'
+      - '16'
     request_timeout: 125
     runtime:
       existing_input: keep

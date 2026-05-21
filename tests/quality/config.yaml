@@ -348,6 +348,7 @@ tests:
     images:
       - registry.suse.com/suse/sles12sp4:26.380@sha256:94b537f5b312e7397b5d0bbb3d892f961acdd9454950fc233d77f771e25335fb
       - registry.suse.com/suse/sle15:15.1.6.2.461@sha256:6e613c994c3b33224e439ef8ee9003fb69416f77f7a6b1da0b18981d5aa3bb75
+      - registry.suse.com/bci/bci-base:16.0-18.4@sha256:ae18370c24511ed8b9d6d5376260663f5e535e0d52b0803a9e3e7858760606bf
 
     expected_namespaces:
       - sles:distro:sles:11
@@ -369,8 +370,10 @@ tests:
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
       - sles:distro:sles:15.7
+      - sles:distro:sles:16.0
     validations:
-      - *default-validations
+      - <<: *default-validations
+        max_year: 2024
 
   - provider: ubuntu
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
