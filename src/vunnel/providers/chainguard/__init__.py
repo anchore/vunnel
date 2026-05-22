@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.providers.wolfi.parser import Parser
+from vunnel.providers.wolfi.parser import SecDBParser, OSVParser
 from vunnel.utils import timer
 
 if TYPE_CHECKING:
@@ -23,6 +23,10 @@ class Config:
     request_timeout: int = 125
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_SECDB_URL
     secdb_url: str = "https://packages.cgr.dev/chainguard/security.json"
+    # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_URL
+    osv_url: str = "https://packages.cgr.dev/chainguard/v2/osv/all.json"
+    # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
+    use_osv: bool = False
 
 
 class Provider(provider.Provider):
@@ -39,13 +43,28 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
-            workspace=self.workspace,
-            url=config.secdb_url,
-            namespace=self._namespace,
-            download_timeout=self.config.request_timeout,
-            logger=self.logger,
-        )
+        # Use OSV feed or secdb feed depending on the configuration.
+        # The OSV feed is newer and has more metadata.
+        if self.config.use_osv:
+            self.logger.info("Using OSV chainguard data source")
+            self.parser = OSVParser(
+                workspace=self.workspace,
+                url=config.osv_url,
+                namespace=self._namespace,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
+            self.feed_url = config.osv_url
+        else:
+            self.logger.info("Using secdb chainguard data source")
+            self.parser = SecDBParser(
+                workspace=self.workspace,
+                url=config.secdb_url,
+                namespace=self._namespace,
+                download_timeout=self.config.request_timeout,
+                logger=self.logger,
+            )
+            self.feed_url = config.secdb_url
 
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)
@@ -70,4 +89,4 @@ class Provider(provider.Provider):
                             payload=record,
                         )
 
-            return [self.config.secdb_url], len(writer)
+            return [self.feed_url], len(writer)

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
-from .parser import Parser
+from .parser import SecDBParser
 
 if TYPE_CHECKING:
     import datetime
@@ -40,7 +40,7 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
+        self.parser = SecDBParser(
             workspace=self.workspace,
             url=config.secdb_url,
             namespace=self._namespace,

@@ -7,7 +7,14 @@ import shutil
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.wolfi import Config, Provider, parser
-from vunnel.providers.wolfi.parser import Parser
+from vunnel.providers.wolfi.parser import (
+    OSVParser,
+    SecDBParser,
+    _parse_cvss,
+    _severity_from_score,
+    _version_from_ranges,
+    _vulnerable_range,
+)
 
 
 class TestParser:
@@ -152,14 +159,14 @@ class TestParser:
         return release, dbtype_data_dict
 
     def test_load(self, mock_raw_data, tmpdir):
-        p = Parser(
+        p = SecDBParser(
             workspace=workspace.Workspace(tmpdir, "test", create=True),
             url="https://packages.wolfi.dev/os/security.json",
             namespace="wolfi",
         )
 
-        os.makedirs(p.secdb_dir_path, exist_ok=True)
-        b = os.path.join(p.secdb_dir_path, "security.json")
+        os.makedirs(p.input_dir_path, exist_ok=True)
+        b = os.path.join(p.input_dir_path, "security.json")
         with open(b, "w") as fp:
             fp.write(mock_raw_data)
 
@@ -173,7 +180,7 @@ class TestParser:
         assert counter == 1
 
     def test_normalize(self, mock_parsed_data, tmpdir, auto_fake_fixdate_finder):
-        p = Parser(
+        p = SecDBParser(
             workspace=workspace.Workspace(tmpdir, "test", create=True),
             url="https://packages.wolfi.dev/os/security.json",
             namespace="wolfi",
@@ -242,3 +249,196 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     p.update(None)
 
     workspace.assert_result_snapshots()
+
+
+CVSS3_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+CVSS3_PARSED = {
+    "version": "3.0",
+    "vector_string": CVSS3_VECTOR,
+    "base_metrics": {
+        "base_score": 9.8,
+        "exploitability_score": 3.9,
+        "impact_score": 5.9,
+        "base_severity": "Critical",
+    },
+    "status": "N/A",
+}
+
+
+class TestOSVHelpers:
+    @pytest.mark.parametrize(
+        ("vector", "expected"),
+        [
+            (CVSS3_VECTOR, CVSS3_PARSED),
+            ("not-a-cvss-vector", None),
+            ("", None),
+        ],
+    )
+    def test_parse_cvss(self, vector, expected):
+        assert _parse_cvss(vector) == expected
+
+    @pytest.mark.parametrize(
+        ("score", "expected"),
+        [
+            (-1.0, "None"),
+            (0.0, "None"),
+            (0.1, "Low"),
+            (3.9, "Low"),
+            (4.0, "Medium"),
+            (6.9, "Medium"),
+            (7.0, "High"),
+            (8.9, "High"),
+            (9.0, "Critical"),
+            (10.0, "Critical"),
+        ],
+    )
+    def test_severity_from_score(self, score, expected):
+        assert _severity_from_score(score) == expected
+
+    @pytest.mark.parametrize(
+        ("ranges", "expected"),
+        [
+            (None, ""),
+            ([], ""),
+            ([{"events": []}], ""),
+            ([{"events": [{"introduced": "0"}, {"fixed": "1.2.3"}]}], "< 1.2.3"),
+            ([{"events": [{"introduced": "1.0"}, {"fixed": "2.0"}]}], ">= 1.0, < 2.0"),
+            ([{"events": [{"introduced": "1.0"}, {"last_affected": "1.9"}]}], ">= 1.0, <= 1.9"),
+            (
+                [{"events": [{"introduced": "1.0"}]}, {"events": [{"fixed": "2.0"}]}],
+                ">= 1.0, < 2.0",
+            ),
+        ],
+    )
+    def test_vulnerable_range(self, ranges, expected):
+        assert _vulnerable_range(ranges) == expected
+
+    @pytest.mark.parametrize(
+        ("ranges", "expected"),
+        [
+            (None, None),
+            ([], None),
+            ([{"events": []}], None),
+            ([{"events": [{"introduced": "0"}, {"fixed": "1.2.3"}]}], "1.2.3"),
+            ([{"events": [{"introduced": "1.0"}]}], "1.0"),
+            (
+                [{"events": [{"introduced": "1.0"}]}, {"events": [{"fixed": "2.0"}]}],
+                "2.0",
+            ),
+        ],
+    )
+    def test_version_from_ranges(self, ranges, expected):
+        assert _version_from_ranges(ranges) == expected
+
+
+class TestOSVParser:
+    @pytest.fixture()
+    def osv_record(self):
+        return {
+            "id": "CGA-test-1234-5678",
+            "severity": [{"type": "CVSS_V3", "score": CVSS3_VECTOR}],
+            "affected": [
+                {
+                    "package": {"name": "openssl", "ecosystem": "wolfi"},
+                    "ranges": [
+                        {
+                            "type": "ECOSYSTEM",
+                            "events": [{"introduced": "0"}, {"fixed": "3.0.7-r0"}],
+                        },
+                    ],
+                    "ecosystem_specific": {
+                        "components": [
+                            {
+                                "advisory_id": "CGA-aaaa-bbbb-cccc",
+                                "architecture": "x86_64",
+                                "component_name": "openssl",
+                                "component_version": "3.0.6-r0",
+                                "component_type": "apk",
+                                "component_location": "/usr/bin/openssl",
+                                "component_purl": "pkg:apk/wolfi/openssl@3.0.6-r0",
+                                "latest_event_status": "fixed",
+                                "latest_event_timestamp": "2024-09-15T12:34:56Z",
+                            },
+                        ],
+                    },
+                },
+            ],
+            "published": "2024-09-14T00:00:00Z",
+            "modified": "2024-09-15T00:00:00Z",
+            "upstream": ["CVE-2024-1234"],
+        }
+
+    def _make_parser(self, tmpdir):
+        return OSVParser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.cgr.dev/chainguard/v2/osv/all.json",
+            namespace="wolfi",
+        )
+
+    def test_load(self, tmpdir, auto_fake_fixdate_finder):
+        p = self._make_parser(tmpdir)
+        os.makedirs(p.input_dir_path, exist_ok=True)
+        with open(os.path.join(p.input_dir_path, "CGA-aaaa.json"), "w") as fp:
+            fp.write('{"id": "CGA-aaaa"}')
+        with open(os.path.join(p.input_dir_path, "CGA-bbbb.json"), "w") as fp:
+            fp.write('{"id": "CGA-bbbb"}')
+        with open(os.path.join(p.input_dir_path, "ignore.txt"), "w") as fp:
+            fp.write("not json")
+
+        results = list(p._load())
+
+        assert sorted((release, data["id"]) for release, data in results) == [
+            ("rolling", "CGA-aaaa"),
+            ("rolling", "CGA-bbbb"),
+        ]
+
+    def test_normalize(self, tmpdir, auto_fake_fixdate_finder, osv_record):
+        p = self._make_parser(tmpdir)
+
+        result = p._normalize("rolling", osv_record)
+
+        expected = {
+            "Vulnerability": {
+                "CVSS": [CVSS3_PARSED],
+                "Description": "",
+                "FixedIn": [
+                    {
+                        "Name": "openssl",
+                        "NamespaceName": "wolfi:rolling",
+                        "VendorAdvisory": {
+                            "NoAdvisory": False,
+                            "AdvisorySummary": [
+                                {
+                                    "ID": "CGA-aaaa-bbbb-cccc",
+                                    "Link": "https://images.chainguard.dev/security/CGA-aaaa-bbbb-cccc",
+                                    "Architecture": "x86_64",
+                                    "ComponentName": "openssl",
+                                    "ComponentVersion": "3.0.6-r0",
+                                    "ComponentType": "apk",
+                                    "ComponentLocation": "/usr/bin/openssl",
+                                    "ComponentPurl": "pkg:apk/wolfi/openssl@3.0.6-r0",
+                                    "LatestEventStatus": "fixed",
+                                    "LatestEventTimestamp": "2024-09-15T12:34:56Z",
+                                },
+                            ],
+                        },
+                        "Version": "3.0.7-r0",
+                        "VersionFormat": "apk",
+                        "VulnerableRange": "< 3.0.7-r0",
+                        "Module": None,
+                    },
+                ],
+                "Link": "https://images.chainguard.dev/security/CGA-test-1234-5678",
+                "Metadata": {
+                    "Issued": "2024-09-14T00:00:00Z",
+                    "Updated": "2024-09-15T00:00:00Z",
+                    "Withdrawn": None,
+                    "RefId": None,
+                    "CVE": [{"Name": "CVE-2024-1234"}],
+                },
+                "Name": "CGA-test-1234-5678",
+                "NamespaceName": "wolfi:rolling",
+                "Severity": "Critical",
+            },
+        }
+        assert result == expected
