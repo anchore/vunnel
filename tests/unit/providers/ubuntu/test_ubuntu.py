@@ -1,753 +1,277 @@
 from __future__ import annotations
 
-import json
+import datetime
 import os
-import shlex
 import shutil
-import subprocess
-import sys
-from dataclasses import asdict
+from unittest.mock import patch
 
 import pytest
-from vunnel import result, workspace
-from vunnel.providers import ubuntu
-from vunnel.providers.ubuntu.parser import (
-    CVEFile,
-    Parser,
-    Patch,
-    check_merge,
-    check_patch,
-    map_parsed,
-    parse_cve_file,
-    parse_list,
-    parse_multiline_keyvalue,
-    parse_severity_from_priority,
-    parse_simple_keyvalue,
-    patch_states,
-    Severity,
-    ubuntu_version_names,
-)
+
+from vunnel import provider, result, schema, workspace
+from vunnel.providers.ubuntu import Config, Provider
+from vunnel.providers.ubuntu.parser import Parser
+from vunnel.tool.fixdate.finder import Result
 
 
-class TestUbuntuParser:
-    _location_ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__), "test-fixtures"))
-    _data_ = os.path.join(_location_, "example_ubuntu_cve")
-    _weird_data_ = os.path.join(_location_, "weird_example_cve")
-    _workspace_ = "/tmp/ubuntu"
-
-    # @classmethod
-    # def setUpClass(cls):
-    #     os.makedirs(cls._workspace_, exist_ok=True)
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     shutil.rmtree(cls._workspace_)
-
-    def test_reference_parser(self):
-        data = {
-            """References:
-            https://cve.mitre.org/1/cvename.cgi?somecve
-            https://cve.mitre.org/2/cvename2.cgi
-            """: [
-                "https://cve.mitre.org/1/cvename.cgi?somecve",
-                "https://cve.mitre.org/2/cvename2.cgi",
-            ],
-            """References:
-            https://cve.mitre.org/1/cvename.cgi?somecve
-            https://cve.mitre.org/2/cvename2.cgi
-
-            """: [
-                "https://cve.mitre.org/1/cvename.cgi?somecve",
-                "https://cve.mitre.org/2/cvename2.cgi",
-            ],
-            """References:
-
-            https://cve.mitre.org/1/cvename.cgi?somecve
-            https://cve.mitre.org/2/cvename2.cgi
-
-            """: [],
-        }
-
-        header = "References"
-
-        for input, result in data.items():
-            split_lines = input.splitlines()
-            got = parse_list(header, split_lines)
-
-            assert got == result
-
-    def test_simple_newline_parser(self):
-        data = {
-            "Header: somevalue\n": "somevalue",
-            "Header:   somevalue2     \n\n\n": "somevalue2",
-        }
-
-        header = "Header"
-
-        for input, result in data.items():
-            split_lines = input.splitlines()
-            got = parse_simple_keyvalue(header, split_lines)
-            assert got == result
-
-    def test_parse_cve(self):
-        with open(self._data_) as f:
-            data = f.readlines()
-
-        print("Parsing")
-        result = parse_cve_file("CVE-2017-9996", data)
-        print("Complete")
-
-        expected = CVEFile.from_dict(
-            {
-                "Candidate": "CVE-2017-9996",
-                # "PublicDate": dateutil.parser.parse("2017-06-28"),
-                "References": [
-                    "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-9996",
-                    "https://github.com/FFmpeg/FFmpeg/commit/1e42736b95065c69a7481d0cf55247024f54b660",
-                    "https://github.com/FFmpeg/FFmpeg/commit/e1b60aad77c27ed5d4dfc11e5e6a05a38c70489d",
-                    "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=1378",
-                    "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=1427",
-                ],
-                "Description": "The cdxl_decode_frame function in libavcodec/cdxl.c in FFmpeg 2.8.x before 2.8.12, 3.0.x before 3.0.8, 3.1.x before 3.1.8, 3.2.x before 3.2.5, and 3.3.x before 3.3.1 does not exclude the CHUNKY format, which allows remote attackers to cause a denial of service (heap-based buffer overflow and application crash) or possibly have unspecified other impact via a crafted file.",
-                # "Ubuntu-Description": "",
-                "Priority": "medium",
-                "patches": [
-                    {
-                        "distro": "upstream",
-                        "package": "libav",
-                        "status": "needs-triage",
-                        "version": None,
-                    },
-                    {
-                        "distro": "precise/esm",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "trusty",
-                        "package": "libav",
-                        "status": "needed",
-                        "version": None,
-                    },
-                    {
-                        "distro": "vivid/ubuntu-core",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "xenial",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "yakkety",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "zesty",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "artful",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "devel",
-                        "package": "libav",
-                        "status": "DNE",
-                        "version": None,
-                    },
-                    {
-                        "distro": "upstream",
-                        "package": "ffmpeg",
-                        "status": "released",
-                        "version": "7:3.2.5-1",
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "precise/esm",
-                        "package": "ffmpeg",
-                        "status": "DNE",
-                        "version": None,
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "trusty",
-                        "package": "ffmpeg",
-                        "status": "DNE",
-                        "version": None,
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "vivid/ubuntu-core",
-                        "package": "ffmpeg",
-                        "status": "DNE",
-                        "version": None,
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "xenial",
-                        "package": "ffmpeg",
-                        "status": "needed",
-                        "version": None,
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "yakkety",
-                        "package": "ffmpeg",
-                        "status": "ignored",
-                        "version": "reached end-of-life",
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "zesty",
-                        "package": "ffmpeg",
-                        "status": "needed",
-                        "version": None,
-                        "priority": "low",
-                    },
-                    {
-                        "distro": "artful",
-                        "package": "ffmpeg",
-                        "status": "not-affected",
-                        "priority": "low",
-                        "version": "7:3.2.6-1",
-                    },
-                    {
-                        "distro": "devel",
-                        "package": "ffmpeg",
-                        "status": "not-affected",
-                        "priority": "low",
-                        "version": "7:3.2.6-1",
-                    },
-                ],
-            },
-        )
-
-        # No longer parsing by default
-        # self.assertEqual(expected['PublicDate'], result['PublicDate'])
-        assert expected.description == result.description
-        self.maxDiff = None
-        assert expected.patches == result.patches
-        assert expected == result
-
-    def test_non_header_patches(self):
-        with open(self._weird_data_) as f:
-            data = f.readlines()
-
-        print("Parsing")
-        result = parse_cve_file("CVE-2007-0255", data)
-        print("Complete")
-
-        print(result)
-
-    def test_simple_multiline_parser(self):
-        data = {
-            """Description:
-             a
-             b
-             c
-             d
-             e
-             f
-            """: "a b c d e f",
-            """Description:
-             ab
-             bc
+@pytest.fixture
+def fixture_dir(helpers):
+    return helpers.local_dir("test-fixtures")
 
 
-            """: "ab bc",
-            """Description:
+@pytest.fixture
+def fresh_workspace(tmpdir):
+    return workspace.Workspace(tmpdir, "ubuntu", create=True)
 
-             a
-             b
 
-            """: "",
-        }
+class TestProvider:
+    def test_static_attrs(self):
+        assert Provider.name() == "ubuntu"
+        assert Provider.tags() == ["vulnerability", "os"]
+        assert "/osv/" in Provider.__schema__.url
+        # We deliberately do NOT bump __distribution_version__. The framework would
+        # otherwise call workspace.clear() on the first run with the new code, wiping
+        # the operationally-critical input/legacy/ cache. Downstream dispatches on the
+        # per-envelope schema URL instead.
+        assert Provider.__distribution_version__ == 1
 
-        header = "Description"
+    def test_compatible_schema_not_overridden(self):
+        # parser yields Schema objects directly; we don't gate on compatible_schema
+        assert "compatible_schema" not in Provider.__dict__
 
-        for input, result in data.items():
-            split_lines = input.splitlines()
-            got = parse_multiline_keyvalue(header, split_lines)
-            assert got == result
+    def test_rejects_existing_input_delete(self, tmpdir):
+        c = Config()
+        c.runtime.existing_input = provider.InputStatePolicy.DELETE
+        with pytest.raises(ValueError, match="existing_input"):
+            Provider(root=str(tmpdir), config=c)
 
-    def test_mapper(self, fake_fixdate_finder):
-        with open(self._data_) as f:
-            parsed = parse_cve_file("CVE-2017-9996", f.readlines())
+    def test_rejects_on_error_input_delete(self, tmpdir):
+        c = Config()
+        c.runtime.on_error.input = provider.InputStatePolicy.DELETE
+        with pytest.raises(ValueError, match="on_error.input"):
+            Provider(root=str(tmpdir), config=c)
 
-        parsed.name = "CVE-TEST-123"
-        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
-        for i in vulns:
-            j = i.json()
-            print(json.dumps(j))
-            assert j != {"FixedIn": [{}, {}]}
 
-    def test_esm_not_affected_suppresses_needs_triage(self, fake_fixdate_finder):
-        """When a needs-triage patch has a corresponding ESM ignored_patch with
-        not-affected status, map_parsed should emit a version="0" FixedIn entry
-        for that package+namespace instead of the match-all constraint that
-        needs-triage would normally produce.
+class TestParserOSVIteration:
+    def test_iterates_osv_records_from_extracted_dir(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        shutil.copytree(os.path.join(fixture_dir, "osv"), os.path.join(fresh_workspace.input_path, "osv"))
 
-        Uses normalized data from CVE-2023-5752 (literal output of the merge
-        pipeline). Key entries in that file:
-          patches:         focal/python-pip: needs-triage
-          ignored_patches: esm-apps/focal/python-pip: not-affected (code not present)
-        """
-        fixture = os.path.join(self._location_, "normalized_CVE-2023-5752.json")
-        with open(fixture) as f:
-            parsed = CVEFile.from_dict(json.load(f))
+        p = Parser(workspace=fresh_workspace)
+        records = list(p._iter_osv_records())
 
-        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
-
-        # Find the ubuntu:20.04 (focal) vulnerability record
-        focal_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:20.04":
-                focal_vuln = v
-                break
-
-        # The focal record should have a version="0" FixedIn for python-pip,
-        # signaling "not affected" to downstream consumers.
-        assert focal_vuln is not None, "Expected a vulnerability record for ubuntu:20.04 (focal)"
-        fixed_pip = [f for f in focal_vuln.FixedIn if f.Name == "python-pip"]
-        assert len(fixed_pip) == 1, f"Expected exactly one FixedIn for python-pip on focal, got: {[f.json() for f in fixed_pip]}"
-        assert fixed_pip[0].Version == "0", f"Expected version '0' (not-affected), got: {fixed_pip[0].Version}"
-
-        # Verify jammy (not-affected in patches) also gets a version="0" FixedIn
-        jammy_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:22.04":
-                jammy_vuln = v
-                break
-        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
-        jammy_pip = [f for f in jammy_vuln.FixedIn if f.Name == "python-pip"]
-        assert len(jammy_pip) == 1, f"Expected exactly one FixedIn for python-pip on jammy, got: {[f.json() for f in jammy_pip]}"
-        assert jammy_pip[0].Version == "0", f"Expected version '0' (not-affected), got: {jammy_pip[0].Version}"
-
-    def test_esm_not_affected_version_string_does_not_suppress(self, fake_fixdate_finder):
-        """When the ESM not-affected entry has a version string (e.g. a kernel
-        version like 4.4.0-2.16), the needs-triage entry should NOT be
-        suppressed. Version strings are ambiguous — they document the archive
-        version, but we can't be sure the determination applies to all versions.
-
-        Uses normalized data from CVE-2021-43057. Key entries:
-          patches:         xenial/linux: needs-triage
-          ignored_patches: esm-infra/xenial/linux: not-affected (4.4.0-2.16)
-        """
-        fixture = os.path.join(self._location_, "normalized_CVE-2021-43057.json")
-        with open(fixture) as f:
-            parsed = CVEFile.from_dict(json.load(f))
-
-        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
-
-        xenial_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:16.04":
-                xenial_vuln = v
-                break
-
-        assert xenial_vuln is not None, "Expected a vulnerability record for ubuntu:16.04 (xenial)"
-        fixed_linux = [f for f in xenial_vuln.FixedIn if f.Name == "linux"]
-        assert len(fixed_linux) == 1, (
-            f"Expected needs-triage linux on xenial to still produce a FixedIn entry "
-            f"(ESM has version string, not a textual reason), got {len(fixed_linux)}"
-        )
-
-    def test_esm_needs_triage_does_not_suppress(self, fake_fixdate_finder):
-        """When the ESM entry itself is needs-triage (not a definitive
-        determination), the base needs-triage entry should NOT be suppressed.
-
-        Uses normalized data from CVE-2002-2439. Key entries:
-          patches:         jammy/gcc-arm-none-eabi: needs-triage
-          ignored_patches: esm-apps/jammy/gcc-arm-none-eabi: needs-triage
-        """
-        fixture = os.path.join(self._location_, "normalized_CVE-2002-2439.json")
-        with open(fixture) as f:
-            parsed = CVEFile.from_dict(json.load(f))
-
-        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
-
-        jammy_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:22.04":
-                jammy_vuln = v
-                break
-
-        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
-        fixed_gcc = [f for f in jammy_vuln.FixedIn if f.Name == "gcc-arm-none-eabi"]
-        assert len(fixed_gcc) == 1, (
-            f"Expected needs-triage gcc-arm-none-eabi on jammy to still produce a FixedIn entry "
-            f"(ESM is also needs-triage, not a definitive determination), got {len(fixed_gcc)}"
-        )
-
-    def test_no_esm_counterpart_does_not_suppress(self, fake_fixdate_finder):
-        """When there is no ESM counterpart at all for a needs-triage entry,
-        it should NOT be suppressed.
-
-        Uses normalized data from CVE-2002-2439. Key entries:
-          patches:         questing/gcc-arm-none-eabi: needs-triage
-          ignored_patches: (no esm-*/questing entry for gcc-arm-none-eabi)
-        """
-        fixture = os.path.join(self._location_, "normalized_CVE-2002-2439.json")
-        with open(fixture) as f:
-            parsed = CVEFile.from_dict(json.load(f))
-
-        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
-
-        questing_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:25.10":
-                questing_vuln = v
-                break
-
-        assert questing_vuln is not None, "Expected a vulnerability record for ubuntu:25.10 (questing)"
-        fixed_gcc = [f for f in questing_vuln.FixedIn if f.Name == "gcc-arm-none-eabi"]
-        assert len(fixed_gcc) == 1, (
-            f"Expected needs-triage gcc-arm-none-eabi on questing to still produce a FixedIn entry "
-            f"(no ESM counterpart exists), got {len(fixed_gcc)}"
-        )
-
-    def test_bare_ignored_produces_fixedin(self, fake_fixdate_finder):
-        """When a patch has status 'ignored' with no version/reason on an active
-        release, it should produce a FixedIn entry with Version='None' and
-        NoAdvisory=True. This covers the case where Ubuntu decides a CVE won't
-        be fixed (e.g. 'no viable solution') but the package is still vulnerable.
-
-        Uses normalized data from CVE-2016-2781. Key entries:
-          patches: jammy/coreutils: ignored (bare, no reason)
-                   noble/coreutils: ignored (bare, no reason)
-                   focal/coreutils: ignored (end of standard support)
-        """
-        fixture = os.path.join(self._location_, "normalized_CVE-2016-2781.json")
-        with open(fixture) as f:
-            parsed = CVEFile.from_dict(json.load(f))
-
-        vulns = map_parsed(parsed, fixdater=fake_fixdate_finder())
-
-        # jammy (bare ignored) should produce a FixedIn with NoAdvisory
-        jammy_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:22.04":
-                jammy_vuln = v
-                break
-
-        assert jammy_vuln is not None, "Expected a vulnerability record for ubuntu:22.04 (jammy)"
-        fixed_coreutils = [f for f in jammy_vuln.FixedIn if f.Name == "coreutils"]
-        assert len(fixed_coreutils) == 1, (
-            f"Expected bare-ignored coreutils on jammy to produce a FixedIn entry, got {len(fixed_coreutils)}"
-        )
-        assert fixed_coreutils[0].Version == "None", "Expected Version='None' for won't-fix entry"
-        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
-            "Expected NoAdvisory=True for ignored entry"
-        )
-
-        # noble (also bare ignored) should behave the same
-        noble_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:24.04":
-                noble_vuln = v
-                break
-
-        assert noble_vuln is not None, "Expected a vulnerability record for ubuntu:24.04 (noble)"
-        fixed_coreutils = [f for f in noble_vuln.FixedIn if f.Name == "coreutils"]
-        assert len(fixed_coreutils) == 1, (
-            f"Expected bare-ignored coreutils on noble to produce a FixedIn entry, got {len(fixed_coreutils)}"
-        )
-
-        # focal (ignored with EOL reason) should also produce a FixedIn via check_merge
-        focal_vuln = None
-        for v in vulns:
-            if v.NamespaceName == "ubuntu:20.04":
-                focal_vuln = v
-                break
-
-        assert focal_vuln is not None, "Expected a vulnerability record for ubuntu:20.04 (focal)"
-        fixed_coreutils = [f for f in focal_vuln.FixedIn if f.Name == "coreutils"]
-        assert len(fixed_coreutils) == 1, (
-            f"Expected ignored (end of standard support) coreutils on focal to produce a FixedIn entry, "
-            f"got {len(fixed_coreutils)}"
-        )
-        assert fixed_coreutils[0].VendorAdvisory == {"NoAdvisory": True}, (
-            "Expected NoAdvisory=True for ignored entry with EOL reason"
-        )
-
-    def test_checkers(self):
-        check_data = [
-            (Patch(distro="natty", status="released", version="1.1"), False),
-            (Patch(distro="blah", status="released", version="1.1"), False),
-            (Patch(distro="lucid", status="released", version="1.1"), False),
+        identifiers = sorted(r[0] for r in records)
+        assert identifiers == [
+            "ubuntu-cve-2011-0221",
+            "ubuntu-cve-2021-3782",
+            "ubuntu-cve-2023-99999",
         ]
 
-        # Try cross-product of states and releases
-        for s, v in patch_states.items():
-            for r in ubuntu_version_names:
-                check_data.append((Patch(distro=r, status=s, version="testversion"), v))
+    def test_yields_schema_per_record_version(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        shutil.copytree(os.path.join(fixture_dir, "osv"), os.path.join(fresh_workspace.input_path, "osv"))
+        p = Parser(workspace=fresh_workspace)
+        by_id = {r[0]: r[1] for r in p._iter_osv_records()}
 
-        for data in check_data:
-            assert check_patch(data[0]) == data[1]
+        # the older-schema fixture record gets a 1.6.1 schema; the rest get 1.7.0
+        assert by_id["ubuntu-cve-2023-99999"].version == "1.6.1"
+        assert by_id["ubuntu-cve-2023-99999"].url.endswith("/osv/schema-1.6.1.json")
+        assert by_id["ubuntu-cve-2021-3782"].version == "1.7.0"
+        assert by_id["ubuntu-cve-2021-3782"].url.endswith("/osv/schema-1.7.0.json")
 
-    @pytest.mark.parametrize(
-        ("patch", "expected"),
-        [
-            (Patch(distro="foo", package="bar", status="ignored ftw", version="end-of-life now but something else before"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="reached end-of-life"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="end-of-life"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="end-of-life, was needed"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="was pending now end-of-life"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="end_of_life"), False),
-            (Patch(distro="foo", package="bar", status="ignored", version="bleddyend-of-lifeas we know"), False),
-            (Patch(distro="foo", package="bar", status="ignored", version="end times of all life"), False),
-            (Patch(distro="foo", package="bar", status="some-invalid-state", version="end-of-life"), False),
-            (Patch(distro="foo", package="bar", status="ignored", version="oh so end-of-lifed"), False),
-            (Patch(distro="foo", package="bar", status="ignored", version="end of standard support"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="out of standard support"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="end-of-standard-support"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="out-of-standard-support"), True),
-            (Patch(distro="foo", package="bar", status="ignored", version="end of standard support, was needed"), True),
-        ],
-    )
-    def test_check_merge(self, patch: Patch, expected: bool):
-        assert check_merge(patch) == expected
+    def test_payload_passed_through_verbatim(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        shutil.copytree(os.path.join(fixture_dir, "osv"), os.path.join(fresh_workspace.input_path, "osv"))
+        p = Parser(workspace=fresh_workspace)
+        by_id = {r[0]: r[2] for r in p._iter_osv_records()}
 
-    def test_reprocess_merged_cve(self, tmpdir):
-        new_distro_patches = [
-            {
-                "distro": "madeup",
-                "package": "mozjs38",
-                "status": "DNE",
-                "version": None,
-            },
-            {
-                "distro": "madeup",
-                "package": "mozjs52",
-                "status": "needs-triage",
-                "version": None,
-            },
-            {
-                "distro": "madeup",
-                "package": "mozjs60",
-                "status": "ignored",
-                "version": "end of life",
-            },
-        ]
-        data = CVEFile.from_dict(
-            {
-                "patches": [
-                    {
-                        "distro": "trusty",
-                        "package": "firefox",
-                        "status": "ignored",
-                        "version": "out of standard support",
-                    },
-                    {
-                        "distro": "bionic",
-                        "package": "firefox",
-                        "status": "released",
-                        "version": "82.0+build2-0ubuntu0.18.04.1",
-                    },
-                ],
-                "Candidate": "CVE-0000-0000",
-                "References": [
-                    "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-0000-0000",
-                ],
-                "Description": "blah blah blah",
-                "Priority": "medium",
-                "Name": "CVE-0000-0000",
-                "ignored_patches": [
-                    {"distro": "devel", "package": "mozjs52", "status": "DNE", "version": None},
-                    *new_distro_patches,
-                ],
-                "git_last_processed_rev": "40a85b5b23bd905f8d5c6791d3f61108406ec372",
-            },
+        rec = by_id["ubuntu-cve-2021-3782"]
+        ecosystems = sorted({a["package"]["ecosystem"] for a in rec["affected"]})
+        assert ecosystems == ["Ubuntu:18.04:LTS", "Ubuntu:20.04:LTS"]
+
+
+class TestParserFixDatePatching:
+    def test_patches_records_with_fixed_events(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # Use a mock date *earlier* than the record's published date AND mark it accurate so it
+        # becomes the upper bound — that way Finder.best() filters out the higher-confidence
+        # "published" candidate (which is later than the upper bound) and falls back to the mock.
+        finder = fake_fixdate_finder(
+            responses=[Result(date=datetime.date(2020, 1, 1), kind="first-observed", accurate=True)],
         )
-        ws = workspace.Workspace(tmpdir, "test")
-        udp = Parser(workspace=ws, additional_versions={"madeup": "00.00"}, enable_rev_history=False)
+        shutil.copytree(os.path.join(fixture_dir, "osv"), os.path.join(fresh_workspace.input_path, "osv"))
 
-        os.makedirs(udp.norm_workspace, exist_ok=True)
+        p = Parser(workspace=fresh_workspace, fixdater=finder)
+        by_id = {r[0]: r[2] for r in p._iter_osv_records()}
 
-        cve_id = "CVE-0000-0000"
-        cvs_file = os.path.join(udp.norm_workspace, cve_id)
+        rec = by_id["ubuntu-cve-2021-3782"]
+        bionic = next(a for a in rec["affected"] if a["package"]["ecosystem"] == "Ubuntu:18.04:LTS")
+        fixes = bionic["ranges"][0]["database_specific"]["anchore"]["fixes"]
+        assert any(f["date"] == "2020-01-01" for f in fixes)
 
-        with open(cvs_file, "w") as fp:
-            json.dump(asdict(data), fp)
+    def test_no_fixed_events_means_no_anchore_field(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        shutil.copytree(os.path.join(fixture_dir, "osv"), os.path.join(fresh_workspace.input_path, "osv"))
+        p = Parser(workspace=fresh_workspace)
+        by_id = {r[0]: r[2] for r in p._iter_osv_records()}
 
-        result = udp._reprocess_merged_cve(cve_id, cvs_file)
-        assert result.patches == data.patches + [Patch(**p) for p in new_distro_patches]
+        # CVE-2011-0221 has only {introduced: 0} -> patch_fix_date is a no-op
+        rec = by_id["ubuntu-cve-2011-0221"]
+        for aff in rec["affected"]:
+            for r in aff["ranges"]:
+                assert "anchore" not in r.get("database_specific", {})
 
-    @pytest.mark.parametrize(
-        ("cve", "expected_severity"),
-        [
-            (
-                CVEFile(name="unset"),
-                Severity.Unknown,
-            ),
-            (
-                CVEFile(name="unknown", priority="unknown"),
-                Severity.Unknown,
-            ),
-            (
-                CVEFile(name="untriaged", priority="untriaged"),
-                Severity.Unknown,
-            ),
-            (
-                CVEFile(name="negligible", priority="negligible"),
-                Severity.Negligible,
-            ),
-            (
-                CVEFile(name="low", priority="low"),
-                Severity.Low,
-            ),
-            (
-                CVEFile(name="medium", priority="medium"),
-                Severity.Medium,
-            ),
-            (
-                CVEFile(name="high", priority="high"),
-                Severity.High,
-            ),
-            (
-                CVEFile(name="critical", priority="critical"),
-                Severity.Critical,
-            ),
-        ],
+
+class TestParserLegacyPassthrough:
+    def test_iterates_legacy_envelopes(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        legacy_src = os.path.join(fixture_dir, "input", "legacy")
+        shutil.copytree(legacy_src, os.path.join(fresh_workspace.input_path, "legacy"))
+
+        p = Parser(workspace=fresh_workspace)
+        records = list(p._iter_legacy_records())
+
+        identifiers = sorted(r[0] for r in records)
+        assert identifiers == ["ubuntu:12.04/cve-2012-1111", "ubuntu:13.04/cve-2013-2222"]
+
+    def test_legacy_envelopes_preserve_os_schema_url(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        legacy_src = os.path.join(fixture_dir, "input", "legacy")
+        shutil.copytree(legacy_src, os.path.join(fresh_workspace.input_path, "legacy"))
+
+        p = Parser(workspace=fresh_workspace)
+        for _id, sch, _payload in p._iter_legacy_records():
+            assert "/os/schema-" in sch.url
+            assert sch.version == "1.1.0"
+
+    def test_legacy_dir_missing_yields_nothing(self, fresh_workspace, auto_fake_fixdate_finder):
+        p = Parser(workspace=fresh_workspace)
+        assert list(p._iter_legacy_records()) == []
+
+
+class TestParserDownloadAndExtract:
+    def test_download_streams_archive_to_input(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        with open(os.path.join(fixture_dir, "sample-osv-all.tar.xz"), "rb") as f:
+            payload = f.read()
+
+        class FakeResp:
+            def __init__(self, data: bytes):
+                self._data = data
+
+            def iter_content(self, chunk_size: int):  # noqa: ARG002
+                yield self._data
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return None
+
+        with patch("vunnel.providers.ubuntu.parser.http.get", return_value=FakeResp(payload)) as mock_get:
+            p = Parser(workspace=fresh_workspace)
+            p._download()
+
+        archive = os.path.join(fresh_workspace.input_path, "osv-all.tar.xz")
+        assert os.path.isfile(archive)
+        assert os.path.getsize(archive) == len(payload)
+        mock_get.assert_called_once()
+
+    def test_extract_wipes_existing_osv_dir(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # seed a stale file under input/osv/ that should be removed by extract
+        stale = os.path.join(fresh_workspace.input_path, "osv", "stale.json")
+        os.makedirs(os.path.dirname(stale))
+        with open(stale, "w") as f:
+            f.write("{}")
+
+        shutil.copy(
+            os.path.join(fixture_dir, "sample-osv-all.tar.xz"),
+            os.path.join(fresh_workspace.input_path, "osv-all.tar.xz"),
+        )
+
+        p = Parser(workspace=fresh_workspace)
+        p._extract()
+
+        assert not os.path.exists(stale), "stale file should be wiped before extraction"
+        assert os.path.isfile(
+            os.path.join(fresh_workspace.input_path, "osv", "cve", "2021", "UBUNTU-CVE-2021-3782.json"),
+        )
+
+
+class TestParserEmissionOrder:
+    def test_legacy_yielded_before_osv(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        shutil.copytree(os.path.join(fixture_dir, "osv"), os.path.join(fresh_workspace.input_path, "osv"))
+        shutil.copytree(
+            os.path.join(fixture_dir, "input", "legacy"),
+            os.path.join(fresh_workspace.input_path, "legacy"),
+        )
+
+        p = Parser(workspace=fresh_workspace)
+
+        with patch.object(p, "_download"), patch.object(p, "_extract"):
+            ids = [t[0] for t in p.get()]
+
+        first_osv = next(i for i, x in enumerate(ids) if x.startswith("ubuntu-cve-"))
+        last_legacy = max(i for i, x in enumerate(ids) if x.startswith("ubuntu:"))
+        assert last_legacy < first_osv
+
+
+def _stage_workspace_for_update(ws_root: str, fixture_dir: str) -> None:
+    """Copy fixture archive + legacy db into the workspace's input dir."""
+    input_path = os.path.join(ws_root, "ubuntu", "input")
+    shutil.copy(
+        os.path.join(fixture_dir, "sample-osv-all.tar.xz"),
+        os.path.join(input_path, "osv-all.tar.xz"),
     )
-    def test_parse_severity_from_priority(self, cve: CVEFile, expected_severity: Severity):
-        assert parse_severity_from_priority(cve) == expected_severity
-
-    @pytest.mark.parametrize(
-        ("cve", "error_type"),
-        [
-            (
-                CVEFile(name="unset", priority="something-else"),
-                AttributeError,
-            ),
-            (
-                None,
-                Exception,
-            ),
-        ],
+    shutil.copytree(
+        os.path.join(fixture_dir, "input", "legacy"),
+        os.path.join(input_path, "legacy"),
     )
-    def test_parse_severity_from_priority(self, cve: CVEFile, error_type: Exception):
-        with pytest.raises(error_type):
-            parse_severity_from_priority(cve)
 
 
-@pytest.fixture()
-def hydrate_git_repo(tmpdir, helpers):
-    def run(cmd, **kwargs):
-        subprocess.run(shlex.split(cmd), **kwargs, stderr=sys.stderr, stdout=sys.stdout)
+class TestProviderUpdate:
+    def test_writes_mixed_schema_results(self, helpers, fixture_dir, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        c = Config()
+        c.runtime.result_store = result.StoreStrategy.FLAT_FILE
 
-    def apply(export_path):
-        ws = workspace.Workspace(tmpdir, "ubuntu", create=True)
-        repo_path = os.path.join(ws.input_path, "ubuntu-cve-tracker")
+        p = Provider(root=str(ws.root), config=c)
+        _stage_workspace_for_update(str(ws.root), fixture_dir)
 
-        shutil.rmtree(repo_path, ignore_errors=True)
+        with patch.object(p.parser, "_download"):
+            p.update(None)
 
-        run("git init ubuntu-cve-tracker --initial-branch=main", cwd=ws.input_path)
+        # 3 OSV records + 2 legacy records = 5 entries
+        assert ws.num_result_entries() == 5
+        # NOTE: we deliberately do NOT call result_schemas_valid() here. Canonical's records
+        # declare schema_version=1.7.0 but use the "Ubuntu" severity.type, which the upstream
+        # OSV 1.7.0 schema rejects (it permits only CVSS_V{2,3,4}). The provider is per spec
+        # a verbatim pass-through; reconciling this is grype-db's OSV transformer's job.
 
-        mock_data_path = helpers.local_dir(export_path)
-        run("git fast-import", stdin=open(mock_data_path), cwd=repo_path)
-        run("git checkout", cwd=repo_path)
+    def test_writes_expected_envelope_schemas(self, helpers, fixture_dir, auto_fake_fixdate_finder):
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        c = Config()
+        c.runtime.result_store = result.StoreStrategy.FLAT_FILE
 
-        return tmpdir
+        p = Provider(root=str(ws.root), config=c)
+        _stage_workspace_for_update(str(ws.root), fixture_dir)
 
-    return apply
+        with patch.object(p.parser, "_download"):
+            p.update(None)
 
+        # confirm the mixed-schema envelope: OSV records carry per-record OSV schema URLs,
+        # legacy records carry the original OS schema URL
+        import json
+        schemas = []
+        for f in ws.result_files():
+            with open(f) as fh:
+                schemas.append(json.load(fh)["schema"])
+        assert any("/osv/schema-1.7.0.json" in s for s in schemas), schemas
+        assert any("/osv/schema-1.6.1.json" in s for s in schemas), schemas
+        assert any("/os/schema-1.1.0.json" in s for s in schemas), schemas
 
-@pytest.mark.parametrize(
-    ("mock_data_path", "expected_written_entries"),
-    [
-        ("test-fixtures/repo-fast-export", 42),
-        # this is 6 records distributed across multiple distros:
-        # └── results
-        #     ├── ubuntu:14.04
-        #     │   ├── cve-2019-17185.json
-        #     │   ├── cve-2021-4204.json
-        #     │   ├── cve-2022-20566.json
-        #     │   ├── cve-2022-41859.json
-        #     │   ├── cve-2022-41860.json
-        #     │   └── cve-2022-41861.json
-        #     ├── ubuntu:16.04
-        #     │   ├── cve-2019-17185.json
-        #     │   ├── cve-2021-4204.json
-        #     │   ├── cve-2022-20566.json
-        #     │   ├── cve-2022-41859.json
-        #     │   ├── cve-2022-41860.json
-        #     │   └── cve-2022-41861.json
-        #     ├── ubuntu:18.04
-        #     │   ├── cve-2019-17185.json
-        #     │   ├── cve-2021-4204.json
-        #     │   ├── cve-2022-20566.json
-        #     │   ├── cve-2022-41859.json
-        #     │   ├── cve-2022-41860.json
-        #     │   └── cve-2022-41861.json
-        #     ├── ubuntu:19.10
-        #     │   └── cve-2019-17185.json
-        #     ├── ubuntu:20.04
-        #     │   ├── cve-2019-17185.json
-        #     │   ├── cve-2021-4204.json
-        #     │   ├── cve-2022-20566.json
-        #     │   ├── cve-2022-41859.json
-        #     │   ├── cve-2022-41860.json
-        #     │   └── cve-2022-41861.json
-        #     ├── ubuntu:20.10
-        #     │   └── cve-2019-17185.json
-        #     ├── ubuntu:21.04
-        #     │   ├── cve-2019-17185.json
-        #     │   └── cve-2021-4204.json
-        #     ├── ubuntu:21.10
-        #     │   ├── cve-2019-17185.json
-        #     │   └── cve-2021-4204.json
-        #     ├── ubuntu:22.04
-        #     │   ├── cve-2019-17185.json
-        #     │   ├── cve-2021-4204.json
-        #     │   ├── cve-2022-20566.json
-        #     │   ├── cve-2022-41859.json
-        #     │   ├── cve-2022-41860.json
-        #     │   └── cve-2022-41861.json
-        #     └── ubuntu:22.10
-        #         ├── cve-2019-17185.json
-        #         ├── cve-2021-4204.json
-        #         ├── cve-2022-20566.json
-        #         ├── cve-2022-41859.json
-        #         ├── cve-2022-41860.json
-        #         └── cve-2022-41861.json
-    ],
-)
-def test_provider_schema(helpers, mock_data_path, hydrate_git_repo, expected_written_entries, mocker, auto_fake_fixdate_finder):
-    path = hydrate_git_repo(mock_data_path)
+    def test_via_snapshot(self, helpers, fixture_dir, fake_fixdate_finder):
+        fake_fixdate_finder(responses=[Result(date=datetime.date(2024, 1, 1), kind="first-observed")])
 
-    c = ubuntu.Config()
-    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
-    p = ubuntu.Provider(root=path, config=c)
-    p.parser.git_wrapper.init_repo = mocker.Mock()
-    p.update(None)
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        c = Config()
+        c.runtime.result_store = result.StoreStrategy.FLAT_FILE
 
-    ws = helpers.provider_workspace_helper("ubuntu", create=False)
+        p = Provider(root=str(ws.root), config=c)
+        _stage_workspace_for_update(str(ws.root), fixture_dir)
 
-    assert expected_written_entries == ws.num_result_entries()
-    assert ws.result_schemas_valid(require_entries=expected_written_entries > 0)
+        with patch.object(p.parser, "_download"):
+            p.update(None)
 
-
-def test_provider_via_snapshot(helpers, hydrate_git_repo, mocker, auto_fake_fixdate_finder):
-    path = hydrate_git_repo("test-fixtures/repo-fast-export")
-
-    c = ubuntu.Config()
-    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
-    p = ubuntu.Provider(root=path, config=c)
-    p.parser.git_wrapper.init_repo = mocker.Mock()
-    p.update(None)
-
-    ws = helpers.provider_workspace_helper("ubuntu", create=False)
-
-    ws.assert_result_snapshots()
+        ws.assert_result_snapshots()

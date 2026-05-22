@@ -621,15 +621,10 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   ubuntu:
-    additional_versions: {}
-    enable_rev_history: true
-    git_branch: master
-    git_url: git://git.launchpad.net/ubuntu-cve-tracker
-    parallelism: 8x
     request_timeout: 125
     runtime:
       existing_input: keep
-      existing_results: keep
+      existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
       import_results_path: providers/{provider_name}/listing.json
