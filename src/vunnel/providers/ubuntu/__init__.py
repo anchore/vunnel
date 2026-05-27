@@ -32,12 +32,10 @@ class Provider(provider.Provider):
 
     __schema__ = schema.OSVSchema()
     # Distribution version stays at 1 (derived from major_version, which is "1" for
-    # both OSSchema and OSVSchema). We deliberately do NOT bump this, even though
-    # the envelope shape changes: every record carries its own schema URL in the
-    # envelope (OSV records use the OSV URL, legacy passthrough preserves the OS URL),
-    # so downstream can dispatch on per-record shape without a global bump signal.
-    # Bumping this would trip provider.py's "version changed -> workspace.clear()"
-    # logic and erase the operationally-critical input/legacy/ cache.
+    # both OSSchema and OSVSchema). Bumping this trips provider.py's "version changed
+    # -> workspace.clear()" logic, which would erase input/fragments/ (frozen OSV
+    # state for releases that have dropped out of the feed) and input/normalized-cve-data/
+    # (at-cutover EOL source). Per-envelope schema URLs are the dispatch signal.
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
@@ -46,11 +44,11 @@ class Provider(provider.Provider):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
-        # The legacy passthrough cache under input/legacy/ is the only source of
-        # records for releases Canonical has dropped from the OSV feed. Losing
-        # it requires re-seeding from a frozen pre-rewrite production results.db,
-        # which may not be readily available — guard against any policy that
-        # lets the framework wipe input/.
+        # input/ is operationally load-bearing. Two things must survive between runs:
+        #   - fragments/        : frozen per-ecosystem OSV state for releases no longer
+        #                         in today's tarball. The only source for those releases.
+        #   - normalized-cve-data/ : at-cutover EOL data (pre-OSV releases). Phase 1.
+        # Guard both the steady-state and on-error policies against wiping input/.
         provider.disallow_existing_input_policy(config.runtime)
         if config.runtime.on_error.input != provider.InputStatePolicy.KEEP:
             raise ValueError(
