@@ -30,6 +30,8 @@ class Config:
 
 
 class Provider(provider.Provider):
+    # NOTE: schema and distribution version are actually set on init depending
+    # on which feed we configure the provider to use.
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -43,10 +45,9 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        # Use OSV feed or secdb feed depending on the configuration.
-        # The OSV feed is newer and has more metadata.
         if self.config.use_osv:
-            self.logger.info("Using OSV chainguard data source")
+            self.logger.info("Using OSV data source")
+            self.feed_url = self.config.osv_url
             self.parser = OSVParser(
                 workspace=self.workspace,
                 url=config.osv_url,
@@ -54,9 +55,8 @@ class Provider(provider.Provider):
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
             )
-            self.feed_url = config.osv_url
+            self.schema = schema.OSVSchema()
         else:
-            self.logger.info("Using secdb chainguard data source")
             self.parser = SecDBParser(
                 workspace=self.workspace,
                 url=config.secdb_url,
@@ -64,7 +64,8 @@ class Provider(provider.Provider):
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
             )
-            self.feed_url = config.secdb_url
+            self.feed_url = self.config.secdb_url
+            self.schema = schema.OSSchema()
 
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)
@@ -85,7 +86,7 @@ class Provider(provider.Provider):
                     for vuln_id, record in vuln_dict.items():
                         writer.write(
                             identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                            schema=self.__schema__,
+                            schema=self.schema,
                             payload=record,
                         )
 

@@ -9,10 +9,10 @@ from vunnel.providers.wolfi.parser import OSVParser, SecDBParser
 
 
 @pytest.mark.parametrize(
-    ("use_osv", "expected_parser_cls", "expected_url_attr"),
+    ("use_osv", "expected_parser_cls", "expected_url_attr", "expected_schema_name"),
     [
-        (False, SecDBParser, "secdb_url"),
-        (True, OSVParser, "osv_url"),
+        (False, SecDBParser, "secdb_url", "vulnerability/os"),
+        (True, OSVParser, "osv_url", "vulnerability/osv"),
     ],
 )
 def test_parser_selection(
@@ -21,6 +21,7 @@ def test_parser_selection(
     use_osv,
     expected_parser_cls,
     expected_url_attr,
+    expected_schema_name,
 ):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
@@ -31,7 +32,7 @@ def test_parser_selection(
     expected_url = getattr(c, expected_url_attr)
     assert isinstance(p.parser, expected_parser_cls)
     assert p.parser.url == expected_url
-    assert p.feed_url == expected_url
+    assert p.schema.name == expected_schema_name
 
 
 def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder):

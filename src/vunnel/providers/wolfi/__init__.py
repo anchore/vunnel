@@ -25,7 +25,6 @@ class Config:
     # Override with VUNNEL_PROVIDERS_WOLFI_SECDB_URL
     secdb_url: str = "https://packages.wolfi.dev/os/security.json"
 
-
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)

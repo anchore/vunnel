@@ -135,6 +135,41 @@ class SecDBParser(Parser):
             raise
 
     def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
+        """Normalize a wolfi/chainguard secdb document into vunnel OS-schema records.
+
+        Returns a ``{vuln_id: record}`` mapping where each ``record`` conforms to
+        the vunnel OS vulnerability schema (schema.OSSchema, default v1.1.0):
+        https://github.com/anchore/vunnel/blob/main/schema/vulnerability/os/schema-1.1.0.json
+
+        Example output for a single vulnerability::
+
+            {
+                "CVE-2022-30065": {
+                    "Vulnerability": {
+                        "Name": "CVE-2022-30065",
+                        "NamespaceName": "wolfi:rolling",
+                        "Link": "https://images.chainguard.dev/security/CVE-2022-30065",
+                        "Severity": "Unknown",
+                        "Description": "",
+                        "Metadata": {},
+                        "CVSS": [],
+                        "FixedIn": [
+                            {
+                                "Name": "busybox",
+                                "Version": "1.35.0-r3",
+                                "VersionFormat": "apk",
+                                "NamespaceName": "wolfi:rolling",
+                                "Available": {"Date": "2022-05-30", "Kind": "commit"},
+                            }
+                        ],
+                    }
+                }
+            }
+
+        Args:
+            release: Release name, e.g. ``"rolling"``. Used to build ``NamespaceName``.
+            data: Parsed secdb document (output of :meth:`_load`).
+        """
         vuln_dict: dict[str, Any] = {}
 
         self.logger.debug("normalizing vulnerability data")
@@ -242,147 +277,16 @@ class OSVParser(Parser):
 
     def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
         """
-        Normalize one OSV record into a single-entry {vuln_id: payload} dict.
+        Normalize one OSV record to match vunnel requirements. Currently, the OSV schema used 
+        by vunnel matches Chainguard, so this is a noop.
 
-        Output conforms to the vunnel OS vulnerability schema (schema.OSSchema, default v1.1.0):
-        https://github.com/anchore/vunnel/blob/main/schema/vulnerability/os/schema-1.1.0.json
+        Output conforms to the vunnel OS vulnerability schema (schema.OSVSchema, default v1.7.0):
+        https://github.com/anchore/vunnel/blob/main/schema/vulnerability/osv/schema-1.7.0.json
 
         Input shape reference (Chainguard OSV):
         https://packages.cgr.dev/chainguard/v2/osv/CGA-2255-2h2p-73q2.json
         """
-        vid = data["id"]
-        ecosystem = f"{self.namespace}:{release}"
-        cvss_scores = [
-            _parse_cvss(entry["score"])
-            for entry in data["severity"]
-        ]
-
-        return {
-            "Vulnerability": {
-                "CVSS": cvss_scores,
-                "Description": "",
-                "FixedIn": [
-                    {
-                        "Name": affected["package"]["name"],
-                        "NamespaceName": ecosystem,
-                        "VendorAdvisory": {
-                            "NoAdvisory": False,
-                            "AdvisorySummary": [
-                                {
-                                    # TODO should we only include fixed events
-                                    "ID": component["advisory_id"],
-                                    "Link": f"{self.security_reference_url}/{component['advisory_id']}",
-                                    # TODO can we use the rest of these fields
-                                    "Architecture": component["architecture"],
-                                    "ComponentName": component["component_name"],
-                                    "ComponentVersion": component["component_version"],
-                                    "ComponentType": component["component_type"],
-                                    "ComponentLocation": component["component_location"],
-                                    "ComponentPurl": component["component_purl"],
-                                    "LatestEventStatus": component["latest_event_status"],
-                                    "LatestEventTimestamp": component["latest_event_timestamp"],
-                                }
-                                for component in affected["ecosystem_specific"]["components"]
-                            ]
-                        },
-                        "Version": _version_from_ranges(affected["ranges"]),
-                        "VersionFormat": "apk",
-                        # TODO should we try to pull timestamp from components
-                        # "Availability": {
-                        #     "Date": ,
-                        #     "Kind": "advisory",
-                        # },
-                        "VulnerableRange": _vulnerable_range(affected["ranges"]),
-                        "Module": None,
-                    }
-                    for affected in data["affected"]
-                ],
-                "Link": f"https://images.chainguard.dev/security/{vid}",
-                "Metadata": {
-                    "Issued": data["published"],
-                    "Updated": data["modified"],
-                    "Withdrawn": None,
-                    "RefId": None, # TODO what is this
-                    "CVE": [
-                        {"Name": parent}
-                        for parent in data["upstream"]
-                    ]
-                },
-                "Name": vid,
-                "NamespaceName": ecosystem,
-                "Severity": _severity_from_score(max((s["base_metrics"]["base_score"] for s in cvss_scores), default=0.0)),
-            }
-        }
-
-
-def _parse_cvss(vector: str) -> dict[str, Any] | None:
-    """Parse a CVSS vector into the structured form expected by the OS schema, or None on failure."""
-    parsers: list[tuple[type, str]] = [(cvss.CVSS3, "3.0"), (cvss.CVSS2, "2.0")]
-    for cls, default_version in parsers:
-        try:
-            c = cls(vector)
-        except Exception:  # noqa: BLE001 — try the next CVSS version on any parse failure
-            continue
-        return {
-            "version": default_version,
-            "vector_string": vector,
-            "base_metrics": {
-                "base_score": float(c.base_score),
-                # cvss.CVSS3 exposes sub-scores as c.isc / c.esc (raw, unrounded);
-                # cvss.CVSS2 doesn't expose them, so fall back to 0.0.
-                "exploitability_score": round(float(getattr(c, "esc", 0.0)), 1),
-                "impact_score": round(float(getattr(c, "isc", 0.0)), 1),
-                "base_severity": str(c.severities()[0]),
-            },
-            "status": "N/A",
-        }
-    return None
-
-
-def _severity_from_score(base_score: float) -> str:
-    """Map a CVSS v3 base score to its qualitative rating (None/Low/Medium/High/Critical)."""
-    if base_score <= 0.0:
-        return "None"
-    if base_score < 4.0:
-        return "Low"
-    if base_score < 7.0:
-        return "Medium"
-    if base_score < 9.0:
-        return "High"
-    return "Critical"
-
-
-def _vulnerable_range(ranges: list[dict[str, Any]] | None) -> str:
-    """Build a VulnerableRange string (e.g. '>= 1.0, < 2.0') from an OSV affected.ranges array.
-
-    OSV events become comparators: ``introduced`` -> ``>=`` (omitted when ``"0"``),
-    ``fixed`` -> ``<``, ``last_affected`` -> ``<=``. Comparators are joined with ", ".
-    """
-    parts: list[str] = []
-    for r in ranges or []:
-        for event in r.get("events") or []:
-            if "introduced" in event:
-                v = event["introduced"]
-                if v and v != "0":
-                    parts.append(f">= {v}")
-            elif "fixed" in event:
-                parts.append(f"< {event['fixed']}")
-            elif "last_affected" in event:
-                parts.append(f"<= {event['last_affected']}")
-    return ", ".join(parts)
-
-
-def _version_from_ranges(ranges: list[dict[str, Any]] | None) -> str | None:
-    """Pull a Version from an OSV affected.ranges array.
-
-    Returns the first ``fixed`` event encountered (priority); otherwise the first
-    ``introduced`` event; otherwise ``None`` when neither is present.
-    """
-    introduced: str | None = None
-    for r in ranges or []:
-        for event in r.get("events") or []:
-            if "fixed" in event:
-                return event["fixed"]
-            if introduced is None and "introduced" in event:
-                introduced = event["introduced"]
-    return introduced
+        # we map the osv id to the osv data to keep consistency in the secdb parser, which
+        # does this for ease of identifying the associated vulnerability when writing records.
+        # IE: {"CGA-1234-5678-9abc": {<full osv record>}}
+        return {data["id"]: data}
