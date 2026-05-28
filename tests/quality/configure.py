@@ -454,7 +454,7 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
         "src/vunnel/result.py",
         "src/vunnel/provider.py",
         "src/vunnel/tool/fixdate/**",
-        "src/vunnel/utils/http_wrapper.py",
+        "src/vunnel/utils/**",
     ]
 
     for search_glob in gate_globs:
