@@ -412,6 +412,8 @@ tests:
       - ubuntu:distro:ubuntu:24.04
       - ubuntu:distro:ubuntu:24.10
       - ubuntu:distro:ubuntu:25.04
+      - ubuntu:distro:ubuntu:25.10
+      - ubuntu:distro:ubuntu:26.04
     validations:
       - *default-validations
 

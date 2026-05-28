@@ -471,14 +471,27 @@ Critically: an ecosystem only gets its fragment wiped if today's tarball
 has at least one record affecting it. Empty/dropped ecosystems are
 untouched, which preserves the freeze.
 
-### 5. Fix-date patching
+### 5. Fix-date patching (deferred to yield time)
 
-Each parsed record gets `vunnel.utils.osv.patch_fix_date(rec, fixdater)`
-applied **before** slicing. The fixdate annotations land in
+`patch_fix_date` is **not** called when writing fragments. It is called
+in `_iter_fragments` at yield time, so the cache stores raw OSV records
+and the fixdater state at emission time is what flows downstream. The
+fixdate annotations land in
 `affected[].ranges[].database_specific.anchore.fixes[]`, which is on
-the per-ecosystem `affected[]` entry, so each fragment carries its own
-patched fix-date data. About 38% of records have no `fixed:` events
-(just `{"introduced": "0"}`) and patch_fix_date is a no-op for them.
+the per-ecosystem `affected[]` entry. About 38% of records have no
+`fixed:` events (just `{"introduced": "0"}`) and patch_fix_date is a
+no-op for them.
+
+Why this matters: frozen fragments (ecosystems no longer in OSV) get
+re-patched on every run with the latest fixdater data, instead of being
+permanently baked with whatever fixdate cache happened to be present
+the day they were last written.
+
+The legacy passthrough applies the symmetric optimization: it
+**pre-filters** `cve_file.patches` by OSV coverage before invoking
+`map_parsed`, so fixdater is never asked about a namespace whose
+record will be discarded post-mapping (e.g. jammy/noble fix versions
+for a CVE the rolling OSV path already covers).
 
 `Parser` owns the `fixdate.Finder` and acts as a context manager so its
 `__enter__`/`__exit__` propagate (same pattern as bitnami/debian).
@@ -534,7 +547,62 @@ This path stays in place for phase 1. Phase 2 converts
 `normalized-cve-data` into fragment files once and drops `map_parsed()`
 and the v3 dataclasses (`CVEFile`, `Patch`, etc.).
 
-### 8. endoflife.date integration
+### 8. Fix-disposition overlay from Canonical VEX
+
+Canonical's OSV publication collapses six tracker statuses
+(`needs-triage`, `needed`, `ignored`, `pending`, `deferred`, `in-progress`)
+into a single OSV shape — `events: [{"introduced": "0"}]` with no `fixed:`
+event. Their own documentation
+(documentation.ubuntu.com/security/security-updates/osv/) makes this
+explicit. The `affected[].database_specific` extension is universally
+empty in production records; `ecosystem_specific` only carries
+`binaries`, `availability`, `ubuntu_priority`, `priority_reason`. There
+is no field in their OSV publication that distinguishes "won't fix"
+from "still triaging."
+
+The same data is published in OpenVEX format at
+`https://security-metadata.canonical.com/vex/vex-all.tar.xz` (64 MB).
+There, the four canonical openings of `action_statement` for
+`status: "affected"` are:
+
+| Opening | UCT status | grype state |
+|---|---|---|
+| `"...decided to not fix it..."` | ignored | **wont-fix** |
+| `"...is no longer supported..."` | ignored (EOL) | **wont-fix** |
+| `"...needs fixing"` | needed | not-fixed |
+| `"...needs fixing, and...actively..."` | active/in-progress | not-fixed |
+
+The provider downloads `vex-all.tar.xz` alongside `osv-all.tar.xz`,
+builds an in-memory index of `(cve_id, distro_label_from_purl,
+source_package)` tuples that are won't-fix (~1.25M entries, ~60 MB),
+and during fragment writes stamps
+`affected[].database_specific.anchore.status = "wont-fix"` onto matching
+slices. Both OSV and VEX records carry the same `distro=X` qualifier in
+their package PURLs (e.g. `distro=noble`, `distro=esm-infra/jammy`),
+which is the join key — no codename/version translation needed.
+
+**Bake at write time, not yield time.** This is the inverse of the
+fix-date pattern. When a currently-tracked release later EOLs, VEX
+stops carrying it at the same moment OSV does. If the disposition is
+overlaid at yield time, the day after EOL won't-fix matches would
+silently regress. Baking the annotation into the fragment carries it
+forward through the freeze.
+
+**Coverage gap.** Live VEX has the same coverage as live OSV — only
+currently-tracked releases. For at-cutover EOL releases (precise →
+mantic), the legacy `normalized-cve-data` path already preserves
+won't-fix via `status: ignored` → `VendorAdvisory.NoAdvisory: True` →
+`db.WontFixStatus`. So `normalized-cve-data` remains load-bearing for
+the EOL slice; phase 2 (drop it) is shelved until Canonical publishes
+EOL data in some refreshable format.
+
+**Grype side.** `transform_ubuntu.go`'s `ubuntuRangesFromAffected`
+reads `affected.DatabaseSpecific["anchore"]["status"]` when building the
+no-fix sentinel range. If `"wont-fix"`, the emitted `Fix.State` is
+`WontFixStatus`; otherwise `NotFixedStatus`. Mirrors the os-schema
+transformer's `VendorAdvisory.NoAdvisory:true` → `WontFixStatus` path.
+
+### 9. endoflife.date integration
 
 The existing `eol` provider hits `https://endoflife.date/api/v1/products/full`.
 Ubuntu records there expose `name` (e.g. `22.04`), `codename`
@@ -674,6 +742,19 @@ ones it understands).
 
 ## Revision history
 
+- **2026-05-27** (later — VEX overlay added): added Canonical OpenVEX
+  feed (`vex-all.tar.xz`) as a fix-disposition source. Vunnel builds an
+  in-memory index of won't-fix (cve, distro, source-pkg) tuples by
+  prefix-matching `action_statement`, and bakes
+  `affected[].database_specific.anchore.status = "wont-fix"` into
+  fragments at write time so frozen fragments retain disposition
+  through EOL. Grype's `transform_ubuntu.go` reads the annotation and
+  emits `WontFixStatus`. Recovers the "(won't fix)" UX that
+  Canonical's OSV publication drops by collapsing six tracker statuses
+  into one shape. Phase 2 (drop normalized-cve-data) shelved — VEX has
+  the same EOL coverage gap as OSV, so normalized-cve-data remains
+  load-bearing for at-cutover EOL releases (which the v3 mapper
+  already preserves won't-fix for natively).
 - **2026-05-27** (current): switched from single `osv/` extracted
   directory + single `legacy/results.db` to **per-ecosystem
   `fragments/*.db`** with **streaming tarball read** (no extraction to
@@ -684,7 +765,11 @@ ones it understands).
   phase 2 plan for converting normalized-cve-data to fragments.
   Confirmed Canonical uses OSV `withdrawn` (6.1% of records) and added
   withdrawn-handling section. Resolved Pro/FIPS sub-ecosystem collapse
-  as "keep separate" to preserve future Pro/ESM-aware matching.
+  as "keep separate" to preserve future Pro/ESM-aware matching. Moved
+  `patch_fix_date` from write time to yield time so frozen fragments
+  pick up fixdater improvements automatically; pre-filter
+  normalized-cve-data patches by OSV coverage before `map_parsed` to
+  skip fixdater queries we'd discard.
 - **2026-05-22** (initial): extract-to-disk + monolithic legacy
   passthrough design. See git history at commit `ac45370` for the
   original spec.

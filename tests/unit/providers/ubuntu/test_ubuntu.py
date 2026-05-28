@@ -12,8 +12,15 @@ from vunnel import provider, result, schema, workspace
 from vunnel.providers.ubuntu import Config, Provider
 from vunnel.providers.ubuntu.parser import (
     Parser,
+    _annotate_wont_fix,
     ecosystem_to_slug,
     slice_by_ecosystem,
+)
+from vunnel.providers.ubuntu.vex_overlay import (
+    VEXOverlay,
+    distro_label_from_purl,
+    is_wont_fix_action,
+    source_package_from_purl,
 )
 from vunnel.tool.fixdate.finder import Result
 
@@ -156,6 +163,13 @@ def _seed_archive(fresh_workspace, fixture_dir):
     )
 
 
+def _seed_vex_archive(fresh_workspace, fixture_dir):
+    shutil.copy(
+        os.path.join(fixture_dir, "sample-vex-all.tar.xz"),
+        os.path.join(fresh_workspace.input_path, "vex-all.tar.xz"),
+    )
+
+
 def _fragment_paths(workspace):
     fragments_dir = os.path.join(workspace.input_path, "fragments")
     if not os.path.isdir(fragments_dir):
@@ -165,12 +179,12 @@ def _fragment_paths(workspace):
 
 class TestParserFragmentWriter:
     # Real OSV fixtures in tests/unit/providers/ubuntu/test-fixtures/osv:
-    #   UBUNTU-CVE-2013-2208   (1.7.0, has `fixed:` events, withdrawn)
-    #                                                -> Ubuntu:14.04:LTS
-    #   UBUNTU-CVE-2020-36325  (1.6.3, withdrawn)    -> Ubuntu:Pro:14.04:LTS
-    #   UBUNTU-CVE-2021-3782   (1.7.0)               -> Ubuntu:18.04:LTS, Ubuntu:20.04:LTS,
-    #                                                   Ubuntu:22.04:LTS, Ubuntu:Pro:16.04:LTS
-    #   UBUNTU-CVE-2026-1403   (1.7.0)               -> Ubuntu:16.04:LTS
+    #   UBUNTU-CVE-2013-2208   (1.7.0, fixed events, withdrawn) -> Ubuntu:14.04:LTS
+    #   UBUNTU-CVE-2016-20013  (1.7.0, no fixed events)         -> 10 ecosystems
+    #                                                              (used for VEX wont-fix tests)
+    #   UBUNTU-CVE-2020-36325  (1.6.3, withdrawn)               -> Ubuntu:Pro:14.04:LTS
+    #   UBUNTU-CVE-2021-3782   (1.7.0)                          -> 4 ecosystems
+    #   UBUNTU-CVE-2026-1403   (1.7.0)                          -> Ubuntu:16.04:LTS
 
     def test_writes_one_fragment_per_ecosystem(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         _seed_archive(fresh_workspace, fixture_dir)
@@ -183,8 +197,11 @@ class TestParserFragmentWriter:
             "ubuntu-18.04-lts.db",
             "ubuntu-20.04-lts.db",
             "ubuntu-22.04-lts.db",
+            "ubuntu-24.04-lts.db",
             "ubuntu-pro-14.04-lts.db",
             "ubuntu-pro-16.04-lts.db",
+            "ubuntu-pro-18.04-lts.db",
+            "ubuntu-pro-20.04-lts.db",
         ]
 
     def test_fragment_envelope_identifier_is_eco_slug_prefixed(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
@@ -192,10 +209,11 @@ class TestParserFragmentWriter:
         p = Parser(workspace=fresh_workspace)
         p._write_fragments()
 
-        path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-16.04-lts.db")
+        # ubuntu-24.04-lts has only CVE-2016-20013 in our fixture set
+        path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-24.04-lts.db")
         with result.SQLiteReader(path) as reader:
             ids = [e.identifier for e in reader.each()]
-        assert ids == ["ubuntu-16.04-lts/ubuntu-cve-2026-1403"]
+        assert ids == ["ubuntu-24.04-lts/ubuntu-cve-2016-20013"]
 
     def test_fragment_payload_is_per_ecosystem_slice(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         _seed_archive(fresh_workspace, fixture_dir)
@@ -333,37 +351,79 @@ class TestParserFreeze:
 # ---------------------------------------------------------------------------
 
 
-class TestParserFixDatePatching:
-    def test_patched_fix_date_appears_in_slice(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
-        # UBUNTU-CVE-2013-2208 carries a real `fixed: 1.3.1-3` event on Ubuntu:14.04:LTS.
-        # Mark the fixdate response accurate so it beats the (later) published-date candidate.
-        finder = fake_fixdate_finder(
+class TestParserFixDateDeferredToYield:
+    """patch_fix_date is applied at yield time, not write time.
+
+    This lets frozen fragments pick up fixdater improvements on every run
+    without rewriting the cache.
+    """
+
+    def test_fragment_on_disk_has_no_anchore_data(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # Even with a fixdater that would happily return a date, the cached
+        # fragment payload must NOT have database_specific.anchore — patching
+        # happens at yield time only.
+        fake_fixdate_finder(
             responses=[Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
         )
         _seed_archive(fresh_workspace, fixture_dir)
-        p = Parser(workspace=fresh_workspace, fixdater=finder)
+        p = Parser(workspace=fresh_workspace)
         p._write_fragments()
 
         path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-14.04-lts.db")
         with result.SQLiteReader(path) as reader:
             env = next(e for e in reader.each() if "2013-2208" in e.identifier)
-        anchore = env.item["affected"][0]["ranges"][0]["database_specific"]["anchore"]
-        assert any(fix["date"] == "2013-07-15" and fix["version"] == "1.3.1-3" for fix in anchore["fixes"])
+        for r in env.item["affected"][0]["ranges"]:
+            assert "anchore" not in r.get("database_specific", {}), \
+                "fragment payload should be raw OSV record, no fix-date patching at write time"
 
-    def test_no_fixed_events_no_anchore_field(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+    def test_yielded_record_has_anchore_when_fixed_event_present(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # On yield, patch_fix_date runs and populates database_specific.anchore
+        # for records that have `fixed:` events.
+        fake_fixdate_finder(
+            responses=[Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
+        )
         _seed_archive(fresh_workspace, fixture_dir)
         p = Parser(workspace=fresh_workspace)
         p._write_fragments()
 
-        # Fixtures with only {"introduced": "0"} ranges (no fixed: events) —
-        # patch_fix_date is a no-op for them. The other fragments (2013-2208 + all
-        # of 2021-3782's slices) DO have fixed: events and would get anchore populated.
-        for slug in ("ubuntu-16.04-lts", "ubuntu-pro-14.04-lts"):
-            path = os.path.join(fresh_workspace.input_path, "fragments", f"{slug}.db")
-            with result.SQLiteReader(path) as reader:
-                env = next(reader.each())
-            for r in env.item["affected"][0]["ranges"]:
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+        # CVE-2013-2208 has a real `fixed: 1.3.1-3` event
+        payload = yielded["ubuntu-14.04-lts/ubuntu-cve-2013-2208"]
+        anchore = payload["affected"][0]["ranges"][0]["database_specific"]["anchore"]
+        assert any(fix["date"] == "2013-07-15" and fix["version"] == "1.3.1-3" for fix in anchore["fixes"])
+
+    def test_yielded_record_no_anchore_when_no_fixed_event(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+        # 2026-1403 and 2020-36325 have only {"introduced": "0"} — patch_fix_date is a no-op
+        for ident in ("ubuntu-16.04-lts/ubuntu-cve-2026-1403", "ubuntu-pro-14.04-lts/ubuntu-cve-2020-36325"):
+            payload = yielded[ident]
+            for r in payload["affected"][0]["ranges"]:
                 assert "anchore" not in r.get("database_specific", {})
+
+    def test_frozen_fragment_picks_up_todays_fixdater(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # The headline win of this design: a fragment written before with stale
+        # (or no) fixdater info should pick up today's fixdater on the next yield.
+        _seed_archive(fresh_workspace, fixture_dir)
+
+        # First pass: a fixdater that returns nothing — fragments get written but
+        # no anchore data is computed at write time anyway.
+        empty = fake_fixdate_finder(responses=[])
+        p1 = Parser(workspace=fresh_workspace, fixdater=empty)
+        p1._write_fragments()
+
+        # Second pass: same fragments on disk, but yield with a populated fixdater.
+        good = fake_fixdate_finder(
+            responses=[Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
+        )
+        p2 = Parser(workspace=fresh_workspace, fixdater=good)
+        yielded = {t[0]: t[2] for t in p2._iter_fragments()}
+        payload = yielded["ubuntu-14.04-lts/ubuntu-cve-2013-2208"]
+        anchore = payload["affected"][0]["ranges"][0]["database_specific"]["anchore"]
+        assert any(fix["date"] == "2013-07-15" for fix in anchore["fixes"])
 
 
 # ---------------------------------------------------------------------------
@@ -432,15 +492,26 @@ class TestParserIteration:
         p._write_fragments()
 
         ids = sorted(t[0] for t in p._iter_fragments())
-        # one envelope per (CVE, ecosystem) pair: 2013-2208 × 1, 2020-36325 × 1, 2021-3782 × 4, 2026-1403 × 1 = 7
+        # one envelope per (CVE, ecosystem) pair:
+        #   2013-2208 × 1, 2016-20013 × 10, 2020-36325 × 1, 2021-3782 × 4, 2026-1403 × 1 = 17
         assert ids == [
             "ubuntu-14.04-lts/ubuntu-cve-2013-2208",
+            "ubuntu-14.04-lts/ubuntu-cve-2016-20013",
+            "ubuntu-16.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-16.04-lts/ubuntu-cve-2026-1403",
+            "ubuntu-18.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-18.04-lts/ubuntu-cve-2021-3782",
+            "ubuntu-20.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-20.04-lts/ubuntu-cve-2021-3782",
+            "ubuntu-22.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-22.04-lts/ubuntu-cve-2021-3782",
+            "ubuntu-24.04-lts/ubuntu-cve-2016-20013",
+            "ubuntu-pro-14.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-pro-14.04-lts/ubuntu-cve-2020-36325",
+            "ubuntu-pro-16.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-pro-16.04-lts/ubuntu-cve-2021-3782",
+            "ubuntu-pro-18.04-lts/ubuntu-cve-2016-20013",
+            "ubuntu-pro-20.04-lts/ubuntu-cve-2016-20013",
         ]
 
     def test_iter_fragments_yields_correct_schema_per_record(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
@@ -591,6 +662,35 @@ class TestParserLegacyPassthrough:
         fixed_in_versions = [f["Version"] for f in vuln["FixedIn"]]
         assert "3.0.1271.97-0ubuntu0.12.04.1" in fixed_in_versions
 
+    def test_fixdater_not_queried_for_osv_covered_namespaces(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # Count fixdater queries via a callable response. With a fragment for 18.04
+        # present, the bionic legacy record (CVE-2022-31258) should never reach map_parsed
+        # — so fixdater should be called zero times for it.
+        calls = []
+
+        def counting_responses(vuln_id, cpe_or_package, fix_version, ecosystem):
+            calls.append((vuln_id, cpe_or_package, ecosystem))
+            return []
+
+        fake_fixdate_finder(responses=counting_responses)
+        _seed_normalized(fresh_workspace, fixture_dir)
+        # plant a fragment for 18.04
+        fragments_dir = os.path.join(fresh_workspace.input_path, "fragments")
+        os.makedirs(fragments_dir)
+        open(os.path.join(fragments_dir, "ubuntu-18.04-lts.db"), "wb").close()
+
+        p = Parser(workspace=fresh_workspace)
+        list(p._iter_normalized_cve_data())
+
+        # No fixdater call should reference CVE-2022-31258 (its only namespace is OSV-covered)
+        bionic_filtered_calls = [c for c in calls if c[0] == "CVE-2022-31258"]
+        assert bionic_filtered_calls == [], (
+            f"expected zero fixdater calls for OSV-covered CVE-2022-31258, got {bionic_filtered_calls}"
+        )
+        # And calls for the EOL namespaces DO happen
+        assert any(c[0] == "CVE-2012-5124" for c in calls)
+        assert any(c[0] == "CVE-2013-6627" for c in calls)
+
 
 class TestParserEmissionOrder:
     """Policy: legacy first, OSV last. Identifier shapes don't collide so this is informational."""
@@ -624,11 +724,11 @@ class TestProviderUpdate:
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
 
-        with patch.object(p.parser, "_download_archive"):
+        with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
-        # 4 OSV records sliced across 7 ecosystems = 7 envelopes
-        assert ws.num_result_entries() == 7
+        # 5 OSV records sliced: 2013-2208 × 1 + 2016-20013 × 10 + 2020-36325 × 1 + 2021-3782 × 4 + 2026-1403 × 1 = 17
+        assert ws.num_result_entries() == 17
 
     def test_writes_per_record_osv_schema(self, helpers, fixture_dir, auto_fake_fixdate_finder):
         ws = helpers.provider_workspace_helper(name=Provider.name())
@@ -638,7 +738,7 @@ class TestProviderUpdate:
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
 
-        with patch.object(p.parser, "_download_archive"):
+        with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
         import json
@@ -663,12 +763,12 @@ class TestProviderUpdate:
             os.path.join(input_path, "normalized-cve-data"),
         )
 
-        with patch.object(p.parser, "_download_archive"):
+        with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
-        # 7 OSV envelopes + 5 legacy envelopes (CVE-2022-31258 bionic is filtered out by OSV coverage on 18.04)
+        # 17 OSV envelopes + 5 legacy envelopes (CVE-2022-31258 bionic is filtered out by OSV coverage on 18.04)
         # legacy: 2012-5124×2 + 2013-6627×3 = 5
-        assert ws.num_result_entries() == 12
+        assert ws.num_result_entries() == 22
 
         # check mixed-schema output
         import json
@@ -688,14 +788,227 @@ class TestProviderUpdate:
 
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
-        # legacy fixture included — snapshot will assert on both OSV + legacy envelopes
         input_path = os.path.join(str(ws.root), "ubuntu", "input")
+        # legacy fixture
         shutil.copytree(
             os.path.join(fixture_dir, "normalized-cve-data"),
             os.path.join(input_path, "normalized-cve-data"),
         )
+        # VEX fixture so wont-fix annotations bake into the snapshots
+        shutil.copy(
+            os.path.join(fixture_dir, "sample-vex-all.tar.xz"),
+            os.path.join(input_path, "vex-all.tar.xz"),
+        )
 
-        with patch.object(p.parser, "_download_archive"):
+        with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
         ws.assert_result_snapshots()
+
+
+# ---------------------------------------------------------------------------
+# VEX overlay — wont-fix annotation from Canonical's OpenVEX feed
+# ---------------------------------------------------------------------------
+
+
+class TestVEXHelpers:
+    """Pure-function tests for the VEX module."""
+
+    def test_distro_label_from_purl(self):
+        assert distro_label_from_purl(
+            "pkg:deb/ubuntu/glibc@2.39-0ubuntu8.7?arch=source&distro=noble",
+        ) == "noble"
+        # ESM/Pro channels use compound distro labels
+        assert distro_label_from_purl(
+            "pkg:deb/ubuntu/eglibc@2.19-0ubuntu6.15+esm4?arch=source&distro=esm-infra-legacy/trusty",
+        ) == "esm-infra-legacy/trusty"
+        # No distro qualifier → None
+        assert distro_label_from_purl("pkg:deb/ubuntu/foo@1.0") is None
+        assert distro_label_from_purl("") is None
+
+    def test_source_package_from_purl(self):
+        assert source_package_from_purl(
+            "pkg:deb/ubuntu/glibc@2.39-0ubuntu8.7?arch=source&distro=noble",
+        ) == "glibc"
+        assert source_package_from_purl("not-a-purl") is None
+        assert source_package_from_purl("") is None
+
+    def test_is_wont_fix_action_matches_both_canonical_openings(self):
+        decided = (
+            "This package (for the given release) is vulnerable to the CVE, "
+            "the problem is understood, but the Ubuntu Security Team decided "
+            "to not fix it. CVE Notes: ..."
+        )
+        assert is_wont_fix_action(decided) is True
+
+        no_longer_supported = (
+            "This package (for the given release) is no longer supported. "
+            "CVE Notes: ..."
+        )
+        assert is_wont_fix_action(no_longer_supported) is True
+
+    def test_is_wont_fix_action_rejects_needs_fixing(self):
+        assert is_wont_fix_action(
+            "This package (for the given release) is vulnerable to the CVE and needs fixing.",
+        ) is False
+        assert is_wont_fix_action(
+            "This package (for the given release) is vulnerable to the CVE, "
+            "needs fixing, and it is being actively worked on.",
+        ) is False
+        assert is_wont_fix_action(None) is False
+        assert is_wont_fix_action("") is False
+        assert is_wont_fix_action("some random text") is False
+
+
+class TestVEXOverlay:
+    """End-to-end overlay-from-tarball tests using the real-record fixture."""
+
+    def test_builds_from_archive_and_indexes_wont_fix_entries(self, fixture_dir):
+        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+        # CVE-2016-20013 is marked won't-fix on every release where Canonical's UCT
+        # used status: "ignored". The fixture has the real record verbatim — every
+        # (noble, jammy, focal, etc.) × (glibc, syslinux, dietlibc, sssd, zabbix) tuple
+        # that's `ignored` upstream should be present.
+        assert overlay.is_wont_fix("CVE-2016-20013", "noble", "glibc") is True
+        assert overlay.is_wont_fix("CVE-2016-20013", "jammy", "glibc") is True
+        assert overlay.is_wont_fix("CVE-2016-20013", "noble", "syslinux") is True
+        assert overlay.is_wont_fix("CVE-2016-20013", "noble", "dietlibc") is True
+
+    def test_does_not_index_needs_fixing_entries(self, fixture_dir):
+        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+        # CVE-2023-38545 (curl) has status "affected" but action_statement "needs fixing"
+        # on jammy and noble — Canonical will ship a fix. Should NOT be indexed as wont-fix.
+        assert overlay.is_wont_fix("CVE-2023-38545", "jammy", "curl") is False
+        assert overlay.is_wont_fix("CVE-2023-38545", "noble", "curl") is False
+
+    def test_unknown_lookups_return_false(self, fixture_dir):
+        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+        assert overlay.is_wont_fix("CVE-9999-9999", "noble", "glibc") is False
+        assert overlay.is_wont_fix("CVE-2016-20013", "noble", "no-such-pkg") is False
+        # right CVE/pkg, but a release Canonical doesn't cover anymore
+        assert overlay.is_wont_fix("CVE-2016-20013", "natty", "glibc") is False
+
+    def test_empty_overlay_is_safely_queryable(self):
+        # An overlay that's never been built (e.g. archive missing) should not blow up
+        overlay = VEXOverlay()
+        assert overlay.is_wont_fix("any", "any", "any") is False
+        assert len(overlay) == 0
+
+
+class TestAnnotateWontFix:
+    """The slicing-time helper that stamps wont-fix onto matching slices."""
+
+    def _record(self):
+        # Minimal OSV record fragment with two ecosystem slices.
+        return {
+            "id": "UBUNTU-CVE-2016-20013",
+            "upstream": ["CVE-2016-20013"],
+            "affected": [
+                {
+                    "package": {
+                        "ecosystem": "Ubuntu:24.04:LTS",
+                        "name": "glibc",
+                        "purl": "pkg:deb/ubuntu/glibc@2.39?arch=source&distro=noble",
+                    },
+                    "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+                },
+                {
+                    "package": {
+                        "ecosystem": "Ubuntu:24.04:LTS",
+                        "name": "needs-fixing-pkg",
+                        "purl": "pkg:deb/ubuntu/needs-fixing-pkg@1.0?arch=source&distro=noble",
+                    },
+                    "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+                },
+            ],
+        }
+
+    def test_annotates_only_wont_fix_packages(self, fixture_dir):
+        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+        rec = self._record()
+        sliced = slice_by_ecosystem(rec)
+        _annotate_wont_fix(sliced, rec, overlay)
+
+        # One slice for Ubuntu:24.04:LTS containing both packages
+        slice24 = sliced["Ubuntu:24.04:LTS"]
+        glibc = next(a for a in slice24["affected"] if a["package"]["name"] == "glibc")
+        other = next(a for a in slice24["affected"] if a["package"]["name"] == "needs-fixing-pkg")
+
+        # glibc is in VEX as wont-fix → annotated
+        assert glibc["database_specific"]["anchore"]["status"] == "wont-fix"
+        # the other package isn't in VEX → no annotation
+        assert "database_specific" not in other or "anchore" not in other.get("database_specific", {})
+
+    def test_no_upstream_means_no_annotation(self, fixture_dir):
+        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+        rec = self._record()
+        rec["upstream"] = []  # without an upstream CVE we have no join key
+        sliced = slice_by_ecosystem(rec)
+        _annotate_wont_fix(sliced, rec, overlay)
+
+        for slice_payload in sliced.values():
+            for aff in slice_payload["affected"]:
+                assert "database_specific" not in aff or "anchore" not in aff.get("database_specific", {})
+
+    def test_preserves_other_database_specific_keys(self, fixture_dir):
+        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+        rec = self._record()
+        # pre-existing database_specific data on glibc should be preserved
+        rec["affected"][0]["database_specific"] = {"anchore": {"other_key": "stays"}, "vendor": "x"}
+        sliced = slice_by_ecosystem(rec)
+        _annotate_wont_fix(sliced, rec, overlay)
+
+        glibc = next(a for a in sliced["Ubuntu:24.04:LTS"]["affected"] if a["package"]["name"] == "glibc")
+        assert glibc["database_specific"]["anchore"] == {"other_key": "stays", "status": "wont-fix"}
+        assert glibc["database_specific"]["vendor"] == "x"
+
+
+class TestParserVEXIntegration:
+    """Bake-at-write-time semantics: VEX wont-fix lands in the fragment payload on disk."""
+
+    def test_wont_fix_baked_into_fragment_payload(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace)
+        overlay = p._load_vex_overlay()
+        p._write_fragments(vex_overlay=overlay)
+
+        # CVE-2016-20013 / noble / glibc — Canonical's "ignored" case, the user's regression
+        path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-24.04-lts.db")
+        with result.SQLiteReader(path) as reader:
+            env = next(e for e in reader.each() if "2016-20013" in e.identifier)
+        glibc = next(a for a in env.item["affected"] if a["package"]["name"] == "glibc")
+        assert glibc["database_specific"]["anchore"]["status"] == "wont-fix"
+
+    def test_no_overlay_means_no_annotations(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Without a VEX archive on disk, parser proceeds and writes raw fragments
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        overlay = p._load_vex_overlay()  # returns None — file is missing
+        assert overlay is None
+        p._write_fragments(vex_overlay=overlay)
+
+        path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-24.04-lts.db")
+        with result.SQLiteReader(path) as reader:
+            env = next(e for e in reader.each() if "2016-20013" in e.identifier)
+        # nothing should have database_specific.anchore on a no-overlay run
+        for aff in env.item["affected"]:
+            assert "database_specific" not in aff or "anchore" not in aff.get("database_specific", {})
+
+    def test_frozen_fragment_retains_wont_fix_after_overlay_disappears(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Headline behavior: write with overlay → freeze (VEX gone) → wont-fix survives
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+        p1 = Parser(workspace=fresh_workspace)
+        p1._write_fragments(vex_overlay=p1._load_vex_overlay())
+
+        # Now simulate: the VEX archive is gone, but the fragment file remains.
+        # Read it via _iter_fragments and confirm wont-fix is still there.
+        os.remove(os.path.join(fresh_workspace.input_path, "vex-all.tar.xz"))
+
+        p2 = Parser(workspace=fresh_workspace)
+        yielded = {t[0]: t[2] for t in p2._iter_fragments()}
+        payload = yielded["ubuntu-24.04-lts/ubuntu-cve-2016-20013"]
+        glibc = next(a for a in payload["affected"] if a["package"]["name"] == "glibc")
+        assert glibc["database_specific"]["anchore"]["status"] == "wont-fix"

@@ -15,6 +15,7 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
 
 from . import parser_legacy
+from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -68,9 +69,58 @@ def _schema_from_envelope_url(url: str) -> schema.Schema:
     return schema.Schema(version=version, url=url)
 
 
+def _iter_cve_records(tar: tarfile.TarFile) -> Iterator[dict[str, Any]]:
+    """Yield parsed CVE records from a streaming tar (osv/cve/**/*.json only)."""
+    for member in tar:
+        if not member.isfile():
+            continue
+        if not (member.name.startswith("osv/cve/") and member.name.endswith(".json")):
+            continue
+        fh = tar.extractfile(member)
+        if fh is None:
+            continue
+        yield orjson.loads(fh.read())
+
+
+def _annotate_wont_fix(
+    sliced: dict[str, dict[str, Any]],
+    original: dict[str, Any],
+    overlay: VEXOverlay,
+) -> None:
+    """Stamp `affected[].database_specific.anchore.status = "wont-fix"` for slices
+    Canonical's VEX feed marks as won't-fix.
+
+    Join key is (upstream CVE, PURL distro label, source package). The
+    upstream CVE comes from the OSV record's `upstream[0]` (UBUNTU-CVE-* is
+    Canonical's internal id; users and VEX use the upstream CVE). Distro
+    label + source package come from each per-package PURL inside the slice.
+    """
+    upstream = original.get("upstream") or []
+    if not upstream:
+        return
+    cve_id = upstream[0]
+
+    for sliced_record in sliced.values():
+        for aff in sliced_record.get("affected", []):
+            purl = (aff.get("package") or {}).get("purl") or ""
+            distro = distro_label_from_purl(purl)
+            pkg = source_package_from_purl(purl)
+            if not distro or not pkg:
+                continue
+            if not overlay.is_wont_fix(cve_id, distro, pkg):
+                continue
+            db_spec = aff.get("database_specific") or {}
+            anchore = db_spec.get("anchore") or {}
+            anchore["status"] = "wont-fix"
+            db_spec["anchore"] = anchore
+            aff["database_specific"] = db_spec
+
+
 class Parser:
     _osv_url_ = "https://security-metadata.canonical.com/osv/osv-all.tar.xz"
+    _vex_url_ = "https://security-metadata.canonical.com/vex/vex-all.tar.xz"
     _archive_filename_ = "osv-all.tar.xz"
+    _vex_archive_filename_ = "vex-all.tar.xz"
     _fragments_subdir_ = "fragments"
     _normalized_subdir_ = "normalized-cve-data"
 
@@ -87,9 +137,10 @@ class Parser:
         self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
 
         self.archive_path = os.path.join(workspace.input_path, self._archive_filename_)
+        self.vex_archive_path = os.path.join(workspace.input_path, self._vex_archive_filename_)
         self.fragments_dir = os.path.join(workspace.input_path, self._fragments_subdir_)
         self.normalized_cve_dir = os.path.join(workspace.input_path, self._normalized_subdir_)
-        self.urls = [self._osv_url_]
+        self.urls = [self._osv_url_, self._vex_url_]
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -105,13 +156,17 @@ class Parser:
 
     def _download_archive(self) -> None:
         os.makedirs(self.workspace.input_path, exist_ok=True)
-        self.logger.info(f"downloading {self._osv_url_}")
+        self._stream_to_disk(self._osv_url_, self.archive_path)
+
+    def _download_vex_archive(self) -> None:
+        os.makedirs(self.workspace.input_path, exist_ok=True)
+        self._stream_to_disk(self._vex_url_, self.vex_archive_path)
+
+    def _stream_to_disk(self, url: str, path: str) -> None:
+        self.logger.info(f"downloading {url}")
         with (
-            http.get(self._osv_url_, self.logger, stream=True, timeout=self.download_timeout) as r,
-            open(
-                self.archive_path,
-                "wb",
-            ) as fh,
+            http.get(url, self.logger, stream=True, timeout=self.download_timeout) as r,
+            open(path, "wb") as fh,
         ):
             for chunk in r.iter_content(chunk_size=65536):
                 if chunk:
@@ -138,39 +193,30 @@ class Parser:
         )
         return writer.__enter__()
 
-    def _write_fragments(self) -> None:
+    def _write_fragments(self, vex_overlay: VEXOverlay | None = None) -> None:
         """Stream the tarball, slice records by ecosystem, write per-ecosystem fragments.
 
         Each ecosystem encountered in today's tarball gets its fragment
         file wiped (via DELETE_BEFORE_WRITE) and rewritten. Ecosystems
         absent from today's tarball are not touched.
+
+        NOTE: `patch_fix_date` is intentionally NOT called here. Fix-date
+        annotations are applied at yield time (in _iter_fragments) so that
+        improvements to the fixdate cache flow through to frozen fragments
+        on the next run without rewriting them.
+
+        Fix DISPOSITION (won't-fix vs other) is the opposite: it's baked
+        into the fragment at write time using today's VEX overlay, so
+        that frozen fragments carry the disposition forward through EOL.
+        When VEX stops publishing for a release, the fragment retains the
+        last-known wont-fix status from when the release was still tracked.
         """
         writers: dict[str, result.Writer] = {}
         exc: BaseException | None = None
         try:
             with tarfile.open(self.archive_path, mode="r:xz") as tar:
-                for member in tar:
-                    if not member.isfile():
-                        continue
-                    if not (member.name.startswith("osv/cve/") and member.name.endswith(".json")):
-                        continue
-                    fh = tar.extractfile(member)
-                    if fh is None:
-                        continue
-                    record = orjson.loads(fh.read())
-                    osv.patch_fix_date(record, self.fixdater)
-
-                    sliced = slice_by_ecosystem(record)
-                    if not sliced:
-                        continue
-
-                    rec_schema = self._record_schema(record)
-                    cve_id = record["id"].lower()
-                    for eco, sliced_record in sliced.items():
-                        if eco not in writers:
-                            writers[eco] = self._open_fragment_writer(eco)
-                        identifier = f"{ecosystem_to_slug(eco)}/{cve_id}"
-                        writers[eco].write(identifier=identifier, schema=rec_schema, payload=sliced_record)
+                for record in _iter_cve_records(tar):
+                    self._dispatch_record_to_fragments(record, writers, vex_overlay)
         except BaseException as e:
             exc = e
             raise
@@ -178,11 +224,32 @@ class Parser:
             for writer in writers.values():
                 writer.__exit__(type(exc) if exc else None, exc, exc.__traceback__ if exc else None)
 
+    def _dispatch_record_to_fragments(
+        self,
+        record: dict[str, Any],
+        writers: dict[str, result.Writer],
+        vex_overlay: VEXOverlay | None,
+    ) -> None:
+        sliced = slice_by_ecosystem(record)
+        if not sliced:
+            return
+        if vex_overlay is not None:
+            _annotate_wont_fix(sliced, record, vex_overlay)
+        rec_schema = self._record_schema(record)
+        cve_id = record["id"].lower()
+        for eco, sliced_record in sliced.items():
+            if eco not in writers:
+                writers[eco] = self._open_fragment_writer(eco)
+            identifier = f"{ecosystem_to_slug(eco)}/{cve_id}"
+            writers[eco].write(identifier=identifier, schema=rec_schema, payload=sliced_record)
+
     def _iter_fragments(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         """Yield (identifier, schema, payload) from every fragment on disk.
 
         Includes both fragments written this run and frozen fragments
         from prior runs whose ecosystem is no longer in the OSV feed.
+        Fix-date patching is applied here, at yield time, so today's
+        fixdater state annotates even records cached from prior runs.
         """
         if not os.path.isdir(self.fragments_dir):
             return
@@ -192,10 +259,12 @@ class Parser:
             path = os.path.join(self.fragments_dir, filename)
             with result.SQLiteReader(path) as reader:
                 for envelope in reader.each():
+                    payload = envelope.item
+                    osv.patch_fix_date(payload, self.fixdater)
                     yield (
                         envelope.identifier,
                         _schema_from_envelope_url(envelope.schema),
-                        envelope.item,
+                        payload,
                     )
 
     def _osv_covers_legacy_namespace(self, ns: str) -> bool:
@@ -216,7 +285,8 @@ class Parser:
 
         Emits OS-schema envelopes for at-cutover EOL releases only — namespaces
         whose base ecosystem is in today's OSV feed (or a frozen fragment) are
-        skipped to avoid double-emission.
+        skipped. The filter is applied BEFORE map_parsed so fixdater isn't
+        queried for releases we'd discard anyway.
         """
         if not os.path.isdir(self.normalized_cve_dir):
             return
@@ -232,19 +302,48 @@ class Parser:
             except Exception:
                 self.logger.exception(f"failed to load normalized cve {full}")
                 continue
+
+            # Drop patches for releases OSV already covers. map_parsed would
+            # otherwise call fixdater.best() per released patch — wasted work
+            # for jammy/noble/etc. that we'd filter out post-mapping.
+            cve_file.patches = [
+                p for p in cve_file.patches if (ns := parser_legacy.map_namespace(p.distro)) is not None and not self._osv_covers_legacy_namespace(ns)
+            ]
+            if not cve_file.patches:
+                continue
+
             vulns = parser_legacy.map_parsed(cve_file, self.fixdater, self.logger)
             for vuln in vulns:
                 if not vuln.NamespaceName or not vuln.Name:
-                    continue
-                if self._osv_covers_legacy_namespace(vuln.NamespaceName):
                     continue
                 identifier = f"{vuln.NamespaceName}/{vuln.Name.lower()}"
                 yield identifier, os_schema, {"Vulnerability": vuln.json()}
 
     def get(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         self._download_archive()
+        self._download_vex_archive()
         self.fixdater.download()
-        self._write_fragments()
+        vex_overlay = self._load_vex_overlay()
+        self._write_fragments(vex_overlay=vex_overlay)
         # legacy first; OSV last (policy-only — identifier shapes don't collide)
         yield from self._iter_normalized_cve_data()
         yield from self._iter_fragments()
+
+    def _load_vex_overlay(self) -> VEXOverlay | None:
+        """Build the won't-fix overlay from the downloaded VEX archive.
+
+        If the archive is missing or unreadable, log a warning and proceed
+        without an overlay — the fragments still get written with full OSV
+        data, just without won't-fix annotations on this run. Frozen
+        fragments from prior runs retain whatever they were written with.
+        """
+        if not os.path.isfile(self.vex_archive_path):
+            self.logger.warning(
+                f"VEX archive missing at {self.vex_archive_path}; won't-fix annotations will be absent on this run",
+            )
+            return None
+        try:
+            return VEXOverlay.from_archive(self.vex_archive_path, logger=self.logger)
+        except Exception:
+            self.logger.exception("failed to build VEX overlay; won't-fix annotations will be absent on this run")
+            return None
