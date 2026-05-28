@@ -55,7 +55,7 @@ class Provider(provider.Provider):
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
             )
-            self.schema = schema.OSVSchema()
+            self.schema = schema.OSVSchema(version="1.7.0")
         else:
             self.parser = SecDBParser(
                 workspace=self.workspace,

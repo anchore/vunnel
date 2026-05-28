@@ -24,6 +24,9 @@ class Config:
     request_timeout: int = 125
     # Override with VUNNEL_PROVIDERS_WOLFI_SECDB_URL
     secdb_url: str = "https://packages.wolfi.dev/os/security.json"
+    # Override with VUNNEL_PROVIDERS_WOLFI_ENABLE
+    # Enable allows us to switch to an OSV feed in the future if/when one becomes available
+    enable: bool = True
 
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
@@ -59,6 +62,10 @@ class Provider(provider.Provider):
         return ["vulnerability", "os"]
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        if not self.config.enable:
+            self.logger.info("Provider is disabled via config, skipping update")
+            return [], 0
+
         with timer(self.name(), self.logger):
             with self.results_writer() as writer, self.parser:
                 # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
