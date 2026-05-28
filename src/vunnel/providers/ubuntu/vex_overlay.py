@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 import re
 import tarfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import orjson
 
@@ -131,7 +131,7 @@ class VEXOverlay:
                 continue
             self._ingest_statements(record.get("statements", []))
 
-    def _ingest_statements(self, statements: Iterable[dict]) -> None:
+    def _ingest_statements(self, statements: Iterable[dict[str, Any]]) -> None:
         for stmt in statements:
             if stmt.get("status") != "affected":
                 continue

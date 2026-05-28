@@ -164,8 +164,12 @@ class CVEFile:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> CVEFile:
+        # name is required — v3 records always carry it as "name"/"Name"/"candidate"/"Candidate".
+        # Coerce to str (empty if absent) so the field type matches; map_parsed treats empty as
+        # invalid via the `if not parsed_cve.name` guard and returns an empty set.
+        name = d.get("name") or d.get("Name") or d.get("candidate") or d.get("Candidate") or ""
         return CVEFile(
-            name=d.get("name", d.get("Name", d.get("candidate", d.get("Candidate")))),
+            name=name,
             priority=d.get("priority", d.get("Priority", "Unknown")),
             patches=[Patch(**p) for p in d.get("patches", [])],
             ignored_patches=[Patch(**p) for p in d.get("ignored_patches", [])],
@@ -305,7 +309,7 @@ def map_parsed(  # noqa: C901, PLR0912, PLR0915
                 fix_version=pkg.Version,
                 ecosystem=r.NamespaceName or "",
             )
-            if result:
+            if result and result.date:
                 fa = FixAvailability()
                 fa.Date = result.date.isoformat()
                 fa.Kind = result.kind
