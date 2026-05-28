@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 import shutil
+import tarfile
 from unittest.mock import patch
 
 import orjson
@@ -156,18 +157,57 @@ class TestProvider:
 # ---------------------------------------------------------------------------
 
 
+def _build_sample_archive(fixture_dir: str, source_subdir: str, archive_prefix: str, dst_path: str) -> None:
+    """Build a small tar.xz at dst_path from the loose JSON tree under fixture_dir/source_subdir.
+
+    Binary tar.xz fixtures don't live in the repo — the loose JSON files are
+    the source of truth (reviewable diffs, no LFS pressure). Each test builder
+    that needs a tarball constructs one on demand. ~5ms for the small fixture
+    trees we ship; cheap enough not to bother memoizing.
+
+    archive_prefix is the directory each archive member sits under
+    (e.g. "osv" → entries become "osv/cve/<year>/<file>.json"). This matches
+    the production layout the parser expects.
+    """
+    src = os.path.join(fixture_dir, source_subdir)
+    with tarfile.open(dst_path, mode="w:xz") as tar:
+        for root, _, files in os.walk(src):
+            for fname in sorted(files):
+                if not fname.endswith(".json"):
+                    continue
+                full = os.path.join(root, fname)
+                arc = f"{archive_prefix}/" + os.path.relpath(full, src).replace(os.sep, "/")
+                tar.add(full, arcname=arc)
+
+
 def _seed_archive(fresh_workspace, fixture_dir):
-    shutil.copy(
-        os.path.join(fixture_dir, "sample-osv-all.tar.xz"),
-        os.path.join(fresh_workspace.input_path, "osv-all.tar.xz"),
+    _build_sample_archive(
+        fixture_dir,
+        source_subdir="osv",
+        archive_prefix="osv",
+        dst_path=os.path.join(fresh_workspace.input_path, "osv-all.tar.xz"),
     )
 
 
 def _seed_vex_archive(fresh_workspace, fixture_dir):
-    shutil.copy(
-        os.path.join(fixture_dir, "sample-vex-all.tar.xz"),
-        os.path.join(fresh_workspace.input_path, "vex-all.tar.xz"),
+    _build_sample_archive(
+        fixture_dir,
+        source_subdir="vex",
+        archive_prefix="vex",
+        dst_path=os.path.join(fresh_workspace.input_path, "vex-all.tar.xz"),
     )
+
+
+@pytest.fixture
+def sample_vex_archive(tmp_path, fixture_dir):
+    """Build a VEX tar.xz once per test and return its path.
+
+    Used by tests that take a path directly (e.g. VEXOverlay.from_archive)
+    rather than seeding it into a workspace.
+    """
+    out = tmp_path / "sample-vex-all.tar.xz"
+    _build_sample_archive(fixture_dir, "vex", "vex", str(out))
+    return str(out)
 
 
 def _fragment_paths(workspace):
@@ -432,8 +472,10 @@ class TestParserFixDateDeferredToYield:
 
 
 class TestParserDownload:
-    def test_download_streams_to_archive_path(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
-        with open(os.path.join(fixture_dir, "sample-osv-all.tar.xz"), "rb") as f:
+    def test_download_streams_to_archive_path(self, fresh_workspace, fixture_dir, tmp_path, auto_fake_fixdate_finder):
+        sample = tmp_path / "sample-osv-all.tar.xz"
+        _build_sample_archive(fixture_dir, "osv", "osv", str(sample))
+        with open(sample, "rb") as f:
             payload = f.read()
 
         class FakeResp:
@@ -562,10 +604,7 @@ class TestParserIteration:
 def _stage_workspace_for_update(ws_root: str, fixture_dir: str) -> None:
     input_path = os.path.join(ws_root, "ubuntu", "input")
     os.makedirs(input_path, exist_ok=True)
-    shutil.copy(
-        os.path.join(fixture_dir, "sample-osv-all.tar.xz"),
-        os.path.join(input_path, "osv-all.tar.xz"),
-    )
+    _build_sample_archive(fixture_dir, "osv", "osv", os.path.join(input_path, "osv-all.tar.xz"))
 
 
 # ---------------------------------------------------------------------------
@@ -697,10 +736,11 @@ class TestParserEmissionOrder:
 
     def test_legacy_yielded_before_osv(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
         _seed_normalized(fresh_workspace, fixture_dir)
 
         p = Parser(workspace=fresh_workspace)
-        with patch.object(p, "_download_archive"):
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
             ids = [t[0] for t in p.get()]
 
         first_osv = next(i for i, x in enumerate(ids) if x.startswith("ubuntu-"))
@@ -795,10 +835,7 @@ class TestProviderUpdate:
             os.path.join(input_path, "normalized-cve-data"),
         )
         # VEX fixture so wont-fix annotations bake into the snapshots
-        shutil.copy(
-            os.path.join(fixture_dir, "sample-vex-all.tar.xz"),
-            os.path.join(input_path, "vex-all.tar.xz"),
-        )
+        _build_sample_archive(fixture_dir, "vex", "vex", os.path.join(input_path, "vex-all.tar.xz"))
 
         with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
@@ -863,8 +900,8 @@ class TestVEXHelpers:
 class TestVEXOverlay:
     """End-to-end overlay-from-tarball tests using the real-record fixture."""
 
-    def test_builds_from_archive_and_indexes_wont_fix_entries(self, fixture_dir):
-        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+    def test_builds_from_archive_and_indexes_wont_fix_entries(self, sample_vex_archive):
+        overlay = VEXOverlay.from_archive(sample_vex_archive)
         # CVE-2016-20013 is marked won't-fix on every release where Canonical's UCT
         # used status: "ignored". The fixture has the real record verbatim — every
         # (noble, jammy, focal, etc.) × (glibc, syslinux, dietlibc, sssd, zabbix) tuple
@@ -874,15 +911,15 @@ class TestVEXOverlay:
         assert overlay.is_wont_fix("CVE-2016-20013", "noble", "syslinux") is True
         assert overlay.is_wont_fix("CVE-2016-20013", "noble", "dietlibc") is True
 
-    def test_does_not_index_needs_fixing_entries(self, fixture_dir):
-        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+    def test_does_not_index_needs_fixing_entries(self, sample_vex_archive):
+        overlay = VEXOverlay.from_archive(sample_vex_archive)
         # CVE-2023-38545 (curl) has status "affected" but action_statement "needs fixing"
         # on jammy and noble — Canonical will ship a fix. Should NOT be indexed as wont-fix.
         assert overlay.is_wont_fix("CVE-2023-38545", "jammy", "curl") is False
         assert overlay.is_wont_fix("CVE-2023-38545", "noble", "curl") is False
 
-    def test_unknown_lookups_return_false(self, fixture_dir):
-        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+    def test_unknown_lookups_return_false(self, sample_vex_archive):
+        overlay = VEXOverlay.from_archive(sample_vex_archive)
         assert overlay.is_wont_fix("CVE-9999-9999", "noble", "glibc") is False
         assert overlay.is_wont_fix("CVE-2016-20013", "noble", "no-such-pkg") is False
         # right CVE/pkg, but a release Canonical doesn't cover anymore
@@ -923,8 +960,8 @@ class TestAnnotateWontFix:
             ],
         }
 
-    def test_annotates_only_wont_fix_packages(self, fixture_dir):
-        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+    def test_annotates_only_wont_fix_packages(self, sample_vex_archive):
+        overlay = VEXOverlay.from_archive(sample_vex_archive)
         rec = self._record()
         sliced = slice_by_ecosystem(rec)
         _annotate_wont_fix(sliced, rec, overlay)
@@ -939,8 +976,8 @@ class TestAnnotateWontFix:
         # the other package isn't in VEX → no annotation
         assert "database_specific" not in other or "anchore" not in other.get("database_specific", {})
 
-    def test_no_upstream_means_no_annotation(self, fixture_dir):
-        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+    def test_no_upstream_means_no_annotation(self, sample_vex_archive):
+        overlay = VEXOverlay.from_archive(sample_vex_archive)
         rec = self._record()
         rec["upstream"] = []  # without an upstream CVE we have no join key
         sliced = slice_by_ecosystem(rec)
@@ -950,8 +987,8 @@ class TestAnnotateWontFix:
             for aff in slice_payload["affected"]:
                 assert "database_specific" not in aff or "anchore" not in aff.get("database_specific", {})
 
-    def test_preserves_other_database_specific_keys(self, fixture_dir):
-        overlay = VEXOverlay.from_archive(os.path.join(fixture_dir, "sample-vex-all.tar.xz"))
+    def test_preserves_other_database_specific_keys(self, sample_vex_archive):
+        overlay = VEXOverlay.from_archive(sample_vex_archive)
         rec = self._record()
         # pre-existing database_specific data on glibc should be preserved
         rec["affected"][0]["database_specific"] = {"anchore": {"other_key": "stays"}, "vendor": "x"}

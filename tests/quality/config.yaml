@@ -385,6 +385,9 @@ tests:
       - docker.io/ubuntu:22.04@sha256:aa6c2c047467afc828e77e306041b7fa4a65734fe3449a54aa9c280822b0d87d
       - docker.io/ubuntu:22.10@sha256:80fb4ea0c0a384a3072a6be1879c342bb636b0d105209535ba893ba75ab38ede
       - docker.io/ubuntu:23.04@sha256:09f035f46361d193ded647342903b413d57d05cc06acff8285f9dda9f2d269d5
+      # current LTS — exercises the OSV path against noble; added with the OSV rewrite
+      # so we catch regressions on the most-deployed Ubuntu release.
+      - docker.io/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b
     expected_namespaces:
       - ubuntu:distro:ubuntu:12.04
       - ubuntu:distro:ubuntu:12.10
