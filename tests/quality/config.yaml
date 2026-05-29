@@ -47,10 +47,9 @@ grype_db:
   #  - a branch name (e.g. "dev-fix-foo")
   #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
   #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
+  version: willmurphyscode/grype-db@temp-use-ubuntu-osv-grype
 
 tests:
-
   - provider: alpine
     use_cache: true
     additional_providers:
