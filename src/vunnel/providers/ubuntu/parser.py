@@ -260,7 +260,15 @@ class Parser:
             with result.SQLiteReader(path) as reader:
                 for envelope in reader.each():
                     payload = envelope.item
-                    osv.patch_fix_date(payload, self.fixdater)
+                    # patch_fix_date keys the lookup by vuln_id. The OSV record's `id` is
+                    # the Canonical-internal `UBUNTU-CVE-*`; the fix-date cache keys by the
+                    # upstream `CVE-*`. Pass the upstream override so the lookup hits.
+                    upstream = payload.get("upstream") or []
+                    osv.patch_fix_date(
+                        payload,
+                        self.fixdater,
+                        vuln_id_override=upstream[0] if upstream else None,
+                    )
                     yield (
                         envelope.identifier,
                         _schema_from_envelope_url(envelope.schema),

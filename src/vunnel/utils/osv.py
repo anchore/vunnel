@@ -8,11 +8,20 @@ def patch_fix_date(
     advisory: dict[str, Any],
     fixdater: fixdate.Finder,
     ecosystem_processor: Callable[[str], str] | None = None,
+    vuln_id_override: str | None = None,
 ) -> None:
+    """Patch database_specific.anchore.fixes on each affected range with first-observed dates.
+
+    `vuln_id_override` lets a caller pass a different vuln_id than `advisory["id"]`
+    for the fixdater lookup. Needed when the OSV record's id is provider-internal
+    (e.g. Canonical's `UBUNTU-CVE-*`) but the fix-date cache keys by the upstream
+    CVE (e.g. `CVE-*`). Without it, the lookup silently misses and every range
+    falls back to the (often wrong) published-date candidate.
+    """
     if not fixdater:
         return
 
-    vuln_id: str = advisory.get("id")  # type: ignore[assignment]
+    vuln_id: str = vuln_id_override or advisory.get("id")  # type: ignore[assignment]
     published = advisory.get("published")
 
     for affected in advisory.get("affected", []):

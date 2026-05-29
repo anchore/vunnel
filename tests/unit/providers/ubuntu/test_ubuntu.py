@@ -432,6 +432,29 @@ class TestParserFixDateDeferredToYield:
         anchore = payload["affected"][0]["ranges"][0]["database_specific"]["anchore"]
         assert any(fix["date"] == "2013-07-15" and fix["version"] == "1.3.1-3" for fix in anchore["fixes"])
 
+    def test_fixdater_keyed_by_upstream_cve_not_ubuntu_cve(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # Regression test: the OSV record's `id` is `UBUNTU-CVE-*` (Canonical's internal
+        # key), but the fix-date cache keys by the upstream `CVE-*`. The parser must look
+        # up using the upstream CVE id or every fixdater hit silently misses.
+        #
+        # Configure the fake finder with a dict keyed by the upstream CVE only. If the
+        # parser uses the UBUNTU-CVE id, the lookup falls through and no anchore.fixes
+        # gets written; if it uses the upstream, the lookup hits.
+        fake_fixdate_finder(responses={
+            "CVE-2013-2208": [Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
+        })
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+        payload = yielded["ubuntu-14.04-lts/ubuntu-cve-2013-2208"]
+        anchore = payload["affected"][0]["ranges"][0]["database_specific"]["anchore"]
+        assert any(fix["date"] == "2013-07-15" and fix["version"] == "1.3.1-3" for fix in anchore["fixes"]), (
+            "fixdater lookup must use upstream CVE id (CVE-2013-2208), not the OSV record id "
+            "(UBUNTU-CVE-2013-2208); otherwise every fix-date lookup silently misses"
+        )
+
     def test_yielded_record_no_anchore_when_no_fixed_event(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         _seed_archive(fresh_workspace, fixture_dir)
         p = Parser(workspace=fresh_workspace)
