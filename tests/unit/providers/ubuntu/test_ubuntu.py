@@ -170,10 +170,17 @@ def _build_sample_archive(fixture_dir: str, source_subdir: str, archive_prefix: 
     archive_prefix is the directory each archive member sits under
     (e.g. "osv" → entries become "osv/cve/<year>/<file>.json"). This matches
     the production layout the parser expects.
+
+    Both files and directories are explicitly sorted: os.walk's directory
+    order is filesystem-dependent (ext4 vs APFS vs CI overlayfs all differ),
+    and the tarball's member order propagates into SQLite insertion order
+    inside fragments. Without sort, tests that read fragments via
+    `next(reader.each())` get a different first row on CI vs local.
     """
     src = os.path.join(fixture_dir, source_subdir)
     with tarfile.open(dst_path, mode="w:xz") as tar:
-        for root, _, files in os.walk(src):
+        for root, dirs, files in os.walk(src):
+            dirs.sort()
             for fname in sorted(files):
                 if not fname.endswith(".json"):
                     continue
@@ -280,10 +287,13 @@ class TestParserFragmentWriter:
         p = Parser(workspace=fresh_workspace)
         p._write_fragments()
 
-        # UBUNTU-CVE-2020-36325 declares schema_version 1.6.3 in Canonical's feed
+        # UBUNTU-CVE-2020-36325 declares schema_version 1.6.3 in Canonical's feed.
+        # ubuntu-pro-14.04-lts.db contains both CVE-2016-20013 (1.7.0) and CVE-2020-36325
+        # (1.6.3); look up by identifier rather than picking the first row, since
+        # SQLite insertion order depends on tarball member order which is filesystem-dependent.
         path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-pro-14.04-lts.db")
         with result.SQLiteReader(path) as reader:
-            env = next(reader.each())
+            env = next(e for e in reader.each() if "2020-36325" in e.identifier)
         assert env.schema.endswith("/osv/schema-1.6.3.json")
 
     def test_fragment_preserves_withdrawn_field(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
@@ -294,7 +304,7 @@ class TestParserFragmentWriter:
 
         path = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-pro-14.04-lts.db")
         with result.SQLiteReader(path) as reader:
-            env = next(reader.each())
+            env = next(e for e in reader.each() if "2020-36325" in e.identifier)
         assert env.item.get("withdrawn") == "2025-06-23T15:53:49Z"
 
     def test_record_with_no_affected_emits_no_fragments(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder, tmp_path):
