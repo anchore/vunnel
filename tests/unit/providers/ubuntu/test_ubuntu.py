@@ -14,7 +14,9 @@ from vunnel.providers.ubuntu import Config, Provider
 from vunnel.providers.ubuntu.parser import (
     Parser,
     _annotate_wont_fix,
+    _build_synthetic_base_affected,
     ecosystem_to_slug,
+    pro_to_base_ecosystem,
     slice_by_ecosystem,
 )
 from vunnel.providers.ubuntu.vex_overlay import (
@@ -557,12 +559,17 @@ class TestParserIteration:
         p._write_fragments()
 
         ids = sorted(t[0] for t in p._iter_fragments())
-        # one envelope per (CVE, ecosystem) pair:
-        #   2013-2208 × 1, 2016-20013 × 10, 2020-36325 × 1, 2021-3782 × 4, 2026-1403 × 1 = 17
+        # 17 real (CVE, ecosystem) envelopes + 2 inferred from Pro-only-fix sources:
+        #   2020-36325 has only Ubuntu:Pro:14.04:LTS (jansson) → synthesize base 14.04/jansson
+        #   2021-3782 has Ubuntu:Pro:16.04:LTS (wayland) but no base 16.04 for wayland in any
+        #     fixture record → synthesize base 16.04/wayland (the existing 16.04 entry from
+        #     CVE-2026-1403 is for gitlab, different package → doesn't suppress)
         assert ids == [
             "ubuntu-14.04-lts/ubuntu-cve-2013-2208",
             "ubuntu-14.04-lts/ubuntu-cve-2016-20013",
+            "ubuntu-14.04-lts/ubuntu-cve-2020-36325",   # ← inferred from Pro:14.04/jansson
             "ubuntu-16.04-lts/ubuntu-cve-2016-20013",
+            "ubuntu-16.04-lts/ubuntu-cve-2021-3782",    # ← inferred from Pro:16.04/wayland
             "ubuntu-16.04-lts/ubuntu-cve-2026-1403",
             "ubuntu-18.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-18.04-lts/ubuntu-cve-2021-3782",
@@ -790,8 +797,10 @@ class TestProviderUpdate:
         with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
-        # 5 OSV records sliced: 2013-2208 × 1 + 2016-20013 × 10 + 2020-36325 × 1 + 2021-3782 × 4 + 2026-1403 × 1 = 17
-        assert ws.num_result_entries() == 17
+        # 17 real OSV envelopes + 2 inferred-from-Pro base envelopes
+        # (Pro:14.04/jansson → base 14.04; Pro:16.04/wayland → base 16.04). See
+        # test_iter_fragments_yields_envelopes_from_every_db_file for the breakdown.
+        assert ws.num_result_entries() == 19
 
     def test_writes_per_record_osv_schema(self, helpers, fixture_dir, auto_fake_fixdate_finder):
         ws = helpers.provider_workspace_helper(name=Provider.name())
@@ -829,9 +838,10 @@ class TestProviderUpdate:
         with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
-        # 17 OSV envelopes + 5 legacy envelopes (CVE-2022-31258 bionic is filtered out by OSV coverage on 18.04)
-        # legacy: 2012-5124×2 + 2013-6627×3 = 5
-        assert ws.num_result_entries() == 22
+        # 17 real OSV + 2 inferred-from-Pro base envelopes + 5 legacy envelopes
+        # (CVE-2022-31258 bionic filtered by OSV coverage on 18.04).
+        # Legacy: 2012-5124×2 + 2013-6627×3 = 5
+        assert ws.num_result_entries() == 24
 
         # check mixed-schema output
         import json
@@ -1072,3 +1082,221 @@ class TestParserVEXIntegration:
         payload = yielded["ubuntu-24.04-lts/ubuntu-cve-2016-20013"]
         glibc = next(a for a in payload["affected"] if a["package"]["name"] == "glibc")
         assert glibc["database_specific"]["anchore"]["status"] == "wont-fix"
+
+
+# ---------------------------------------------------------------------------
+# Pro-only-fix → base wont-fix inference
+# ---------------------------------------------------------------------------
+
+
+class TestProToBaseEcosystem:
+    """Pure-function tests for pro_to_base_ecosystem.
+
+    The function deliberately restricts to plain ESM-tier Pro
+    (Ubuntu:Pro:<version>[:LTS]). FIPS / FIPS-updates / FIPS-preview /
+    Realtime / Nvidia-BlueField are all rejected because they ship
+    *different builds* whose vulnerable code paths may diverge from base.
+    See the function docstring for the full rationale.
+    """
+
+    def test_plain_pro_with_lts_suffix(self):
+        assert pro_to_base_ecosystem("Ubuntu:Pro:20.04:LTS") == "Ubuntu:20.04:LTS"
+
+    def test_plain_pro_oldest_esm_release(self):
+        assert pro_to_base_ecosystem("Ubuntu:Pro:14.04:LTS") == "Ubuntu:14.04:LTS"
+
+    def test_plain_pro_without_lts_suffix(self):
+        # Pro variants of non-LTS releases are uncommon but the parsing should
+        # still produce the matching base form.
+        assert pro_to_base_ecosystem("Ubuntu:Pro:25.10") == "Ubuntu:25.10"
+
+    def test_fips_rejected(self):
+        assert pro_to_base_ecosystem("Ubuntu:Pro:FIPS:20.04:LTS") is None
+        assert pro_to_base_ecosystem("Ubuntu:Pro:FIPS-updates:22.04:LTS") is None
+        assert pro_to_base_ecosystem("Ubuntu:Pro:FIPS-preview:22.04:LTS") is None
+
+    def test_realtime_rejected(self):
+        assert pro_to_base_ecosystem("Ubuntu:Pro:Realtime:24.04:LTS") is None
+        # Six-segment Realtime kernel variant observed in real data
+        assert pro_to_base_ecosystem("Ubuntu:Pro:22.04:LTS:Realtime:Kernel") is None
+
+    def test_nvidia_bluefield_rejected(self):
+        # Different product line, not an ESM continuation of base
+        assert pro_to_base_ecosystem("Ubuntu:Nvidia-BlueField:22.04:LTS") is None
+
+    def test_already_base_returns_none(self):
+        assert pro_to_base_ecosystem("Ubuntu:20.04:LTS") is None
+        assert pro_to_base_ecosystem("Ubuntu:25.10") is None
+        assert pro_to_base_ecosystem("Ubuntu:26.04:LTS") is None
+
+    def test_malformed_inputs_return_none(self):
+        assert pro_to_base_ecosystem("") is None
+        assert pro_to_base_ecosystem("Ubuntu") is None
+        assert pro_to_base_ecosystem("Ubuntu:Pro") is None
+        assert pro_to_base_ecosystem("Ubuntu:Pro:notaversion:LTS") is None
+        assert pro_to_base_ecosystem("Debian:Pro:20.04:LTS") is None  # wrong distro
+        # An LTS suffix variant we don't expect — be strict, not lenient
+        assert pro_to_base_ecosystem("Ubuntu:Pro:20.04:WEIRD") is None
+
+
+class TestSyntheticBaseAffectedBuilder:
+    """Tests for _build_synthetic_base_affected — the per-affected-entry synthesizer."""
+
+    def _template(self, name="glibc", purl=True, binaries=True):
+        eco_spec = {"binaries": [{"binary_name": "libc6", "binary_version": "x"}]} if binaries else {}
+        pkg = {"ecosystem": "Ubuntu:Pro:20.04:LTS", "name": name}
+        if purl:
+            pkg["purl"] = "pkg:deb/ubuntu/glibc@2.31?arch=source&distro=esm-infra/focal"
+        return {"package": pkg, "ecosystem_specific": eco_spec, "ranges": [
+            {"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.31+esm1"}]},
+        ]}
+
+    def test_rebases_ecosystem(self):
+        out = _build_synthetic_base_affected(self._template(), "Ubuntu:20.04:LTS")
+        assert out["package"]["ecosystem"] == "Ubuntu:20.04:LTS"
+        assert out["package"]["name"] == "glibc"
+
+    def test_drops_pro_purl(self):
+        # The Pro purl's distro qualifier (e.g. distro=esm-infra/focal) doesn't
+        # apply to base 20.04 — we don't want to fabricate a misleading qualifier.
+        out = _build_synthetic_base_affected(self._template(), "Ubuntu:20.04:LTS")
+        assert "purl" not in out["package"]
+
+    def test_preserves_binaries(self):
+        # Pro ESM binaries are byte-identical to base while base is supported;
+        # carrying them lets binary→source resolution still work for scans.
+        out = _build_synthetic_base_affected(self._template(), "Ubuntu:20.04:LTS")
+        assert out["ecosystem_specific"]["binaries"] == [
+            {"binary_name": "libc6", "binary_version": "x"},
+        ]
+
+    def test_replaces_ranges_with_no_fix_sentinel(self):
+        # Synthesized base entries are always "vulnerable, no fix shipped on base"
+        # — even if Pro had a fixed event. The Pro fix doesn't apply to base.
+        out = _build_synthetic_base_affected(self._template(), "Ubuntu:20.04:LTS")
+        assert out["ranges"] == [
+            {"type": "ECOSYSTEM", "events": [{"introduced": "0"}]},
+        ]
+
+    def test_emits_wont_fix_status_without_inference_provenance_key(self):
+        # The wont-fix status lives directly on database_specific.anchore; the
+        # inference.source_ecosystems provenance is added by the caller because
+        # it depends on cross-fragment context the builder doesn't know.
+        out = _build_synthetic_base_affected(self._template(), "Ubuntu:20.04:LTS")
+        anchore = out["database_specific"]["anchore"]
+        assert anchore["status"] == "wont-fix"
+        assert "inference" not in anchore
+
+
+class TestProOnlyInferenceIntegration:
+    """End-to-end: write fragments from sample tarball, yield, assert inferred entries materialize."""
+
+    def test_pro_only_record_synthesizes_base_envelope(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # UBUNTU-CVE-2020-36325 has ONLY Ubuntu:Pro:14.04:LTS / jansson in its affected[].
+        # The base Ubuntu:14.04:LTS record has no entry for jansson in any fixture.
+        # Inference should produce a synthetic base 14.04 envelope.
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+
+        synth = yielded.get("ubuntu-14.04-lts/ubuntu-cve-2020-36325")
+        assert synth is not None, "expected synthetic base 14.04 envelope for CVE-2020-36325"
+        affs = synth["affected"]
+        assert len(affs) == 1
+        jansson = affs[0]
+        assert jansson["package"]["ecosystem"] == "Ubuntu:14.04:LTS"
+        assert jansson["package"]["name"] == "jansson"
+        assert "purl" not in jansson["package"]
+        assert jansson["ranges"] == [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}]
+        anchore = jansson["database_specific"]["anchore"]
+        assert anchore["status"] == "wont-fix"
+        assert anchore["inference"] == {
+            "kind": "pro-only-fix",
+            "source_ecosystems": ["Ubuntu:Pro:14.04:LTS"],
+        }
+
+    def test_inferred_entries_merge_into_existing_base_envelope(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # UBUNTU-CVE-2016-20013 has base 14.04 / syslinux (real) AND Pro:14.04 / eglibc, zabbix.
+        # The yielded base 14.04 envelope must contain BOTH real and inferred packages —
+        # synthesizing a separate envelope would collide on identifier and overwrite the real one.
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+
+        payload = yielded["ubuntu-14.04-lts/ubuntu-cve-2016-20013"]
+        by_name = {a["package"]["name"]: a for a in payload["affected"]}
+        assert "syslinux" in by_name, "real base entry must survive"
+        assert "eglibc" in by_name, "inferred entry from Pro:14.04/eglibc must be added"
+        assert "zabbix" in by_name, "inferred entry from Pro:14.04/zabbix must be added"
+
+        # Real syslinux entry has NO inference key — and may not have database_specific
+        # at all if neither VEX nor fixdate annotated it.
+        assert "inference" not in by_name["syslinux"].get("database_specific", {}).get("anchore", {})
+        # Inferred eglibc DOES carry provenance
+        assert by_name["eglibc"]["database_specific"]["anchore"]["inference"]["kind"] == "pro-only-fix"
+        assert by_name["eglibc"]["database_specific"]["anchore"]["inference"]["source_ecosystems"] == [
+            "Ubuntu:Pro:14.04:LTS",
+        ]
+
+    def test_base_present_for_same_package_suppresses_synthesis(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # UBUNTU-CVE-2021-3782 has both Ubuntu:18.04:LTS / wayland (real) and
+        # Ubuntu:Pro:16.04:LTS / wayland (Pro). Base 18.04/wayland is already in
+        # the record, so we must NOT synthesize a base entry that overrides it.
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+
+        # base 18.04 entry has the original Pro:16.04 → base 16.04 inference,
+        # but base 18.04's own wayland entry is REAL — keep its fix event intact.
+        payload = yielded["ubuntu-18.04-lts/ubuntu-cve-2021-3782"]
+        wayland = next(a for a in payload["affected"] if a["package"]["name"] == "wayland")
+        # Real entries have fix events; synthesized entries always have just introduced=0.
+        events = [list(e.keys())[0] for r in wayland["ranges"] for e in r["events"]]
+        assert "fixed" in events, "real base 18.04/wayland entry must keep its fixed event"
+        # Real entries may not have database_specific at all if no VEX/fixdate annotations apply.
+        assert "inference" not in wayland.get("database_specific", {}).get("anchore", {})
+
+    def test_sub_tier_fragments_do_not_trigger_inference(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # No FIPS/Realtime/BlueField in our fixtures, so this is a structural check:
+        # iterate fragments after a write and assert none of the synthesized base
+        # entries reference a Pro:FIPS / Pro:Realtime / Nvidia-BlueField source.
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+        forbidden_sources = ("FIPS", "Realtime", "Nvidia-BlueField")
+        for _ident, _sch, payload in p._iter_fragments():
+            for aff in payload.get("affected", []):
+                inf = aff.get("database_specific", {}).get("anchore", {}).get("inference")
+                if not inf:
+                    continue
+                for src in inf.get("source_ecosystems", []):
+                    for marker in forbidden_sources:
+                        assert marker not in src, (
+                            f"inference fired off a sub-tier source ({src}); "
+                            "pro_to_base_ecosystem should have excluded this"
+                        )
+
+    def test_inference_survives_frozen_base_fragment(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Headline post-EOL scenario: imagine base 14.04 dropped from OSV but Pro:14.04
+        # is still tracked. We simulate by writing fragments from today's fixture
+        # (which has both base 14.04 and Pro:14.04), then deleting the base fragment
+        # to mimic "base wasn't refreshed this run." Pro siblings should still produce
+        # inferred base entries on yield.
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._write_fragments()
+
+        base_fragment = os.path.join(fresh_workspace.input_path, "fragments", "ubuntu-14.04-lts.db")
+        assert os.path.exists(base_fragment)
+        os.remove(base_fragment)
+
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+        # Inferred entries still come through from Pro:14.04 — base fragment isn't needed.
+        synth = yielded.get("ubuntu-14.04-lts/ubuntu-cve-2020-36325")
+        assert synth is not None, "inference must still fire when base fragment is absent"
+        anchore = synth["affected"][0]["database_specific"]["anchore"]
+        assert anchore["status"] == "wont-fix"
+        assert anchore["inference"]["source_ecosystems"] == ["Ubuntu:Pro:14.04:LTS"]

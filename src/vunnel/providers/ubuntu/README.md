@@ -3,12 +3,14 @@
 ## Overview
 
 This provider ingests Canonical's OSV to get vulnerability data about Ubuntu.
-However, this data is incomplete in 3 ways:
+However, this data is incomplete in 4 ways:
 
 1. It does not cover Ubuntu versions that no longer receive any support
 2. It does not mark CVEs as "won't fix" when Canonical has decided not to
    publish a fix.
 3. It does not report when a fix became available
+4. It does not list vulnerabilities for packages in base Ubuntu that are only
+   fixed in ESM.
 
 To work around the first limitation, this provider relies on the
 `normalized_cve_data` directory written into the cached workspaces by previous
@@ -21,6 +23,10 @@ feed annotates the OSV data with "won't fix" information from the OpenVEX.
 
 To work around the third limitation, vunnel runs are supplied with a database
 of grype-db-observed-fix-dates, similarly to other providers.
+
+To work around the fourth limitation, this provider infers the existence of a
+"wont-fix" record for packages that are fixed in Ubuntu Pro but not mentioned
+in regular Ubuntu of the same version number.
 
 Because presently supported Ubuntu versions are expected to disappear from the
 OSV data after they reach EOL, the following strategy is used:
@@ -129,24 +135,77 @@ Provider.update()
       │             insert envelope
       ├─ yield from _iter_normalized_cve_data()   # legacy first
       └─ yield from _iter_fragments()             # OSV second
-            (patch_fix_date applied here, at yield time)
+            for each base ecosystem:
+              yield real base envelopes (patch_fix_date applied)
+              merge inferred wont-fix entries from sibling Pro fragments
+                into existing envelopes, or synthesize new ones
 ```
 
-Two annotations live in `affected[].database_specific.anchore`:
+Three annotations live in `affected[].database_specific.anchore`:
 
 - `fixes[]` — `{version, date, kind}` derived from the fix-date cache.
-  Applied **at yield time**, not at write time. This means improvements
-  to the fix-date cache flow through to frozen fragments on the next run
-  without rewriting them.
+  Applied **at yield time**. Improvements to the fix-date cache flow
+  through to frozen fragments on the next run without rewriting them.
 - `status` — `"wont-fix"` when Canonical's VEX feed marks this
   `(cve, distro, source-pkg)` as won't-fix. Applied **at write time**,
   baked into the fragment. When a release later EOLs and VEX stops
   carrying it, the frozen fragment retains the disposition.
+- `inference` — when a base wont-fix entry was synthesized from a
+  Pro-only-fix record (see next section). Applied **at yield time** on
+  synthesized base entries. Carries `kind: "pro-only-fix"` and
+  `source_ecosystems` (the Pro ecosystems whose presence triggered the
+  inference) — gives downstream a precise join key for future
+  Pro-fix-suggestion behavior.
 
-These two annotations have opposite update semantics on purpose. Fix
-dates can be refined retroactively from new tracking data; disposition
-is a "what Canonical decided at this moment" snapshot that must survive
-the release leaving both upstream feeds.
+These have deliberately different update semantics. Fix dates can be
+refined retroactively from new tracking data; the won't-fix status is a
+"what Canonical decided at this moment" snapshot that must survive the
+release leaving both upstream feeds; the inference is recomputed every
+yield from current Pro data, so frozen base fragments still pick up
+newly-published Pro-only fixes after base EOLs.
+
+## Pro-only-fix → base wont-fix inference
+
+Canonical encodes "this CVE will only be fixed in Pro/ESM, not base
+Ubuntu" by **omitting the base ecosystem** from the OSV record's
+`affected[]` while listing the Pro tier. E.g. CVE-2018-20796 lists
+`Ubuntu:Pro:20.04:LTS / glibc` but no `Ubuntu:20.04:LTS / glibc` — the
+intent is "base focal users won't get a fix; only Pro subscribers
+will." v3 captured this via `status: ignored` on base in the tracker;
+OSV drops the signal entirely.
+
+At yield time, for each base ecosystem fragment we look at sibling
+plain-Pro fragments (`Ubuntu:Pro:X.YY:LTS` only — see below). For any
+`(CVE, source-package)` tuple Pro lists but base doesn't, we
+synthesize a base wont-fix entry. Synthesized entries are merged into
+the existing base envelope when one exists; they become a new envelope
+when base has no entry for that CVE at all.
+
+**Why only plain Pro, not FIPS/Realtime/Nvidia-BlueField:** plain Pro
+packages are byte-identical to base packages while base is supported,
+then diverge via ESM-backported patches — same vulnerable code, so the
+inference is sound. FIPS rebuilds specific packages against
+FIPS-validated cryptographic modules (different crypto code paths);
+Realtime is the PREEMPT_RT kernel (different locking/scheduling code);
+Nvidia-BlueField is a separate SmartNIC OS. A CVE in those builds
+doesn't reliably imply the same CVE on base, so we don't infer from
+them.
+
+**Why at yield time, not write time:** consider the post-EOL scenario.
+Base 24.04 eventually drops out of OSV; its fragment freezes. Pro:24.04
+is still tracked. A new CVE-X gets a Pro-only fix. Yield-time inference
+sees the fresh Pro:24.04 record alongside the frozen base 24.04
+fragment and produces a synthetic base wont-fix entry — base 24.04
+users get the disclosure without us rewriting the frozen base data. A
+write-time inference would have to either overwrite the frozen base
+fragment (losing pre-EOL real data) or special-case the wipe-and-rewrite
+semantics; both are worse.
+
+**Provenance for future grype behaviors:** the synthesized entry's
+`anchore.inference.source_ecosystems` carries the Pro ecosystems that
+triggered it. Downstream can use this as a join key to look up the Pro
+fix version for "vulnerable, fix available via Pro upgrade" presentation
+when a user opts in to Pro-fix suggestions.
 
 ## Why OpenVEX (not just OSV)
 

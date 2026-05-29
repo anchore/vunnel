@@ -40,6 +40,122 @@ def ecosystem_to_slug(ecosystem: str) -> str:
     return ecosystem.lower().replace(":", "-")
 
 
+_VERSION_RE = re.compile(r"^\d+\.\d+$")
+
+
+def pro_to_base_ecosystem(ecosystem: str) -> str | None:
+    """Map a plain Ubuntu Pro (ESM) ecosystem to its base Ubuntu form.
+
+    Only the plain ESM tier qualifies. Sub-tiers (FIPS, FIPS-updates,
+    FIPS-preview, Realtime) and adjacent product lines (Nvidia-BlueField)
+    are intentionally excluded:
+
+      - FIPS / FIPS-updates / FIPS-preview rebuild specific packages
+        (kernel, openssl, libgcrypt, ...) against FIPS 140-validated
+        cryptographic modules. The crypto code paths differ from base.
+        A CVE in the FIPS-rebuilt binary may or may not exist in the
+        mainline binary depending on whether the bug is in the
+        FIPS-modified code; inference would be unreliable.
+
+      - Realtime is the PREEMPT_RT kernel — locking, scheduling, and
+        concurrency paths are materially different. RT-specific CVEs
+        and non-RT-specific CVEs both exist.
+
+      - Nvidia-BlueField is a separate SmartNIC/DPU OS product line
+        with its own package set.
+
+    Plain Ubuntu Pro packages are byte-identical to base packages while
+    base is supported, then diverge only via ESM-backported security
+    patches. A CVE on Pro means the same vulnerable code shipped on base
+    — that's the inference this enables.
+
+      Ubuntu:Pro:20.04:LTS              -> Ubuntu:20.04:LTS    (plain ESM, inferable)
+      Ubuntu:Pro:14.04:LTS              -> Ubuntu:14.04:LTS
+      Ubuntu:Pro:FIPS:20.04:LTS         -> None                (different build)
+      Ubuntu:Pro:FIPS-updates:22.04:LTS -> None                (different build)
+      Ubuntu:Pro:Realtime:24.04:LTS     -> None                (PREEMPT_RT kernel)
+      Ubuntu:Nvidia-BlueField:22.04:LTS -> None                (separate product)
+      Ubuntu:20.04:LTS                  -> None                (already base)
+    """
+    parts = ecosystem.split(":")
+    # plain Pro shape: Ubuntu:Pro:<version>[:LTS], 3 or 4 segments, nothing between Pro and version
+    if len(parts) not in (3, 4):
+        return None
+    if parts[0] != "Ubuntu" or parts[1] != "Pro":
+        return None
+    if not _VERSION_RE.match(parts[2]):
+        return None
+    if len(parts) == 4 and parts[3] != "LTS":
+        return None
+    return ":".join(["Ubuntu", *parts[2:]])
+
+
+def _affected_package_names(payload: dict[str, Any]) -> set[str]:
+    """Return the set of source-package names in a record's affected[]."""
+    out: set[str] = set()
+    for a in payload.get("affected", []):
+        pkg = a.get("package", {}).get("name")
+        if pkg:
+            out.add(pkg)
+    return out
+
+
+def _synthesize_missing(
+    pro_affs: list[dict[str, Any]],
+    existing_pkgs: set[str],
+    base_eco: str,
+    pro_eco: str | None,
+) -> list[dict[str, Any]]:
+    """For each Pro affected[] entry whose source-package isn't already in the
+    base envelope, produce a synthesized base affected[] entry tagged with the
+    inference provenance.
+    """
+    new_affs: list[dict[str, Any]] = []
+    for aff in pro_affs:
+        pkg = aff.get("package", {}).get("name")
+        if not pkg or pkg in existing_pkgs:
+            continue
+        existing_pkgs.add(pkg)
+        synth = _build_synthetic_base_affected(aff, base_eco)
+        synth["database_specific"]["anchore"]["inference"] = {
+            "kind": "pro-only-fix",
+            "source_ecosystems": [pro_eco] if pro_eco else [],
+        }
+        new_affs.append(synth)
+    return new_affs
+
+
+def _build_synthetic_base_affected(template: dict[str, Any], base_eco: str) -> dict[str, Any]:
+    """Build a single synthetic affected[] entry for the base ecosystem.
+
+    Inherits source package name and binary list from the Pro template (binaries
+    on Pro ESM are byte-identical to base while base was supported; carrying
+    them lets binary→source resolution still work downstream). Drops `purl`
+    since its `distro=` qualifier points at a Pro codename (e.g. `esm-infra/jammy`).
+    """
+    src_pkg = dict(template.get("package", {}))
+    src_pkg["ecosystem"] = base_eco
+    src_pkg.pop("purl", None)
+
+    eco_specific: dict[str, Any] = {}
+    if "binaries" in template.get("ecosystem_specific", {}):
+        eco_specific["binaries"] = template["ecosystem_specific"]["binaries"]
+
+    return {
+        "package": src_pkg,
+        "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+        "ecosystem_specific": eco_specific,
+        "database_specific": {
+            "anchore": {
+                "status": "wont-fix",
+                # `inference.source_ecosystems` filled in by the caller — the same
+                # base (CVE, source-pkg) may have inferences from multiple Pro slices
+                # (though restriction to plain Pro makes this rare in practice).
+            },
+        },
+    }
+
+
 def slice_by_ecosystem(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Group a record's affected[] entries by ecosystem.
 
@@ -244,36 +360,226 @@ class Parser:
             writers[eco].write(identifier=identifier, schema=rec_schema, payload=sliced_record)
 
     def _iter_fragments(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
-        """Yield (identifier, schema, payload) from every fragment on disk.
+        """Yield (identifier, schema, payload) from every fragment on disk + inferred entries.
 
-        Includes both fragments written this run and frozen fragments
-        from prior runs whose ecosystem is no longer in the OSV feed.
-        Fix-date patching is applied here, at yield time, so today's
-        fixdater state annotates even records cached from prior runs.
+        Three things happen here, all at yield time so that improvements to
+        upstream feeds + the fixdate cache flow through to frozen fragments
+        on the next run without rewriting them:
+
+          1. Real envelopes from each fragment are yielded verbatim (with
+             fix-date patching applied).
+          2. For each base Ubuntu ecosystem with sibling plain-Pro (ESM)
+             fragments, any (CVE, source-pkg) tuple Pro has and base does
+             NOT have produces a synthesized base wont-fix envelope. This
+             reconstructs the signal Canonical encodes by *omission* of the
+             base entry when a CVE will only be fixed in Pro.
+          3. The inference runs from current Pro data every yield, so:
+               - while base is still in OSV: inferred entries fill Pro-only-fix gaps
+               - after base EOLs (frozen base fragment): inferred entries
+                 from continuing Pro coverage layer on top of the frozen state.
         """
         if not os.path.isdir(self.fragments_dir):
             return
+
+        base_paths, pro_paths, unclassified = self._group_fragments_by_base()
+
+        # Yield unclassifiable fragments verbatim (test fixtures with empty affected[],
+        # future shapes we don't recognize, etc.) — never apply inference to them.
+        for path in unclassified:
+            yield from self._iter_envelopes_with_fixdate(path)
+
+        # Pass 1: yield Pro fragments verbatim. (Inference happens during the base pass.)
+        seen_pro_paths: set[str] = set()
+        for paths in pro_paths.values():
+            for path in paths:
+                if path in seen_pro_paths:
+                    continue
+                seen_pro_paths.add(path)
+                yield from self._iter_envelopes_with_fixdate(path)
+
+        # Pass 2: yield base envelopes (real + merged inferences from Pro siblings).
+        # An inferred base entry shares the (base_eco, cve_id) key — and therefore the
+        # envelope identifier — with any real base entry for the same CVE. We must
+        # merge inferred affected[] entries INTO the real envelope before yielding;
+        # emitting a separate envelope would collide under INSERT OR REPLACE and
+        # the synthesized one would overwrite the real data.
+        all_base_ecos = set(base_paths) | set(pro_paths)
+        for base_eco in sorted(all_base_ecos):
+            yield from self._yield_base_with_inferences(
+                base_eco,
+                base_path=base_paths.get(base_eco),
+                pro_paths=pro_paths.get(base_eco, []),
+            )
+
+    def _yield_base_with_inferences(
+        self,
+        base_eco: str,
+        base_path: str | None,
+        pro_paths: list[str],
+    ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        # Collect real envelopes by cve, keyed so we can merge inferences in.
+        by_cve: dict[str, dict[str, Any]] = {}
+        cve_order: list[str] = []
+
+        if base_path is not None:
+            for env in self._iter_envelopes_with_fixdate(base_path):
+                identifier, sch, payload = env
+                cve = payload.get("id", "")
+                if cve not in by_cve:
+                    cve_order.append(cve)
+                by_cve[cve] = {
+                    "identifier": identifier,
+                    "schema": sch,
+                    "payload": payload,
+                    "had_real": True,
+                }
+
+        if pro_paths:
+            self._merge_inferred_into(by_cve, cve_order, pro_paths, base_eco)
+
+        for cve in cve_order:
+            entry = by_cve[cve]
+            yield entry["identifier"], entry["schema"], entry["payload"]
+
+    def _merge_inferred_into(
+        self,
+        by_cve: dict[str, dict[str, Any]],
+        cve_order: list[str],
+        pro_paths: list[str],
+        base_eco: str,
+    ) -> None:
+        """Walk sibling Pro fragments. For each Pro envelope, append synthesized
+        base entries to the real envelope (if one exists) or create a new
+        envelope. Records the inference provenance.
+        """
+        for pro_path in pro_paths:
+            with result.SQLiteReader(pro_path) as reader:
+                for envelope in reader.each():
+                    self._merge_pro_envelope(envelope, by_cve, cve_order, base_eco)
+
+    def _merge_pro_envelope(
+        self,
+        envelope: result.Envelope,
+        by_cve: dict[str, dict[str, Any]],
+        cve_order: list[str],
+        base_eco: str,
+    ) -> None:
+        payload = envelope.item
+        cve = payload.get("id", "")
+        if not cve:
+            return
+        pro_affs = payload.get("affected", [])
+        pro_eco = pro_affs[0].get("package", {}).get("ecosystem") if pro_affs else None
+        target = by_cve.get(cve)
+        existing_pkgs = _affected_package_names(target["payload"]) if target else set()
+        new_affs = _synthesize_missing(pro_affs, existing_pkgs, base_eco, pro_eco)
+        if not new_affs:
+            return
+        if target is None:
+            self._add_synthetic_envelope(by_cve, cve_order, envelope, new_affs, base_eco)
+        else:
+            target["payload"].setdefault("affected", []).extend(new_affs)
+
+    def _add_synthetic_envelope(
+        self,
+        by_cve: dict[str, dict[str, Any]],
+        cve_order: list[str],
+        envelope: result.Envelope,
+        new_affs: list[dict[str, Any]],
+        base_eco: str,
+    ) -> None:
+        template = envelope.item
+        cve = template["id"]
+        synth_payload: dict[str, Any] = {k: v for k, v in template.items() if k != "affected"}
+        synth_payload["affected"] = new_affs
+        upstream = synth_payload.get("upstream") or []
+        osv.patch_fix_date(
+            synth_payload,
+            self.fixdater,
+            vuln_id_override=upstream[0] if upstream else None,
+        )
+        by_cve[cve] = {
+            "identifier": f"{ecosystem_to_slug(base_eco)}/{cve.lower()}",
+            "schema": _schema_from_envelope_url(envelope.schema),
+            "payload": synth_payload,
+            "had_real": False,
+        }
+        cve_order.append(cve)
+
+    def _iter_envelopes_with_fixdate(
+        self,
+        fragment_path: str,
+    ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Read a fragment file, apply yield-time fix-date patching, yield envelopes."""
+        with result.SQLiteReader(fragment_path) as reader:
+            for envelope in reader.each():
+                payload = envelope.item
+                # patch_fix_date keys the lookup by vuln_id. The OSV record's `id` is
+                # the Canonical-internal `UBUNTU-CVE-*`; the fix-date cache keys by the
+                # upstream `CVE-*`. Pass the upstream override so the lookup hits.
+                upstream = payload.get("upstream") or []
+                osv.patch_fix_date(
+                    payload,
+                    self.fixdater,
+                    vuln_id_override=upstream[0] if upstream else None,
+                )
+                yield (
+                    envelope.identifier,
+                    _schema_from_envelope_url(envelope.schema),
+                    payload,
+                )
+
+    def _group_fragments_by_base(self) -> tuple[dict[str, str], dict[str, list[str]], list[str]]:
+        """Index fragments by their ecosystem.
+
+        Returns (base_paths, pro_paths, unclassified_paths):
+          - base_paths[base_eco]      → path to that base ecosystem's fragment, if present
+          - pro_paths[base_eco]       → paths to plain-Pro sibling fragments of base_eco
+          - unclassified_paths        → paths whose ecosystem couldn't be read (e.g. a
+                                         hand-crafted test fragment or a future shape we
+                                         don't recognize); yielded verbatim, no inference.
+
+        Sub-tier fragments (FIPS / Realtime / Nvidia-BlueField) end up in base_paths
+        keyed by their own ecosystem — they're yielded verbatim, with no inference
+        applied (pro_to_base_ecosystem returns None for them).
+
+        Fragment ecosystem is read from the first envelope's
+        `affected[0].package.ecosystem` to avoid reverse-engineering the
+        slug; every envelope in a fragment shares the same ecosystem by
+        the slicing invariant.
+        """
+        base_paths: dict[str, str] = {}
+        pro_paths: dict[str, list[str]] = {}
+        unclassified: list[str] = []
         for filename in sorted(os.listdir(self.fragments_dir)):
             if not filename.endswith(".db"):
                 continue
             path = os.path.join(self.fragments_dir, filename)
+            eco = self._ecosystem_of_fragment(path)
+            if eco is None:
+                unclassified.append(path)
+                continue
+            base = pro_to_base_ecosystem(eco)
+            if base is None:
+                base_paths[eco] = path
+            else:
+                pro_paths.setdefault(base, []).append(path)
+        return base_paths, pro_paths, unclassified
+
+    @staticmethod
+    def _ecosystem_of_fragment(path: str) -> str | None:
+        """Peek the ecosystem string from a fragment by reading one envelope."""
+        try:
             with result.SQLiteReader(path) as reader:
                 for envelope in reader.each():
-                    payload = envelope.item
-                    # patch_fix_date keys the lookup by vuln_id. The OSV record's `id` is
-                    # the Canonical-internal `UBUNTU-CVE-*`; the fix-date cache keys by the
-                    # upstream `CVE-*`. Pass the upstream override so the lookup hits.
-                    upstream = payload.get("upstream") or []
-                    osv.patch_fix_date(
-                        payload,
-                        self.fixdater,
-                        vuln_id_override=upstream[0] if upstream else None,
-                    )
-                    yield (
-                        envelope.identifier,
-                        _schema_from_envelope_url(envelope.schema),
-                        payload,
-                    )
+                    for aff in envelope.item.get("affected", []):
+                        eco = aff.get("package", {}).get("ecosystem")
+                        if eco:
+                            return eco
+                    return None
+        except Exception:
+            return None
+        return None
 
     def _osv_covers_legacy_namespace(self, ns: str) -> bool:
         """Return True if today's OSV feed covers a legacy namespace `ubuntu:X.YY`.
