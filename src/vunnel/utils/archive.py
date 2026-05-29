@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tarfile
 import tempfile
 from pathlib import Path
@@ -9,6 +10,9 @@ import zstandard
 
 
 def extract(path: str, destination_dir: str) -> None:
+    if os.path.exists(destination_dir):
+        shutil.rmtree(destination_dir)
+
     if path.endswith(".tar.zst"):
         return _extract_tar_zst(path, destination_dir)
 
