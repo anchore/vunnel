@@ -21,8 +21,17 @@ Ubuntu versions was before it was removed.
 To work around the second, this provider also downloads Canonical's OpenVEX
 feed annotates the OSV data with "won't fix" information from the OpenVEX.
 
-To work around the third limitation, vunnel runs are supplied with a database
-of grype-db-observed-fix-dates, similarly to other providers.
+To work around the third limitation, this provider builds an in-memory
+overlay from the USN records in the OSV tarball (`osv/usn/**`) — each USN's
+top-level `published` field is the moment Canonical pushed the patched
+package to the archive, i.e. the real fix-ship date. The overlay supplies
+this as a high-confidence candidate to the fix-date finder so that, e.g.,
+turning on Pro ingestion doesn't make every Pro fix look like it shipped
+today (which is what the legacy "first-observed in grype-db" heuristic
+would record on the first build to see Pro data). The grype-db-observed
+fix-date cache remains the fallback for the ~23% of fix tuples that don't
+have a matching USN entry (FIPS / Realtime / Nvidia-BlueField tiers don't
+ship via USN).
 
 To work around the fourth limitation, this provider infers the existence of a
 "wont-fix" record for packages that are fixed in Ubuntu Pro but not mentioned
@@ -41,19 +50,21 @@ version as it goes EOL.
 
 ## Data sources
 
-The provider reads three things, in priority order:
+The provider reads four things, in priority order:
 
 | Source | URL / path | Role | Lifecycle |
 |---|---|---|---|
-| OSV CVE feed | `https://security-metadata.canonical.com/osv/osv-all.tar.xz` | Authoritative ranges + fix versions for currently-tracked releases | Streamed each run, never extracted to disk |
+| OSV CVE feed (`osv/cve/**`) | `https://security-metadata.canonical.com/osv/osv-all.tar.xz` | Authoritative ranges + fix versions for currently-tracked releases | Streamed each run, never extracted to disk |
+| OSV USN feed (`osv/usn/**`) | same tarball | Authoritative fix-ship dates (USN.published) — see "USN fix-date overlay" below | In-memory index built each run; not persisted |
 | OpenVEX feed | `https://security-metadata.canonical.com/vex/vex-all.tar.xz` | Fix disposition (won't-fix vs other) — see "Why VEX" below | Streamed each run; in-memory index, not persisted |
 | `input/normalized-cve-data/` | local | At-cutover EOL releases (precise → mantic) that have never appeared in either of the above | Frozen; populated by the v3 provider, kept untouched after v3's removal |
-| (fix-date cache) | `input/grype-db-observed-fix-dates.db` | First-observed dates for fixed versions; standard across providers | Refreshed each run |
+| (fix-date cache) | `input/grype-db-observed-fix-dates.db` | Cross-provider fallback for fix dates when no USN advisory shipped the fix | Refreshed each run |
 
-USN records inside `osv-all.tar.xz` (`osv/usn/**`) are **not ingested**. The
-majority of them report fixes that are already present in the CVE-based OSV
-files, and the previous provider did not include them either. This might be an
-area for future enhancement.
+USN records are **not emitted** as their own envelopes — the previous provider
+didn't surface them either. They're used purely as a metadata source: the
+USN→CVE join supplies real fix-ship dates that the CVE records themselves
+don't carry. Emitting USN-keyed advisories alongside CVE entries is a
+possible future enhancement.
 
 ## Output: per-ecosystem fragments + legacy passthrough
 
@@ -125,7 +136,8 @@ Provider.update()
       ├─ _download_archive()       # stream osv-all.tar.xz to disk
       ├─ _download_vex_archive()   # stream vex-all.tar.xz to disk
       ├─ fixdater.download()
-      ├─ _load_vex_overlay()       # build in-memory wont-fix index
+      ├─ _load_vex_overlay()       # build in-memory wont-fix index from VEX
+      ├─ _load_usn_overlay()       # build in-memory (eco, pkg, fix-ver) → USN.published index
       ├─ _write_fragments(overlay):
       │     for each osv/cve/**/*.json (streaming, no extraction):
       │         slice_by_ecosystem(record)        # group affected[] by ecosystem
@@ -136,16 +148,23 @@ Provider.update()
       ├─ yield from _iter_normalized_cve_data()   # legacy first
       └─ yield from _iter_fragments()             # OSV second
             for each base ecosystem:
-              yield real base envelopes (patch_fix_date applied)
+              yield real base envelopes (patch_fix_date applied;
+                                         USN overlay provides authoritative
+                                         fix-ship dates as accurate candidates)
               merge inferred wont-fix entries from sibling Pro fragments
                 into existing envelopes, or synthesize new ones
 ```
 
 Three annotations live in `affected[].database_specific.anchore`:
 
-- `fixes[]` — `{version, date, kind}` derived from the fix-date cache.
-  Applied **at yield time**. Improvements to the fix-date cache flow
-  through to frozen fragments on the next run without rewriting them.
+- `fixes[]` — `{version, date, kind}` populated by `patch_fix_date` at yield
+  time. Source priority: (1) USN overlay (`USN.published`, marked
+  accurate=True; covers ~77% of fix tuples across the live feed and 88–100%
+  of plain-Pro tiers), (2) grype-db-observed first-observed cache, (3)
+  CVE-record `published` date as a last-resort low-confidence fallback.
+  Applied **at yield time** so improvements to either USN data or the
+  fix-date cache flow through to frozen fragments on the next run without
+  rewriting them.
 - `status` — `"wont-fix"` when Canonical's VEX feed marks this
   `(cve, distro, source-pkg)` as won't-fix. Applied **at write time**,
   baked into the fragment. When a release later EOLs and VEX stops
@@ -206,6 +225,47 @@ semantics; both are worse.
 triggered it. Downstream can use this as a join key to look up the Pro
 fix version for "vulnerable, fix available via Pro upgrade" presentation
 when a user opts in to Pro-fix suggestions.
+
+## USN fix-date overlay
+
+Canonical's OSV CVE records don't carry per-fix dates — the record's
+top-level `published` is the *vulnerability* disclosure date, often
+months or years before the fix actually shipped. VEX doesn't help either:
+spot-checked against real records, statement timestamps on `status:
+"fixed"` entries are CVE-publish dates, not fix-ship dates (e.g., a
+chromium 65 fix carries a timestamp from 2012).
+
+The fix-ship date lives in the USN's top-level `published` field. Real
+example: CVE-2023-38545 (curl) → USN-6429-1 published `2023-10-11T11:34:51Z`,
+which is the public coordinated disclosure date.
+
+The provider streams `osv/usn/**` and builds an in-memory index keyed by
+`(ecosystem, source-pkg, fixed-version) → earliest USN published date`.
+At yield time, when `patch_fix_date` walks each `fixed:` event, the USN
+overlay's date is supplied as a high-confidence (`accurate=True`)
+candidate to `fixdater.best()`, which beats first-observed when both are
+present. The grype-db-observed first-observed cache remains the fallback.
+
+**Why this matters now**: when we add Pro ingestion (or any data shape
+v3 didn't carry), the grype-db-observed cache won't have history for the
+new rows. Without the USN overlay, those fixes would all date to the
+first build that captured them — i.e., "the day we turned on Pro." With
+the overlay, we read the real fix-ship date out of the USN that shipped
+it, regardless of how long ago.
+
+**Coverage** measured against today's full tarball: 77% of CVE fix
+tuples have a matching USN tuple overall. Plain-Pro coverage runs
+88–100% across all releases — exactly the regime the cutover stresses.
+FIPS-updates / Realtime / Nvidia-BlueField have low USN coverage (those
+tiers ship through non-USN channels); they fall through to first-observed
+without regression. The 23% USN-miss case has no impact vs. the prior
+behavior — the overlay only adds dates, never removes them.
+
+**Date precedence inside `fixdater.best()`**: candidates with
+`accurate=True` are upper-bound filters; the most-accurate, earliest
+remaining candidate wins. The USN overlay's `(date, kind="advisory",
+accurate=True)` candidate beats first-observed when both are present and
+beats CVE.published (which is `accurate=False`) unconditionally.
 
 ## Why OpenVEX (not just OSV)
 

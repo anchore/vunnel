@@ -1310,3 +1310,119 @@ class TestProOnlyInferenceIntegration:
         anchore = synth["affected"][0]["database_specific"]["anchore"]
         assert anchore["status"] == "wont-fix"
         assert anchore["inference"]["source_ecosystems"] == ["Ubuntu:Pro:14.04:LTS"]
+
+
+# ---------------------------------------------------------------------------
+# USN fix-date overlay — authoritative fix-ship dates from USN.published
+# ---------------------------------------------------------------------------
+
+
+class TestUSNFixDateOverlay:
+    """Pure tests for the overlay class + ISO-date parsing."""
+
+    def test_lookup_returns_usn_publish_date(self, fixture_dir, tmp_path):
+        from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+        import datetime as _dt
+
+        archive = tmp_path / "sample-osv-all.tar.xz"
+        _build_sample_archive(fixture_dir, "osv", "osv", str(archive))
+        overlay = USNFixDateOverlay.from_archive(str(archive))
+
+        # USN-5614-1 fixture covers wayland on 18.04/20.04/22.04, published 2022-09-15.
+        # See tests/unit/providers/ubuntu/test-fixtures/osv/usn/USN-5614-1.json.
+        assert overlay.lookup("Ubuntu:18.04:LTS", "wayland", "1.16.0-1ubuntu1.1~18.04.4") == _dt.date(2022, 9, 15)
+        assert overlay.lookup("Ubuntu:20.04:LTS", "wayland", "1.18.0-1ubuntu0.1") == _dt.date(2022, 9, 15)
+        assert overlay.lookup("Ubuntu:22.04:LTS", "wayland", "1.20.0-1ubuntu0.1") == _dt.date(2022, 9, 15)
+
+    def test_lookup_misses_return_none(self, fixture_dir, tmp_path):
+        from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+
+        archive = tmp_path / "sample-osv-all.tar.xz"
+        _build_sample_archive(fixture_dir, "osv", "osv", str(archive))
+        overlay = USNFixDateOverlay.from_archive(str(archive))
+
+        # tuples that don't exist in any USN in the fixture
+        assert overlay.lookup("Ubuntu:18.04:LTS", "wayland", "9.9.9-bogus") is None
+        assert overlay.lookup("Ubuntu:18.04:LTS", "nonexistent", "1.0") is None
+        assert overlay.lookup("Ubuntu:99.99:LTS", "wayland", "1.16.0-1ubuntu1.1~18.04.4") is None
+
+    def test_empty_overlay_lookups_return_none(self):
+        from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+        overlay = USNFixDateOverlay()
+        assert overlay.lookup("any", "any", "any") is None
+        assert len(overlay) == 0
+
+    def test_iso_date_parsing(self):
+        from vunnel.providers.ubuntu.usn_fixdate_overlay import _parse_iso_date
+        import datetime as _dt
+
+        # Real USN timestamp shapes we observed in the live feed
+        assert _parse_iso_date("2023-10-11T11:34:51Z") == _dt.date(2023, 10, 11)
+        assert _parse_iso_date("2023-10-17T11:22:48.353678Z") == _dt.date(2023, 10, 17)
+        assert _parse_iso_date("2014-12-24T18:59:00Z") == _dt.date(2014, 12, 24)
+        # Date-only form (defensive — not observed in real data, but parses correctly)
+        assert _parse_iso_date("2023-10-11") == _dt.date(2023, 10, 11)
+        # Garbage returns None — caller treats as "no USN date" and falls through
+        assert _parse_iso_date("not a date") is None
+        assert _parse_iso_date("") is None
+
+
+class TestUSNOverlayIntegration:
+    """End-to-end: USN overlay's authoritative date beats other fixdater sources."""
+
+    def test_usn_date_overrides_first_observed(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # Set up a first-observed finder that would return 2024-01-01 for everything
+        # (the "wrong day — we just turned on Pro and grype-db is recording today"
+        # failure mode the overlay was built to prevent).
+        fake_fixdate_finder(
+            responses=[Result(date=datetime.date(2024, 1, 1), kind="first-observed", accurate=True)],
+        )
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        # _iter_fragments reads self._usn_overlay; populate it as get() would
+        from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+        p._usn_overlay = USNFixDateOverlay.from_archive(p.archive_path)
+        p._write_fragments()
+
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+        # CVE-2021-3782 / wayland on 18.04 has a real USN (USN-5614-1) published 2022-09-15.
+        # That should beat the first-observed mock's 2024-01-01.
+        payload = yielded["ubuntu-18.04-lts/ubuntu-cve-2021-3782"]
+        wayland = next(a for a in payload["affected"] if a["package"]["name"] == "wayland")
+        fixes = wayland["ranges"][0]["database_specific"]["anchore"]["fixes"]
+        usn_fix = next(f for f in fixes if f["version"] == "1.16.0-1ubuntu1.1~18.04.4")
+        assert usn_fix["date"] == "2022-09-15", (
+            f"USN-published date (2022-09-15) should override first-observed mock (2024-01-01); got {usn_fix['date']}"
+        )
+
+    def test_falls_back_to_first_observed_when_usn_missing(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
+        # First-observed mock with a date EARLIER than CVE.published (2013-10-28) so it
+        # beats the CVE.published fallback candidate in fixdater.best()'s ranking. Without
+        # this, the test would pass for the wrong reason (CVE.published is the actual
+        # earliest accurate candidate present and would win).
+        fake_fixdate_finder(
+            responses=[Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
+        )
+        _seed_archive(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        # CVE-2013-2208 fixes tpp@1.3.1-3 on Ubuntu:14.04:LTS; no USN in our fixture
+        # ships that tuple, so the overlay lookup misses and the fixdater fallback applies.
+        from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+        p._usn_overlay = USNFixDateOverlay.from_archive(p.archive_path)
+        p._write_fragments()
+
+        yielded = {t[0]: t[2] for t in p._iter_fragments()}
+        payload = yielded["ubuntu-14.04-lts/ubuntu-cve-2013-2208"]
+        fixes = payload["affected"][0]["ranges"][0]["database_specific"]["anchore"]["fixes"]
+        tpp_fix = next(f for f in fixes if f["version"] == "1.3.1-3")
+        assert tpp_fix["date"] == "2013-07-15", (
+            f"missing USN tuple should fall through to first-observed mock; got {tpp_fix['date']}"
+        )
+        # And not carrying any USN advisory provenance.
+        assert tpp_fix["kind"] == "first-observed"
+
+    def test_missing_archive_disables_overlay_gracefully(self, fresh_workspace, auto_fake_fixdate_finder):
+        # No tarball staged — _load_usn_overlay logs a warning and returns None.
+        p = Parser(workspace=fresh_workspace)
+        overlay = p._load_usn_overlay()
+        assert overlay is None

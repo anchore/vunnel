@@ -15,6 +15,7 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
 
 from . import parser_legacy
+from .usn_fixdate_overlay import USNFixDateOverlay, usn_extra_candidates
 from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
 
 if TYPE_CHECKING:
@@ -257,6 +258,8 @@ class Parser:
         self.fragments_dir = os.path.join(workspace.input_path, self._fragments_subdir_)
         self.normalized_cve_dir = os.path.join(workspace.input_path, self._normalized_subdir_)
         self.urls = [self._osv_url_, self._vex_url_]
+        # USN fix-date overlay built lazily in get(); _iter_envelopes_with_fixdate reads it.
+        self._usn_overlay: USNFixDateOverlay | None = None
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -497,6 +500,7 @@ class Parser:
             synth_payload,
             self.fixdater,
             vuln_id_override=upstream[0] if upstream else None,
+            extra_candidates=usn_extra_candidates(self._usn_overlay),
         )
         by_cve[cve] = {
             "identifier": f"{ecosystem_to_slug(base_eco)}/{cve.lower()}",
@@ -511,6 +515,7 @@ class Parser:
         fragment_path: str,
     ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         """Read a fragment file, apply yield-time fix-date patching, yield envelopes."""
+        extra_candidates = usn_extra_candidates(self._usn_overlay)
         with result.SQLiteReader(fragment_path) as reader:
             for envelope in reader.each():
                 payload = envelope.item
@@ -522,6 +527,7 @@ class Parser:
                     payload,
                     self.fixdater,
                     vuln_id_override=upstream[0] if upstream else None,
+                    extra_candidates=extra_candidates,
                 )
                 yield (
                     envelope.identifier,
@@ -638,10 +644,30 @@ class Parser:
         self._download_vex_archive()
         self.fixdater.download()
         vex_overlay = self._load_vex_overlay()
+        self._usn_overlay = self._load_usn_overlay()
         self._write_fragments(vex_overlay=vex_overlay)
         # legacy first; OSV last (policy-only — identifier shapes don't collide)
         yield from self._iter_normalized_cve_data()
         yield from self._iter_fragments()
+
+    def _load_usn_overlay(self) -> USNFixDateOverlay | None:
+        """Build the (eco, src-pkg, fixed-ver) → USN-published-date index.
+
+        Streams `osv/usn/**` out of the downloaded OSV tarball. If the archive
+        is missing or unreadable, log and proceed without an overlay — fix-date
+        annotations fall back to first-observed + CVE.published, same as before
+        the USN overlay was added. No regression on miss.
+        """
+        if not os.path.isfile(self.archive_path):
+            self.logger.warning(
+                f"OSV archive missing at {self.archive_path}; USN fix-date overlay unavailable, fix dates will fall back to first-observed",
+            )
+            return None
+        try:
+            return USNFixDateOverlay.from_archive(self.archive_path, logger=self.logger)
+        except Exception:
+            self.logger.exception("failed to build USN fix-date overlay; falling back to first-observed")
+            return None
 
     def _load_vex_overlay(self) -> VEXOverlay | None:
         """Build the won't-fix overlay from the downloaded VEX archive.
