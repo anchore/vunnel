@@ -1,9 +1,37 @@
 # Ubuntu provider
 
-Ingests Canonical's published OSV and OpenVEX feeds, augments them with the
-fix-disposition signal that OSV omits, and emits per-ecosystem
-`results.db` fragments plus an OS-schema passthrough for releases that
-were EOL before Canonical started publishing OSV.
+## Overview
+
+This provider ingests Canonical's OSV to get vulnerability data about Ubuntu.
+However, this data is incomplete in 3 ways:
+
+1. It does not cover Ubuntu versions that no longer receive any support
+2. It does not mark CVEs as "won't fix" when Canonical has decided not to
+   publish a fix.
+3. It does not report when a fix became available
+
+To work around the first limitation, this provider relies on the
+`normalized_cve_data` directory written into the cached workspaces by previous
+versions of the provider, which cloned down the ubuntu-cve-tracker git repo and
+examined the history to learn what the vulnerable status of packages in EOLed
+Ubuntu versions was before it was removed.
+
+To work around the second, this provider also downloads Canonical's OpenVEX
+feed annotates the OSV data with "won't fix" information from the OpenVEX.
+
+To work around the third limitation, vunnel runs are supplied with a database
+of grype-db-observed-fix-dates, similarly to other providers.
+
+Because presently supported Ubuntu versions are expected to disappear from the
+OSV data after they reach EOL, the following strategy is used:
+
+1. The OSV data is downloaded.
+2. The OSV data is sharded by ecosystem, so that there is a cache per ubuntu
+   version
+3. On subsequent runs, the cache is replaced with the new OSV data _if new data
+   for that version is present in the data_, otherwise the cache stands
+indefinitely, so that vunnel will emit the last known state of each Ubuntu
+version as it goes EOL.
 
 ## Data sources
 
@@ -16,11 +44,10 @@ The provider reads three things, in priority order:
 | `input/normalized-cve-data/` | local | At-cutover EOL releases (precise → mantic) that have never appeared in either of the above | Frozen; populated by the v3 provider, kept untouched after v3's removal |
 | (fix-date cache) | `input/grype-db-observed-fix-dates.db` | First-observed dates for fixed versions; standard across providers | Refreshed each run |
 
-USN records inside `osv-all.tar.xz` (`osv/usn/**`) are **not ingested**.
-97% of their fix tuples are already in the CVE records they reference;
-the remaining ~280 source-reachable tuples are preserved automatically
-by `normalized-cve-data`. Adding USN parsing later is a parser change
-only — no schema or wiring impact.
+USN records inside `osv-all.tar.xz` (`osv/usn/**`) are **not ingested**. The
+majority of them report fixes that are already present in the CVE-based OSV
+files, and the previous provider did not include them either. This might be an
+area for future enhancement.
 
 ## Output: per-ecosystem fragments + legacy passthrough
 
