@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import contextlib
 import copy
+import functools
 import logging
 import os
 import queue
@@ -35,7 +36,11 @@ if TYPE_CHECKING:
 namespace = "rhel"
 
 
-FixedIn = namedtuple("FixedIn", ["package", "platform", "version", "module", "advisory"])
+FixedIn = namedtuple(
+    "FixedIn",
+    ["package", "platform", "version", "module", "advisory", "vulnerable_range", "additional_advisories"],
+    defaults=[None, ()],
+)
 RHSAFixedIn = namedtuple("RHSAFixedIn", ["package", "version"])
 Advisory = namedtuple("Advisory", ["wont_fix", "rhsa_id", "link", "severity"])
 NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
@@ -436,8 +441,11 @@ class Parser:
         # to deal with affected releases missing package-version strings
         platform_packages = {}  # dictionary of platform -> set of package names
         all_ar_objs = []
-        # to deal with multiple affected releases for the same platform and package
-        final_ar_objs = {}  # dictionary of (package, platform, module) -> AffectedRelease object
+        # collect every affected release for the same (package, platform, module). When Red Hat ships
+        # more than one fix for the same tuple (e.g. a Z-stream/EUS backport in one minor and an upstream
+        # rebase in a later minor), each fix lands here and is later reduced to a single FixedIn that
+        # carries a VulnerableRange describing the per-stream fix boundaries.
+        collected_ar_objs: dict[tuple, list] = {}  # (package, platform, module) -> list[AffectedRelease]
 
         try:
             # first pass to just parse affected releases and construct a list of objects
@@ -536,51 +544,81 @@ class Parser:
                     ar_obj.version = final_v  # store the final_v in the object for future usage
                     ar_obj.module = final_m
 
-                    prev_ar_obj = final_ar_objs.get((ar_obj.name, ar_obj.platform, ar_obj.module), None)
-                    if prev_ar_obj:
-                        if rpm.compare_versions(prev_ar_obj.version, ar_obj.version) < 0:
-                            self.logger.debug(
-                                f"{cve_id}, platform={prev_ar_obj.platform}, package={prev_ar_obj.name}, module={prev_ar_obj.module} : multiple fix versions found, {ar_obj.version} > {prev_ar_obj.version}",  # noqa: E501
-                            )
-                            final_ar_objs[(ar_obj.name, ar_obj.platform, ar_obj.module)] = ar_obj
-                        else:
-                            self.logger.debug(
-                                f"{cve_id}, platform={prev_ar_obj.platform}, package={prev_ar_obj.name}, module={prev_ar_obj.module} : multiple fix versions found, {ar_obj.version} <= {prev_ar_obj.version}",  # noqa: E501
-                            )
-                    else:
-                        final_ar_objs[(ar_obj.name, ar_obj.platform, ar_obj.module)] = ar_obj
+                    key = (ar_obj.name, ar_obj.platform, ar_obj.module)
+                    bucket = collected_ar_objs.setdefault(key, [])
+                    # skip exact-duplicate versions (e.g. the same fix listed under both the
+                    # cpe:/a and cpe:/o product flavors); they carry no new information.
+                    if not any(rpm.compare_versions(existing.version, ar_obj.version) == 0 for existing in bucket):
+                        bucket.append(ar_obj)
 
                 except Exception:
                     self.logger.exception(f"error processing {cve_id} affected release object: {ar_obj.__dict__}")
 
-            # construct the final fixed in objects
-            fixed_ins = [
-                FixedIn(
-                    platform=ar_obj.platform,
-                    package=ar_obj.name,
-                    version=ar_obj.version,
-                    module=ar_obj.module,
-                    advisory=(
-                        Advisory(
-                            wont_fix=False,
-                            rhsa_id=ar_obj.rhsa_id,
-                            link=f"https://access.redhat.com/errata/{ar_obj.rhsa_id}",
-                            severity=None,
-                        )
-                        if ar_obj.rhsa_id
-                        else Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None)
+            # reduce each (package, platform, module) bucket to a single FixedIn. When the bucket
+            # holds fixes from more than one upstream version base, compute a VulnerableRange that
+            # describes the per-stream fix boundaries so that, e.g., a host carrying a 9.4 Z-stream
+            # backport is not falsely flagged against a later minor's upstream rebase.
+            for (pkg_name, platform, module), ar_objs in collected_ar_objs.items():
+                if not ar_objs:
+                    continue
+
+                # sort ascending using true RPM version ordering (not lexical)
+                ar_objs.sort(key=functools.cmp_to_key(lambda a, b: rpm.compare_versions(a.version, b.version)))
+
+                # reduce to distinct upstream version bases, keeping the highest fix within each base.
+                # Keeping the highest preserves the historical "fixed in the newest build" behavior for
+                # the common single-stream case; the per-base reduction only changes behavior when there
+                # is genuinely more than one upstream base (the multi-RHSA case Phase 1 targets).
+                fix_by_base: dict[str, AffectedRelease] = {}
+                for ar_obj in ar_objs:  # ascending, so the last write per base wins (highest)
+                    fix_by_base[_get_version_base(ar_obj.version)] = ar_obj
+                distinct_base_fixes = list(fix_by_base.values())  # ascending by base
+
+                # the canonical "fixed in" version reported for the major-version namespace is the
+                # newest stream's fix (highest base). VulnerableRange, when present, is what actually
+                # drives matching downstream; this version is the single-constraint fallback.
+                canonical = distinct_base_fixes[-1]
+
+                if len(distinct_base_fixes) > 1:
+                    vulnerable_range = _build_vulnerable_range(distinct_base_fixes)
+                    self.logger.debug(
+                        f"{cve_id}, platform={platform}, package={pkg_name}, module={module} : computed VulnerableRange from {len(distinct_base_fixes)} fix streams: {vulnerable_range}",  # noqa: E501
+                    )
+                    # fold every advisory that touched this bucket into the record, newest fix first and
+                    # de-duplicated. The primary advisory corresponds to the canonical (newest) fix.
+                    folded: list[Advisory] = []
+                    seen_rhsa: set[str] = set()
+                    for ar_obj in reversed(ar_objs):  # descending by version
+                        if ar_obj.rhsa_id and ar_obj.rhsa_id not in seen_rhsa:
+                            seen_rhsa.add(ar_obj.rhsa_id)
+                            folded.append(_advisory_from_rhsa(ar_obj.rhsa_id))
+                    primary_advisory = folded[0] if folded else _advisory_from_rhsa(canonical.rhsa_id)
+                    additional_advisories = tuple(folded[1:])
+                else:
+                    # single upstream stream: behave exactly as before — newest build, its advisory.
+                    vulnerable_range = None
+                    primary_advisory = _advisory_from_rhsa(canonical.rhsa_id)
+                    additional_advisories = ()
+
+                fixed_ins.append(
+                    FixedIn(
+                        platform=platform,
+                        package=pkg_name,
+                        version=canonical.version,
+                        module=module,
+                        advisory=primary_advisory,
+                        vulnerable_range=vulnerable_range,
+                        additional_advisories=additional_advisories,
                     ),
                 )
-                for ar_obj in final_ar_objs.values()
-            ]
         finally:
             # free up intermediate data structures
             try:
                 platform_packages.clear()
-                final_ar_objs.clear()
+                collected_ar_objs.clear()
                 del all_ar_objs[:]
                 del platform_packages
-                del final_ar_objs
+                del collected_ar_objs
                 del all_ar_objs
             except Exception:
                 self.logger.info("exception freeing up intermediate data structures", exc_info=True)
@@ -829,13 +867,16 @@ class Parser:
                         a = {"NoAdvisory": True}
                     else:
                         a = {"NoAdvisory": False, "AdvisorySummary": []}
-                        if artifact.advisory.rhsa_id and artifact.advisory.link:
-                            a["AdvisorySummary"].append(
-                                {
-                                    "ID": artifact.advisory.rhsa_id,
-                                    "Link": artifact.advisory.link,
-                                },
-                            )
+                        # primary advisory (corresponds to the canonical fix version) first, then any
+                        # additional advisories folded in from other fix streams for the same package.
+                        for adv in (artifact.advisory, *artifact.additional_advisories):
+                            if adv.rhsa_id and adv.link:
+                                a["AdvisorySummary"].append(
+                                    {
+                                        "ID": adv.rhsa_id,
+                                        "Link": adv.link,
+                                    },
+                                )
 
                     fix_version = artifact.version
                     package_name = artifact.package
@@ -848,6 +889,12 @@ class Parser:
                         "NamespaceName": ns,
                         "VendorAdvisory": a,
                     }
+
+                    # When multiple fix streams exist for the same package, VulnerableRange encodes the
+                    # per-stream fix boundaries directly as a grype version constraint. grype-db uses it
+                    # verbatim in preference to deriving "< Version" from the single fix version.
+                    if artifact.vulnerable_range:
+                        record["VulnerableRange"] = artifact.vulnerable_range
 
                     result = self.fixdater.best(
                         vuln_id=cve_id,
@@ -955,6 +1002,71 @@ class Parser:
             if self.rhsa_dict:
                 self.rhsa_dict.clear()
                 del self.rhsa_dict
+
+
+def _get_version_base(version: str) -> str:
+    """Return the epoch:version portion of an RPM version string, dropping the release.
+
+    The release (which carries the `.elN_M` dist tag) is what differentiates Z-stream/EUS
+    builds within a single upstream version, so the base is the right unit for deciding
+    whether two fixes belong to genuinely different upstream streams.
+
+    Examples:
+        "0:3.9.19-8.el9"        -> "0:3.9.19"
+        "3.9.18-3.el9_4.5"      -> "3.9.18"
+        "1:2.27-34.base.el7"    -> "1:2.27"
+    """
+    epoch, ver, _ = rpm.split_fullversion(version)
+    if ver is None:
+        return version
+    return f"{epoch}:{ver}" if epoch is not None else ver
+
+
+def _advisory_from_rhsa(rhsa_id: str | None) -> Advisory:
+    """Build an Advisory namedtuple from an RHSA ID, or an empty one when there is no advisory."""
+    if rhsa_id:
+        return Advisory(
+            wont_fix=False,
+            rhsa_id=rhsa_id,
+            link=f"https://access.redhat.com/errata/{rhsa_id}",
+            severity=None,
+        )
+    return Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None)
+
+
+def _build_vulnerable_range(sorted_base_fixes: list) -> str | None:
+    """Build an OR'd grype version constraint from fixes that live on distinct upstream bases.
+
+    Red Hat sometimes fixes the same package in the same major version more than once: a backport
+    that keeps the older upstream base on an older minor (e.g. python3.9 3.9.18-3.el9_4.5 for 9.4)
+    and a rebase to a newer upstream on a later minor (3.9.19-8.el9 for 9.5). Hydra flattens both
+    into "Red Hat Enterprise Linux 9", so a naive "fixed in the highest version" record falsely
+    flags a 9.4 host that already carries its backport (because 3.9.18 < 3.9.19 in RPM ordering).
+
+    Given the per-base fixes sorted ascending by upstream base, this produces a constraint like:
+
+        < 0:3.9.18-3.el9_4.5 || >= 0:3.9.19, < 0:3.9.19-8.el9
+
+    read as: vulnerable if below the lowest stream's fix, OR within a later stream (at or above that
+    stream's base) but below that stream's fix. The `>= base` pivot is what isolates each stream:
+    a 9.4 build at-or-above its fix is < 3.9.19, so it falls into no clause and is considered fixed.
+
+    Returns None when fewer than two distinct upstream bases are present (nothing to disambiguate);
+    callers fall back to the single "< fix" constraint in that case.
+
+    NOTE: this only works when the streams have *distinct upstream bases*. Two fixes that share a
+    base but differ only in their `.elN_M` dist tag (e.g. an el9_2 vs el9_4 backport of 2.34) cannot
+    be separated by RPM version comparison and require per-minor namespacing instead.
+    """
+    if not sorted_base_fixes or len(sorted_base_fixes) < 2:
+        return None
+
+    groups = [f"< {sorted_base_fixes[0].version}"]
+    for fix in sorted_base_fixes[1:]:
+        base = _get_version_base(fix.version)
+        groups.append(f">= {base}, < {fix.version}")
+
+    return " || ".join(groups)
 
 
 class RHELCVSS3:
