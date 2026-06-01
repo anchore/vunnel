@@ -13,20 +13,25 @@ on:
       version:
         description: tag the latest commit on main with the given version (prefixed with v)
         required: true
-
+      skip-checks:
+        description: skip the check gate that verifies required checks have passed on main
+        type: boolean
+        default: false
 jobs:
   version-available:
-    uses: anchore/workflows/.github/workflows/check-version-available.yaml@b3e328b5ae31ba96297e2ed9a6124e5e6352a4c5 # v0.7.0
+    uses: anchore/workflows/.github/workflows/check-version-available.yaml@c8124d07eda64dc19b5eecb9ffd2ad4643c0aae4 # v0.7.1
     permissions:
       contents: read # for reading latest tags
     with:
       version: ${{ github.event.inputs.version }}
 
   check-gate:
+    # only run the gate when checks have not been explicitly skipped
+    if: ${{ !inputs.skip-checks }}
     permissions:
       checks: read # required for getting the status of specific check names
       contents: read # needed for using the wait-for-check action upstream
-    uses: anchore/workflows/.github/workflows/check-gate.yaml@b3e328b5ae31ba96297e2ed9a6124e5e6352a4c5 # v0.7.0
+    uses: anchore/workflows/.github/workflows/check-gate.yaml@c8124d07eda64dc19b5eecb9ffd2ad4643c0aae4 # v0.7.1
     with:
       # these are checks that should be run on pull-request and merges to main.
       # we do NOT want to kick off a release if these have not been verified on main.
@@ -35,6 +40,14 @@ jobs:
 
   tag:
     needs: [check-gate, version-available]
+    # run even when check-gate is skipped, but never when version-available
+    # failed/was skipped, nor when check-gate failed or was cancelled. note:
+    # always() disables the implicit success() gate on ALL needs, so the
+    # version-available requirement must be re-asserted explicitly here.
+    if: >-
+      ${{ always()
+          && needs.version-available.result == 'success'
+          && !contains(fromJSON('["failure", "cancelled"]'), needs.check-gate.result) }}
     runs-on: ubuntu-latest
     # the release environment exposes DEPLOY_KEY, the SSH key authorized to push tags to this repo.
     # GITHUB_TOKEN cannot push to branch-protected refs, so we authenticate via deploy key instead.
@@ -49,7 +62,7 @@ jobs:
           persist-credentials: false
 
       - name: Tag release
-        uses: anchore/workflows/.github/actions/create-tag-via-deploy-key@b3e328b5ae31ba96297e2ed9a6124e5e6352a4c5 # v0.7.0
+        uses: anchore/workflows/.github/actions/create-tag-via-deploy-key@c8124d07eda64dc19b5eecb9ffd2ad4643c0aae4 # v0.7.1
         with:
           tag: ${{ github.event.inputs.version }}
           deploy-key: ${{ secrets.DEPLOY_KEY }}
