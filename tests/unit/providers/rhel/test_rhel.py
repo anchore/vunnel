@@ -613,7 +613,10 @@ class TestParser:
                 ],
             ),
             (
-                # same package and platform, different versions - major, minor
+                # same package and platform, different versions across distinct upstream bases
+                # (10.19.0 / 11.19.1 / 12.16.1). These are genuinely different streams, so a
+                # VulnerableRange is emitted partitioning each stream below its own fix. The
+                # reported Version remains the newest stream's fix (single-constraint fallback).
                 {
                     "affected_release": [
                         {
@@ -638,6 +641,11 @@ class TestParser:
                         platform="8",
                         version="1:12.16.1-2.module+el8.1.0+6117+b25a342c",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        vulnerable_range=(
+                            "< 1:10.19.0-2.module+el8.1.0+6118+5aaa808b "
+                            "|| >= 1:11.19.1, < 1:11.19.1-2.module+el8.1.0+6118+5aaa808b "
+                            "|| >= 1:12.16.1, < 1:12.16.1-2.module+el8.1.0+6117+b25a342c"
+                        ),
                     )
                 ],
             ),
