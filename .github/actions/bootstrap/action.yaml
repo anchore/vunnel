@@ -1,10 +1,6 @@
 name: "Bootstrap"
 description: "Bootstrap all tools and dependencies"
 inputs:
-  go-version:
-    description: "Go version to install"
-    required: true
-    default: "1.26.2"
   python-version:
     description: "Python version to install"
     required: true
@@ -15,10 +11,6 @@ inputs:
     description: "UV version to install"
     required: true
     default: "0.5.16"
-  tools:
-    description: "Bootstrap tooling (also implies installing go)"
-    required: true
-    default: "true"
   cache-key-prefix:
     description: "Prefix all cache keys with this value"
     required: true
@@ -33,16 +25,9 @@ runs:
     # non-default branches (and the upstream repo's default branch only writes). This prevents
     # cache poisoning from PRs and forks.
     - name: Setup go and tool cache
-      if: inputs.tools == 'true'
       uses: anchore/go-make/.github/actions/setup@9de27be11ed73e2f9d5406a836a492b7d8aa1225 # v0.5.0
       with:
-        go-version: ${{ inputs.go-version }}
         cache-key-prefix: ${{ inputs.cache-key-prefix }}
-
-    - name: Bootstrap tools
-      if: inputs.tools == 'true'
-      shell: bash
-      run: make bootstrap
 
     - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
