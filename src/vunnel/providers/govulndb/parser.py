@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import silent_remove
+from vunnel.utils import osv, silent_remove
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -25,14 +26,18 @@ namespace = "govulndb"
 class Parser:
     _source_url_ = "https://vuln.go.dev/vulndb.zip"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         ws: Workspace,
         url: str | None = None,
         download_timeout: int = 125,
         skip_download: bool = False,
+        fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
     ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
+        self.fixdater = fixdater
         self.workspace = ws
         self.url = url or self._source_url_
         self.download_timeout = download_timeout
@@ -45,10 +50,11 @@ class Parser:
         self.extract_dir = os.path.join(self.workspace.input_path, "vulndb")
 
     def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
         return self
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
-        return None
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _download(self) -> None:
         os.makedirs(self.workspace.input_path, exist_ok=True)
@@ -103,5 +109,12 @@ class Parser:
             self._download()
             self._extract()
 
+        # go.dev's OSV records carry no per-fix date; patch in database_specific.anchore.fixes
+        # so the grype OSV transformer's existing fix-availability path picks them up. The
+        # advisory's own `published` date rides along as a low-confidence candidate so the
+        # finder can fall back to it when no first-observed dataset has the fix.
+        self.fixdater.download()
+
         for vuln_entry in self._load():
+            osv.patch_fix_date(vuln_entry, self.fixdater)
             yield self._normalize(vuln_entry)

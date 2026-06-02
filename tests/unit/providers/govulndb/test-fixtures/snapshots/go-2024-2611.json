@@ -28,6 +28,17 @@
         },
         "ranges": [
           {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-03-05",
+                    "kind": "advisory",
+                    "version": "1.33.0"
+                  }
+                ]
+              }
+            },
             "events": [
               {
                 "introduced": "0"

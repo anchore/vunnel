@@ -9,7 +9,7 @@ from vunnel.providers.govulndb.parser import Parser
 
 @patch("vunnel.providers.govulndb.parser.Parser._extract")
 @patch("vunnel.providers.govulndb.parser.Parser._download")
-def test_provider_schema(mock_download, mock_extract, helpers, disable_get_requests):
+def test_provider_schema(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     mock_download.return_value = None
     mock_extract.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
@@ -26,7 +26,7 @@ def test_provider_schema(mock_download, mock_extract, helpers, disable_get_reque
 
 @patch("vunnel.providers.govulndb.parser.Parser._extract")
 @patch("vunnel.providers.govulndb.parser.Parser._download")
-def test_parser(mock_download, mock_extract, helpers, disable_get_requests):
+def test_parser(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     mock_download.return_value = None
     mock_extract.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
@@ -57,7 +57,7 @@ def test_compatible_schema(schema_version, expected):
 
 @patch("vunnel.providers.govulndb.parser.Parser._extract")
 @patch("vunnel.providers.govulndb.parser.Parser._download")
-def test_provider_via_snapshot(mock_download, mock_extract, helpers, disable_get_requests):
+def test_provider_via_snapshot(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     mock_download.return_value = None
     mock_extract.return_value = None
     workspace = helpers.provider_workspace_helper(name=Provider.name())
@@ -71,7 +71,7 @@ def test_provider_via_snapshot(mock_download, mock_extract, helpers, disable_get
     workspace.assert_result_snapshots()
 
 
-def test_provider_skip_download(helpers, monkeypatch):
+def test_provider_skip_download(helpers, auto_fake_fixdate_finder, monkeypatch):
     """With skip_download=True, no HTTP request should be made and pre-staged input is used."""
     workspace = helpers.provider_workspace_helper(name=Provider.name())
     c = Config()

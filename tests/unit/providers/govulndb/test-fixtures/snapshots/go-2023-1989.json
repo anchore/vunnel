@@ -21,6 +21,17 @@
         },
         "ranges": [
           {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2023-08-02",
+                    "kind": "advisory",
+                    "version": "0.10.0"
+                  }
+                ]
+              }
+            },
             "events": [
               {
                 "introduced": "0"
