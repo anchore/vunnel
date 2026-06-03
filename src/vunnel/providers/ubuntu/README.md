@@ -393,3 +393,57 @@ transformer produces. Notable mappings:
 - `Ubuntu:Pro:14.04:LTS` → same shape + `Channel: "esm"`.
 - `affected[].database_specific.anchore.status == "wont-fix"` →
   `Fix{State: WontFixStatus}` on the no-fix sentinel range.
+
+## Optional: OSV → OS downconversion
+
+For consumers stuck on a grype-db build process that pre-dates the OSV
+transformer, the provider can rewrite every fragment envelope into the
+v3 `{"Vulnerability": {...}}` OS-schema shape as it is yielded. Enable
+it via config:
+
+```yaml
+providers:
+  ubuntu:
+    downconvert_osv_to_os: true   # default: false
+```
+
+When the toggle is on:
+
+- The on-disk fragment store remains OSV-shaped — only the *yielded*
+  records change. Toggling between runs requires no cache wipe.
+- The legacy `normalized-cve-data` passthrough is unchanged (already OS-shape).
+- Output is uniformly OS-schema: an old grype-db build sees exactly the
+  same row shapes the v3 provider produced.
+
+### Mapping rules
+
+| OSV input | OS output |
+|---|---|
+| `upstream[0]` (`CVE-*`) | `Vulnerability.Name` |
+| `severity[type=Ubuntu].score` | `Vulnerability.Severity` (Negligible/Low/Medium/High/Critical, else Unknown) |
+| `Ubuntu:22.04:LTS` ecosystem | `NamespaceName: "ubuntu:22.04"` |
+| `Ubuntu:Pro:*` / FIPS / Realtime / BlueField | **dropped** — v3 never emitted these namespaces |
+| `ranges[].events[].fixed: "x.y.z"` | `FixedIn.Version: "x.y.z"`, `NoAdvisory: false` |
+| no `fixed` + `database_specific.anchore.status == "wont-fix"` | `FixedIn.Version: "None"`, `NoAdvisory: true` |
+| no `fixed`, no wont-fix marker | `FixedIn.Version: "None"`, `NoAdvisory: false` |
+| `database_specific.anchore.fixes[].date` | `FixedIn.Available: {Date, Kind}` |
+
+Pro-only-fix data still surfaces in OS output: by the time downconversion
+runs, the inference pass in `_yield_base_with_inferences` has already
+merged the synthesized wont-fix entries into the base ecosystem's
+`affected[]` list, so they emerge as `FixedIn{Version="None", NoAdvisory=true}`
+rows on the base namespace.
+
+### Trade-offs
+
+- **Provenance is lost.** OSV's `database_specific.anchore.inference` and
+  per-status annotations have no representation in the OS schema. The
+  resulting OS rows are indistinguishable from those v3 produced from
+  cve-tracker — which is the point, but it means downstream cannot tell
+  which records came from Pro inference vs. real base entries.
+- **Six Canonical statuses collapse to three.** OSV-via-Canonical already
+  collapsed `released/needed/active/deferred/pending/ignored` to a single
+  `affected` status; downconversion preserves only the wont-fix vs. not
+  distinction reconstructed via VEX overlay.
+- This is a *compatibility shim*, not a recommended long-term path. New
+  consumers should adopt the OSV transformer rather than enable this.

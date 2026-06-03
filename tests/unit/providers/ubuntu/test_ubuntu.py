@@ -1426,3 +1426,292 @@ class TestUSNOverlayIntegration:
         p = Parser(workspace=fresh_workspace)
         overlay = p._load_usn_overlay()
         assert overlay is None
+
+
+# ---------------------------------------------------------------------------
+# OSV → OS downconverter — opt-in compatibility path for grype-db builds
+# that pre-date the OSV transformer
+# ---------------------------------------------------------------------------
+
+
+class TestOSDowncoverterHelpers:
+    """Pure-function tests for the OSV→OS mapping primitives."""
+
+    def test_base_ecosystem_to_namespace(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_ecosystem_to_os_namespace
+        assert osv_ecosystem_to_os_namespace("Ubuntu:22.04:LTS") == "ubuntu:22.04"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:24.04:LTS") == "ubuntu:24.04"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:24.10") == "ubuntu:24.10"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:25.04") == "ubuntu:25.04"
+
+    def test_pro_and_subtiers_skipped(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_ecosystem_to_os_namespace
+        # v3 never emitted Vulnerability records for Pro/FIPS/Realtime/BlueField namespaces;
+        # they have no entry in cve-tracker's codename map. Pro-only-fix data still surfaces
+        # in OS output because inference layers it into the base ecosystem's affected[] list
+        # upstream of this code.
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:14.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:16.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:FIPS:22.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:FIPS-updates:20.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:Realtime:24.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Nvidia-BlueField:22.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Garbage") is None
+
+
+class TestOSDowncoverter:
+    """Verify per-record translation: Severity, FixedIn shape, Available date."""
+
+    def _osv_record(self, **overrides):
+        # Minimal valid OSV record we can mutate per test
+        rec = {
+            "schema_version": "1.7.0",
+            "id": "UBUNTU-CVE-2024-1",
+            "upstream": ["CVE-2024-1"],
+            "details": "test details",
+            "severity": [{"type": "Ubuntu", "score": "medium"}],
+            "affected": [
+                {
+                    "package": {"ecosystem": "Ubuntu:22.04:LTS", "name": "openssl"},
+                    "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1.1.1f-1ubuntu2.20"}]}],
+                },
+            ],
+        }
+        rec.update(overrides)
+        return rec
+
+    def test_fixed_event_yields_fixedin_with_version(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        out = osv_to_os(self._osv_record())
+        assert out is not None
+        vuln = out["Vulnerability"]
+        assert vuln["Name"] == "CVE-2024-1"
+        assert vuln["NamespaceName"] == "ubuntu:22.04"
+        assert vuln["Severity"] == "Medium"
+        assert vuln["Link"] == "https://ubuntu.com/security/CVE-2024-1"
+        assert vuln["Metadata"] == {}
+        assert vuln["Description"] == ""
+        assert len(vuln["FixedIn"]) == 1
+        fi = vuln["FixedIn"][0]
+        assert fi == {
+            "Name": "openssl",
+            "NamespaceName": "ubuntu:22.04",
+            "VersionFormat": "dpkg",
+            "Version": "1.1.1f-1ubuntu2.20",
+            "VendorAdvisory": {"NoAdvisory": False},
+            "Available": None,
+        }
+
+    def test_fixed_event_carries_anchore_fix_date_as_available(self):
+        # Once `patch_fix_date` has run, database_specific.anchore.fixes[] holds the
+        # date+kind that downconversion should surface as the v3 `Available` field.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        rec["affected"][0]["ranges"][0]["database_specific"] = {
+            "anchore": {"fixes": [{"version": "1.1.1f-1ubuntu2.20", "date": "2022-09-15", "kind": "advisory"}]},
+        }
+        out = osv_to_os(rec)
+        assert out is not None
+        fi = out["Vulnerability"]["FixedIn"][0]
+        assert fi["Version"] == "1.1.1f-1ubuntu2.20"
+        assert fi["Available"] == {"Date": "2022-09-15", "Kind": "advisory"}
+
+    def test_wont_fix_status_yields_version_none_no_advisory_true(self):
+        # Mirrors what _annotate_wont_fix writes after consulting the VEX overlay,
+        # OR what _build_synthetic_base_affected writes when Pro-only-fix inference
+        # synthesizes a base entry.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:18.04:LTS", "name": "foo"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+                "database_specific": {"anchore": {"status": "wont-fix"}},
+            },
+        ]
+        out = osv_to_os(rec)
+        assert out is not None
+        fi = out["Vulnerability"]["FixedIn"][0]
+        assert fi["Version"] == "None"
+        assert fi["VendorAdvisory"] == {"NoAdvisory": True}
+        assert fi["Available"] is None
+        assert out["Vulnerability"]["NamespaceName"] == "ubuntu:18.04"
+
+    def test_no_fixed_event_yields_version_none_no_advisory_false(self):
+        # "affected but no fix yet" — neither wont-fix nor a released fix version.
+        # v3 represented this as Version="None", NoAdvisory=False.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:22.04:LTS", "name": "foo"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+            },
+        ]
+        out = osv_to_os(rec)
+        assert out is not None
+        fi = out["Vulnerability"]["FixedIn"][0]
+        assert fi["Version"] == "None"
+        assert fi["VendorAdvisory"] == {"NoAdvisory": False}
+
+    def test_severity_handling_falls_back_to_unknown(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        # missing severity entirely
+        rec = self._osv_record()
+        rec.pop("severity", None)
+        assert osv_to_os(rec)["Vulnerability"]["Severity"] == "Unknown"
+        # untriaged → Unknown (matches v3 parse_severity_from_priority)
+        rec["severity"] = [{"type": "Ubuntu", "score": "untriaged"}]
+        assert osv_to_os(rec)["Vulnerability"]["Severity"] == "Unknown"
+        # CVSS scores alone don't supply the Ubuntu priority — fall through
+        rec["severity"] = [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:L/..."}]
+        assert osv_to_os(rec)["Vulnerability"]["Severity"] == "Unknown"
+
+    def test_severity_capitalizes_canonical_priority(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        for score, expected in [
+            ("negligible", "Negligible"),
+            ("low", "Low"),
+            ("medium", "Medium"),
+            ("high", "High"),
+            ("critical", "Critical"),
+        ]:
+            rec["severity"] = [{"type": "Ubuntu", "score": score}]
+            assert osv_to_os(rec)["Vulnerability"]["Severity"] == expected
+
+    def test_no_upstream_returns_none(self):
+        # No CVE-* id to use as Vulnerability.Name → cannot produce a v3-shape record.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        rec.pop("upstream", None)
+        assert osv_to_os(rec) is None
+
+    def test_pro_only_record_returns_none(self):
+        # Pro/FIPS/Realtime/BlueField fragments don't get downconverted.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:FIPS:22.04:LTS", "name": "openssl"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1.1.1+fips1"}]}],
+            },
+        ]
+        assert osv_to_os(rec) is None
+
+    def test_multiple_packages_become_multiple_fixedin(self):
+        # Sliced by ecosystem, an envelope still has one affected[] entry per source
+        # package. Each becomes one FixedIn (in input order).
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record()
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:20.04:LTS", "name": "linux"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+            },
+            {
+                "package": {"ecosystem": "Ubuntu:20.04:LTS", "name": "linux-aws"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+                "database_specific": {"anchore": {"status": "wont-fix"}},
+            },
+            {
+                "package": {"ecosystem": "Ubuntu:20.04:LTS", "name": "linux-gcp"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "5.4.0-100.113"}]}],
+            },
+        ]
+        out = osv_to_os(rec)
+        assert out is not None
+        names = [fi["Name"] for fi in out["Vulnerability"]["FixedIn"]]
+        assert names == ["linux", "linux-aws", "linux-gcp"]
+        # The wont-fix one carries NoAdvisory=True; the no-fix-yet one False; the fixed one carries the version.
+        by_name = {fi["Name"]: fi for fi in out["Vulnerability"]["FixedIn"]}
+        assert by_name["linux"]["Version"] == "None" and by_name["linux"]["VendorAdvisory"]["NoAdvisory"] is False
+        assert by_name["linux-aws"]["Version"] == "None" and by_name["linux-aws"]["VendorAdvisory"]["NoAdvisory"] is True
+        assert by_name["linux-gcp"]["Version"] == "5.4.0-100.113"
+
+    def test_identifier_for_returns_v3_shape(self):
+        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for
+        rec = self._osv_record()
+        assert os_identifier_for(rec) == "ubuntu:22.04/cve-2024-1"
+
+
+class TestOSDowncoverterIntegration:
+    """Verify the parser actually yields OS-shape records when the toggle is on."""
+
+    def test_get_yields_os_records_when_enabled(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # downconvert_osv_to_os=True swaps fragment yields to OS shape; legacy passthrough
+        # (which also produces OS) is unaffected.
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+
+        # Every yielded record should be OS-shape.
+        assert records, "expected non-empty yield"
+        for identifier, sch, payload in records:
+            assert "/os/" in sch.url, f"expected OS schema, got {sch.url}"
+            assert "Vulnerability" in payload, f"expected v3 Vulnerability shape, got {list(payload)}"
+            # Identifier shape: ubuntu:X.YY/cve-...
+            assert identifier.startswith("ubuntu:"), identifier
+
+        # Every Pro/FIPS/BlueField slice should be filtered out — only base namespaces remain.
+        namespaces = {p["Vulnerability"]["NamespaceName"] for _, _, p in records}
+        assert all(ns.startswith("ubuntu:") and ":Pro" not in ns and "-" not in ns.split(":")[1] for ns in namespaces), namespaces
+
+    def test_inferred_wont_fix_lands_in_downconverted_output(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # The Pro-only-fix inference path synthesizes base envelopes with
+        # status=wont-fix; downconversion should render them as Version="None"
+        # / NoAdvisory=True FixedIn entries on the base ecosystem.
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+
+        # Find the ubuntu:16.04 envelope for CVE-2021-3782 (wayland). It's inferred from
+        # the Ubuntu:Pro:16.04:LTS fragment via _yield_base_with_inferences.
+        # (See TestProOnlyInferenceIntegration for the underlying fixture coverage.)
+        by_id = {i: payload for i, _, payload in records}
+        target = by_id.get("ubuntu:16.04/cve-2021-3782")
+        assert target is not None, sorted(by_id)
+        fixed = target["Vulnerability"]["FixedIn"]
+        wayland = next(fi for fi in fixed if fi["Name"] == "wayland")
+        assert wayland["Version"] == "None"
+        assert wayland["VendorAdvisory"]["NoAdvisory"] is True
+
+    def test_default_still_yields_osv_records(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Sanity: with the toggle off (default), OSV envelopes flow through unchanged.
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+
+        schemas = {sch.url for _, sch, _ in records}
+        assert all("/osv/" in s for s in schemas), schemas
+
+    def test_provider_config_wires_toggle_through(self, helpers, fixture_dir, auto_fake_fixdate_finder):
+        # End-to-end through Provider.update with the Config flag on, exercising
+        # the actual Provider plumbing (not just Parser.__init__).
+        import json
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        c = Config()
+        c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+        c.downconvert_osv_to_os = True
+
+        p = Provider(root=str(ws.root), config=c)
+        _stage_workspace_for_update(str(ws.root), fixture_dir)
+
+        with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
+            p.update(None)
+
+        schemas = []
+        for f in ws.result_files():
+            with open(f) as fh:
+                schemas.append(json.load(fh)["schema"])
+        # Every emitted record uses the OS schema; no OSV envelopes leak through.
+        assert all("/os/schema-" in s for s in schemas), schemas

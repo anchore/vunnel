@@ -15,6 +15,7 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
 
 from . import parser_legacy
+from .os_downconvert import os_identifier_for, osv_to_os
 from .usn_fixdate_overlay import USNFixDateOverlay, usn_extra_candidates
 from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
 
@@ -247,11 +248,16 @@ class Parser:
         fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
+        downconvert_osv_to_os: bool = False,
     ):
         self.workspace = workspace
         self.fixdater = fixdater if fixdater is not None else fixdate.default_finder(workspace)
         self.download_timeout = download_timeout
         self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
+        # Opt-in compatibility: rewrite OSV fragments into v3 OS-schema records as they
+        # are yielded. The legacy normalized-cve-data passthrough already emits OS shape,
+        # so when this is enabled every yielded record is OS.
+        self.downconvert_osv_to_os = downconvert_osv_to_os
 
         self.archive_path = os.path.join(workspace.input_path, self._archive_filename_)
         self.vex_archive_path = os.path.join(workspace.input_path, self._vex_archive_filename_)
@@ -648,7 +654,28 @@ class Parser:
         self._write_fragments(vex_overlay=vex_overlay)
         # legacy first; OSV last (policy-only — identifier shapes don't collide)
         yield from self._iter_normalized_cve_data()
-        yield from self._iter_fragments()
+        if self.downconvert_osv_to_os:
+            yield from self._iter_fragments_downconverted()
+        else:
+            yield from self._iter_fragments()
+
+    def _iter_fragments_downconverted(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Yield OSV fragment envelopes rewritten into v3 OS-schema records.
+
+        Pro/FIPS/Realtime/BlueField slices and any envelope without an upstream
+        CVE alias are dropped — v3 never emitted them. Pro-only-fix wont-fix
+        data still appears here because `_yield_base_with_inferences` already
+        merged it into the base ecosystem's affected[] list before this runs.
+        """
+        os_schema = schema.OSSchema()
+        for _osv_identifier, _osv_schema, osv_payload in self._iter_fragments():
+            os_payload = osv_to_os(osv_payload)
+            if os_payload is None:
+                continue
+            identifier = os_identifier_for(osv_payload)
+            if identifier is None:
+                continue
+            yield identifier, os_schema, os_payload
 
     def _load_usn_overlay(self) -> USNFixDateOverlay | None:
         """Build the (eco, src-pkg, fixed-ver) → USN-published-date index.

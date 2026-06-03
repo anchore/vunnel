@@ -22,6 +22,12 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    # Compatibility switch: when True, OSV fragment envelopes are rewritten into the
+    # v3 OS-schema `{"Vulnerability": {...}}` shape as they are yielded. Leave this off
+    # unless you're feeding a grype-db build that pre-dates the OSV transformer — there
+    # is no provenance for the inference and won't-fix annotations in the OS shape, so
+    # downstream consumers lose that signal.
+    downconvert_osv_to_os: bool = False
 
 
 class Provider(provider.Provider):
@@ -61,6 +67,7 @@ class Provider(provider.Provider):
             workspace=self.workspace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
+            downconvert_osv_to_os=self.config.downconvert_osv_to_os,
         )
 
     @classmethod
