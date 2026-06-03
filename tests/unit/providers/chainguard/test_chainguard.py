@@ -36,6 +36,32 @@ def test_parser_selection(
     assert p.schema.name == expected_schema_name
 
 
+@pytest.mark.parametrize(
+    ("use_osv", "expected_parser_cls"),
+    [
+        (False, SecDBParser),
+        (True, OSVParser),
+    ],
+)
+def test_config_propagates_to_parser(helpers, auto_fake_fixdate_finder, use_osv, expected_parser_cls):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    c = Config(use_osv=use_osv, skip_redownload=True, osv_max_workers=16)
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=workspace.root, config=c)
+
+    assert isinstance(p.parser, expected_parser_cls)
+    assert p.parser.skip_redownload is True
+    if use_osv:
+        assert p.parser.max_workers == 16
+
+
+def test_config_defaults():
+    c = Config()
+    assert c.skip_redownload is False
+    assert c.osv_max_workers == 8
+
+
 def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 

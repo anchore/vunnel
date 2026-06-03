@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import concurrent.futures
 import copy
 import logging
 import os
@@ -34,6 +35,8 @@ class Parser(abc.ABC):
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
+        skip_redownload: bool = False,
+        max_workers: int = 8,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -46,6 +49,8 @@ class Parser(abc.ABC):
         self.security_reference_url = (
             security_reference_url.strip("/") if security_reference_url else self._security_reference_url_
         )
+        self.skip_redownload = skip_redownload
+        self.max_workers = max_workers
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -105,9 +110,21 @@ class SecDBParser(Parser):
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
+        skip_redownload: bool = False,
+        max_workers: int = 8,
     ):
         self._db_filename = self._extract_filename_from_url(url)
-        super().__init__(workspace, url, namespace, fixdater, download_timeout, logger, security_reference_url)
+        super().__init__(
+            workspace,
+            url,
+            namespace,
+            fixdater,
+            download_timeout,
+            logger,
+            security_reference_url,
+            skip_redownload=skip_redownload,
+            max_workers=max_workers,
+        )
 
     def _download(self) -> None:
         if not os.path.exists(self.input_dir_path):
@@ -119,6 +136,11 @@ class SecDBParser(Parser):
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
             r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
             file_path = os.path.join(self.input_dir_path, self._db_filename)
+            # if the file already exists and skip_redownload is True, skip writing the file again. This is to avoid
+            # unnecessary redownloading and rewriting of the same file, which can save time on subsequent runs.
+            if self.skip_redownload and os.path.exists(file_path):
+                self.logger.info(f"skipping download of {self.namespace} secdb since file already exists at {file_path}")
+                return
             with open(file_path, "wb") as fp:
                 for chunk in r.iter_content():
                     fp.write(chunk)
@@ -236,9 +258,14 @@ class OSVParser(Parser):
     _input_dir_ = "osv"
 
     def _download(self) -> None:
+        '''
+        Download all OSV entry files based on the index file at self.url, which should point to the
+        top level all.json file. For each entry in the index, we construct the URL for the individual
+        entry file and download it to the input directory.
+        '''
         if not os.path.exists(self.input_dir_path):
             os.makedirs(self.input_dir_path, exist_ok=True)
-        
+
         self.fixdater.download()
 
         try:
@@ -249,17 +276,39 @@ class OSVParser(Parser):
             index = orjson.loads(r.content)
 
             base_url = self.url.rsplit("/", 1)[0]
-            for entry in index:
-                # for each entry pointed to by the index, pull down the full JSON file
-                filename = f"{entry['id']}.json"
-                entry_url = f"{base_url}/{filename}"
-                r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
-                file_path = os.path.join(self.input_dir_path, filename)
-                with open(file_path, "wb") as fp:
-                    for chunk in r.iter_content():
-                        fp.write(chunk)
+            # Download all entries in the index concurrently using a thread pool,
+            # which should speed up the download process significantly since there are thousands of entries.
+            # We construct the URL for each entry by appending the entry ID and .json to the base URL
+            # e.g. https://packages.cgr.dev/chainguard/v2/osv/CGA-2255-2h2p-73q2.json
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                futures = [
+                    executor.submit(self._download_single_file, f"{base_url}/{entry['id']}.json", f"{entry['id']}.json")
+                    for entry in index
+                ]
+                # surface the first exception (if any) — matches prior behavior where a single
+                # failure aborted the batch via the outer try/except
+                done, _not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
+                for future in done:
+                    future.result()
         except Exception:
             self.logger.exception(f"ignoring error processing osv for {self.url}")
+
+    def _download_single_file(self, url: str, filename: str) -> None:
+        '''
+        Download a single OSV entry file given its URL and the desired filename.
+        '''
+        file_path = os.path.join(self.input_dir_path, filename)
+        # if the file already exists and skip_redownload is True, skip writing the file again. This is to avoid
+        # unnecessary redownloading and rewriting of the same file, which can save time on subsequent
+        # runs.
+        if self.skip_redownload and os.path.exists(file_path):
+            self.logger.info(f"skipping download of {self.namespace} osv entry {filename} since file already exists")
+            return
+        self.logger.info(f"downloading {self.namespace} osv entry {filename}")
+        r = http.get(url, self.logger, stream=True, timeout=self.download_timeout)
+        with open(file_path, "wb") as fp:
+            for chunk in r.iter_content():
+                fp.write(chunk)
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         try:
@@ -268,6 +317,7 @@ class OSVParser(Parser):
             for filename in os.listdir(self.input_dir_path):
                 if not filename.endswith(".json"):
                     continue
+                self.logger.info(f"loading {self.namespace} osv data from {filename}")
                 with open(os.path.join(self.input_dir_path, filename)) as fh:
                     data = orjson.loads(fh.read())
                     yield self._release_, data
@@ -289,4 +339,4 @@ class OSVParser(Parser):
         # we map the osv id to the osv data to keep consistency in the secdb parser, which
         # does this for ease of identifying the associated vulnerability when writing records.
         # IE: {"CGA-1234-5678-9abc": {<full osv record>}}
-        return {data["id"]: data}
+        return {data['id']: data}
