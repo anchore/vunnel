@@ -27,8 +27,6 @@ class Config:
     osv_url: str = "https://packages.cgr.dev/chainguard/v2/osv/all.json"
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
     use_osv: bool = False
-    # Override with VUNNEL_PROVIDERS_CHAINGUARD_SKIP_REDOWNLOAD
-    skip_redownload: bool = False
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_MAX_WORKERS
     osv_max_workers: int = 8
 
@@ -58,7 +56,7 @@ class Provider(provider.Provider):
                 namespace=self._namespace,
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
-                skip_redownload=self.config.skip_redownload,
+                skip_download=self.config.runtime.skip_download,
                 max_workers=self.config.osv_max_workers,
             )
             self.schema = schema.OSVSchema(version="1.7.0")
@@ -69,7 +67,7 @@ class Provider(provider.Provider):
                 namespace=self._namespace,
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
-                skip_redownload=self.config.skip_redownload,
+                skip_download=self.config.runtime.skip_download,
             )
             self.feed_url = self.config.secdb_url
             self.schema = schema.OSSchema()
@@ -84,6 +82,10 @@ class Provider(provider.Provider):
     @classmethod
     def tags(cls) -> list[str]:
         return ["vulnerability", "os"]
+
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):

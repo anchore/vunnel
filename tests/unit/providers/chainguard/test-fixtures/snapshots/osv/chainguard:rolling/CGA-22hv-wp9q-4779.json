@@ -24,6 +24,17 @@
         },
         "ranges": [
           {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-02-24",
+                    "kind": "advisory",
+                    "version": "3.153.0-r0"
+                  }
+                ]
+              }
+            },
             "events": [
               {
                 "introduced": "0"
@@ -57,6 +68,17 @@
         },
         "ranges": [
           {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-02-24",
+                    "kind": "advisory",
+                    "version": "3.152.0-r0"
+                  }
+                ]
+              }
+            },
             "events": [
               {
                 "introduced": "0"
@@ -77,6 +99,17 @@
         },
         "ranges": [
           {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-02-24",
+                    "kind": "advisory",
+                    "version": "3.153.0-r0"
+                  }
+                ]
+              }
+            },
             "events": [
               {
                 "introduced": "0"

@@ -5,6 +5,7 @@ import concurrent.futures
 import copy
 import logging
 import os
+import re
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -13,7 +14,7 @@ import orjson
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import vulnerability
+from vunnel.utils import vulnerability, osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -35,8 +36,8 @@ class Parser(abc.ABC):
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
-        skip_redownload: bool = False,
-        max_workers: int = 8,
+        skip_download: bool = False,
+        max_workers: int = 64,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -49,7 +50,7 @@ class Parser(abc.ABC):
         self.security_reference_url = (
             security_reference_url.strip("/") if security_reference_url else self._security_reference_url_
         )
-        self.skip_redownload = skip_redownload
+        self.skip_download = skip_download
         self.max_workers = max_workers
 
         if not logger:
@@ -110,7 +111,7 @@ class SecDBParser(Parser):
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
-        skip_redownload: bool = False,
+        skip_download: bool = False,
         max_workers: int = 8,
     ):
         self._db_filename = self._extract_filename_from_url(url)
@@ -122,11 +123,15 @@ class SecDBParser(Parser):
             download_timeout,
             logger,
             security_reference_url,
-            skip_redownload=skip_redownload,
+            skip_download=skip_download,
             max_workers=max_workers,
         )
 
     def _download(self) -> None:
+        if self.skip_download:
+            self.logger.info(f"skip_download is enabled for {self.namespace} secdb feed")
+            return
+
         if not os.path.exists(self.input_dir_path):
             os.makedirs(self.input_dir_path, exist_ok=True)
 
@@ -136,11 +141,6 @@ class SecDBParser(Parser):
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
             r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
             file_path = os.path.join(self.input_dir_path, self._db_filename)
-            # if the file already exists and skip_redownload is True, skip writing the file again. This is to avoid
-            # unnecessary redownloading and rewriting of the same file, which can save time on subsequent runs.
-            if self.skip_redownload and os.path.exists(file_path):
-                self.logger.info(f"skipping download of {self.namespace} secdb since file already exists at {file_path}")
-                return
             with open(file_path, "wb") as fp:
                 for chunk in r.iter_content():
                     fp.write(chunk)
@@ -256,6 +256,7 @@ class SecDBParser(Parser):
 
 class OSVParser(Parser):
     _input_dir_ = "osv"
+    _cga_id_re = re.compile(r"^CGA(-[23456789cfghjmpqrvwx]{4}){3}$")
 
     def _download(self) -> None:
         '''
@@ -263,10 +264,14 @@ class OSVParser(Parser):
         top level all.json file. For each entry in the index, we construct the URL for the individual
         entry file and download it to the input directory.
         '''
+        self.fixdater.download()
+
+        if self.skip_download:
+            self.logger.info(f"skip_download is enabled for {self.namespace} osv feed")
+            return
+
         if not os.path.exists(self.input_dir_path):
             os.makedirs(self.input_dir_path, exist_ok=True)
-
-        self.fixdater.download()
 
         try:
             self.logger.info(f"downloading {self.namespace} osv index {self.url}")
@@ -281,10 +286,15 @@ class OSVParser(Parser):
             # We construct the URL for each entry by appending the entry ID and .json to the base URL
             # e.g. https://packages.cgr.dev/chainguard/v2/osv/CGA-2255-2h2p-73q2.json
             with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                futures = [
-                    executor.submit(self._download_single_file, f"{base_url}/{entry['id']}.json", f"{entry['id']}.json")
-                    for entry in index
-                ]
+                futures = []
+                for entry in index:
+                    entry_id = entry["id"]
+                    if not entry_id or not self._cga_id_re.match(entry_id):
+                        self.logger.warning(f"skipping osv entry with invalid id: {entry_id!r}")
+                        continue
+                    futures.append(
+                        executor.submit(self._download_single_file, f"{base_url}/{entry_id}.json", f"{entry_id}.json"),
+                    )
                 # surface the first exception (if any) — matches prior behavior where a single
                 # failure aborted the batch via the outer try/except
                 done, _not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -298,12 +308,6 @@ class OSVParser(Parser):
         Download a single OSV entry file given its URL and the desired filename.
         '''
         file_path = os.path.join(self.input_dir_path, filename)
-        # if the file already exists and skip_redownload is True, skip writing the file again. This is to avoid
-        # unnecessary redownloading and rewriting of the same file, which can save time on subsequent
-        # runs.
-        if self.skip_redownload and os.path.exists(file_path):
-            self.logger.info(f"skipping download of {self.namespace} osv entry {filename} since file already exists")
-            return
         self.logger.info(f"downloading {self.namespace} osv entry {filename}")
         r = http.get(url, self.logger, stream=True, timeout=self.download_timeout)
         with open(file_path, "wb") as fp:
@@ -339,4 +343,5 @@ class OSVParser(Parser):
         # we map the osv id to the osv data to keep consistency in the secdb parser, which
         # does this for ease of identifying the associated vulnerability when writing records.
         # IE: {"CGA-1234-5678-9abc": {<full osv record>}}
+        osv.patch_fix_date(data, self.fixdater)
         return {data['id']: data}
