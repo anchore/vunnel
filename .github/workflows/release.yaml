@@ -19,7 +19,7 @@ on:
         default: false
 jobs:
   version-available:
-    uses: anchore/workflows/.github/workflows/check-version-available.yaml@c8124d07eda64dc19b5eecb9ffd2ad4643c0aae4 # v0.7.1
+    uses: anchore/workflows/.github/workflows/check-version-available.yaml@b0c30a80409130d329aaa356fd64a34d8c0b3375 # v0.7.2
     permissions:
       contents: read # for reading latest tags
     with:
@@ -31,7 +31,7 @@ jobs:
     permissions:
       checks: read # required for getting the status of specific check names
       contents: read # needed for using the wait-for-check action upstream
-    uses: anchore/workflows/.github/workflows/check-gate.yaml@c8124d07eda64dc19b5eecb9ffd2ad4643c0aae4 # v0.7.1
+    uses: anchore/workflows/.github/workflows/check-gate.yaml@b0c30a80409130d329aaa356fd64a34d8c0b3375 # v0.7.2
     with:
       # these are checks that should be run on pull-request and merges to main.
       # we do NOT want to kick off a release if these have not been verified on main.
@@ -55,14 +55,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
           persist-credentials: false
 
       - name: Tag release
-        uses: anchore/workflows/.github/actions/create-tag-via-deploy-key@c8124d07eda64dc19b5eecb9ffd2ad4643c0aae4 # v0.7.1
+        uses: anchore/workflows/.github/actions/create-tag-via-deploy-key@b0c30a80409130d329aaa356fd64a34d8c0b3375 # v0.7.2
         with:
           tag: ${{ github.event.inputs.version }}
           deploy-key: ${{ secrets.DEPLOY_KEY }}
@@ -78,7 +78,7 @@ jobs:
       # required to authenticate with PyPI via OIDC token
       id-token: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -99,7 +99,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -132,7 +132,7 @@ jobs:
       issues: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
