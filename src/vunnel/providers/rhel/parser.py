@@ -729,7 +729,7 @@ class Parser:
             "8" -> None (already base)
         """
         if "+eus" in platform:
-            return platform.split(".")[0]
+            return platform.split(".", maxsplit=1)[0]
         if "+els" in platform:
             return platform.replace("+els", "")
         return None

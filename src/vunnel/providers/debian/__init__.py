@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Config:
-    releases: dict[str, Any] = field(default_factory=lambda: debian_distro_map.copy())
+    releases: dict[str, Any] = field(default_factory=debian_distro_map.copy)
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,

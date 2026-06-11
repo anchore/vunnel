@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
 
-class OnErrorAction(str, enum.Enum):
+class OnErrorAction(enum.StrEnum):
     FAIL = "fail"
     SKIP = "skip"
     RETRY = "retry"
@@ -31,7 +31,7 @@ class OnErrorAction(str, enum.Enum):
         return self.value
 
 
-class InputStatePolicy(str, enum.Enum):
+class InputStatePolicy(enum.StrEnum):
     KEEP = "keep"
     DELETE = "delete"
 
