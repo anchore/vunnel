@@ -8,7 +8,32 @@ import pytest
 from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider
 from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser
-from vunnel.providers.rhel.rhsa_provider import OVALRHSAProvider
+from vunnel.providers.rhel.rhsa_provider import RHSAProvider
+
+
+class FakeRHSAProvider(RHSAProvider):
+    """A test double for an RHSAProvider backed by an in-memory dict.
+
+    It mirrors the (rhsa_id, platform) -> FixedIn lookup the parser relies on, so tests can
+    exercise the parser's version/FixedIn/module semantics without a live CSAF or OVAL source.
+    """
+
+    def __init__(self, rhsa_dict):
+        self.rhsa_dict = rhsa_dict
+
+    @classmethod
+    def from_rhsa_dict(cls, rhsa_dict) -> "FakeRHSAProvider":
+        return cls(rhsa_dict)
+
+    def get_fixed_version_and_module(self, cve_id, ar, override_package_name):
+        _, p = self.rhsa_dict.get((ar.rhsa_id, ar.platform), (None, None))
+        package_name = override_package_name or ar.name
+        if p:
+            return next(
+                ((item["Version"], item.get("Module")) for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package_name),
+                (None, None),
+            )
+        return None, None
 
 
 class TestParser:
@@ -424,7 +449,7 @@ class TestParser:
 
     def test_parse_affected_releases_eus(self, mock_eus_cve, tmpdir):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+        driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_affected_release(mock_eus_cve.get("name"), mock_eus_cve)
 
@@ -446,7 +471,7 @@ class TestParser:
 
     def test_parse_affected_releases_0(self, mock_cve, tmpdir):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+        driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_affected_release(mock_cve.get("name"), mock_cve)
 
@@ -679,7 +704,7 @@ class TestParser:
     )
     def test_parse_affected_releases(self, tmpdir, affected_releases, fixed_ins, mock_rhsa_dict_2):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict(mock_rhsa_dict_2)
+        driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict(mock_rhsa_dict_2)
 
         results = driver._parse_affected_release(affected_releases.get("name"), affected_releases)
         assert isinstance(results, list)
@@ -741,7 +766,7 @@ class TestParser:
 
     def test_parse_cve(self, tmpdir, mock_cve, auto_fake_fixdate_finder):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+        driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_cve(mock_cve.get("name"), mock_cve)
         assert results and isinstance(results, list) and len(results) == 2
@@ -752,7 +777,7 @@ class TestParser:
 
     def test_parse_cve_partial_fix(self, tmpdir, mock_cve_partial_fix, auto_fake_fixdate_finder):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+        driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
 
         results = driver._parse_cve(mock_cve_partial_fix.get("name"), mock_cve_partial_fix)
         assert results and isinstance(results, list) and len(results) == 1
@@ -774,7 +799,7 @@ class TestParser:
     )
     def test_fetch_rhsa_fix_version(self, tmpdir, mock_rhsa_dict, test_id, test_p, test_pkg, expected):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
-        driver.rhsa_provider = OVALRHSAProvider.from_rhsa_dict(mock_rhsa_dict)
+        driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict(mock_rhsa_dict)
 
         ar_obj = AffectedRelease(rhsa_id=test_id, platform=test_p, name=test_pkg)
 
@@ -813,7 +838,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
         return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
     def mock_init_rhsa_data(*args, **kwargs):
-        p.parser.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+        p.parser.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
 
     monkeypatch.setattr(p.parser, "_sync_cves", mock_sync_cves)
     monkeypatch.setattr(p.parser, "_init_rhsa_data", mock_init_rhsa_data)
@@ -922,7 +947,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
         return os.path.join(p.parser.cve_dir_path, p.parser.__full_dir_name__)
 
     def mock_init_rhsa_data(*args, **kwargs):
-        p.parser.rhsa_provider = OVALRHSAProvider.from_rhsa_dict({})
+        p.parser.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
 
         return {}
 
@@ -932,6 +957,40 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     p.update(None)
 
     workspace.assert_result_snapshots()
+
+
+@pytest.mark.parametrize("rhsa_source", ["OVAL", "oval", "CSAF"])
+def test_init_rhsa_data_always_uses_csaf(tmpdir, monkeypatch, rhsa_source):
+    """The legacy rhsa_source field is honored for loading, but CSAF is the only runtime path.
+
+    An OVAL value logs a warning and still produces a CSAFRHSAProvider; a CSAF value is a no-op.
+    """
+    from unittest.mock import Mock
+
+    import vunnel.providers.rhel.parser as rhel_parser
+
+    fake_csaf_provider = Mock(name="CSAFRHSAProvider-instance")
+    csaf_ctor = Mock(return_value=fake_csaf_provider)
+    monkeypatch.setattr(rhel_parser, "CSAFRHSAProvider", csaf_ctor)
+
+    mock_logger = Mock()
+    driver = Parser(
+        workspace=workspace.Workspace(tmpdir, "test", create=True),
+        rhsa_provider_type=rhsa_source,
+        logger=mock_logger,
+    )
+
+    driver._init_rhsa_data()
+
+    # CSAF is always the runtime provider regardless of the configured source
+    assert driver.rhsa_provider is fake_csaf_provider
+    assert csaf_ctor.call_count == 1
+
+    warning_messages = " ".join(str(call.args[0]) for call in mock_logger.warning.call_args_list)
+    if rhsa_source.lower() == "oval":
+        assert "OVAL" in warning_messages and "CSAF" in warning_messages
+    else:
+        assert "OVAL" not in warning_messages
 
 
 @patch("vunnel.providers.rhel.Parser._sync_cves")

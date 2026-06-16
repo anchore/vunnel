@@ -20,7 +20,7 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
-from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider, OVALRHSAProvider
+from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import rpm
@@ -370,19 +370,20 @@ class Parser:
         return p
 
     def _init_rhsa_data(self, skip_if_exists=False):
-        self.logger.info(f"instantiating RHSA provider of type {self.rhsa_provider_type}")
-        if self.rhsa_provider_type.lower() == "oval":
-            if self.skip_download:
-                self.logger.warning("skip download requested, but OVAL RHSA provider does not support skipping download")
-            self.rhsa_provider = OVALRHSAProvider(self.workspace, self.download_timeout, self.logger, self.rhsa_dir_path)
-        elif self.rhsa_provider_type.lower() == "csaf":
-            self.rhsa_provider = CSAFRHSAProvider(
-                self.workspace,
-                self.download_timeout,
-                self.logger,
-                self.skip_download,
-                self.csaf_max_workers,
+        # the OVAL RHSA source has been removed; CSAF is now the only path. Honor the legacy
+        # rhsa_source config field so existing configs still load, but warn if it asks for OVAL.
+        if self.rhsa_provider_type and self.rhsa_provider_type.lower() == "oval":
+            self.logger.warning(
+                "the OVAL RHSA source has been removed; using CSAF instead (rhsa_source='OVAL' is no longer supported)",
             )
+        self.logger.info("instantiating CSAF RHSA provider")
+        self.rhsa_provider = CSAFRHSAProvider(
+            self.workspace,
+            self.download_timeout,
+            self.logger,
+            self.skip_download,
+            self.csaf_max_workers,
+        )
 
     @staticmethod
     def _get_name_version(package):

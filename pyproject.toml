@@ -82,6 +82,7 @@ exclude = '''(?x)(
     | ^src/vunnel/providers/mariner/model/        # generated code
     | ^src/vunnel/providers/nvd/parser\.py$       # ported from enterprise, never had type hints
     | ^src/vunnel/providers/oracle/parser\.py$    # ported from enterprise, never had type hints
+    | ^src/vunnel/providers/oracle/oval_parser.py$  # ported from enterprise (and moved from utils); never had type hints
     | ^src/vunnel/providers/rhel/parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/rhel/oval_parser\.py$      # ported from enterprise, never had type hints
     | ^src/vunnel/providers/sles/parser\.py$      # ported from enterprise, never had type hints
@@ -89,7 +90,6 @@ exclude = '''(?x)(
     | ^src/vunnel/providers/ubuntu/parser\.py$    # ported from enterprise, never had type hints
     | ^src/vunnel/providers/wolfi/parser\.py$     # ported from enterprise, never had type hints
     | ^src/vunnel/utils/oval_v2.py$               # ported from enterprise, never had type hints
-    | ^src/vunnel/utils/oval_parser.py$           # ported from enterprise, never had type hints
     | ^src/vunnel/utils/fdb.py$                   # ported from enterprise, never had type hints
     | ^src/vunnel/utils/vulnerability.py$         # ported from enterprise, never had type hints
     | ^tests/.*$     # any tests
