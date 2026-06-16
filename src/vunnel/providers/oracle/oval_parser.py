@@ -6,6 +6,7 @@ import gzip
 import logging
 import os
 import re
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as ET
@@ -34,6 +35,10 @@ class Config:
     pkg_module_pattern: re.Pattern | None = None
     signed_with_pattern: re.Pattern | None = None
     platform_version_pattern: re.Pattern | None = None
+    # arch_pattern is optional: when set, a criterion comment matching it (e.g. "Oracle Linux
+    # arch is x86_64") tags the package-version tests gated by that branch with the architecture,
+    # so a single advisory that ships different fixes per arch is not flattened together.
+    arch_pattern: re.Pattern | None = None
 
     # xpath queries
     title_xpath_query: str | None = None
@@ -127,7 +132,7 @@ def _parse_severity(def_element, oval_ns, vuln_id: str, config: Config) -> str:
     return severity
 
 
-def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912, C901
+def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR0912
     oval_ns = re.search(config.ns_pattern, def_element.tag).group(1)
 
     def_version = def_element.attrib["version"]
@@ -175,20 +180,7 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
             v["Vulnerability"]["Metadata"]["CVE"] = cves
 
         if ns_pkgs_dict and ns_name in ns_pkgs_dict:
-            fixed_in_list = []
-            for x in ns_pkgs_dict[ns_name]:
-                fixed_el = {
-                    "Name": x[0],
-                    "Version": x[1],
-                    "Module": x[2],
-                    "VersionFormat": "rpm",  # hard code version format for now
-                    "NamespaceName": ns_name,
-                }
-                # add Available object if fix version exists and issued date is available
-                if x[1] != "None" and issued:
-                    fixed_el["Available"] = {"Date": date.normalize_date(issued), "Kind": "advisory"}
-                fixed_in_list.append(fixed_el)
-            v["Vulnerability"]["FixedIn"] = fixed_in_list
+            v["Vulnerability"]["FixedIn"] = _build_fixed_in(ns_pkgs_dict[ns_name], ns_name, issued)
         else:
             logger.warning(f"No affected packages found for {name}, this is unusual")
 
@@ -216,66 +208,108 @@ def _process_definition(def_element, vuln_dict, config: Config):  # noqa: PLR091
 
 def _process_criteria(element_a, oval_ns, config: Config):
     """
-    Parse and return a dict containing namespace mapped to a set of (package, version) tuples
-    :param element_a: outermost criteria element within a definition element
-    :param oval_ns: namespace URL of the oval
-    :return:
+    Parse and return a dict mapping namespace -> set of (package, version, module, arch) tuples.
+
+    The outermost criteria of a definition is either a single platform group (operator AND) or an
+    OR of per-platform groups (a definition that covers multiple OS releases). Each group is walked
+    recursively so a package-version test inherits the module and architecture of the branch that
+    gates it (see _collect_affected). arch is None unless config.arch_pattern is set and the branch
+    carried an arch criterion.
     """
     criteria_element = element_a.find(config.criteria_xpath_query.format(oval_ns))
-    groups = []
-    ns_pkgs_dict = {}
+    ns_pkgs_dict: dict = {}
+    if criteria_element is None:
+        return ns_pkgs_dict
 
-    if criteria_element.attrib["operator"].lower() == "or":
-        for child in list(criteria_element):
-            groups.append(_get_all_criterion(child, oval_ns, config))
-    else:
-        groups.append(_get_all_criterion(criteria_element, oval_ns, config))
+    groups = list(criteria_element.findall(f"{oval_ns}criteria")) if criteria_element.attrib["operator"].lower() == "or" else [criteria_element]
 
     for group in groups:
-        if not group:
-            # logger.debug('Parsed group for one or more criterion is empty, skipping')
-            continue  # bail out of processing the group if its empty
-
-        # Find the first platform version string in the returned list
-        ns_name, ns_module = next((x for x in group if not isinstance(x, tuple)), None)
-
-        if ns_name:  # proceed only if a platform is found
-            # Filter out duplicate (package, version) tuples
-            ns_pkgs_dict[ns_name] = {tuple(list(x) + [ns_module]) for x in group if isinstance(x, tuple)}  # noqa: RUF005
-        else:
-            # logger.debug('Namespace for the criteria not found, ignoring criteria')
-            continue  # ignore this group of conditions if namespace is not found
+        ns_name, affected = _collect_affected(group, oval_ns, config)
+        if ns_name and affected:
+            ns_pkgs_dict.setdefault(ns_name, set()).update(affected)
 
     return ns_pkgs_dict
 
 
-def _get_all_criterion(element_b, oval_ns, config: Config):
+def _collect_affected(criteria_element, oval_ns, config: Config, arch=None, module=None):
     """
-    Search for all the criterion elements under the given criteria element and
-    parse contents into a list. Returned list may contain tuples and or simple strings.
-    Package name and version found in the comment of a criterion element is represented by a tuple.
-    Platform version found in the comment of a criterion element is represented by a simple string.
-    :param element_b: criteria element
-    :param oval_ns: namespace URL of the oval
-    :return:
+    Recursively walk a criteria subtree and return (ns_name, [(package, version, module, arch), ...]).
+
+    module and arch are inherited from the nearest enclosing criterion that sets them, so a
+    "PKG is earlier than V" test picks up the module and architecture of the branch gating it. This
+    keeps a per-arch fix (e.g. an advisory whose x86_64 and aarch64 builds were respun at different
+    revisions) attributed to the right architecture instead of being flattened together.
     """
-    collectibles = []
-    final_ns_name = None
-    final_module_name = None
     ns_name = None
-    module_name = None
-    for criterion in element_b.iterfind(config.criterion_xpath_query.format(oval_ns)):
-        if re.search(config.pkg_version_pattern, criterion.attrib["comment"]):
-            pkg, version = re.search(config.pkg_version_pattern, criterion.attrib["comment"]).groups()
-            collectibles.append((pkg, version))
-        elif re.search(config.is_installed_pattern, criterion.attrib["comment"]):
-            ns_name = config.ns_format.format(re.search(config.is_installed_pattern, criterion.attrib["comment"]).group(1))
-        elif re.search(config.pkg_module_pattern, criterion.attrib["comment"]):
-            module_name = re.search(config.pkg_module_pattern, criterion.attrib["comment"]).group(1)
-        if ns_name:
-            final_ns_name = ns_name
-        if module_name:
-            final_module_name = module_name
-    if final_ns_name:
-        collectibles.append([final_ns_name, final_module_name])
-    return collectibles
+    local_arch = arch
+    local_module = module
+    versions = []
+
+    for criterion in criteria_element.findall(f"{oval_ns}criterion"):
+        comment = criterion.attrib["comment"]
+        m = re.search(config.pkg_version_pattern, comment)
+        if m:
+            versions.append((m.group(1), m.group(2)))
+            continue
+        m = re.search(config.is_installed_pattern, comment)
+        if m:
+            ns_name = config.ns_format.format(m.group(1))
+            continue
+        if config.pkg_module_pattern:
+            m = re.search(config.pkg_module_pattern, comment)
+            if m:
+                local_module = m.group(1)
+                continue
+        if config.arch_pattern:
+            m = re.search(config.arch_pattern, comment)
+            if m:
+                local_arch = m.group(1)
+                continue
+
+    affected = [(pkg, version, local_module, local_arch) for pkg, version in versions]
+
+    for child in criteria_element.findall(f"{oval_ns}criteria"):
+        child_ns, child_affected = _collect_affected(child, oval_ns, config, local_arch, local_module)
+        if child_ns:
+            ns_name = child_ns
+        affected.extend(child_affected)
+
+    return ns_name, affected
+
+
+def _build_fixed_in(pkg_tuples, ns_name, issued):
+    """
+    Build the FixedIn list from (package, version, module, arch) tuples, emitting an architecture
+    only when it actually differentiates a fix.
+
+    For a given (package, module): if every architecture is fixed at the same version, a single
+    arch-less FixedIn is emitted (it applies to all arches, saving database space and matching the
+    historical shape). If the fixed version differs across architectures, one FixedIn per (arch,
+    version) is emitted with Arch set, so a fix for one arch never over-matches another.
+    """
+    grouped: dict = defaultdict(set)  # (name, module) -> {(version, arch), ...}
+    for pkg, version, module, arch in pkg_tuples:
+        grouped[(pkg, module)].add((version, arch))
+
+    fixed_in_list = []
+    for (pkg, module), version_arches in grouped.items():
+        distinct_versions = {version for version, _ in version_arches}
+        entries = [(next(iter(distinct_versions)), None)] if len(distinct_versions) <= 1 else sorted(version_arches)
+        for version, arch in entries:
+            fixed_el = {
+                "Name": pkg,
+                "Version": version,
+                "Module": module,
+                "VersionFormat": "rpm",  # hard code version format for now
+                "NamespaceName": ns_name,
+            }
+            if arch:
+                fixed_el["Arch"] = arch
+            # add Available object if fix version exists and issued date is available
+            if version != "None" and issued:
+                fixed_el["Available"] = {"Date": date.normalize_date(issued), "Kind": "advisory"}
+            fixed_in_list.append(fixed_el)
+
+    # stable ordering for reproducible output
+    fixed_in_list.sort(key=lambda f: (f["Name"], f.get("Arch") or "", f["Version"]))
+    return fixed_in_list

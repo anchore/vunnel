@@ -25,7 +25,11 @@ class Config:
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
+    # Oracle advisories can ship a different fix per architecture (e.g. an x86_64 and aarch64 build
+    # respun at different revisions), which this provider records via the optional FixedIn.Arch
+    # field added in OS schema 1.1.1. Other OS providers never emit Arch and stay on the default
+    # OS schema version, so only Oracle advertises 1.1.1.
+    __schema__ = schema.OSSchema(version="1.1.1")
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):

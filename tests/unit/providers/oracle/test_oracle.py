@@ -301,6 +301,38 @@ def test_parse(tmpdir, helpers, input_file, expected):
     assert vuln_dict == expected
 
 
+def _fixed_in_keys(fixed_in_list):
+    # (Name, Version, Arch-or-None) for stable comparison
+    return {(f["Name"], f["Version"], f.get("Arch")) for f in fixed_in_list}
+
+
+# mock_per_arch_data holds two ELSA definitions: ELSA-2022-4803, whose x86_64 and aarch64 rsyslog
+# builds were respun at different revisions, and ELSA-2099-0001, whose arches share a single fix.
+def test_parse_per_arch_fixed_in(tmpdir, helpers):
+    subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+
+    mock_data_path = helpers.local_dir("test-fixtures/mock_per_arch_data")
+
+    vuln_dict = subject._parse_oval_data(mock_data_path, subject.config)
+
+    # divergent per-arch fix: each package keeps both arches explicit so the higher aarch64
+    # revision (.0.4) can't suppress/over-match a patched x86_64 package (.0.1) — the FP class
+    # in ELSA-2022-4803.
+    _, divergent = vuln_dict[("ELSA-2022-4803", "ol:7")]
+    assert _fixed_in_keys(divergent["Vulnerability"]["FixedIn"]) == {
+        ("rsyslog", "0:8.24.0-57.0.4.el7_9.3", "aarch64"),
+        ("rsyslog", "0:8.24.0-57.0.1.el7_9.3", "x86_64"),
+        ("rsyslog-doc", "0:8.24.0-57.0.4.el7_9.3", "aarch64"),
+        ("rsyslog-doc", "0:8.24.0-57.0.1.el7_9.3", "x86_64"),
+    }
+
+    # identical fix across arches: collapse to a single arch-less FixedIn (no Arch key) to save space.
+    _, shared = vuln_dict[("ELSA-2099-0001", "ol:9")]
+    shared_fixed = shared["Vulnerability"]["FixedIn"]
+    assert _fixed_in_keys(shared_fixed) == {("firefox", "0:128.0-1.el9", None)}
+    assert all("Arch" not in f for f in shared_fixed), "arch-less fix must not emit an Arch field"
+
+
 class TestKspliceFilterer:
     @pytest.mark.parametrize(
         ("input_vulnerability", "expected_output"),

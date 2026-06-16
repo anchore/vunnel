@@ -1,0 +1,74 @@
+<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5">
+<definitions>
+<definition id="oval:com.oracle.elsa:def:20224803" version="501" class="patch">
+<metadata>
+<title>ELSA-2022-4803:  rsyslog security update (IMPORTANT)</title>
+<affected family="unix"><platform>Oracle Linux 7</platform></affected>
+<reference source="elsa" ref_id="ELSA-2022-4803" ref_url="https://linux.oracle.com/errata/ELSA-2022-4803.html"/>
+<reference source="CVE" ref_id="CVE-2022-24903" ref_url="https://linux.oracle.com/cve/CVE-2022-24903.html"/>
+<description>rsyslog</description>
+<advisory><severity>IMPORTANT</severity><issued date="2022-05-31"/><cve href="https://linux.oracle.com/cve/CVE-2022-24903.html">CVE-2022-24903</cve></advisory>
+</metadata>
+<criteria operator="AND">
+<criterion test_ref="t1" comment="Oracle Linux 7 is installed"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="t2" comment="Oracle Linux arch is aarch64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="t3" comment="rsyslog is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="t4" comment="rsyslog is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="t5" comment="rsyslog-doc is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="t6" comment="rsyslog-doc is signed with the Oracle Linux 7 key"/>
+</criteria>
+</criteria>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="t7" comment="Oracle Linux arch is x86_64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="t8" comment="rsyslog is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="t9" comment="rsyslog is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="t10" comment="rsyslog-doc is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="t11" comment="rsyslog-doc is signed with the Oracle Linux 7 key"/>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</definition>
+<definition id="oval:com.oracle.elsa:def:20990001" version="501" class="patch">
+<metadata>
+<title>ELSA-2099-0001:  firefox security update (IMPORTANT)</title>
+<affected family="unix"><platform>Oracle Linux 9</platform></affected>
+<reference source="elsa" ref_id="ELSA-2099-0001" ref_url="https://linux.oracle.com/errata/ELSA-2099-0001.html"/>
+<reference source="CVE" ref_id="CVE-2099-0001" ref_url="https://linux.oracle.com/cve/CVE-2099-0001.html"/>
+<description>firefox</description>
+<advisory><severity>IMPORTANT</severity><issued date="2099-01-01"/><cve href="https://linux.oracle.com/cve/CVE-2099-0001.html">CVE-2099-0001</cve></advisory>
+</metadata>
+<criteria operator="AND">
+<criterion test_ref="f1" comment="Oracle Linux 9 is installed"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="f2" comment="Oracle Linux arch is aarch64"/>
+<criteria operator="AND">
+<criterion test_ref="f3" comment="firefox is earlier than 0:128.0-1.el9"/>
+<criterion test_ref="f4" comment="firefox is signed with the Oracle Linux 9 key"/>
+</criteria>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="f5" comment="Oracle Linux arch is x86_64"/>
+<criteria operator="AND">
+<criterion test_ref="f6" comment="firefox is earlier than 0:128.0-1.el9"/>
+<criterion test_ref="f7" comment="firefox is signed with the Oracle Linux 9 key"/>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</definition>
+</definitions>
+</oval_definitions>

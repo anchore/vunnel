@@ -25,6 +25,7 @@ ol_config.is_installed_pattern = re.compile(r"Oracle Linux (\d+).*is installed")
 ol_config.pkg_version_pattern = re.compile(r"(.*) is earlier than (.*)")
 ol_config.pkg_module_pattern = re.compile(r"Module (.*) is enabled")
 ol_config.signed_with_pattern = re.compile(r"(.*) is signed with the (.*) key")
+ol_config.arch_pattern = re.compile(r"Oracle Linux arch is (\S+)")
 ol_config.platform_version_pattern = re.compile(r"Oracle Linux (\d+)")
 
 # xpath queries
