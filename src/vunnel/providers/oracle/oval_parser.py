@@ -282,10 +282,16 @@ def _build_fixed_in(pkg_tuples, ns_name, issued):
     Build the FixedIn list from (package, version, module, arch) tuples, emitting an architecture
     only when it actually differentiates a fix.
 
-    For a given (package, module): if every architecture is fixed at the same version, a single
-    arch-less FixedIn is emitted (it applies to all arches, saving database space and matching the
-    historical shape). If the fixed version differs across architectures, one FixedIn per (arch,
-    version) is emitted with Arch set, so a fix for one arch never over-matches another.
+    For a given (package, module) we look at which architectures each fixed version covers:
+
+    - If every version covers the same set of architectures, architecture is not a differentiator,
+      so we emit one arch-less FixedIn per distinct version (matching the historical shape and saving
+      database space). This covers the common "one version on all arches" gate as well as "two module
+      rebuilds, each present on every arch" - where splitting by arch would only create redundant
+      duplicate rows.
+    - If different versions cover different architecture sets (e.g. an advisory whose x86_64 and
+      aarch64 builds were respun at different revisions), architecture does differentiate, so we emit
+      one FixedIn per (version, arch) with Arch set, so a fix for one arch never over-matches another.
     """
     grouped: dict = defaultdict(set)  # (name, module) -> {(version, arch), ...}
     for pkg, version, module, arch in pkg_tuples:
@@ -293,8 +299,14 @@ def _build_fixed_in(pkg_tuples, ns_name, issued):
 
     fixed_in_list = []
     for (pkg, module), version_arches in grouped.items():
-        distinct_versions = {version for version, _ in version_arches}
-        entries = [(next(iter(distinct_versions)), None)] if len(distinct_versions) <= 1 else sorted(version_arches)
+        arches_by_version: dict = defaultdict(set)
+        for version, arch in version_arches:
+            arches_by_version[version].add(arch)
+
+        # architecture only matters when different versions cover different arch sets
+        arch_discriminates = len({frozenset(arches) for arches in arches_by_version.values()}) > 1
+        entries = sorted(version_arches) if arch_discriminates else [(version, None) for version in sorted(arches_by_version)]
+
         for version, arch in entries:
             fixed_el = {
                 "Name": pkg,

@@ -1,74 +1,562 @@
 <oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5">
+<!-- Real ELSA definitions copied verbatim from com.oracle.elsa-all.xml (prod OVAL).
+     ELSA-2022-4803 rsyslog: x86_64/aarch64 respun at different revisions -> arch-specific.
+     ELSA-2025-10073 firefox: one fix shared by every arch -> arch-less.
+     ELSA-2024-2961 osbuild: two rebuilds, each on both arches -> arch-less (not per-arch).
+     Only the affected <definition> blocks are kept; the parser reads criterion comments
+     and metadata only, so the referenced tests/objects/states are not needed. -->
 <definitions>
 <definition id="oval:com.oracle.elsa:def:20224803" version="501" class="patch">
 <metadata>
-<title>ELSA-2022-4803:  rsyslog security update (IMPORTANT)</title>
-<affected family="unix"><platform>Oracle Linux 7</platform></affected>
+<title>
+ELSA-2022-4803:  rsyslog security update (IMPORTANT)
+</title>
+<affected family="unix">
+<platform>Oracle Linux 7</platform>
+
+</affected>
 <reference source="elsa" ref_id="ELSA-2022-4803" ref_url="https://linux.oracle.com/errata/ELSA-2022-4803.html"/>
 <reference source="CVE" ref_id="CVE-2022-24903" ref_url="https://linux.oracle.com/cve/CVE-2022-24903.html"/>
-<description>rsyslog</description>
-<advisory><severity>IMPORTANT</severity><issued date="2022-05-31"/><cve href="https://linux.oracle.com/cve/CVE-2022-24903.html">CVE-2022-24903</cve></advisory>
+
+<description>
+[8.24.0-57.0.4.el7_9.3]
+- Newer gcc complains about implicit declaration of prctl. Added header file to quiesce the compiler
+
+[8.24.0-57.3]
+- Address CVE-2022-24903, Heap-based overflow in TCP syslog server
+  resolves: rhbz#2081395
+</description>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   advisory details   ~~~~~~~~~~~~~~~~~~~ 
+-->
+<advisory>
+<severity>IMPORTANT</severity>
+<rights>Copyright 2022 Oracle, Inc.</rights>
+<issued date="2022-05-31"/>
+<cve cvss3="8.1/CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H" href="https://linux.oracle.com/cve/CVE-2022-24903.html" public="20220506">CVE-2022-24903</cve>
+
+<affected_cpe_list>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.21.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.17.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.20.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.14.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.5.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.2.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:24.1.0.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:linux:7::optional_latest</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:24.1.1.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.4.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.9.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:23.1.0.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.4.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.5.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.15.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.16.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.7.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.6.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.22.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.7.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.8.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.1.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.10.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:23.1.1.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.9.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.6.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.3.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.18.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.10.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.19.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:linux:7:9:patch</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.2.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.1.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:linux:7::latest</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:24.1.3.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:21.2.23.0.0::ol7</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:24.1.4.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.3.0.0::ovs3</cpe>
+<cpe>cpe:/a:oracle:exadata_dbserver:22.1.8.0.0::ol7</cpe>
+</affected_cpe_list>
+</advisory>
 </metadata>
 <criteria operator="AND">
-<criterion test_ref="t1" comment="Oracle Linux 7 is installed"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803001" comment="Oracle Linux 7 is installed"/>
 <criteria operator="OR">
 <criteria operator="AND">
-<criterion test_ref="t2" comment="Oracle Linux arch is aarch64"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803002" comment="Oracle Linux arch is aarch64"/>
 <criteria operator="OR">
 <criteria operator="AND">
-<criterion test_ref="t3" comment="rsyslog is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
-<criterion test_ref="t4" comment="rsyslog is signed with the Oracle Linux 7 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803003" comment="rsyslog is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803004" comment="rsyslog is signed with the Oracle Linux 7 key"/>
 </criteria>
 <criteria operator="AND">
-<criterion test_ref="t5" comment="rsyslog-doc is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
-<criterion test_ref="t6" comment="rsyslog-doc is signed with the Oracle Linux 7 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803005" comment="rsyslog-crypto is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803006" comment="rsyslog-crypto is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803007" comment="rsyslog-doc is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803008" comment="rsyslog-doc is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803009" comment="rsyslog-elasticsearch is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803010" comment="rsyslog-elasticsearch is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803011" comment="rsyslog-gnutls is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803012" comment="rsyslog-gnutls is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803013" comment="rsyslog-gssapi is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803014" comment="rsyslog-gssapi is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803015" comment="rsyslog-kafka is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803016" comment="rsyslog-kafka is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803017" comment="rsyslog-libdbi is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803018" comment="rsyslog-libdbi is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803019" comment="rsyslog-mmaudit is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803020" comment="rsyslog-mmaudit is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803021" comment="rsyslog-mmjsonparse is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803022" comment="rsyslog-mmjsonparse is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803023" comment="rsyslog-mmkubernetes is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803024" comment="rsyslog-mmkubernetes is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803025" comment="rsyslog-mmnormalize is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803026" comment="rsyslog-mmnormalize is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803027" comment="rsyslog-mmsnmptrapd is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803028" comment="rsyslog-mmsnmptrapd is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803029" comment="rsyslog-mysql is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803030" comment="rsyslog-mysql is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803031" comment="rsyslog-pgsql is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803032" comment="rsyslog-pgsql is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803033" comment="rsyslog-relp is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803034" comment="rsyslog-relp is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803035" comment="rsyslog-snmp is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803036" comment="rsyslog-snmp is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803037" comment="rsyslog-udpspoof is earlier than 0:8.24.0-57.0.4.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803038" comment="rsyslog-udpspoof is signed with the Oracle Linux 7 key"/>
 </criteria>
 </criteria>
 </criteria>
 <criteria operator="AND">
-<criterion test_ref="t7" comment="Oracle Linux arch is x86_64"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803039" comment="Oracle Linux arch is x86_64"/>
 <criteria operator="OR">
 <criteria operator="AND">
-<criterion test_ref="t8" comment="rsyslog is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
-<criterion test_ref="t9" comment="rsyslog is signed with the Oracle Linux 7 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803040" comment="rsyslog is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803041" comment="rsyslog is signed with the Oracle Linux 7 key"/>
 </criteria>
 <criteria operator="AND">
-<criterion test_ref="t10" comment="rsyslog-doc is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
-<criterion test_ref="t11" comment="rsyslog-doc is signed with the Oracle Linux 7 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803042" comment="rsyslog-crypto is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803043" comment="rsyslog-crypto is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803044" comment="rsyslog-doc is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803045" comment="rsyslog-doc is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803046" comment="rsyslog-elasticsearch is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803047" comment="rsyslog-elasticsearch is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803048" comment="rsyslog-gnutls is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803049" comment="rsyslog-gnutls is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803050" comment="rsyslog-gssapi is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803051" comment="rsyslog-gssapi is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803052" comment="rsyslog-kafka is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803053" comment="rsyslog-kafka is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803054" comment="rsyslog-libdbi is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803055" comment="rsyslog-libdbi is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803056" comment="rsyslog-mmaudit is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803057" comment="rsyslog-mmaudit is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803058" comment="rsyslog-mmjsonparse is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803059" comment="rsyslog-mmjsonparse is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803060" comment="rsyslog-mmkubernetes is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803061" comment="rsyslog-mmkubernetes is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803062" comment="rsyslog-mmnormalize is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803063" comment="rsyslog-mmnormalize is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803064" comment="rsyslog-mmsnmptrapd is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803065" comment="rsyslog-mmsnmptrapd is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803066" comment="rsyslog-mysql is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803067" comment="rsyslog-mysql is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803068" comment="rsyslog-pgsql is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803069" comment="rsyslog-pgsql is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803070" comment="rsyslog-relp is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803071" comment="rsyslog-relp is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803072" comment="rsyslog-snmp is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803073" comment="rsyslog-snmp is signed with the Oracle Linux 7 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803074" comment="rsyslog-udpspoof is earlier than 0:8.24.0-57.0.1.el7_9.3"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20224803075" comment="rsyslog-udpspoof is signed with the Oracle Linux 7 key"/>
 </criteria>
 </criteria>
 </criteria>
 </criteria>
 </criteria>
+
 </definition>
-<definition id="oval:com.oracle.elsa:def:20990001" version="501" class="patch">
+<definition id="oval:com.oracle.elsa:def:202510073" version="501" class="patch">
 <metadata>
-<title>ELSA-2099-0001:  firefox security update (IMPORTANT)</title>
-<affected family="unix"><platform>Oracle Linux 9</platform></affected>
-<reference source="elsa" ref_id="ELSA-2099-0001" ref_url="https://linux.oracle.com/errata/ELSA-2099-0001.html"/>
-<reference source="CVE" ref_id="CVE-2099-0001" ref_url="https://linux.oracle.com/cve/CVE-2099-0001.html"/>
-<description>firefox</description>
-<advisory><severity>IMPORTANT</severity><issued date="2099-01-01"/><cve href="https://linux.oracle.com/cve/CVE-2099-0001.html">CVE-2099-0001</cve></advisory>
+<title>
+ELSA-2025-10073:  firefox security update (IMPORTANT)
+</title>
+<affected family="unix">
+<platform>Oracle Linux 10</platform>
+
+</affected>
+<reference source="elsa" ref_id="ELSA-2025-10073" ref_url="https://linux.oracle.com/errata/ELSA-2025-10073.html"/>
+<reference source="CVE" ref_id="CVE-2025-6429" ref_url="https://linux.oracle.com/cve/CVE-2025-6429.html"/>
+<reference source="CVE" ref_id="CVE-2025-6424" ref_url="https://linux.oracle.com/cve/CVE-2025-6424.html"/>
+<reference source="CVE" ref_id="CVE-2025-6430" ref_url="https://linux.oracle.com/cve/CVE-2025-6430.html"/>
+<reference source="CVE" ref_id="CVE-2025-6425" ref_url="https://linux.oracle.com/cve/CVE-2025-6425.html"/>
+
+<description>
+[128.12.0-1.0.1]
+- Fix firefox-oracle-default-prefs.js for new nss [Orabug: 37079789]
+
+[128.12.0]
+- Add debranding patches (Mustafa Gezen)
+- Add OpenELA default preferences (Louis Abel)
+
+[128.12.0-1]
+- Update to 128.12.0 build1
+</description>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   advisory details   ~~~~~~~~~~~~~~~~~~~ 
+-->
+<advisory>
+<severity>IMPORTANT</severity>
+<rights>Copyright 2025 Oracle, Inc.</rights>
+<issued date="2025-07-01"/>
+<cve cvss3="6.1/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" href="https://linux.oracle.com/cve/CVE-2025-6429.html" public="20250624">CVE-2025-6429</cve>
+<cve cvss3="7.5/CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H" href="https://linux.oracle.com/cve/CVE-2025-6424.html" public="20250624">CVE-2025-6424</cve>
+<cve cvss3="6.1/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" href="https://linux.oracle.com/cve/CVE-2025-6430.html" public="20250624">CVE-2025-6430</cve>
+<cve cvss3="6.1/CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" href="https://linux.oracle.com/cve/CVE-2025-6425.html" public="20250624">CVE-2025-6425</cve>
+
+<affected_cpe_list>
+<cpe>cpe:/a:oracle:linux:10::appstream</cpe>
+</affected_cpe_list>
+</advisory>
 </metadata>
 <criteria operator="AND">
-<criterion test_ref="f1" comment="Oracle Linux 9 is installed"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073001" comment="Oracle Linux 10 is installed"/>
 <criteria operator="OR">
 <criteria operator="AND">
-<criterion test_ref="f2" comment="Oracle Linux arch is aarch64"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073002" comment="Oracle Linux arch is aarch64"/>
 <criteria operator="AND">
-<criterion test_ref="f3" comment="firefox is earlier than 0:128.0-1.el9"/>
-<criterion test_ref="f4" comment="firefox is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073003" comment="firefox is earlier than 0:128.12.0-1.0.1.el10_0"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073004" comment="firefox is signed with the Oracle Linux 10 key"/>
 </criteria>
 </criteria>
 <criteria operator="AND">
-<criterion test_ref="f5" comment="Oracle Linux arch is x86_64"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073005" comment="Oracle Linux arch is x86_64"/>
 <criteria operator="AND">
-<criterion test_ref="f6" comment="firefox is earlier than 0:128.0-1.el9"/>
-<criterion test_ref="f7" comment="firefox is signed with the Oracle Linux 9 key"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073003" comment="firefox is earlier than 0:128.12.0-1.0.1.el10_0"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:202510073004" comment="firefox is signed with the Oracle Linux 10 key"/>
 </criteria>
 </criteria>
 </criteria>
 </criteria>
+
+</definition>
+<definition id="oval:com.oracle.elsa:def:20242961" version="501" class="patch">
+<metadata>
+<title>
+ELSA-2024-2961:  Image builder components bug fix, enhancement and security update (MODERATE)
+</title>
+<affected family="unix">
+<platform>Oracle Linux 8</platform>
+
+</affected>
+<reference source="elsa" ref_id="ELSA-2024-2961" ref_url="https://linux.oracle.com/errata/ELSA-2024-2961.html"/>
+<reference source="CVE" ref_id="CVE-2024-2307" ref_url="https://linux.oracle.com/cve/CVE-2024-2307.html"/>
+
+<description>
+osbuild
+[110-1]
+- New upstream release
+
+[109-1]
+- New upstream release
+
+[106-1]
+- New upstream release
+
+[105-1]
+- New upstream release
+
+[104-2]
+- Fix unit tests in RHEL CI by backporting upstream fixes
+
+[104-1]
+- New upstream release
+
+[101-1]
+- New upstream release
+
+[100-2]
+- Change unit-test timeout from 3h to 4h
+
+[100-1]
+- New upstream release
+
+[96-1]
+- New upstream release
+
+[95-1]
+- New upstream release
+
+[94-1]
+- New upstream release
+
+osbuild-composer
+[101-1]
+- New upstream release
+
+[100-1]
+- New upstream release
+
+[99-1]
+- New upstream release
+
+[98-1]
+- New upstream release
+
+[96-1]
+- New upstream release
+
+[95-1]
+- New upstream release
+
+[94-1]
+- New upstream release
+
+[93-1]
+- New upstream release
+
+[92-1]
+- New upstream release
+
+[91-1]
+- New upstream release
+
+[90-1]
+- New upstream release
+
+[89-1]
+- New upstream release
+</description>
+<!--
+ ~~~~~~~~~~~~~~~~~~~~   advisory details   ~~~~~~~~~~~~~~~~~~~ 
+-->
+<advisory>
+<severity>MODERATE</severity>
+<rights>Copyright 2024 Oracle, Inc.</rights>
+<issued date="2024-05-24"/>
+<cve cvss3="6.1/CVSS:3.0/AV:L/AC:L/PR:H/UI:R/S:U/C:H/I:H/A:L" href="https://linux.oracle.com/cve/CVE-2024-2307.html" public="20240319">CVE-2024-2307</cve>
+
+<affected_cpe_list>
+<cpe>cpe:/a:oracle:linux:8:10:appstream_base</cpe>
+<cpe>cpe:/a:oracle:linux:8::appstream</cpe>
+</affected_cpe_list>
+</advisory>
+</metadata>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961001" comment="Oracle Linux 8 is installed"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961002" comment="Oracle Linux arch is aarch64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961003" comment="osbuild is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961004" comment="osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961005" comment="osbuild is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961006" comment="osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961007" comment="osbuild-composer is earlier than 0:101-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961008" comment="osbuild-composer is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961009" comment="osbuild-composer-core is earlier than 0:101-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961010" comment="osbuild-composer-core is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961011" comment="osbuild-composer-worker is earlier than 0:101-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961012" comment="osbuild-composer-worker is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961013" comment="osbuild-depsolve-dnf is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961014" comment="osbuild-depsolve-dnf is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961015" comment="osbuild-depsolve-dnf is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961016" comment="osbuild-depsolve-dnf is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961017" comment="osbuild-luks2 is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961018" comment="osbuild-luks2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961019" comment="osbuild-luks2 is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961020" comment="osbuild-luks2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961021" comment="osbuild-lvm2 is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961022" comment="osbuild-lvm2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961023" comment="osbuild-lvm2 is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961024" comment="osbuild-lvm2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961025" comment="osbuild-ostree is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961026" comment="osbuild-ostree is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961027" comment="osbuild-ostree is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961028" comment="osbuild-ostree is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961029" comment="osbuild-selinux is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961030" comment="osbuild-selinux is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961031" comment="osbuild-selinux is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961032" comment="osbuild-selinux is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961033" comment="python3-osbuild is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961034" comment="python3-osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961035" comment="python3-osbuild is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961036" comment="python3-osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+</criteria>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961037" comment="Oracle Linux arch is x86_64"/>
+<criteria operator="OR">
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961003" comment="osbuild is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961004" comment="osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961005" comment="osbuild is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961006" comment="osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961007" comment="osbuild-composer is earlier than 0:101-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961008" comment="osbuild-composer is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961009" comment="osbuild-composer-core is earlier than 0:101-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961010" comment="osbuild-composer-core is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961011" comment="osbuild-composer-worker is earlier than 0:101-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961012" comment="osbuild-composer-worker is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961013" comment="osbuild-depsolve-dnf is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961014" comment="osbuild-depsolve-dnf is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961015" comment="osbuild-depsolve-dnf is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961016" comment="osbuild-depsolve-dnf is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961017" comment="osbuild-luks2 is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961018" comment="osbuild-luks2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961019" comment="osbuild-luks2 is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961020" comment="osbuild-luks2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961021" comment="osbuild-lvm2 is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961022" comment="osbuild-lvm2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961023" comment="osbuild-lvm2 is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961024" comment="osbuild-lvm2 is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961025" comment="osbuild-ostree is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961026" comment="osbuild-ostree is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961027" comment="osbuild-ostree is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961028" comment="osbuild-ostree is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961029" comment="osbuild-selinux is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961030" comment="osbuild-selinux is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961031" comment="osbuild-selinux is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961032" comment="osbuild-selinux is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961033" comment="python3-osbuild is earlier than 0:110-1.0.1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961034" comment="python3-osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+<criteria operator="AND">
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961035" comment="python3-osbuild is earlier than 0:110-1.el8"/>
+<criterion test_ref="oval:com.oracle.elsa:tst:20242961036" comment="python3-osbuild is signed with the Oracle Linux 8 key"/>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+</criteria>
+
 </definition>
 </definitions>
 </oval_definitions>
