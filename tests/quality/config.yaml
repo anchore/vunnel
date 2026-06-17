@@ -296,7 +296,7 @@ tests:
   - provider: oracle
     use_cache: true
     additional_trigger_globs:
-      - src/vunnel/utils/oval_parser.py
+      - src/vunnel/providers/oracle/oval_parser.py
     images:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
       - docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
@@ -319,8 +319,6 @@ tests:
     use_cache: true
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
     # This will still test incremental updates relative to the nightly cache that is populated.
-    additional_trigger_globs:
-      - src/vunnel/utils/oval_parser.py
     images:
       - registry.access.redhat.com/ubi8@sha256:68fecea0d255ee253acbf0c860eaebb7017ef5ef007c25bee9eeffd29ce85b29
       - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf

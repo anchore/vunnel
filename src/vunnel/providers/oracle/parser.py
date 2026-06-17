@@ -6,10 +6,10 @@ import os
 import re
 from typing import TYPE_CHECKING, Any
 
+from vunnel.providers.oracle.oval_parser import Config, parse
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import rpm
-from vunnel.utils.oval_parser import Config, parse
 
 if TYPE_CHECKING:
     from collections.abc import Generator

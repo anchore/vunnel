@@ -34,7 +34,9 @@ class Config:
     csaf_parallelism: int | str = "20x"
     full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
-    rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
+    # legacy field, kept so existing configs still load. The OVAL source has been removed;
+    # CSAF is the only RHSA source now. A value of "OVAL" logs a warning and falls back to CSAF.
+    rhsa_source: str = "CSAF"
     ignore_hydra_errors: bool = False
 
 
