@@ -24,7 +24,7 @@ class Config:
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_SECDB_URL
     secdb_url: str = "https://packages.cgr.dev/chainguard/security.json"
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_URL
-    osv_url: str = "https://packages.cgr.dev/chainguard/v2/osv/all.json"
+    osv_url: str = "https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz"
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
     use_osv: bool = False
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_MAX_WORKERS

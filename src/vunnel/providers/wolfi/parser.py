@@ -3,9 +3,11 @@ from __future__ import annotations
 import abc
 import concurrent.futures
 import copy
+import io
 import logging
 import os
 import re
+import tarfile
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -274,52 +276,22 @@ class OSVParser(Parser):
             os.makedirs(self.input_dir_path, exist_ok=True)
 
         try:
-            self.logger.info(f"downloading {self.namespace} osv index {self.url}")
-            # self.url should point to the top level all.json file, e.g.
-            # https://packages.cgr.dev/chainguard/v2/osv/all.json
-            r = http.get(self.url, self.logger, timeout=self.download_timeout)
-            index = orjson.loads(r.content)
-
-            base_url = self.url.rsplit("/", 1)[0]
-            # Download all entries in the index concurrently using a thread pool,
-            # which should speed up the download process significantly since there are thousands of entries.
-            # We construct the URL for each entry by appending the entry ID and .json to the base URL
-            # e.g. https://packages.cgr.dev/chainguard/v2/osv/CGA-2255-2h2p-73q2.json
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                futures = []
-                for entry in index:
-                    entry_id = entry["id"]
-                    if not entry_id or not self._cga_id_re.match(entry_id):
-                        self.logger.warning(f"skipping osv entry with invalid id: {entry_id!r}")
-                        continue
-                    futures.append(
-                        executor.submit(self._download_single_file, f"{base_url}/{entry_id}.json", f"{entry_id}.json"),
-                    )
-                # surface the first exception (if any) — matches prior behavior where a single
-                # failure aborted the batch via the outer try/except
-                done, _not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
-                for future in done:
-                    future.result()
+            self.logger.info(f"downloading {self.namespace} osv {self.url}")
+            r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
+            buf = io.BytesIO(r.content)
+            with tarfile.open(fileobj=buf, mode="r:gz") as tf:
+                tf.extractall(path=self.input_dir_path)
         except Exception:
-            self.logger.exception(f"ignoring error processing osv for {self.url}")
-
-    def _download_single_file(self, url: str, filename: str) -> None:
-        '''
-        Download a single OSV entry file given its URL and the desired filename.
-        '''
-        file_path = os.path.join(self.input_dir_path, filename)
-        self.logger.info(f"downloading {self.namespace} osv entry {filename}")
-        r = http.get(url, self.logger, stream=True, timeout=self.download_timeout)
-        with open(file_path, "wb") as fp:
-            for chunk in r.iter_content():
-                fp.write(chunk)
+            self.logger.exception(f"ignoring error processing osv feed for {self.url}")
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         try:
             # for each file we have downloaded, which should be every json file in the index, load it
             # and yield the data for normalization
             for filename in os.listdir(self.input_dir_path):
-                if not filename.endswith(".json"):
+                # we only want to process files of form CGA-0123-4567-89ab.json
+                if not self._cga_id_re.match(filename.removesuffix(".json")):
+                    self.logger.warning(f"skipping file with invalid name: {filename}")
                     continue
                 self.logger.info(f"loading {self.namespace} osv data from {filename}")
                 with open(os.path.join(self.input_dir_path, filename)) as fh:
