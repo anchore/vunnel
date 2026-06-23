@@ -11,7 +11,6 @@ import tarfile
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-import cvss
 import orjson
 
 from vunnel.tool import fixdate
@@ -39,7 +38,7 @@ class Parser(abc.ABC):
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
         skip_download: bool = False,
-        max_workers: int = 64,
+        max_workers: int = 16,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -114,7 +113,6 @@ class SecDBParser(Parser):
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
         skip_download: bool = False,
-        max_workers: int = 8,
     ):
         self._db_filename = self._extract_filename_from_url(url)
         super().__init__(
@@ -126,7 +124,6 @@ class SecDBParser(Parser):
             logger,
             security_reference_url,
             skip_download=skip_download,
-            max_workers=max_workers,
         )
 
     def _download(self) -> None:
@@ -285,17 +282,24 @@ class OSVParser(Parser):
             self.logger.exception(f"ignoring error processing osv feed for {self.url}")
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+        self.logger.info(f"load files for {self.namespace} osv feed")
         try:
-            # for each file we have downloaded, which should be every json file in the index, load it
-            # and yield the data for normalization
+            # filter files to those which match the CGA...json format
+            filenames = []
             for filename in os.listdir(self.input_dir_path):
-                # we only want to process files of form CGA-0123-4567-89ab.json
                 if not self._cga_id_re.match(filename.removesuffix(".json")):
                     self.logger.warning(f"skipping file with invalid name: {filename}")
                     continue
-                self.logger.info(f"loading {self.namespace} osv data from {filename}")
+                filenames.append(filename)
+
+            # given the large volume of osv files, process in parallel
+            def _load_file(filename: str) -> dict[str, Any]:
+                self.logger.debug(f"loading {self.namespace} osv data from {filename}")
                 with open(os.path.join(self.input_dir_path, filename)) as fh:
-                    data = orjson.loads(fh.read())
+                    return orjson.loads(fh.read())
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                for data in executor.map(_load_file, filenames):
                     yield self._release_, data
         except Exception:
             self.logger.exception(f"failed to load {self.namespace} osv data")

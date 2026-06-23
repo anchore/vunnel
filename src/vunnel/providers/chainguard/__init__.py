@@ -28,7 +28,7 @@ class Config:
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
     use_osv: bool = False
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_MAX_WORKERS
-    osv_max_workers: int = 8
+    osv_max_workers: int = 16 
 
 
 class Provider(provider.Provider):
