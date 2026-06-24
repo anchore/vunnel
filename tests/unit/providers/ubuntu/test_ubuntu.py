@@ -1484,6 +1484,11 @@ class TestOSDowncoverter:
         rec.update(overrides)
         return rec
 
+    def test_withdrawn_record_is_skipped(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+        rec = self._osv_record(withdrawn="2025-09-12T17:13:25Z")
+        assert osv_to_os(rec) is None
+
     def test_fixed_event_yields_fixedin_with_version(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
         out = osv_to_os(self._osv_record())

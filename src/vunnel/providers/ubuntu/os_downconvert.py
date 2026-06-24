@@ -176,6 +176,11 @@ def osv_to_os(payload: dict[str, Any]) -> dict[str, Any] | None:
     Caller is responsible for choosing the identifier and schema. This
     function just produces the payload.
     """
+    # Withdrawn records are retractions; the OS schema has no withdrawn concept,
+    # so drop them rather than emit an affected-at-all-versions record.
+    if payload.get("withdrawn"):
+        return None
+
     upstream = payload.get("upstream") or []
     if not upstream:
         return None
