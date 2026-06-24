@@ -1,1203 +1,716 @@
 from __future__ import annotations
 
-import concurrent.futures
-import copy
-import enum
 import logging
 import os
 import re
-import time
-from dataclasses import asdict, dataclass, field
+import tarfile
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel import result, schema
 from vunnel.tool import fixdate
+from vunnel.utils import http_wrapper as http
+from vunnel.utils import osv
 
-from .git import GitWrapper
+from . import parser_legacy
+from .os_downconvert import os_identifier_for, osv_to_os
+from .usn_fixdate_overlay import USNFixDateOverlay, usn_extra_candidates
+from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Iterator
     from types import TracebackType
 
     from vunnel.workspace import Workspace
 
-namespace = "ubuntu"
 
-default_max_workers = 8
-default_git_url = "git://git.launchpad.net/ubuntu-cve-tracker"
-default_git_branch = "master"
-
-ubuntu_pkg_version_format = "dpkg"
-ubuntu_cve_url = "https://ubuntu.com/security/{}"
-_patches_header_regex = re.compile(r"Patches_(\S+)\s*")
-_patches_regex = re.compile(r"\s*(.+)_(.+)\s*:\s+(.+)\s*")
-_patch_state_regex = re.compile(r"\s*(\S+)(\s+.+)?\s*")
-_indent_line_regex = re.compile(r"\s+\S+\s*")
-_package_priority_regex = re.compile(r"\s*Priority_(\S+)\s*:\s+(\S+)\s*")
-_cve_filename_regex = re.compile("CVE-[0-9]+-[0-9]+")
-
-# Per the Ubuntu README in the security tracker BZR repo:
-# Maps the state name to whether it indicates a package is vulnerable
-patch_states = {
-    "DNE": False,  # Does Not Exist, the package is does not exist in a particular ubuntu release
-    "needs-triage": True,  # Not yet determined if CVE affects package, consider all versions vulnerable until determination is made
-    "ignored": True,  # Package is vulnerable but won't be fixed (e.g. end-of-life, no viable solution)
-    "not-affected": False,  # The package is related to the issue, but not affected by it.
-    "needed": True,  # Package is vuln and needs a fix. No version yet.
-    "released": True,  # The package is affected and a fix has been released with the given version.
-    "pending": True,
-    # Indicates a vuln with release coming in the expected version. We ignore here for now assuming it will be in 'released' status shortly.
-    "active": True,  # The package is affected, needs fixing and is being worked on.
-    "deferred": True,
-    # The package is affected by work on fix is deferred for some reason. In this case, ignore any version info as it may be random (e.g. a date)
-}
-
-patch_merge_criteria = {
-    "status": re.compile(r"ignored"),
-    # match end-of-life, end-of-standard-support, out-of-standard-support anywhere in the line
-    "version": re.compile(
-        r"(^|.*\s+)(end[\s-]of[\s-]life|end[\s-]of[\s-]standard[\s-]support|out[\s-]of[\s-]standard[\s-]support)($|\s+|\,.*)",
-    ),
-}
-
-# Only releases present in this mapping will be output by the driver, so it must be maintained with new releases.
-ubuntu_version_names = {
-    "precise": "12.04",
-    # 'precise/esm': '12.04',
-    "quantal": "12.10",
-    "raring": "13.04",
-    "trusty": "14.04",
-    "utopic": "14.10",
-    "vivid": "15.04",
-    "wily": "15.10",
-    "xenial": "16.04",
-    "yakkety": "16.10",
-    "zesty": "17.04",
-    "artful": "17.10",
-    "bionic": "18.04",
-    "cosmic": "18.10",
-    "disco": "19.04",
-    "eoan": "19.10",
-    "focal": "20.04",
-    "groovy": "20.10",
-    "hirsute": "21.04",
-    "impish": "21.10",
-    "jammy": "22.04",
-    "kinetic": "22.10",
-    "lunar": "23.04",
-    "mantic": "23.10",
-    "noble": "24.04",
-    "oracular": "24.10",
-    "plucky": "25.04",
-    "questing": "25.10",
-    "resolute": "26.04",
-}
-
-# driver workspace
-driver_workspace = None
+_CVE_FILENAME_RE = re.compile(r"^CVE-[0-9]{4}-[0-9]+$")
 
 
-@dataclass(frozen=True)
-class DistroPkg:
-    distro: str
-    pkg: str
+_SCHEMA_VERSION_RE = re.compile(r"/schema-([0-9]+(?:\.[0-9]+){1,2})\.json$")
 
 
-class JsonifierMixin:
-    def json(self):
-        jsonified = {}
-        for k, v in vars(self).items():
-            if k[0] != "_":
-                if isinstance(v, (list, set)):
-                    jsonified[k] = [x.json() if hasattr(x, "json") and callable(x.json) else x for x in v]
-                elif isinstance(v, dict):
-                    jsonified[k] = {x: y.json() if hasattr(y, "json") and callable(y.json) else y for x, y in v.items()}
-                elif hasattr(v, "json"):
-                    jsonified[k] = v.json()
-                else:
-                    jsonified[k] = v
-        return jsonified
+def ecosystem_to_slug(ecosystem: str) -> str:
+    """Map an OSV ecosystem string to a filesystem-safe slug.
 
-
-# Driver V2 Design Changes:
-# Because the ubuntu data is removed when a release hits EOL (patch records changed from a state to 'ignored (reached end-of-life)'),
-# the way to keep the actual state for all cves is to track the last update prior to EOL, which requires traversing revision history.
-# The v2 driver does this to maintain an accurate state
-# for each cve. It will be very slow on initial run but can be optimized by pre-populating the cache of merged state
-
-
-class Vulnerability(JsonifierMixin):
+    Lowercase and replace `:` with `-`. The mapping is reversible by
+    splitting on `-` against the known ecosystem set, but we don't rely
+    on that — the slug is opaque to callers.
     """
-    Class representing the record to be returned. Uses strange capitalization
-    to be backwards compatible in the json output with previous version of feed data.
+    return ecosystem.lower().replace(":", "-")
+
+
+_VERSION_RE = re.compile(r"^\d+\.\d+$")
+
+
+def pro_to_base_ecosystem(ecosystem: str) -> str | None:
+    """Map a plain Ubuntu Pro (ESM) ecosystem to its base Ubuntu form.
+
+    Only the plain ESM tier qualifies. Sub-tiers (FIPS, FIPS-updates,
+    FIPS-preview, Realtime) and adjacent product lines (Nvidia-BlueField)
+    are intentionally excluded:
+
+      - FIPS / FIPS-updates / FIPS-preview rebuild specific packages
+        (kernel, openssl, libgcrypt, ...) against FIPS 140-validated
+        cryptographic modules. The crypto code paths differ from base.
+        A CVE in the FIPS-rebuilt binary may or may not exist in the
+        mainline binary depending on whether the bug is in the
+        FIPS-modified code; inference would be unreliable.
+
+      - Realtime is the PREEMPT_RT kernel — locking, scheduling, and
+        concurrency paths are materially different. RT-specific CVEs
+        and non-RT-specific CVEs both exist.
+
+      - Nvidia-BlueField is a separate SmartNIC/DPU OS product line
+        with its own package set.
+
+    Plain Ubuntu Pro packages are byte-identical to base packages while
+    base is supported, then diverge only via ESM-backported security
+    patches. A CVE on Pro means the same vulnerable code shipped on base
+    — that's the inference this enables.
+
+      Ubuntu:Pro:20.04:LTS              -> Ubuntu:20.04:LTS    (plain ESM, inferable)
+      Ubuntu:Pro:14.04:LTS              -> Ubuntu:14.04:LTS
+      Ubuntu:Pro:FIPS:20.04:LTS         -> None                (different build)
+      Ubuntu:Pro:FIPS-updates:22.04:LTS -> None                (different build)
+      Ubuntu:Pro:Realtime:24.04:LTS     -> None                (PREEMPT_RT kernel)
+      Ubuntu:Nvidia-BlueField:22.04:LTS -> None                (separate product)
+      Ubuntu:20.04:LTS                  -> None                (already base)
     """
+    parts = ecosystem.split(":")
+    # plain Pro shape: Ubuntu:Pro:<version>[:LTS], 3 or 4 segments, nothing between Pro and version
+    if len(parts) not in (3, 4):
+        return None
+    if parts[0] != "Ubuntu" or parts[1] != "Pro":
+        return None
+    if not _VERSION_RE.match(parts[2]):
+        return None
+    if len(parts) == 4 and parts[3] != "LTS":
+        return None
+    return ":".join(["Ubuntu", *parts[2:]])
 
-    def __init__(self):
-        self.Name = None
-        self.NamespaceName = None
-        self.Description = ""
-        self.Severity = None
-        self.Metadata = None
-        self.Link = None
-        self.FixedIn = []
+
+def _affected_package_names(payload: dict[str, Any]) -> set[str]:
+    """Return the set of source-package names in a record's affected[]."""
+    out: set[str] = set()
+    for a in payload.get("affected", []):
+        pkg = a.get("package", {}).get("name")
+        if pkg:
+            out.add(pkg)
+    return out
 
 
-class FixedIn(JsonifierMixin):
+def _synthesize_missing(
+    pro_affs: list[dict[str, Any]],
+    existing_pkgs: set[str],
+    base_eco: str,
+    pro_eco: str | None,
+) -> list[dict[str, Any]]:
+    """For each Pro affected[] entry whose source-package isn't already in the
+    base envelope, produce a synthesized base affected[] entry tagged with the
+    inference provenance.
     """
-    Class representing a fix record for return back to the service from the driver. The semantics of the version are:
-    "None" -> Package is vulnerable and no fix available yet
-    ! "None" -> Version of package with a fix for a vulnerability. Assume all older versions of the package are vulnerable.
-
-    """
-
-    def __init__(self):
-        self.Name = None
-        self.NamespaceName = None
-        self.VersionFormat = None
-        self.Version = None
-        self.VendorAdvisory = None
-        self.Available = None
-
-
-class FixAvailability(JsonifierMixin):
-    def __init__(self):
-        self.Date = None
-        self.Kind = None
-
-
-class Severity(enum.IntEnum):
-    Unknown = 1
-    Negligible = 2
-    Low = 3
-    Medium = 4
-    High = 5
-    Critical = 6
-
-    def json(self):
-        return self.name
-
-
-@dataclass
-class Patch:
-    distro: str
-    status: str
-    version: str
-    package: str | None = None
-    priority: str | None = None
-
-
-@dataclass
-class CVEFile:
-    # Keep this naming for now to preserve compatibility with legacy
-    name: str
-    priority: str = "Unknown"
-    patches: list[Patch] = field(default_factory=list)
-    ignored_patches: list[Patch] = field(default_factory=list)
-    git_last_processed_rev: str | None = None
-    references: list[str] | None = None
-    description: str | None = None
-
-    @staticmethod
-    def from_dict(d: dict[str, Any]):
-        name = d.get("name", d.get("Name", d.get("candidate", d.get("Candidate"))))
-        priority = d.get("priority", d.get("Priority", "Unknown"))
-        patches = [Patch(**p) for p in d.get("patches", [])]
-        ignored_patches = [Patch(**p) for p in d.get("ignored_patches", [])]
-        git_last_processed_rev = d.get("git_last_processed_rev")
-        references = d.get("references", d.get("References"))
-        description = d.get("description", d.get("Description"))
-        return CVEFile(
-            name=name,
-            priority=priority,
-            patches=patches,
-            ignored_patches=ignored_patches,
-            git_last_processed_rev=git_last_processed_rev,
-            references=references,
-            description=description,
-        )
-
-
-def check_header(expected: str, lines: list[str]):
-    """
-    Check that the first element of the lines list matches expected + ':'. And pop it off if found. Else raise exception.
-    :param expected: The str value of the header prefix expected to be found on the first line
-    :param lines: the list of lines, which will be modified on success by removing the first entry if it matches
-    :return: None
-    """
-
-    # This is not a full match, only prefix to handle cases where the header isn't quite within spec (e.g. notes added etc).
-    if not lines[0].strip().startswith(expected + ":"):
-        raise ValueError(f"Expected header {expected}, found {lines[0]}")
-    lines.pop(0)
-
-
-def parse_list(header: str, lines: list[str]) -> list[str]:
-    """
-    Greedy parser that consumes lines if lines[0] is the header until the first empty line.
-
-    :param header:
-    :param lines:
-    :return:
-    """
-
-    check_header(header, lines)
-
-    refs: list[str] = []
-    while lines:
-        if _indent_line_regex.match(lines[0]):
-            refs.append(lines.pop(0).strip())
-        else:
-            break
-
-    return refs
-
-
-def parse_patch(header: str, lines: list[str]) -> list[Patch]:  # noqa: C901
-    """
-    Parse a patch spec of the form:
-    Patches_<packagename>:
-    [<Priority_<packagename>: <priority>] (these are optional)
-    [debdiff: URL]
-    [vendor: URL]
-    [upstream: URL]
-    [patch: URL]
-    <distro1>_<packagename>: <status> <status details>
-    <distro2>_<packagename>: <status> <status details>
-    ...
-    <distroN>_<packagename>: <status> <status details>
-    <newline>
-
-    :param header:
-    :param lines:
-    :return:
-    """
-    if lines[0].startswith("Patches"):
-        check_header(header, lines)
-
-    patches: list[Patch] = []
-    priority: str | None = None
-    while lines:
-        line = lines[0].strip()
-        if not line:
-            break
-
-            # Check if this is a "Priority_<pkg>: <priority>" line
-        pkg_priority = _package_priority_regex.match(line)
-        if pkg_priority:
-            pkg = pkg_priority.group(1)
-            priority = pkg_priority.group(2)
-            for patch in filter(lambda x: x.package == pkg, patches):
-                patch.priority = priority
-            lines.pop(0)
+    new_affs: list[dict[str, Any]] = []
+    for aff in pro_affs:
+        pkg = aff.get("package", {}).get("name")
+        if not pkg or pkg in existing_pkgs:
             continue
-        else:  # noqa: RET507
-            match = _patches_regex.match(line)
-            if match:
-                version = None
-                state = match.group(3)
-                status_match = _patch_state_regex.match(match.group(3))
-                if status_match and status_match.group(1):
-                    state = status_match.group(1)
-                    if state in patch_states:
-                        version = status_match.group(2)
-                        if version:
-                            version = version.strip()
-                            if version[0] == "(" and version[-1] == ")":
-                                version = version[1:-1]
-
-                        p = Patch(distro=match.group(1), package=match.group(2), status=state, version=version, priority=priority)
-                        patches.append(p)
-                lines.pop(0)
-            else:
-                break
-
-    return patches
+        existing_pkgs.add(pkg)
+        synth = _build_synthetic_base_affected(aff, base_eco)
+        synth["database_specific"]["anchore"]["inference"] = {
+            "kind": "pro-only-fix",
+            "source_ecosystems": [pro_eco] if pro_eco else [],
+        }
+        new_affs.append(synth)
+    return new_affs
 
 
-def parse_simple_keyvalue(expected_key: str, lines: list[str]) -> str:
+def _build_synthetic_base_affected(template: dict[str, Any], base_eco: str) -> dict[str, Any]:
+    """Build a single synthetic affected[] entry for the base ecosystem.
+
+    Inherits source package name and binary list from the Pro template (binaries
+    on Pro ESM are byte-identical to base while base was supported; carrying
+    them lets binary→source resolution still work downstream). Drops `purl`
+    since its `distro=` qualifier points at a Pro codename (e.g. `esm-infra/jammy`).
     """
-    Parse a <Header>: <value> line and any skip ahead any empty lines following
+    src_pkg = dict(template.get("package", {}))
+    src_pkg["ecosystem"] = base_eco
+    src_pkg.pop("purl", None)
 
-    :param header: expected key
-    :param lines: lines of input
-    :return: tuple (value, line count consumed)
+    eco_specific: dict[str, Any] = {}
+    if "binaries" in template.get("ecosystem_specific", {}):
+        eco_specific["binaries"] = template["ecosystem_specific"]["binaries"]
+
+    return {
+        "package": src_pkg,
+        "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+        "ecosystem_specific": eco_specific,
+        "database_specific": {
+            "anchore": {
+                "status": "wont-fix",
+                # `inference.source_ecosystems` filled in by the caller — the same
+                # base (CVE, source-pkg) may have inferences from multiple Pro slices
+                # (though restriction to plain Pro makes this rare in practice).
+            },
+        },
+    }
+
+
+def slice_by_ecosystem(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Group a record's affected[] entries by ecosystem.
+
+    Returns a mapping {ecosystem -> sliced_record}. Each sliced record
+    has the original top-level fields and an affected[] containing only
+    the entries for that ecosystem. Records with no affected[] entries
+    yield an empty mapping.
     """
-
-    tokens = lines[0].split(":", 1)
-    if len(tokens) != 2:
-        raise ValueError(f"Could not parse {lines[0]} as key: value")
-
-    key = tokens[0]
-    value = tokens[1].strip()
-
-    if key != expected_key:
-        raise ValueError(f"Did not find expected key {expected_key}. Found {key}")
-
-    lines.pop(0)
-
-    return value
-
-
-def parse_multiline_keyvalue(header: str, lines: list[str]) -> str:
-    """
-    Parse a header plus multiple lines (to an empty line) into a single string, stripping newlines
-
-    :param header:
-    :param lines:
-    :return:
-    """
-    check_header(header, lines)
-
-    content: list[str] = []
-    while lines and _indent_line_regex.match(lines[0]):
-        content.append(lines.pop(0).strip())
-
-    return " ".join(content)
-
-
-def get_patch_section(header_line: str) -> str | None:
-    match = _patches_header_regex.match(header_line)
-    if match:
-        return match.group(1)
-    return None
-
-
-def check_release(releasename: str) -> bool:
-    """
-    Returns true if the releasename is one we care about.
-
-    :param releasename: str name of the release
-    :return: bool, True if release name is known, False if not
-    """
-    return releasename in ubuntu_version_names
-
-
-def check_state(state: str) -> bool:
-    """
-    Returns true if the state is one we should process.
-    :param state:l
-    :return: bool, True if state is valid, False if not
-    """
-    return state and patch_states.get(state)
-
-
-def check_patch(patch_record: Patch) -> bool:
-    """
-    Filtering test for a patch record to determine if this patch record indicates:
-    * The release is affected
-    * The release is one we are tracking
-
-    :param patch_record: dict for a patch
-    :return: True if record should be used, False if not
-    """
-
-    if not patch_record:
-        return False
-
-    # Distro filter step
-    return check_release(patch_record.distro) and check_state(patch_record.status)
-
-
-def check_merge(patch_record: Patch) -> bool:
-    """
-    Test a patch record to see if it meets the merge criteria
-
-    :param patch_record:
-    :return:
-    """
-
-    if not patch_record:
-        return False
-
-    patch_dict = asdict(patch_record)
-
-    # perform regex match only if the value is non-null and non-empty
-    return all(patch_dict.get(key, None) and re.match(regex, patch_dict.get(key)) for key, regex in patch_merge_criteria.items())
-
-
-def parse_cve_file(cve_id: str, content_lines: list[str]) -> CVEFile:
-    """
-    Parses a single CVE file into a dict representation suitable for further processing.
-
-    :param lines:
-    :return: dict version of the cve record
-    """
-
-    parsed = CVEFile(name=cve_id)
-
-    # Copy to avoid modifying the passed param directly since the parsing is greedy.
-    lines = copy.deepcopy(content_lines)
-    while lines:
-        line = lines[0].strip()
-        if not line or line.startswith("#"):
-            # Skip empties and comments
-            lines.pop(0)
-        else:
-            section = line.split(":", 1)[0]
-            if section == "Candidate":
-                parsed.name = parse_simple_keyvalue(section, lines)
-            elif section == "References":
-                parsed.references = parse_list(section, lines)
-            elif section == "Description":
-                parsed.description = parse_multiline_keyvalue(section, lines)
-            elif section == "Priority":
-                parsed.priority = parse_simple_keyvalue(section, lines)
-            else:
-                patch_name = get_patch_section(section)
-                p_match = _patches_regex.match(line)
-                if patch_name:  # noqa: SIM114
-                    patches = parse_patch(section, lines)
-                    parsed.patches += patches
-                    continue
-                elif p_match and map_namespace(p_match.group(1)):  # noqa: RET507
-                    patches = parse_patch(section, lines)
-                    parsed.patches += patches
-                    continue
-                else:
-                    # Consume the line. No match to parse.
-                    lines.pop(0)
-
-    return parsed
-
-
-def map_namespace(release_name: str) -> str | None:
-    """
-    Returns a namespace name (ubuntu:<version>) where version is a numeric id instead of release name
-    e.g. map_namespace('vivid') -> ubuntu:15.04
-    :param release_name:
-    :return:
-    """
-
-    dist = ubuntu_version_names.get(release_name)
-    if dist:
-        return ":".join([namespace, dist])
-
-    return None
-
-
-def parse_severity_from_priority(cve: CVEFile) -> Severity:
-    severity = cve.priority.capitalize()
-    if severity in {"Untriaged"}:
-        return Severity.Unknown
-    return getattr(Severity, severity)
-
-
-def map_parsed(parsed_cve: CVEFile, fixdater: fixdate.Finder, logger: logging.Logger | None = None):  # noqa: C901, PLR0912, PLR0915
-    """
-    Maps a parsed CVE dict into a Vulnerability object.
-
-    Each parsed CVE dict contains data for multiple distro releases and packages.
-    The returned output is a set of Vulnerability objects.
-
-    The overall approach is to emit a CVE record for each namespace that has an entry for a patch, even if that entry is a Does Not Effect.
-    The output can be Vulnerability objects with no FixedIn records.
-
-    :param parsed_cve:
-    :return: set of Vulnerability objects
-    """
-
-    if not logger:
-        logger = logging.getLogger(__name__)
-
-    # Map keyed by namespace name
-    vulns = {}
-    if not (parsed_cve.name):
-        logger.error(f"could not find a Name for parsed cve: {asdict(parsed_cve)}")
-        return []
-
-    # Build a set of (bare_codename, package) pairs where an ESM variant confirms the
-    # package is not affected. When the main (bare codename) entry is "needs-triage",
-    # we can infer that the package is also not affected on the base release, avoiding
-    # false-positive match-all constraints in grype.
-    #
-    # We only consider entries where the version field is NOT a version string (i.e. it's
-    # a textual reason like "code not present" or empty). Entries with version strings like
-    # "5.4.0-1005.5" mean "fixed at this version" — older versions may still be vulnerable.
-    _esm_prefixes = ("esm-apps/", "esm-infra/", "esm-infra-legacy/")
-    esm_not_affected = set()
-    for ip in parsed_cve.ignored_patches:
-        if ip.status == "not-affected":
-            # Skip entries where the version field looks like an actual package version —
-            # those indicate a fix version, not a blanket "not affected" determination.
-            if ip.version and ip.version[:1].isdigit():
-                continue
-            for prefix in _esm_prefixes:
-                if ip.distro.startswith(prefix):
-                    bare = ip.distro[len(prefix) :]
-                    esm_not_affected.add((bare, ip.package))
-                    break
-
-    for p in parsed_cve.patches:
-        namespace_name = map_namespace(p.distro)
-
-        # Build the CVE record even if no fixedIn record
-        r = vulns.get(namespace_name)
-        if not r:
-            if not namespace_name:
-                continue
-
-            r = Vulnerability()
-
-            try:
-                r.Severity = parse_severity_from_priority(parsed_cve)
-            except AttributeError:
-                logger.warning(
-                    f"setting unknown severity on {parsed_cve.name} due to unsupported priority value {parsed_cve.priority}",
-                )
-                r.Severity = Severity.Unknown
-            except Exception:
-                logger.exception(f"setting unknown severity on {parsed_cve.name} due to exception parsing severity from priority")
-                r.Severity = Severity.Unknown
-
-            r.Name = parsed_cve.name
-            r.Metadata = {}
-            r.Link = ubuntu_cve_url.format(r.Name)
-            r.FixedIn = []
-            r.NamespaceName = namespace_name
-            vulns[namespace_name] = r
-
-        # Emit an explicit "not affected" FixedIn (version "0") so downstream consumers
-        # can distinguish "confirmed not affected" from "no data available".
-        if p.status == "not-affected":
-            pkg = FixedIn()
-            pkg.Name = p.package
-            pkg.Version = "0"
-            pkg.VendorAdvisory = {"NoAdvisory": False}
-            pkg.VersionFormat = "dpkg"
-            pkg.NamespaceName = namespace_name
-            r.FixedIn.append(pkg)
+    by_eco: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for aff in record.get("affected", []):
+        eco = aff.get("package", {}).get("ecosystem")
+        if not eco:
             continue
+        by_eco[eco].append(aff)
 
-        # If the patch status is one we care about, make the FixedIn record, else skip it but create CVE records
-        # We currently want to mark end-of-support records with no previously known fix as vulnerable, hence the
-        # or check_merge step here.
-        if check_state(p.status) or check_merge(p):
-            # If the patch is needs-triage but a corresponding ESM entry confirms
-            # the package is not affected, emit an explicit "not affected" FixedIn
-            # (version "0") instead of the match-all constraint that needs-triage
-            # would normally produce.
-            if p.status == "needs-triage" and (p.distro, p.package) in esm_not_affected:
-                logger.debug(
-                    f"emitting not-affected for {parsed_cve.name} {p.distro}/{p.package}: ESM variant confirms not-affected",
-                )
-                pkg = FixedIn()
-                pkg.Name = p.package
-                pkg.Version = "0"
-                pkg.VendorAdvisory = {"NoAdvisory": False}
-                pkg.VersionFormat = "dpkg"
-                pkg.NamespaceName = namespace_name
-                r.FixedIn.append(pkg)
+    if not by_eco:
+        return {}
+
+    top = {k: v for k, v in record.items() if k != "affected"}
+    return {eco: {**top, "affected": entries} for eco, entries in by_eco.items()}
+
+
+def _schema_from_envelope_url(url: str) -> schema.Schema:
+    """Reconstruct a Schema object from an envelope's schema URL."""
+    m = _SCHEMA_VERSION_RE.search(url)
+    version = m.group(1) if m else "0.0.0"
+    return schema.Schema(version=version, url=url)
+
+
+def _iter_cve_records(tar: tarfile.TarFile) -> Iterator[dict[str, Any]]:
+    """Yield parsed CVE records from a streaming tar (osv/cve/**/*.json only)."""
+    for member in tar:
+        if not member.isfile():
+            continue
+        if not (member.name.startswith("osv/cve/") and member.name.endswith(".json")):
+            continue
+        fh = tar.extractfile(member)
+        if fh is None:
+            continue
+        yield orjson.loads(fh.read())
+
+
+def _annotate_wont_fix(
+    sliced: dict[str, dict[str, Any]],
+    original: dict[str, Any],
+    overlay: VEXOverlay,
+) -> None:
+    """Stamp `affected[].database_specific.anchore.status = "wont-fix"` for slices
+    Canonical's VEX feed marks as won't-fix.
+
+    Join key is (upstream CVE, PURL distro label, source package). The
+    upstream CVE comes from the OSV record's `upstream[0]` (UBUNTU-CVE-* is
+    Canonical's internal id; users and VEX use the upstream CVE). Distro
+    label + source package come from each per-package PURL inside the slice.
+    """
+    upstream = original.get("upstream") or []
+    if not upstream:
+        return
+    cve_id = upstream[0]
+
+    for sliced_record in sliced.values():
+        for aff in sliced_record.get("affected", []):
+            purl = (aff.get("package") or {}).get("purl") or ""
+            distro = distro_label_from_purl(purl)
+            pkg = source_package_from_purl(purl)
+            if not distro or not pkg:
                 continue
-
-            pkg = FixedIn()
-            pkg.Name = p.package
-
-            # If there is a version indicating a fix use it, else 'None' is special keyword for no-fix-available
-            if p.status == "released":
-                # Can do version format check here, but requires code from anchore-engine
-                # anchore_engine.services.policy_engine.engine.util.deb.DpkgVersion.from_string(p.get('status'))
-                pkg.Version = p.version
-                if pkg.Version is None:
-                    logger.debug(
-                        'found CVE {} in ubuntu version {} with "released" status for pkg {} but no version for release. Released patches should have version info, but missing in source data. Marking package as not vulnerable'.format(  # noqa: E501, G001, UP032
-                            r.Name,
-                            r.NamespaceName,
-                            pkg.Name,
-                        ),
-                    )
-                    continue
-                    # Strange condition where a release was done but no version found. In this case, we'll omit the FixedIn record.
-
-                result = fixdater.best(
-                    vuln_id=r.Name,
-                    cpe_or_package=pkg.Name,
-                    fix_version=pkg.Version,
-                    ecosystem=r.NamespaceName,
-                )
-                if result:
-                    fa = FixAvailability()
-                    fa.Date = result.date.isoformat()
-                    fa.Kind = result.kind
-                    pkg.Available = fa
-
-            else:
-                pkg.Version = "None"
-                # Set NoAdvisory to true so that `wont-fix` status gets set on
-                # out of support entries
-                if p.status == "ignored":
-                    pkg.VendorAdvisory = {"NoAdvisory": True}
-
-            if not pkg.VendorAdvisory:
-                pkg.VendorAdvisory = {"NoAdvisory": False}
-
-            pkg.VersionFormat = "dpkg"
-            pkg.NamespaceName = namespace_name
-            r.FixedIn.append(pkg)
-
-            # Check for max priority of all packages with it set
-            if p.priority:
-                pkg_sev = getattr(Severity, p.priority.capitalize())
-                r.Severity = max(pkg_sev, r.Severity)
-
-    return set(vulns.values())
-
-
-def filter_resolved_patches(cve: CVEFile, dpt_list: list[DistroPkg]) -> dict[DistroPkg, Patch]:
-    """
-    Filter patch records from the cve dictionary that match the package and distribution of the items in the list but don't satisfy merge criteria
-
-    :param cve_dict: dict version of a cve record, like the return value of parse_cve_file()
-    :param dpt_list: list of DistroPkg objects
-    :return:
-    """
-    filtered_map = {}
-    for dpt in dpt_list:
-        matched_p = next(
-            (p for p in cve.patches if dpt.distro == p.distro and dpt.pkg == p.package and not check_merge(p)),
-            None,
-        )
-        if matched_p:
-            filtered_map[dpt] = matched_p
-
-    return filtered_map
-
-
-def filter_merged_patches(cve: CVEFile, dpt_list: list[DistroPkg]) -> dict[DistroPkg, Patch]:
-    """
-    Filter patch records from the cve dictionary that match the package and distribution of the items in the list
-
-    :param cve_dict: dict version of a cve record, like the return value of parse_cve_file()
-    :param dpt_list: list of DistroPkg objects
-    :return:
-    """
-    filtered_map: dict[DistroPkg, Patch] = {}
-    for dpt in dpt_list:
-        matched_p = next(
-            (p for p in cve.patches if dpt.distro == p.distro and dpt.pkg == p.package),
-            None,
-        )
-        if matched_p:
-            filtered_map[dpt] = matched_p
-
-    return filtered_map
+            if not overlay.is_wont_fix(cve_id, distro, pkg):
+                continue
+            db_spec = aff.get("database_specific") or {}
+            anchore = db_spec.get("anchore") or {}
+            anchore["status"] = "wont-fix"
+            db_spec["anchore"] = anchore
+            aff["database_specific"] = db_spec
 
 
 class Parser:
-    __payload__ = Vulnerability
+    _osv_url_ = "https://security-metadata.canonical.com/osv/osv-all.tar.xz"
+    _vex_url_ = "https://security-metadata.canonical.com/vex/vex-all.tar.xz"
+    _archive_filename_ = "osv-all.tar.xz"
+    _vex_archive_filename_ = "vex-all.tar.xz"
+    _fragments_subdir_ = "fragments"
+    _normalized_subdir_ = "normalized-cve-data"
 
-    _bzr_src = "https://launchpad.net/ubuntu-cve-tracker"
-    _git_src_url = "git://git.launchpad.net/ubuntu-cve-tracker"
-    _bzr_to_git_transition_commit = "dc3f64a0dfe6b1780240ff115d8a0a1b23fd00b4"
-
-    _active_cve_dir = "active"
-    _retired_cve_dir = "retired"
-    _ignored_cve_dir = "ignored"  # May need to use this later if CVEs transition from one to another
-    _vc_working_dir = "ubuntu-cve-tracker"
-    _normalized_cve_dir = "normalized-cve-data"
-    _last_processed_rev_file = "bzr-last-processed-rev"
-    _last_processed_rev_file_git = "git-last-processed-rev"
-
-    data_filename_regex = re.compile(r"(active|retired|ignored)/CVE-[0-9]{4}-[0-9]+")
-
-    # Revision 9000 on the sec bzr repo before trusty eol. revno 9000 on 2015-01-27.
-
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         workspace: Workspace,
         fixdater: fixdate.Finder | None = None,
+        download_timeout: int = 125,
         logger: logging.Logger | None = None,
-        additional_versions: dict[str, str] | None = None,
-        enable_rev_history: bool = True,
-        max_workers: int = default_max_workers,
-        git_url: str = default_git_url,
-        git_branch: str = default_git_branch,
+        downconvert_osv_to_os: bool = False,
     ):
-        if not fixdater:
-            fixdater = fixdate.default_finder(workspace)
-        self.fixdater = fixdater
-        self.vc_workspace = os.path.join(workspace.input_path, self._vc_working_dir)
-        # TODO: tech debt: this should use the results workspace with the correct schema-aware envelope
-        self.norm_workspace = os.path.join(workspace.input_path, self._normalized_cve_dir)
-        if not logger:
-            logger = logging.getLogger(self.__class__.__name__)
-        self.logger = logger
-        self.git_url = git_url
-        self.git_branch = git_branch
-        self.urls = [self.git_url]
-        self.git_wrapper = GitWrapper(source=self.git_url, branch=self.git_branch, checkout_dest=self.vc_workspace, logger=logger)
+        self.workspace = workspace
+        self.fixdater = fixdater if fixdater is not None else fixdate.default_finder(workspace)
+        self.download_timeout = download_timeout
+        self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
+        # Opt-in compatibility: rewrite OSV fragments into v3 OS-schema records as they
+        # are yielded. The legacy normalized-cve-data passthrough already emits OS shape,
+        # so when this is enabled every yielded record is OS.
+        self.downconvert_osv_to_os = downconvert_osv_to_os
 
-        if additional_versions:
-            ubuntu_version_names.update(additional_versions)
-        self.enable_rev_history = enable_rev_history
-        self._max_workers = max_workers
+        self.archive_path = os.path.join(workspace.input_path, self._archive_filename_)
+        self.vex_archive_path = os.path.join(workspace.input_path, self._vex_archive_filename_)
+        self.fragments_dir = os.path.join(workspace.input_path, self._fragments_subdir_)
+        self.normalized_cve_dir = os.path.join(workspace.input_path, self._normalized_subdir_)
+        self.urls = [self._osv_url_, self._vex_url_]
+        # USN fix-date overlay built lazily in get(); _iter_envelopes_with_fixdate reads it.
+        self._usn_overlay: USNFixDateOverlay | None = None
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
         return self
 
-    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-    def fetch(self, skip_if_exists=False):
-        self.fixdater.download()
+    def _download_archive(self) -> None:
+        os.makedirs(self.workspace.input_path, exist_ok=True)
+        self._stream_to_disk(self._osv_url_, self.archive_path)
 
-        # setup merged workspace
-        if not os.path.exists(self.norm_workspace):
-            os.makedirs(self.norm_workspace)
+    def _download_vex_archive(self) -> None:
+        os.makedirs(self.workspace.input_path, exist_ok=True)
+        self._stream_to_disk(self._vex_url_, self.vex_archive_path)
 
-        # sync git repo
-        self.git_wrapper.init_repo()
+    def _stream_to_disk(self, url: str, path: str) -> None:
+        self.logger.info(f"downloading {url}")
+        with (
+            http.get(url, self.logger, stream=True, timeout=self.download_timeout) as r,
+            open(path, "wb") as fh,
+        ):
+            for chunk in r.iter_content(chunk_size=65536):
+                if chunk:
+                    fh.write(chunk)
 
-        # get the last processed revision if available and the current latest revision
-        last_rev = self._load_last_processed_rev()
-        current_rev = self.git_wrapper.get_current_rev()
+    def _record_schema(self, record: dict[str, Any]) -> schema.Schema:
+        return schema.OSVSchema(version=record.get("schema_version", schema.OSV_SCHEMA_VERSION))
 
-        # process all the updates between last processed and current revisions
-        self._process_data(self.vc_workspace, from_rev=last_rev, to_rev=current_rev)
-        # save last processed revision to disk
-        self._save_last_processed_rev(current_rev)
+    def _open_fragment_writer(self, ecosystem: str) -> result.Writer:
+        """Open a writer for a single ecosystem's fragment.
 
-        # load merged state and map it to vulnerabilities
-        self.logger.info("begin loading processed CVE content and transforming into vulnerabilities")
-        for merged_cve in self._merged_cve_iterator():
-            yield from map_parsed(merged_cve, self.fixdater, self.logger)
-        self.logger.info("finish loading processed CVE content and transforming into vulnerabilities")
+        Uses DELETE_BEFORE_WRITE so any prior fragment for this ecosystem
+        is replaced wholesale. Fragments for ecosystems we don't open
+        this run are left untouched (frozen).
+        """
+        os.makedirs(self.fragments_dir, exist_ok=True)
+        path = os.path.join(self.fragments_dir, f"{ecosystem_to_slug(ecosystem)}.db")
+        writer = result.Writer(
+            workspace=self.workspace,
+            result_state_policy=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
+            store_strategy=result.StoreStrategy.SQLITE,
+            write_location=path,
+            logger=self.logger,
+        )
+        return writer.__enter__()
 
-    def _process_data(self, vc_dir: str, to_rev: str, from_rev: str | None = None):  # noqa: C901
-        self.logger.info(f"processing data from git repository: {vc_dir}, from revision: {from_rev}, to revision: {to_rev}")
+    def _write_fragments(self, vex_overlay: VEXOverlay | None = None) -> None:
+        """Stream the tarball, slice records by ecosystem, write per-ecosystem fragments.
 
-        self.git_wrapper.prepare_cve_revision_history()
+        Each ecosystem encountered in today's tarball gets its fragment
+        file wiped (via DELETE_BEFORE_WRITE) and rewritten. Ecosystems
+        absent from today's tarball are not touched.
 
-        # gather a list of changed files if the last repo revision processed is available
-        updated_paths = []
-        deleted_ids = []
-        if from_rev and to_rev and from_rev != to_rev:
-            self.logger.debug(f"fetching changes to CVEs between revisions {from_rev} and {to_rev}")
-            modified, removed = self.git_wrapper.get_merged_change_set(from_rev=from_rev, to_rev=to_rev)
-            updated_paths = list(modified.values()) if modified else []
-            deleted_ids = list(removed.keys()) if removed else []
-            self.logger.info(f"detected {len(updated_paths)} CVE updates (add/modify/rename)")
-            self.logger.info(f"detected {len(deleted_ids)} CVE deletions")
+        NOTE: `patch_fix_date` is intentionally NOT called here. Fix-date
+        annotations are applied at yield time (in _iter_fragments) so that
+        improvements to the fixdate cache flow through to frozen fragments
+        on the next run without rewriting them.
 
-        # Load cves from active and retired directories and spool merged state to disk
-        # note: this is an IO bound operation, so a thread pool will suffice for now
-        # but look to a process pool if this becomes a bottleneck
-        proc_exception = None
-        self.logger.info("begin processing updates")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+        Fix DISPOSITION (won't-fix vs other) is the opposite: it's baked
+        into the fragment at write time using today's VEX overlay, so
+        that frozen fragments carry the disposition forward through EOL.
+        When VEX stops publishing for a release, the fragment retains the
+        last-known wont-fix status from when the release was still tracked.
+        """
+        writers: dict[str, result.Writer] = {}
+        exc: BaseException | None = None
+        try:
+            with tarfile.open(self.archive_path, mode="r:xz") as tar:
+                for record in _iter_cve_records(tar):
+                    self._dispatch_record_to_fragments(record, writers, vex_overlay)
+        except BaseException as e:
+            exc = e
+            raise
+        finally:
+            for writer in writers.values():
+                writer.__exit__(type(exc) if exc else None, exc, exc.__traceback__ if exc else None)
 
-            def worker(fn, cve_id: str, *args, **kwargs):
-                try:
-                    return fn(cve_id, *args, **kwargs)
-                except:
-                    self.logger.exception(f"error processing {cve_id}")
-                    raise
-
-            futures = []
-
-            for d in [self._active_cve_dir, self._retired_cve_dir]:
-                cve_dir = os.path.join(vc_dir, d)
-                for cve_id in sorted(filter(lambda x: _cve_filename_regex.match(x), os.listdir(cve_dir))):
-                    f = os.path.join(cve_dir, cve_id)
-                    cve_rel_path = "/".join([d, cve_id])
-
-                    future = executor.submit(worker, self._process_cve, cve_id, cve_rel_path, f, to_rev, updated_paths)
-                    futures.append(future)
-
-            # wait for all the futures to complete
-            done, _not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
-
-            if len(done) > 0 and len(done) != len(futures):
-                future = done.pop()
-                proc_exception = future.exception()
-                if proc_exception:
-                    self.logger.error(f"one task failed with: {proc_exception} (shutting down)")
-
-                    # cancel any scheduled tasks
-                    for future in futures:
-                        future.cancel()
-
-        if proc_exception:
-            raise proc_exception
-
-        self.logger.info("finish processing updates")
-
-        # Remove merged state of deleted cves
-        self.logger.info("begin processing deletes")
-        for cve_id in deleted_ids:
-            self.logger.debug(f"{cve_id} is no longer relevant, deleting merged CVE state if any")
-            self._delete_merged_cve(cve_id)
-        self.logger.info("finish processing deletes")
-
-    def _process_cve(
+    def _dispatch_record_to_fragments(
         self,
-        cve_id: str,
-        cve_rel_path: str,
-        f: str,
-        to_rev: str,
-        updated_paths: list[str],
-    ) -> CVEFile | None:
-        self.logger.debug(f"begin processing {cve_id} to rev {to_rev}")
+        record: dict[str, Any],
+        writers: dict[str, result.Writer],
+        vex_overlay: VEXOverlay | None,
+    ) -> None:
+        sliced = slice_by_ecosystem(record)
+        if not sliced:
+            return
+        if vex_overlay is not None:
+            _annotate_wont_fix(sliced, record, vex_overlay)
+        rec_schema = self._record_schema(record)
+        cve_id = record["id"].lower()
+        for eco, sliced_record in sliced.items():
+            if eco not in writers:
+                writers[eco] = self._open_fragment_writer(eco)
+            identifier = f"{ecosystem_to_slug(eco)}/{cve_id}"
+            writers[eco].write(identifier=identifier, schema=rec_schema, payload=sliced_record)
 
-        if cve_rel_path in updated_paths:
-            # merge cves updated since last revision or all if the last processed revision is not available
-            # self.logger.debug("CVE updated since last run, processing {}".format(cve_rel_path))
-            result = self._merge_cve(cve_id, cve_rel_path, f, to_rev)
-        elif not self._merged_cve_exists(cve_id):
-            # merge may be required since the saved state is not found
-            # self.logger.debug("CVE merged state not found, processing {}".format(cve_rel_path))
-            result = self._merge_cve(cve_id, cve_rel_path, f, to_rev)
-        else:
-            # merge may be required if new distros were added
-            # self.logger.debug("reprocessing merged CVE {}".format(cve_rel_path))
-            result = self._reprocess_merged_cve(cve_id, cve_rel_path)
+    def _iter_fragments(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Yield (identifier, schema, payload) from every fragment on disk + inferred entries.
 
-        self.logger.debug(f"finish processing {cve_id} to rev {to_rev}")
-        return result
+        Three things happen here, all at yield time so that improvements to
+        upstream feeds + the fixdate cache flow through to frozen fragments
+        on the next run without rewriting them:
 
-    def _load_last_processed_rev(self):
-        last_processed_rev_path = os.path.join(self.norm_workspace, self._last_processed_rev_file_git)
-
-        if os.path.exists(last_processed_rev_path):
-            with open(last_processed_rev_path) as fp:
-                return fp.readline().strip()
-        else:
-            last_processed_rev_path = os.path.join(self.norm_workspace, self._last_processed_rev_file)
-            if os.path.exists(last_processed_rev_path):
-                return self._bzr_to_git_transition_commit
-            return None
-
-    def _save_last_processed_rev(self, revno: str):
-        last_processed_rev_path = os.path.join(self.norm_workspace, self._last_processed_rev_file_git)
-
-        with open(last_processed_rev_path, "w") as f:
-            f.write(f"{revno}")
-
-    def _load_merged_cve(self, cve_id: str) -> CVEFile | None:
-        if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
-            with open(os.path.join(self.norm_workspace, cve_id)) as fp:
-                cve_json = orjson.loads(fp.read())
-                return CVEFile.from_dict(cve_json)
-
-        return None
-
-    def _save_merged_cve(self, cve_id: str, merged_cve: CVEFile):
-        filepath = os.path.join(self.norm_workspace, cve_id)
-        with open(filepath, "wb") as f:
-            self.logger.trace(f"writing record to {filepath!r}")  # type: ignore  # noqa: PGH003
-            f.write(orjson.dumps(asdict(merged_cve), f))  # type: ignore  # noqa: PGH003
-
-    def _delete_merged_cve(self, cve_id):
-        if os.path.exists(os.path.join(self.norm_workspace, cve_id)):
-            os.remove(os.path.join(self.norm_workspace, cve_id))
-
-    def _merged_cve_iterator(self) -> Generator[CVEFile]:
-        for cve_id in filter(lambda x: _cve_filename_regex.match(x), os.listdir(self.norm_workspace)):
-            with open(os.path.join(self.norm_workspace, cve_id)) as fp:
-                cve = orjson.loads(fp.read())
-                yield CVEFile.from_dict(cve)
-
-    def _merged_cve_exists(self, cve_id):
-        return os.path.exists(os.path.join(self.norm_workspace, cve_id))
-
-    def _reprocess_merged_cve(self, cve_id: str, cve_rel_path: str):
+          1. Real envelopes from each fragment are yielded verbatim (with
+             fix-date patching applied).
+          2. For each base Ubuntu ecosystem with sibling plain-Pro (ESM)
+             fragments, any (CVE, source-pkg) tuple Pro has and base does
+             NOT have produces a synthesized base wont-fix envelope. This
+             reconstructs the signal Canonical encodes by *omission* of the
+             base entry when a CVE will only be fixed in Pro.
+          3. The inference runs from current Pro data every yield, so:
+               - while base is still in OSV: inferred entries fill Pro-only-fix gaps
+               - after base EOLs (frozen base fragment): inferred entries
+                 from continuing Pro coverage layer on top of the frozen state.
         """
-        Assumes that a normalized state exists for cve and processes only ignored patches, mainly for handling new distros
+        if not os.path.isdir(self.fragments_dir):
+            return
 
-        :param cve_id:
-        :param cve_rel_path:
-        :return:
+        base_paths, pro_paths, unclassified = self._group_fragments_by_base()
+
+        # Yield unclassifiable fragments verbatim (test fixtures with empty affected[],
+        # future shapes we don't recognize, etc.) — never apply inference to them.
+        for path in unclassified:
+            yield from self._iter_envelopes_with_fixdate(path)
+
+        # Pass 1: yield Pro fragments verbatim. (Inference happens during the base pass.)
+        seen_pro_paths: set[str] = set()
+        for paths in pro_paths.values():
+            for path in paths:
+                if path in seen_pro_paths:
+                    continue
+                seen_pro_paths.add(path)
+                yield from self._iter_envelopes_with_fixdate(path)
+
+        # Pass 2: yield base envelopes (real + merged inferences from Pro siblings).
+        # An inferred base entry shares the (base_eco, cve_id) key — and therefore the
+        # envelope identifier — with any real base entry for the same CVE. We must
+        # merge inferred affected[] entries INTO the real envelope before yielding;
+        # emitting a separate envelope would collide under INSERT OR REPLACE and
+        # the synthesized one would overwrite the real data.
+        all_base_ecos = set(base_paths) | set(pro_paths)
+        for base_eco in sorted(all_base_ecos):
+            yield from self._yield_base_with_inferences(
+                base_eco,
+                base_path=base_paths.get(base_eco),
+                pro_paths=pro_paths.get(base_eco, []),
+            )
+
+    def _yield_base_with_inferences(
+        self,
+        base_eco: str,
+        base_path: str | None,
+        pro_paths: list[str],
+    ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        # Collect real envelopes by cve, keyed so we can merge inferences in.
+        by_cve: dict[str, dict[str, Any]] = {}
+        cve_order: list[str] = []
+
+        if base_path is not None:
+            for env in self._iter_envelopes_with_fixdate(base_path):
+                identifier, sch, payload = env
+                cve = payload.get("id", "")
+                if cve not in by_cve:
+                    cve_order.append(cve)
+                by_cve[cve] = {
+                    "identifier": identifier,
+                    "schema": sch,
+                    "payload": payload,
+                    "had_real": True,
+                }
+
+        if pro_paths:
+            self._merge_inferred_into(by_cve, cve_order, pro_paths, base_eco)
+
+        for cve in cve_order:
+            entry = by_cve[cve]
+            yield entry["identifier"], entry["schema"], entry["payload"]
+
+    def _merge_inferred_into(
+        self,
+        by_cve: dict[str, dict[str, Any]],
+        cve_order: list[str],
+        pro_paths: list[str],
+        base_eco: str,
+    ) -> None:
+        """Walk sibling Pro fragments. For each Pro envelope, append synthesized
+        base entries to the real envelope (if one exists) or create a new
+        envelope. Records the inference provenance.
         """
-        self.logger.debug(f"reprocessing merged CVE {cve_rel_path}")
-        saved_state = self._load_merged_cve(cve_id)
+        for pro_path in pro_paths:
+            with result.SQLiteReader(pro_path) as reader:
+                for envelope in reader.each():
+                    self._merge_pro_envelope(envelope, by_cve, cve_order, base_eco)
 
-        if not saved_state:
-            self.logger.debug(f"no saved state found for {cve_id}")
-            return None
+    def _merge_pro_envelope(
+        self,
+        envelope: result.Envelope,
+        by_cve: dict[str, dict[str, Any]],
+        cve_order: list[str],
+        base_eco: str,
+    ) -> None:
+        payload = envelope.item
+        cve = payload.get("id", "")
+        if not cve:
+            return
+        pro_affs = payload.get("affected", [])
+        pro_eco = pro_affs[0].get("package", {}).get("ecosystem") if pro_affs else None
+        target = by_cve.get(cve)
+        existing_pkgs = _affected_package_names(target["payload"]) if target else set()
+        new_affs = _synthesize_missing(pro_affs, existing_pkgs, base_eco, pro_eco)
+        if not new_affs:
+            return
+        if target is None:
+            self._add_synthetic_envelope(by_cve, cve_order, envelope, new_affs, base_eco)
+        else:
+            target["payload"].setdefault("affected", []).extend(new_affs)
 
-        # reprocess only ignored patches
-        merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(saved_state.ignored_patches)
+    def _add_synthetic_envelope(
+        self,
+        by_cve: dict[str, dict[str, Any]],
+        cve_order: list[str],
+        envelope: result.Envelope,
+        new_affs: list[dict[str, Any]],
+        base_eco: str,
+    ) -> None:
+        template = envelope.item
+        cve = template["id"]
+        synth_payload: dict[str, Any] = {k: v for k, v in template.items() if k != "affected"}
+        synth_payload["affected"] = new_affs
+        upstream = synth_payload.get("upstream") or []
+        osv.patch_fix_date(
+            synth_payload,
+            self.fixdater,
+            vuln_id_override=upstream[0] if upstream else None,
+            extra_candidates=usn_extra_candidates(self._usn_overlay),
+        )
+        by_cve[cve] = {
+            "identifier": f"{ecosystem_to_slug(base_eco)}/{cve.lower()}",
+            "schema": _schema_from_envelope_url(envelope.schema),
+            "payload": synth_payload,
+            "had_real": False,
+        }
+        cve_order.append(cve)
 
-        # Found patches that can be merged and or can't be resolved from the saved state, could be a new namespace
-        if merged_patches or to_be_merged_map:
-            self.logger.debug("found unresolved patches in previously merged state, could be a new distro")
-            # Process revision history for eol-ed packages that need to be merged
-            if to_be_merged_map:
-                if self.enable_rev_history:
-                    self.logger.debug(f"attempting to resolve patches using revision history for {cve_rel_path}")
-                    (
-                        resolved_patches,
-                        pending_dpt_list,
-                        cve_latest_rev,
-                    ) = self._resolve_patches_using_history(
-                        cve_id=cve_id,
-                        cve_rel_path=cve_rel_path,
-                        to_be_merged_dpt_list=list(to_be_merged_map.keys()),
-                        priority=saved_state.priority,
-                    )
-                    merged_patches.extend(resolved_patches)
-                    if pending_dpt_list:
-                        self.logger.debug(
-                            "exhausted all revisions for {} but could not resolve patches: {}".format(  # noqa: G001, UP032
-                                cve_rel_path,
-                                [to_be_merged_map[x] for x in pending_dpt_list],
-                            ),
-                        )
-                        merged_patches.extend([to_be_merged_map[x] for x in pending_dpt_list])
+    def _iter_envelopes_with_fixdate(
+        self,
+        fragment_path: str,
+    ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Read a fragment file, apply yield-time fix-date patching, yield envelopes."""
+        extra_candidates = usn_extra_candidates(self._usn_overlay)
+        with result.SQLiteReader(fragment_path) as reader:
+            for envelope in reader.each():
+                payload = envelope.item
+                # patch_fix_date keys the lookup by vuln_id. The OSV record's `id` is
+                # the Canonical-internal `UBUNTU-CVE-*`; the fix-date cache keys by the
+                # upstream `CVE-*`. Pass the upstream override so the lookup hits.
+                upstream = payload.get("upstream") or []
+                osv.patch_fix_date(
+                    payload,
+                    self.fixdater,
+                    vuln_id_override=upstream[0] if upstream else None,
+                    extra_candidates=extra_candidates,
+                )
+                yield (
+                    envelope.identifier,
+                    _schema_from_envelope_url(envelope.schema),
+                    payload,
+                )
 
-                    del resolved_patches[:]
-                    del pending_dpt_list[:]
+    def _group_fragments_by_base(self) -> tuple[dict[str, str], dict[str, list[str]], list[str]]:
+        """Index fragments by their ecosystem.
 
-                    if cve_latest_rev:
-                        saved_state.git_last_processed_rev = cve_latest_rev
-                else:
-                    self.logger.debug("revision history processing is disabled. Merging unresolved patches as they are")
-                    merged_patches.extend(to_be_merged_map.values())
+        Returns (base_paths, pro_paths, unclassified_paths):
+          - base_paths[base_eco]      → path to that base ecosystem's fragment, if present
+          - pro_paths[base_eco]       → paths to plain-Pro sibling fragments of base_eco
+          - unclassified_paths        → paths whose ecosystem couldn't be read (e.g. a
+                                         hand-crafted test fragment or a future shape we
+                                         don't recognize); yielded verbatim, no inference.
 
-            # pulling this outside of the revision history block for fixing ENTERPRISE-195. saved state should be updated if there are mergeable or to-be-merged packages  # noqa: E501
-            # there might already be resolved patches, extend it with merged patches, don't overwrite it
-            if saved_state.patches:
-                saved_state.patches.extend(merged_patches)
+        Sub-tier fragments (FIPS / Realtime / Nvidia-BlueField) end up in base_paths
+        keyed by their own ecosystem — they're yielded verbatim, with no inference
+        applied (pro_to_base_ecosystem returns None for them).
+
+        Fragment ecosystem is read from the first envelope's
+        `affected[0].package.ecosystem` to avoid reverse-engineering the
+        slug; every envelope in a fragment shares the same ecosystem by
+        the slicing invariant.
+        """
+        base_paths: dict[str, str] = {}
+        pro_paths: dict[str, list[str]] = {}
+        unclassified: list[str] = []
+        for filename in sorted(os.listdir(self.fragments_dir)):
+            if not filename.endswith(".db"):
+                continue
+            path = os.path.join(self.fragments_dir, filename)
+            eco = self._ecosystem_of_fragment(path)
+            if eco is None:
+                unclassified.append(path)
+                continue
+            base = pro_to_base_ecosystem(eco)
+            if base is None:
+                base_paths[eco] = path
             else:
-                saved_state.patches = merged_patches
-
-            # overwrite ignored patches since its the final list
-            saved_state.ignored_patches = ignored_patches
-
-            # save the merged cve state to disk before returning
-            self._save_merged_cve(cve_id, saved_state)
-        else:  # No patches that require resolution
-            pass
-
-        return saved_state
+                pro_paths.setdefault(base, []).append(path)
+        return base_paths, pro_paths, unclassified
 
     @staticmethod
-    def _categorize_patches(patch_list: list[Patch]) -> tuple[list[Patch], list[Patch], dict[DistroPkg, Patch]]:
+    def _ecosystem_of_fragment(path: str) -> str | None:
+        """Peek the ecosystem string from a fragment by reading one envelope."""
+        try:
+            with result.SQLiteReader(path) as reader:
+                for envelope in reader.each():
+                    for aff in envelope.item.get("affected", []):
+                        eco = aff.get("package", {}).get("ecosystem")
+                        if eco:
+                            return eco
+                    return None
+        except Exception:
+            return None
+        return None
+
+    def _osv_covers_legacy_namespace(self, ns: str) -> bool:
+        """Return True if today's OSV feed covers a legacy namespace `ubuntu:X.YY`.
+
+        Used to filter normalized-cve-data passthrough down to the at-cutover
+        EOL set — we never want to emit legacy records for a release that
+        OSV (or a frozen fragment for that release) already covers.
+        Checks the base ecosystem only (`ubuntu-X.YY-lts.db` or `ubuntu-X.YY.db`);
+        Pro/FIPS variants persisting after the base ecosystem drops is fine —
+        they emit their own fragments, base release falls through to legacy.
         """
-        Takes in a list of patches and splits them into merged and ignored lists and a dictionary of patches that need further resolution
-        :param patch_list:
-        :return:
+        version = ns.split(":")[-1]
+        return any(os.path.exists(os.path.join(self.fragments_dir, candidate)) for candidate in (f"ubuntu-{version}-lts.db", f"ubuntu-{version}.db"))
+
+    def _iter_normalized_cve_data(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Read input/normalized-cve-data/ via the vendored v3 map_parsed.
+
+        Emits OS-schema envelopes for at-cutover EOL releases only — namespaces
+        whose base ecosystem is in today's OSV feed (or a frozen fragment) are
+        skipped. The filter is applied BEFORE map_parsed so fixdater isn't
+        queried for releases we'd discard anyway.
         """
+        if not os.path.isdir(self.normalized_cve_dir):
+            return
 
-        to_be_merged_map: dict[DistroPkg, Patch] = {}
-        merged_patches: list[Patch] = []
-        ignored_patches: list[Patch] = []
+        os_schema = schema.OSSchema()
+        for filename in sorted(os.listdir(self.normalized_cve_dir)):
+            if not _CVE_FILENAME_RE.match(filename):
+                continue
+            full = os.path.join(self.normalized_cve_dir, filename)
+            try:
+                with open(full, "rb") as f:
+                    cve_file = parser_legacy.CVEFile.from_dict(orjson.loads(f.read()))
+            except Exception:
+                self.logger.exception(f"failed to load normalized cve {full}")
+                continue
 
-        for p in patch_list:
-            namespace_name = map_namespace(p.distro)
+            # Drop patches for releases OSV already covers. map_parsed would
+            # otherwise call fixdater.best() per released patch — wasted work
+            # for jammy/noble/etc. that we'd filter out post-mapping.
+            cve_file.patches = [
+                p for p in cve_file.patches if (ns := parser_legacy.map_namespace(p.distro)) is not None and not self._osv_covers_legacy_namespace(ns)
+            ]
+            if not cve_file.patches:
+                continue
 
-            if not namespace_name:
-                ignored_patches.append(p)
-            elif namespace_name and check_merge(p):
-                to_be_merged_map[DistroPkg(distro=p.distro, pkg=p.package)] = p
-            else:
-                # Patch does not meet criteria for resolution - either its not eol-ed or in a namespace we care about
-                merged_patches.append(p)
+            vulns = parser_legacy.map_parsed(cve_file, self.fixdater, self.logger)
+            for vuln in vulns:
+                if not vuln.NamespaceName or not vuln.Name:
+                    continue
+                identifier = f"{vuln.NamespaceName}/{vuln.Name.lower()}"
+                yield identifier, os_schema, {"Vulnerability": vuln.json()}
 
-        return merged_patches, ignored_patches, to_be_merged_map
-
-    def _merge_cve(self, cve_id: str, cve_rel_path: str, cve_abs_path: str, repo_current_rev: str):
-        """
-        Parses the contents of an ubuntu security tracker CVE file and returns the normalized data as a dictionary.
-        If the CVE has any patches/fixes that meet the merge criteria, the revision history of the CVE is traversed
-        in the most recent to least recent order to compute the last known state of the patch.
-
-        :param cve_abs_path:
-        :param repo_current_rev:
-        :return:
-        """
-        self.logger.debug(f"merging CVE {cve_rel_path}")
-
-        with open(cve_abs_path) as cve_file:
-            raw_content = cve_file.readlines()
-            parsed_cve = parse_cve_file(cve_id, raw_content)
-
-        cve_latest_rev = None
-        merged_patches, ignored_patches, to_be_merged_map = self._categorize_patches(parsed_cve.patches)
-
-        # Found patches that can't be resolved from the input data, could be the first time the driver is running
-        if to_be_merged_map:
-            # lookup saved state
-            saved_cve = self._load_merged_cve(cve_id)
-
-            if self.enable_rev_history:
-                (
-                    resolved_patches,
-                    pending_dpt_list,
-                    cve_latest_rev,
-                ) = self._resolve_patches_using_history(
-                    cve_id=cve_id,
-                    cve_rel_path=cve_rel_path,
-                    to_be_merged_dpt_list=list(to_be_merged_map.keys()),
-                    priority=parsed_cve.__dict__.get("Priority", "Unknown"),
-                    saved_state=saved_cve,
-                )
-                merged_patches.extend(resolved_patches)
-                if pending_dpt_list:
-                    self.logger.debug(
-                        f"exhausted all revisions for {cve_rel_path} but could not resolve patches: {[to_be_merged_map[x] for x in pending_dpt_list]}",  # noqa: E501
-                    )
-                    merged_patches.extend([to_be_merged_map[x] for x in pending_dpt_list])
-
-                del resolved_patches[:]
-                del pending_dpt_list[:]
-
-            else:  # merge with saved state if any  # noqa: PLR5501
-                if saved_cve:
-                    self.logger.debug("revision history processing is disabled. Resolving patches using saved cve state")
-                    rev_matched_map = filter_merged_patches(saved_cve, list(to_be_merged_map.keys()))
-                    # merge resolved and unresolved patches
-                    merged_patches.extend(list(rev_matched_map.values()))
-                    merged_patches.extend([to_be_merged_map[x] for x in to_be_merged_map if x not in rev_matched_map])
-
-                    rev_matched_map.clear()
-                else:
-                    self.logger.debug(
-                        "revision history processing is disabled and no saved state found. Skipping patch resolution",
-                    )
-                    merged_patches.extend(list(to_be_merged_map.values()))
-
-        else:  # No patches that require resolution
-            pass
-
-        parsed_cve.patches = merged_patches
-        parsed_cve.ignored_patches = ignored_patches
-        parsed_cve.git_last_processed_rev = cve_latest_rev if cve_latest_rev else repo_current_rev
-
-        # save the merged cve state to disk before returning
-        self._save_merged_cve(cve_id, parsed_cve)
-
-        return parsed_cve
-
-    def _resolve_patches_using_history(  # noqa: C901, PLR0912, PLR0915
-        self,
-        cve_id: str,
-        cve_rel_path: str,
-        to_be_merged_dpt_list: list[DistroPkg],
-        priority: str | None = None,
-        saved_state: CVEFile | None = None,
-    ):
-        t = time.time()
-        self.logger.debug(f"processing CVE revision history for: {cve_rel_path}")
-
-        # setup metrics
-        metrics = {
-            "revs_processed": 0,
-            "previous_state_counter": {},
-            "time_elapsed": 0,
-            "severity": priority,
-        }
-
-        # initialize
-        resolved_patches: list[Patch] = []
-
-        # copy the keys so the original ds is not modified
-        pending_dpt_list: list[DistroPkg] = copy.deepcopy(to_be_merged_dpt_list)
-
-        # last processed commit
-        saved_cve_last_processed_rev = saved_state.git_last_processed_rev if saved_state and saved_state.git_last_processed_rev else None
-
-        # fetch log of revision history for this file, its in the most recent - least recent order
-        since_revs = self.git_wrapper.get_revision_history(cve_id, cve_rel_path, saved_cve_last_processed_rev)
-
-        # make note of the first revision, its the latest revision and one we already processed
-        cve_latest_rev = since_revs[0].sha if since_revs and since_revs[0] else None
-
-        # first process all revisions before last processed revision
-        if since_revs and len(since_revs) > 1:
-            # process only previous revisions, not current
-            for rev in since_revs[1:]:
-                # getting revision content is expensive, so check things to merge first
-                if not pending_dpt_list:
-                    break  # No more merging required, stop processing revs!
-
-                # process revision: fetch content, parse, filter patches that need to be merged and so on
-                rev_raw_content = self.git_wrapper.get_content(rev)
-
-                # parse the cve and filter based on merge criteria
-                rev_cve = parse_cve_file(cve_id, rev_raw_content)
-                rev_matched_map = filter_resolved_patches(rev_cve, pending_dpt_list)
-                resolved_patches.extend(list(rev_matched_map.values()))
-                pending_dpt_list = [x for x in pending_dpt_list if x not in rev_matched_map]
-
-                # metrics for processed revision
-                metrics["revs_processed"] += 1
-                for rev_p in rev_matched_map.values():
-                    rev_p_ns = map_namespace(rev_p.distro)
-                    patch_status = rev_p.status if not None else "Unknown"
-                    patch_distro = rev_p.distro if not None else "Unknown"
-                    if patch_status not in metrics["previous_state_counter"]:
-                        metrics["previous_state_counter"][patch_status] = {rev_p_ns: 0}
-                    if patch_distro not in metrics["previous_state_counter"][patch_status]:
-                        metrics["previous_state_counter"][patch_status][rev_p_ns] = 0
-
-                    metrics["previous_state_counter"][patch_status][rev_p_ns] += 1
-
-                # free up after processing
-                rev_matched_map.clear()
-                del rev_cve
-                del rev_raw_content[:]
+    def get(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        self._download_archive()
+        self._download_vex_archive()
+        self.fixdater.download()
+        vex_overlay = self._load_vex_overlay()
+        self._usn_overlay = self._load_usn_overlay()
+        self._write_fragments(vex_overlay=vex_overlay)
+        # legacy first; OSV last (policy-only — identifier shapes don't collide)
+        yield from self._iter_normalized_cve_data()
+        if self.downconvert_osv_to_os:
+            yield from self._iter_fragments_downconverted()
         else:
-            # no revs for processing
-            self.logger.debug("no previous revisions found")
+            yield from self._iter_fragments()
 
-        # then merge with saved state if there are things that still need to be merged. This is a one time thing to short circuit fetching revs
-        if pending_dpt_list and saved_state:
-            self.logger.debug("resolving patches using saved cve state before processing any more revisions")
-            rev_matched_map = filter_merged_patches(saved_state, pending_dpt_list)
-            resolved_patches.extend(list(rev_matched_map.values()))
-            pending_dpt_list = [x for x in pending_dpt_list if x not in rev_matched_map]
+    def _iter_fragments_downconverted(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Yield OSV fragment envelopes rewritten into v3 OS-schema records.
 
-            # free up after processing
-            rev_matched_map.clear()
+        Pro/FIPS/Realtime/BlueField slices and any envelope without an upstream
+        CVE alias are dropped — v3 never emitted them. Pro-only-fix wont-fix
+        data still appears here because `_yield_base_with_inferences` already
+        merged it into the base ecosystem's affected[] list before this runs.
+        """
+        os_schema = schema.OSSchema()
+        for _osv_identifier, _osv_schema, osv_payload in self._iter_fragments():
+            os_payload = osv_to_os(osv_payload)
+            if os_payload is None:
+                continue
+            identifier = os_identifier_for(osv_payload)
+            if identifier is None:
+                continue
+            yield identifier, os_schema, os_payload
 
-            # Last, merging with saved state may or may not resolve patch state.
-            # If a new namespace is introduced, its possible the saved cve is not fully resolved.
-            # So continue with process revision: fetch content, parse, filter patches that need to be merged and so on
-            if pending_dpt_list:
-                # fetch the entire revision history for this file, needed for computing the merge
-                self.logger.debug("unresolved patches found even after merge with saved state, walking entire revision history")
-                all_revs = self.git_wrapper.get_revision_history(cve_id, cve_rel_path, None)
-                before_revs = all_revs[len(since_revs) :] if since_revs else all_revs
+    def _load_usn_overlay(self) -> USNFixDateOverlay | None:
+        """Build the (eco, src-pkg, fixed-ver) → USN-published-date index.
 
-                for rev in before_revs:
-                    # getting revision content is expensive, so check things to merge first
-                    if not pending_dpt_list:
-                        break  # No more merging required, stop processing revs!
+        Streams `osv/usn/**` out of the downloaded OSV tarball. If the archive
+        is missing or unreadable, log and proceed without an overlay — fix-date
+        annotations fall back to first-observed + CVE.published, same as before
+        the USN overlay was added. No regression on miss.
+        """
+        if not os.path.isfile(self.archive_path):
+            self.logger.warning(
+                f"OSV archive missing at {self.archive_path}; USN fix-date overlay unavailable, fix dates will fall back to first-observed",
+            )
+            return None
+        try:
+            return USNFixDateOverlay.from_archive(self.archive_path, logger=self.logger)
+        except Exception:
+            self.logger.exception("failed to build USN fix-date overlay; falling back to first-observed")
+            return None
 
-                    # process revision: fetch content, parse, filter patches that need to be merged and so on
-                    rev_raw_content = self.git_wrapper.get_content(rev)
+    def _load_vex_overlay(self) -> VEXOverlay | None:
+        """Build the won't-fix overlay from the downloaded VEX archive.
 
-                    # parse the cve and filter based on merge criteria
-                    rev_cve = parse_cve_file(cve_id, rev_raw_content)
-                    rev_matched_map = filter_resolved_patches(rev_cve, pending_dpt_list)
-                    resolved_patches.extend(list(rev_matched_map.values()))
-                    pending_dpt_list = [x for x in pending_dpt_list if x not in rev_matched_map]
-
-                    # metrics for processed revision
-                    metrics["revs_processed"] += 1
-                    for rev_p in rev_matched_map.values():
-                        rev_p_ns = map_namespace(rev_p.distro)
-                        if rev_p.status not in metrics["previous_state_counter"]:
-                            metrics["previous_state_counter"][rev_p.status] = {rev_p_ns: 0}
-                        if rev_p.distro not in metrics["previous_state_counter"][rev_p.status]:
-                            metrics["previous_state_counter"][rev_p.status][rev_p_ns] = 0
-
-                        metrics["previous_state_counter"][rev_p.status][rev_p_ns] += 1
-
-                    # free up after processing
-                    rev_matched_map.clear()
-                    del rev_cve
-                    del rev_raw_content[:]
-            else:
-                self.logger.debug("Merge with saved state resolved all relevant patches")
-
-        metrics["time_elapsed"] = int((time.time() - t) * 1000) / float(1000)
-        self.logger.trace(f"metrics from processing revision history for {cve_rel_path}: {metrics}")
-
-        return resolved_patches, pending_dpt_list, cve_latest_rev
-
-    def get(self, skip_if_exists=False):
-        for i in self.fetch(skip_if_exists=skip_if_exists):
-            yield i.NamespaceName, i.Name, i.json()
+        If the archive is missing or unreadable, log a warning and proceed
+        without an overlay — the fragments still get written with full OSV
+        data, just without won't-fix annotations on this run. Frozen
+        fragments from prior runs retain whatever they were written with.
+        """
+        if not os.path.isfile(self.vex_archive_path):
+            self.logger.warning(
+                f"VEX archive missing at {self.vex_archive_path}; won't-fix annotations will be absent on this run",
+            )
+            return None
+        try:
+            return VEXOverlay.from_archive(self.vex_archive_path, logger=self.logger)
+        except Exception:
+            self.logger.exception("failed to build VEX overlay; won't-fix annotations will be absent on this run")
+            return None

@@ -50,7 +50,6 @@ grype_db:
   version: main
 
 tests:
-
   - provider: alpine
     use_cache: true
     additional_providers:
@@ -374,8 +373,9 @@ tests:
         max_year: 2024
 
   - provider: ubuntu
-    # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
-    # This will still test incremental updates relative to the nightly cache that is populated.
+    # use_cache pulls the nightly v3 input snapshot from ghcr.io. The new
+    # provider only reads `normalized-cve-data/` out of that snapshot (the at-cutover
+    # EOL source); osv-all.tar.xz is downloaded fresh on top.
     use_cache: true
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
@@ -385,6 +385,9 @@ tests:
       - docker.io/ubuntu:22.04@sha256:aa6c2c047467afc828e77e306041b7fa4a65734fe3449a54aa9c280822b0d87d
       - docker.io/ubuntu:22.10@sha256:80fb4ea0c0a384a3072a6be1879c342bb636b0d105209535ba893ba75ab38ede
       - docker.io/ubuntu:23.04@sha256:09f035f46361d193ded647342903b413d57d05cc06acff8285f9dda9f2d269d5
+      # current LTS — exercises the OSV path against noble; added with the OSV rewrite
+      # so we catch regressions on the most-deployed Ubuntu release.
+      - docker.io/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b
     expected_namespaces:
       - ubuntu:distro:ubuntu:12.04
       - ubuntu:distro:ubuntu:12.10
@@ -412,6 +415,8 @@ tests:
       - ubuntu:distro:ubuntu:24.04
       - ubuntu:distro:ubuntu:24.10
       - ubuntu:distro:ubuntu:25.04
+      - ubuntu:distro:ubuntu:25.10
+      - ubuntu:distro:ubuntu:26.04
     validations:
       - *default-validations
 
