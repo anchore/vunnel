@@ -1,0 +1,31 @@
+Candidate: CVE-2024-3094
+PublicDate: 2024-03-29 17:15:00 UTC
+References:
+ https://www.openwall.com/lists/oss-security/2024/03/29/4
+ https://discourse.ubuntu.com/t/xz-liblzma-security-update/43714
+Description:
+ Malicious code was discovered in the upstream tarballs of xz, starting with
+ version 5.6.0.
+Ubuntu-Description:
+Notes:
+ mdeslaur> The affected version of xz-utils was only in noble-proposed, and
+  was removed before migrating to noble itself. No released
+  versions of Ubuntu were affected by this issue.
+ > Priority reason:
+  Results in a backdoor in sshd
+Mitigation:
+Bugs:
+Priority: critical
+Discovered-by:
+Assigned-to:
+CVSS:
+ nvd: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H [10.0 CRITICAL]
+
+Patches_xz-utils:
+upstream_xz-utils: needs-triage
+trusty_xz-utils: not-affected
+xenial_xz-utils: not-affected
+bionic_xz-utils: not-affected
+focal_xz-utils: not-affected (5.2.4-1ubuntu1.1)
+jammy_xz-utils: not-affected (5.2.5-2ubuntu1)
+noble_xz-utils: not-affected (5.4.5-0.3)
