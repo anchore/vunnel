@@ -132,7 +132,7 @@ class TestSliceByEcosystem:
 class TestProvider:
     def test_static_attrs(self):
         assert Provider.name() == "ubuntu"
-        assert Provider.tags() == ["vulnerability", "os"]
+        assert Provider.tags() == ["vulnerability", "os", "large"]
         assert "/osv/" in Provider.__schema__.url
         # see __init__.py docstring: bumping these would workspace.clear() the load-bearing input dir
         assert Provider.__distribution_version__ == 1
