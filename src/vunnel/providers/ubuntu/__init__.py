@@ -27,7 +27,7 @@ class Config:
     # unless you're feeding a grype-db build that pre-dates the OSV transformer — there
     # is no provenance for the inference and won't-fix annotations in the OS shape, so
     # downstream consumers lose that signal.
-    downconvert_osv_to_os: bool = False
+    downconvert_osv_to_os: bool = True
 
 
 class Provider(provider.Provider):

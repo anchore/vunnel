@@ -800,6 +800,7 @@ class TestProviderUpdate:
         ws = helpers.provider_workspace_helper(name=Provider.name())
         c = Config()
         c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+        c.downconvert_osv_to_os = False
 
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
@@ -816,6 +817,7 @@ class TestProviderUpdate:
         ws = helpers.provider_workspace_helper(name=Provider.name())
         c = Config()
         c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+        c.downconvert_osv_to_os = False
 
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
@@ -835,6 +837,7 @@ class TestProviderUpdate:
         ws = helpers.provider_workspace_helper(name=Provider.name())
         c = Config()
         c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+        c.downconvert_osv_to_os = False
 
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
@@ -868,6 +871,7 @@ class TestProviderUpdate:
         ws = helpers.provider_workspace_helper(name=Provider.name())
         c = Config()
         c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+        c.downconvert_osv_to_os = False
 
         p = Provider(root=str(ws.root), config=c)
         _stage_workspace_for_update(str(ws.root), fixture_dir)
