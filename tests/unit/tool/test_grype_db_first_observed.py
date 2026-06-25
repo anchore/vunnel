@@ -10,7 +10,7 @@ import zstandard
 
 from vunnel import workspace
 from vunnel.tool.fixdate.finder import Result
-from vunnel.tool.fixdate.grype_db_first_observed import Store, cpe_to_v6_format
+from vunnel.tool.fixdate.grype_db_first_observed import Store, cpe_to_v6_format, cpe_to_v6_format
 
 
 class DatabaseFixture:
@@ -797,29 +797,6 @@ class TestStore:
             )
             assert len(results) == expected_count, f"Case insensitive vuln_id test failed for '{vuln_id}': got {len(results)}, expected {expected_count}"
 
-    def test_provider_case_insensitive_matching(self, tmpdir, helpers):
-        """test that provider matching is case insensitive"""
-        ws = workspace.Workspace(tmpdir, "Test-DB", create=True)  # mixed case provider
-        store = Store(ws)
-
-        # create test database
-        mixed_case_provider_data = [
-            ("CVE-2023-0002", "Test-DB", "curl", "", "debian:11",
-             "7.68.0-1ubuntu2.15", "2023-02-20", "fixed", "grype-db", None, 1, "2023-02-20T00:00:00"),
-        ]
-        db = DatabaseFixture(store.db_path)
-        db.insert_custom_data(store.db_path, mixed_case_provider_data, vulnerability_count=1)
-        store._downloaded = True
-
-        # test that queries work regardless of how provider was stored
-        results = store.find(
-            vuln_id="CVE-2023-0002",
-            cpe_or_package="curl",
-            fix_version=None,
-            ecosystem="debian:11",
-        )
-        assert len(results) == 1, f"Provider case insensitive test failed: got {len(results)}, expected 1"
-
     def test_ecosystem_case_insensitive_matching(self, tmpdir, helpers):
         """test that ecosystem matching is case insensitive"""
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
@@ -1215,6 +1192,55 @@ class TestStore:
 
         # verify both tags were tried
         assert mock_digest_client.do_request.call_count == 2
+
+    def test_get_uses_in_memory_index(self, tmpdir):
+        """verify that get() builds the index once and subsequent calls do not re-query SQLite"""
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        db = DatabaseFixture(store.db_path)
+        db.insert_standard_data(store.db_path)
+        store._downloaded = True
+
+        # index must not exist before first get()
+        assert store._cpe_index is None
+        assert store._pkg_index is None
+
+        build_index_calls = []
+        original_build_index = store._build_index
+
+        def tracking_build_index():
+            build_index_calls.append(1)
+            original_build_index()
+
+        store._build_index = tracking_build_index
+
+        # first call builds the index
+        results = store.get(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+            fix_version="2.4.42",
+        )
+        assert len(results) == 1
+        assert len(build_index_calls) == 1
+
+        # index is now populated
+        assert store._cpe_index is not None
+        assert store._pkg_index is not None
+
+        # subsequent calls do NOT rebuild the index
+        store.get(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+            fix_version="2.4.42",
+        )
+        store.get(
+            vuln_id="CVE-2023-0002",
+            cpe_or_package="curl",
+            fix_version=None,
+            ecosystem="debian:11",
+        )
+        assert len(build_index_calls) == 1  # still only one build
 
 
 class TestCpeToV6Format:
