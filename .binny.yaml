@@ -35,7 +35,7 @@ tools:
   # used at release to generate the changelog
   - name: crane
     version:
-      want: v0.21.6
+      want: v0.21.7
     method: github-release
     with:
       repo: google/go-containerregistry
