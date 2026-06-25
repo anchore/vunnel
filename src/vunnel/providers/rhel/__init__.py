@@ -41,7 +41,10 @@ class Config:
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
+    # RHEL emits the additive AdditionalAdvisoryFixes field (per-stream fix builds), introduced in
+    # OS schema 1.1.1. Pinned here rather than bumping the shared OS_SCHEMA_VERSION default so only
+    # this provider advances and other OS providers don't churn.
+    __schema__ = schema.OSSchema("1.1.1")
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):

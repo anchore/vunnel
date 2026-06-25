@@ -7,8 +7,18 @@ import pytest
 
 from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider
-from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser
+from vunnel.providers.rhel.parser import Advisory, AdvisoryFix, AffectedRelease, FixedIn, Parser
 from vunnel.providers.rhel.rhsa_provider import RHSAProvider
+
+
+def _af(version: str, advisory: Advisory) -> AdvisoryFix:
+    """Build the AdvisoryFix (version + advisory) that Option A now carries for each distinct
+    called-out fix build. Single-stream fixes carry exactly one entry mirroring the canonical fix."""
+    return AdvisoryFix(version=version, advisory=advisory)
+
+
+def _no_advisory() -> Advisory:
+    return Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None)
 
 
 class FakeRHSAProvider(RHSAProvider):
@@ -457,14 +467,14 @@ class TestParser:
 
         # see https://access.redhat.com/security/cve/cve-2021-33631
         expected = [
-            FixedIn(package='kernel-rt', platform='8', version='0:4.18.0-513.24.1.rt7.326.el8_9', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1614', link='https://access.redhat.com/errata/RHSA-2024:1614', severity=None)),
-            FixedIn(package='kernel', platform='8', version='0:4.18.0-513.24.1.el8_9', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1607', link='https://access.redhat.com/errata/RHSA-2024:1607', severity=None)),
-            FixedIn(package='kernel', platform='8.6+eus', version='0:4.18.0-372.98.1.el8_6', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1653', link='https://access.redhat.com/errata/RHSA-2024:1653', severity=None)),
-            FixedIn(package='kernel', platform='8.8+eus', version='0:4.18.0-477.55.1.el8_8', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:2621', link='https://access.redhat.com/errata/RHSA-2024:2621', severity=None)),
-            FixedIn(package='kernel', platform='9', version='0:5.14.0-284.11.1.el9_2', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2023:2458', link='https://access.redhat.com/errata/RHSA-2023:2458', severity=None)),
-            FixedIn(package='kernel-rt', platform='9', version='0:5.14.0-284.11.1.rt14.296.el9_2', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2023:2148', link='https://access.redhat.com/errata/RHSA-2023:2148', severity=None)),
-            FixedIn(package='kernel', platform='9.0+eus', version='0:5.14.0-70.97.1.el9_0', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1836', link='https://access.redhat.com/errata/RHSA-2024:1836', severity=None)),
-            FixedIn(package='kernel-rt', platform='9.0+eus', version='0:5.14.0-70.97.1.rt21.169.el9_0', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1840', link='https://access.redhat.com/errata/RHSA-2024:1840', severity=None)),
+            FixedIn(package='kernel-rt', platform='8', version='0:4.18.0-513.24.1.rt7.326.el8_9', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1614', link='https://access.redhat.com/errata/RHSA-2024:1614', severity=None), additional_advisories=(_af('0:4.18.0-513.24.1.rt7.326.el8_9', Advisory(wont_fix=False, rhsa_id='RHSA-2024:1614', link='https://access.redhat.com/errata/RHSA-2024:1614', severity=None)),)),
+            FixedIn(package='kernel', platform='8', version='0:4.18.0-513.24.1.el8_9', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1607', link='https://access.redhat.com/errata/RHSA-2024:1607', severity=None), additional_advisories=(_af('0:4.18.0-513.24.1.el8_9', Advisory(wont_fix=False, rhsa_id='RHSA-2024:1607', link='https://access.redhat.com/errata/RHSA-2024:1607', severity=None)),)),
+            FixedIn(package='kernel', platform='8.6+eus', version='0:4.18.0-372.98.1.el8_6', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1653', link='https://access.redhat.com/errata/RHSA-2024:1653', severity=None), additional_advisories=(_af('0:4.18.0-372.98.1.el8_6', Advisory(wont_fix=False, rhsa_id='RHSA-2024:1653', link='https://access.redhat.com/errata/RHSA-2024:1653', severity=None)),)),
+            FixedIn(package='kernel', platform='8.8+eus', version='0:4.18.0-477.55.1.el8_8', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:2621', link='https://access.redhat.com/errata/RHSA-2024:2621', severity=None), additional_advisories=(_af('0:4.18.0-477.55.1.el8_8', Advisory(wont_fix=False, rhsa_id='RHSA-2024:2621', link='https://access.redhat.com/errata/RHSA-2024:2621', severity=None)),)),
+            FixedIn(package='kernel', platform='9', version='0:5.14.0-284.11.1.el9_2', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2023:2458', link='https://access.redhat.com/errata/RHSA-2023:2458', severity=None), additional_advisories=(_af('0:5.14.0-284.11.1.el9_2', Advisory(wont_fix=False, rhsa_id='RHSA-2023:2458', link='https://access.redhat.com/errata/RHSA-2023:2458', severity=None)),)),
+            FixedIn(package='kernel-rt', platform='9', version='0:5.14.0-284.11.1.rt14.296.el9_2', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2023:2148', link='https://access.redhat.com/errata/RHSA-2023:2148', severity=None), additional_advisories=(_af('0:5.14.0-284.11.1.rt14.296.el9_2', Advisory(wont_fix=False, rhsa_id='RHSA-2023:2148', link='https://access.redhat.com/errata/RHSA-2023:2148', severity=None)),)),
+            FixedIn(package='kernel', platform='9.0+eus', version='0:5.14.0-70.97.1.el9_0', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1836', link='https://access.redhat.com/errata/RHSA-2024:1836', severity=None), additional_advisories=(_af('0:5.14.0-70.97.1.el9_0', Advisory(wont_fix=False, rhsa_id='RHSA-2024:1836', link='https://access.redhat.com/errata/RHSA-2024:1836', severity=None)),)),
+            FixedIn(package='kernel-rt', platform='9.0+eus', version='0:5.14.0-70.97.1.rt21.169.el9_0', module=None, advisory=Advisory(wont_fix=False, rhsa_id='RHSA-2024:1840', link='https://access.redhat.com/errata/RHSA-2024:1840', severity=None), additional_advisories=(_af('0:5.14.0-70.97.1.rt21.169.el9_0', Advisory(wont_fix=False, rhsa_id='RHSA-2024:1840', link='https://access.redhat.com/errata/RHSA-2024:1840', severity=None)),)),
         ]
 
         assert expected == results
@@ -513,6 +523,17 @@ class TestParser:
                             severity=None,
                             link="https://access.redhat.com/errata/RHSA-2019:2308",
                         ),
+                        additional_advisories=(
+                            _af(
+                                "0:7.2-3.el7",
+                                Advisory(
+                                    wont_fix=False,
+                                    rhsa_id="RHSA-2019:2308",
+                                    severity=None,
+                                    link="https://access.redhat.com/errata/RHSA-2019:2308",
+                                ),
+                            ),
+                        ),
                     ),
                     FixedIn(
                         module=None,
@@ -524,6 +545,17 @@ class TestParser:
                             rhsa_id="RHSA-2019:3345",
                             severity=None,
                             link="https://access.redhat.com/errata/RHSA-2019:3345",
+                        ),
+                        additional_advisories=(
+                            _af(
+                                "0:7.2-3.el8",
+                                Advisory(
+                                    wont_fix=False,
+                                    rhsa_id="RHSA-2019:3345",
+                                    severity=None,
+                                    link="https://access.redhat.com/errata/RHSA-2019:3345",
+                                ),
+                            ),
                         ),
                     ),
                 ],
@@ -557,6 +589,17 @@ class TestParser:
                             severity=None,
                             link="https://access.redhat.com/errata/RHSA-2019:2308",
                         ),
+                        additional_advisories=(
+                            _af(
+                                "0:7.2-3.el7",
+                                Advisory(
+                                    wont_fix=False,
+                                    rhsa_id="RHSA-2019:2308",
+                                    severity=None,
+                                    link="https://access.redhat.com/errata/RHSA-2019:2308",
+                                ),
+                            ),
+                        ),
                     )
                 ],
             ),
@@ -589,6 +632,17 @@ class TestParser:
                             severity=None,
                             link="https://access.redhat.com/errata/RHSA-2019:1234",
                         ),
+                        additional_advisories=(
+                            _af(
+                                "7.2-3.el7",
+                                Advisory(
+                                    wont_fix=False,
+                                    rhsa_id="RHSA-2019:1234",
+                                    severity=None,
+                                    link="https://access.redhat.com/errata/RHSA-2019:1234",
+                                ),
+                            ),
+                        ),
                     )
                 ],
             ),
@@ -609,6 +663,7 @@ class TestParser:
                         platform="7",
                         version="7.2-3.el7",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        additional_advisories=(_af("7.2-3.el7", _no_advisory()),),
                     )
                 ],
             ),
@@ -634,14 +689,19 @@ class TestParser:
                         platform="7",
                         version="7.2-3.el7.1",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        # both distinct builds carried, newest first
+                        additional_advisories=(
+                            _af("7.2-3.el7.1", _no_advisory()),
+                            _af("7.2-3.el7", _no_advisory()),
+                        ),
                     )
                 ],
             ),
             (
                 # same package and platform, different versions across distinct upstream bases
-                # (10.19.0 / 11.19.1 / 12.16.1). These are genuinely different streams, so a
-                # VulnerableRange is emitted partitioning each stream below its own fix. The
-                # reported Version remains the newest stream's fix (single-constraint fallback).
+                # (10.19.0 / 11.19.1 / 12.16.1). Option A carries each distinct fix build in
+                # additional_advisories (newest first) for matcher-side selection; the reported
+                # Version remains the newest stream's fix (the coarse single-constraint fallback).
                 {
                     "affected_release": [
                         {
@@ -666,10 +726,10 @@ class TestParser:
                         platform="8",
                         version="1:12.16.1-2.module+el8.1.0+6117+b25a342c",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
-                        vulnerable_range=(
-                            "< 1:10.19.0-2.module+el8.1.0+6118+5aaa808b "
-                            "|| >= 1:11.19.1, < 1:11.19.1-2.module+el8.1.0+6118+5aaa808b "
-                            "|| >= 1:12.16.1, < 1:12.16.1-2.module+el8.1.0+6117+b25a342c"
+                        additional_advisories=(
+                            _af("1:12.16.1-2.module+el8.1.0+6117+b25a342c", _no_advisory()),
+                            _af("1:11.19.1-2.module+el8.1.0+6118+5aaa808b", _no_advisory()),
+                            _af("1:10.19.0-2.module+el8.1.0+6118+5aaa808b", _no_advisory()),
                         ),
                     )
                 ],
@@ -696,6 +756,10 @@ class TestParser:
                         platform="6",
                         version="2:0.12.1.2-2.209.el6_2.1",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        additional_advisories=(
+                            _af("2:0.12.1.2-2.209.el6_2.1", _no_advisory()),
+                            _af("2:0.12.1.2-2.160.el6_1.9", _no_advisory()),
+                        ),
                     )
                 ],
             ),

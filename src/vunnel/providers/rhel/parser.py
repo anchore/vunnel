@@ -43,6 +43,11 @@ FixedIn = namedtuple(
 )
 RHSAFixedIn = namedtuple("RHSAFixedIn", ["package", "version"])
 Advisory = namedtuple("Advisory", ["wont_fix", "rhsa_id", "link", "severity"])
+# AdvisoryFix pairs a single called-out fix build (EVR) with the advisory that shipped it. Option A
+# carries every distinct per-stream fix build for a same-base package as these pairs, so the grype
+# matcher can pick the build matching the installed package's own .elN_M dist-tag minor at match time
+# rather than collapsing to a single total-ordered EVR.
+AdvisoryFix = namedtuple("AdvisoryFix", ["version", "advisory"])
 NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
 
 
@@ -443,9 +448,9 @@ class Parser:
         platform_packages = {}  # dictionary of platform -> set of package names
         all_ar_objs = []
         # collect every affected release for the same (package, platform, module). When Red Hat ships
-        # more than one fix for the same tuple (e.g. a Z-stream/EUS backport in one minor and an upstream
-        # rebase in a later minor), each fix lands here and is later reduced to a single FixedIn that
-        # carries a VulnerableRange describing the per-stream fix boundaries.
+        # more than one fix for the same tuple (e.g. fixes on several minor streams that share an
+        # upstream base and differ only by .elN_M dist tag), each fix lands here and is later reduced
+        # to a single FixedIn whose additional_advisories carries every distinct per-stream fix build.
         collected_ar_objs: dict[tuple, list] = {}  # (package, platform, module) -> list[AffectedRelease]
 
         try:
@@ -555,10 +560,13 @@ class Parser:
                 except Exception:
                     self.logger.exception(f"error processing {cve_id} affected release object: {ar_obj.__dict__}")
 
-            # reduce each (package, platform, module) bucket to a single FixedIn. When the bucket
-            # holds fixes from more than one upstream version base, compute a VulnerableRange that
-            # describes the per-stream fix boundaries so that, e.g., a host carrying a 9.4 Z-stream
-            # backport is not falsely flagged against a later minor's upstream rebase.
+            # reduce each (package, platform, module) bucket to a single FixedIn. Option A keeps one
+            # record per CVE but carries EVERY distinct called-out fix build paired with its advisory
+            # in additional_advisories, so the grype matcher can select the build matching the
+            # installed package's own .elN_M dist-tag minor at match time. This handles the same-base
+            # multi-stream case (several fixes that share an upstream base and differ only by dist
+            # tag) that a single total-ordered EVR — or a VulnerableRange keyed on the upstream base —
+            # cannot represent.
             for (pkg_name, platform, module), ar_objs in collected_ar_objs.items():
                 if not ar_objs:
                     continue
@@ -566,40 +574,36 @@ class Parser:
                 # sort ascending using true RPM version ordering (not lexical)
                 ar_objs.sort(key=functools.cmp_to_key(lambda a, b: rpm.compare_versions(a.version, b.version)))
 
-                # reduce to distinct upstream version bases, keeping the highest fix within each base.
-                # Keeping the highest preserves the historical "fixed in the newest build" behavior for
-                # the common single-stream case; the per-base reduction only changes behavior when there
-                # is genuinely more than one upstream base (the multi-RHSA case Phase 1 targets).
-                fix_by_base: dict[str, AffectedRelease] = {}
-                for ar_obj in ar_objs:  # ascending, so the last write per base wins (highest)
-                    fix_by_base[_get_version_base(ar_obj.version)] = ar_obj
-                distinct_base_fixes = list(fix_by_base.values())  # ascending by base
+                # de-duplicate to distinct fix builds (by full EVR), keeping the first advisory seen
+                # for each build. We keep ALL distinct builds (not just one per upstream base) because
+                # same-base streams differing only by dist tag are exactly the case Option A targets.
+                distinct_fixes: list[AffectedRelease] = []
+                seen_versions: set[str] = set()
+                for ar_obj in ar_objs:  # ascending by version
+                    if ar_obj.version in seen_versions:
+                        continue
+                    seen_versions.add(ar_obj.version)
+                    distinct_fixes.append(ar_obj)
 
                 # the canonical "fixed in" version reported for the major-version namespace is the
-                # newest stream's fix (highest base). VulnerableRange, when present, is what actually
-                # drives matching downstream; this version is the single-constraint fallback.
-                canonical = distinct_base_fixes[-1]
+                # newest build (highest EVR). This preserves the historical coarse "< highest fix"
+                # behavior as the matcher's fallback when no per-stream build matches the host.
+                canonical = distinct_fixes[-1]
+                primary_advisory = _advisory_from_rhsa(canonical.rhsa_id)
 
-                if len(distinct_base_fixes) > 1:
-                    vulnerable_range = _build_vulnerable_range(distinct_base_fixes)
-                    self.logger.debug(
-                        f"{cve_id}, platform={platform}, package={pkg_name}, module={module} : computed VulnerableRange from {len(distinct_base_fixes)} fix streams: {vulnerable_range}",  # noqa: E501
+                # additional_advisories carries every distinct fix build + its advisory (including the
+                # canonical one), newest first. The grype side encodes these as AdditionalAdvisoryFixes
+                # and uses them for per-stream selection.
+                additional_advisories: list[AdvisoryFix] = []
+                for ar_obj in reversed(distinct_fixes):  # descending by version
+                    additional_advisories.append(
+                        AdvisoryFix(version=ar_obj.version, advisory=_advisory_from_rhsa(ar_obj.rhsa_id)),
                     )
-                    # fold every advisory that touched this bucket into the record, newest fix first and
-                    # de-duplicated. The primary advisory corresponds to the canonical (newest) fix.
-                    folded: list[Advisory] = []
-                    seen_rhsa: set[str] = set()
-                    for ar_obj in reversed(ar_objs):  # descending by version
-                        if ar_obj.rhsa_id and ar_obj.rhsa_id not in seen_rhsa:
-                            seen_rhsa.add(ar_obj.rhsa_id)
-                            folded.append(_advisory_from_rhsa(ar_obj.rhsa_id))
-                    primary_advisory = folded[0] if folded else _advisory_from_rhsa(canonical.rhsa_id)
-                    additional_advisories = tuple(folded[1:])
-                else:
-                    # single upstream stream: behave exactly as before — newest build, its advisory.
-                    vulnerable_range = None
-                    primary_advisory = _advisory_from_rhsa(canonical.rhsa_id)
-                    additional_advisories = ()
+
+                if len(distinct_fixes) > 1:
+                    self.logger.debug(
+                        f"{cve_id}, platform={platform}, package={pkg_name}, module={module} : carrying {len(distinct_fixes)} per-stream fix builds as AdditionalAdvisoryFixes",  # noqa: E501
+                    )
 
                 fixed_ins.append(
                     FixedIn(
@@ -608,8 +612,8 @@ class Parser:
                         version=canonical.version,
                         module=module,
                         advisory=primary_advisory,
-                        vulnerable_range=vulnerable_range,
-                        additional_advisories=additional_advisories,
+                        vulnerable_range=None,
+                        additional_advisories=tuple(additional_advisories),
                     ),
                 )
         finally:
@@ -864,14 +868,22 @@ class Parser:
                     v["Vulnerability"]["CVSS"].append(cvssv3_obj.normalize())
 
                 for artifact in artifacts:
+                    # additional_advisories carries (version, advisory) for every distinct called-out
+                    # fix build for this package (Option A). Build the list of (version, advisory)
+                    # pairs once and reuse it for both AdvisorySummary and AdditionalAdvisoryFixes.
+                    advisory_fixes = list(getattr(artifact, "additional_advisories", ()) or ())
+
                     if artifact.advisory.wont_fix:
                         a = {"NoAdvisory": True}
                     else:
                         a = {"NoAdvisory": False, "AdvisorySummary": []}
-                        # primary advisory (corresponds to the canonical fix version) first, then any
-                        # additional advisories folded in from other fix streams for the same package.
-                        for adv in (artifact.advisory, *artifact.additional_advisories):
-                            if adv.rhsa_id and adv.link:
+                        # Fold ALL contributing advisories into AdvisorySummary: the primary advisory
+                        # (canonical/highest fix) first, then every distinct per-stream advisory, so a
+                        # match against any stream's build can surface every relevant advisory.
+                        seen_advisories: set[str] = set()
+                        for adv in (artifact.advisory, *(af.advisory for af in advisory_fixes)):
+                            if adv.rhsa_id and adv.link and adv.rhsa_id not in seen_advisories:
+                                seen_advisories.add(adv.rhsa_id)
                                 a["AdvisorySummary"].append(
                                     {
                                         "ID": adv.rhsa_id,
@@ -891,11 +903,24 @@ class Parser:
                         "VendorAdvisory": a,
                     }
 
-                    # When multiple fix streams exist for the same package, VulnerableRange encodes the
-                    # per-stream fix boundaries directly as a grype version constraint. grype-db uses it
-                    # verbatim in preference to deriving "< Version" from the single fix version.
-                    if artifact.vulnerable_range:
-                        record["VulnerableRange"] = artifact.vulnerable_range
+                    # AdditionalAdvisoryFixes carries every distinct per-stream fix build + its advisory
+                    # (Option A). The grype matcher reads the installed package's own .elN_M dist-tag
+                    # minor, selects the build whose dist tag matches, and compares against it - so a
+                    # host already carrying its own stream's (lower-EVR) fix is not falsely flagged.
+                    # Additive and backwards compatible: omitted when there is nothing to carry, and
+                    # ignored by older grype.
+                    if advisory_fixes:
+                        record["AdditionalAdvisoryFixes"] = [
+                            {
+                                "Version": af.version,
+                                "Advisory": {
+                                    "ID": af.advisory.rhsa_id or "",
+                                    "Link": af.advisory.link or "",
+                                },
+                            }
+                            for af in advisory_fixes
+                            if af.version
+                        ]
 
                     result = self.fixdater.best(
                         vuln_id=cve_id,
@@ -1033,41 +1058,6 @@ def _advisory_from_rhsa(rhsa_id: str | None) -> Advisory:
             severity=None,
         )
     return Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None)
-
-
-def _build_vulnerable_range(sorted_base_fixes: list) -> str | None:
-    """Build an OR'd grype version constraint from fixes that live on distinct upstream bases.
-
-    Red Hat sometimes fixes the same package in the same major version more than once: a backport
-    that keeps the older upstream base on an older minor (e.g. python3.9 3.9.18-3.el9_4.5 for 9.4)
-    and a rebase to a newer upstream on a later minor (3.9.19-8.el9 for 9.5). Hydra flattens both
-    into "Red Hat Enterprise Linux 9", so a naive "fixed in the highest version" record falsely
-    flags a 9.4 host that already carries its backport (because 3.9.18 < 3.9.19 in RPM ordering).
-
-    Given the per-base fixes sorted ascending by upstream base, this produces a constraint like:
-
-        < 0:3.9.18-3.el9_4.5 || >= 0:3.9.19, < 0:3.9.19-8.el9
-
-    read as: vulnerable if below the lowest stream's fix, OR within a later stream (at or above that
-    stream's base) but below that stream's fix. The `>= base` pivot is what isolates each stream:
-    a 9.4 build at-or-above its fix is < 3.9.19, so it falls into no clause and is considered fixed.
-
-    Returns None when fewer than two distinct upstream bases are present (nothing to disambiguate);
-    callers fall back to the single "< fix" constraint in that case.
-
-    NOTE: this only works when the streams have *distinct upstream bases*. Two fixes that share a
-    base but differ only in their `.elN_M` dist tag (e.g. an el9_2 vs el9_4 backport of 2.34) cannot
-    be separated by RPM version comparison and require per-minor namespacing instead.
-    """
-    if not sorted_base_fixes or len(sorted_base_fixes) < 2:
-        return None
-
-    groups = [f"< {sorted_base_fixes[0].version}"]
-    for fix in sorted_base_fixes[1:]:
-        base = _get_version_base(fix.version)
-        groups.append(f">= {base}, < {fix.version}")
-
-    return " || ".join(groups)
 
 
 class RHELCVSS3:
