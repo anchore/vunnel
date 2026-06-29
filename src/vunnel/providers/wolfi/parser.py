@@ -255,7 +255,8 @@ class SecDBParser(Parser):
 
 class OSVParser(Parser):
     _input_dir_ = "osv"
-    _cga_id_re = re.compile(r"^CGA(-[23456789cfghjmpqrvwx]{4}){3}$")
+    _cga_id_re  = re.compile(r"^CGA(-[23456789cfghjmpqrvwx]{4}){3}$")
+    _tar_file   = "chainguard.tar.gz"
 
     def _download(self) -> None:
         '''
@@ -273,34 +274,34 @@ class OSVParser(Parser):
             os.makedirs(self.input_dir_path, exist_ok=True)
 
         try:
+            # download the tar file
             self.logger.info(f"downloading {self.namespace} osv {self.url}")
-            r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
-            buf = io.BytesIO(r.content)
-            with tarfile.open(fileobj=buf, mode="r:gz") as tf:
-                tf.extractall(path=self.input_dir_path)
+            self._download_stream(self.url, os.path.join(self.input_dir_path, self._tar_file))
         except Exception:
-            self.logger.exception(f"ignoring error processing osv feed for {self.url}")
+            self.logger.exception(f"ignoring error downloading osv feed for {self.url}")
+
+    def _download_stream(self, url: str, path: str) -> None:
+        with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
+            for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
+                if chunk:
+                    fh.write(chunk)
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
         self.logger.info(f"load files for {self.namespace} osv feed")
         try:
-            # filter files to those which match the CGA...json format
-            filenames = []
-            for filename in os.listdir(self.input_dir_path):
-                if not self._cga_id_re.match(filename.removesuffix(".json")):
-                    self.logger.warning(f"skipping file with invalid name: {filename}")
-                    continue
-                filenames.append(filename)
+            with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz") as tf:
+                # Extract a specific file as a file-like object
+                for member in tf:
+                    n = member.name
+                    if not n.endswith(".json"):
+                        continue
+                    if not self._cga_id_re.match(n.removesuffix(".json")):
+                        continue
+                    f = tf.extractfile(member)
+                    if not f:
+                        continue
 
-            # given the large volume of osv files, process in parallel
-            def _load_file(filename: str) -> dict[str, Any]:
-                self.logger.debug(f"loading {self.namespace} osv data from {filename}")
-                with open(os.path.join(self.input_dir_path, filename)) as fh:
-                    return orjson.loads(fh.read())
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                for data in executor.map(_load_file, filenames):
-                    yield self._release_, data
+                    yield self._release_, orjson.loads(f.read())
         except Exception:
             self.logger.exception(f"failed to load {self.namespace} osv data")
             raise
