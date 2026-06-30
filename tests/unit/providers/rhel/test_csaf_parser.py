@@ -93,7 +93,7 @@ def test_best_version_module_from_fpis_package_name(csaf_parser, fixture_dir):
         "AppStream-8.8.0.Z.MAIN.EUS:rubygem-irb-1.2.6-139.module+el8.8.0+18745+f1bef313.noarch.rpm-ruby:2.7",
     ]
     doc = from_path(fixture_dir / "csaf/advisories/rhsa-2023_3821.json")
-    actual_version, actual_module = csaf_parser.best_version_module_from_fpis(
+    actual_version, actual_module, actual_product_id = csaf_parser.best_version_module_from_fpis(
         doc,
         "RHSA-2023:3821",
         fpis,
@@ -101,6 +101,8 @@ def test_best_version_module_from_fpis_package_name(csaf_parser, fixture_dir):
         "cpe:/a:redhat:enterprise_linux:8")
     assert actual_version == "0:2.7.8-139.module+el8.8.0+18745+f1bef313"
     assert actual_module == "ruby:2.7"
+    # the matched FPI is returned so the caller can recover the target minor from it
+    assert actual_product_id == "AppStream-8.8.0.Z.MAIN.EUS:ruby-2.7.8-139.module+el8.8.0+18745+f1bef313.src.rpm-ruby:2.7"
 
 def test_best_version_module_from_fpis_multi_platform(csaf_parser, fixture_dir, multi_platform_csaf_doc):
     fpis = [
@@ -114,11 +116,12 @@ def test_best_version_module_from_fpis_multi_platform(csaf_parser, fixture_dir, 
     ]
     platform_cpe = "cpe:/a:redhat:enterprise_linux:9"
     fix_id = "RHSA-2024:0811"
-    actual_version, actual_module = csaf_parser.best_version_module_from_fpis(
+    actual_version, actual_module, actual_product_id = csaf_parser.best_version_module_from_fpis(
         multi_platform_csaf_doc, fix_id, fpis, "sudo", platform_cpe,
     )
     assert actual_module is None
     assert actual_version == "0:1.9.5p2-10.el9_3"
+    assert actual_product_id == "AppStream-9.3.0.Z.MAIN:sudo-0:1.9.5p2-10.el9_3.src"
 
 
 @pytest.mark.parametrize(
