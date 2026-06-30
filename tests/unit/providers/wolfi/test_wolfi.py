@@ -228,6 +228,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
     )
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
     p = Provider(root=workspace.root, config=c)
 
     p.update(None)
@@ -245,6 +246,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     c = Config()
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
     p = Provider(
         root=workspace.root,
         config=c,

@@ -48,6 +48,7 @@ class Provider(provider.Provider):
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
+            skip_download=self.config.runtime.skip_download,
         )
 
         # this provider requires the previous state from former runs
@@ -60,6 +61,10 @@ class Provider(provider.Provider):
     @classmethod
     def tags(cls) -> list[str]:
         return ["vulnerability", "os"]
+
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         if not self.config.enable:

@@ -67,6 +67,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
 
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
     p = Provider(root=workspace.root, config=c)
 
     mock_data_path = helpers.local_dir("test-fixtures/input")
@@ -120,6 +121,7 @@ def test_provider_osv_schema(helpers, disable_get_requests, auto_fake_fixdate_fi
 
     c = Config(use_osv=True)
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
     p = Provider(root=workspace.root, config=c)
 
     assert p.schema.version == "1.7.0"

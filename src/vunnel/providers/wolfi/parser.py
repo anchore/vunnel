@@ -141,6 +141,7 @@ class SecDBParser(Parser):
                     fp.write(chunk)
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
+            raise
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         try:
@@ -256,9 +257,8 @@ class OSVParser(Parser):
 
     def _download(self) -> None:
         """
-        Download all OSV entry files based on the index file at self.url, which should point to the
-        top level all.json file. For each entry in the index, we construct the URL for the individual
-        entry file and download it to the input directory.
+        Download the OSV tar.gz archive from self.url and save it to the input directory.
+        The archive contains individual OSV JSON files, one per advisory.
         """
         self.fixdater.download()
 
@@ -272,12 +272,13 @@ class OSVParser(Parser):
         try:
             # download the tar file
             self.logger.info(f"downloading {self.namespace} osv {self.url}")
-            self._download_stream(self.url, os.path.join(self.input_dir_path, self._tar_file))
+            self._download_stream(self.url, os.path.join(self.input_dir_path, self._tar_file), self.download_timeout)
         except Exception:
             self.logger.exception(f"ignoring error downloading osv feed for {self.url}")
+            raise
 
-    def _download_stream(self, url: str, path: str) -> None:
-        with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
+    def _download_stream(self, url: str, path: str, timeout: int) -> None:
+        with http.get(url, logger=self.logger, stream=True, timeout=timeout) as response, open(path, "wb") as fh:
             for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
                 if chunk:
                     fh.write(chunk)
@@ -286,20 +287,26 @@ class OSVParser(Parser):
         self.logger.info(f"load files for {self.namespace} osv feed")
         try:
             with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz") as tf:
-                # Extract a specific file as a file-like object
                 for member in tf:
                     n = member.name
                     if not n.endswith(".json"):
                         continue
                     if not self._cga_id_re.match(n.removesuffix(".json")):
+                        self.logger.warning(f"encountered invalid json file f{n} in osv tar.gz")
                         continue
                     f = tf.extractfile(member)
                     if not f:
                         continue
 
                     yield self._release_, orjson.loads(f.read())
-        except Exception:
-            self.logger.exception(f"failed to load {self.namespace} osv data")
+        except FileNotFoundError as e:
+            self.logger.exception(f"failed to open {self.namespace} osv file {e.filename}: {e.strerror}")
+            raise
+        except tarfile.TarError as e:
+            self.logger.exception(f"failed to extract {self.namespace} tar file: {e}")
+            raise
+        except orjson.JSONDecodeError as e:
+            self.logger.exception(f"failed to parse {self.namespace} osv data: {e}")
             raise
 
     def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -317,4 +324,8 @@ class OSVParser(Parser):
         # does this for ease of identifying the associated vulnerability when writing records.
         # IE: {"CGA-1234-5678-9abc": {<full osv record>}}
         osv.patch_fix_date(data, self.fixdater)
-        return {data["id"]: data}
+        vulnid = data.get("id")
+        if vulnid is None:
+            self.logger.warning(f"data missing id: {data}")
+            return None
+        return {vulnid: data}
