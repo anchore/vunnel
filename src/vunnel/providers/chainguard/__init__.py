@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.providers.wolfi.parser import SecDBParser, OSVParser
+from vunnel.providers.wolfi.parser import OSVParser, SecDBParser
 from vunnel.utils import timer
 
 if TYPE_CHECKING:
@@ -27,8 +27,6 @@ class Config:
     osv_url: str = "https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz"
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
     use_osv: bool = False
-    # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_MAX_WORKERS
-    osv_max_workers: int = 16 
 
 
 class Provider(provider.Provider):
@@ -57,7 +55,6 @@ class Provider(provider.Provider):
                 download_timeout=self.config.request_timeout,
                 logger=self.logger,
                 skip_download=self.config.runtime.skip_download,
-                max_workers=self.config.osv_max_workers,
             )
             self.schema = schema.OSVSchema(version="1.7.0")
         else:

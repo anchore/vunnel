@@ -265,6 +265,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   chainguard:
+    osv_url: https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -283,6 +284,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
     secdb_url: https://packages.cgr.dev/chainguard/security.json
+    use_osv: false
   chainguard_libraries:
     openvex_url: https://libraries.cgr.dev/openvex/v1/all.json
     request_timeout: 125
@@ -640,6 +642,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   wolfi:
+    enable: true
     request_timeout: 125
     runtime:
       existing_input: keep

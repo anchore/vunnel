@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import abc
-import concurrent.futures
 import copy
-import io
 import logging
 import os
 import re
@@ -15,7 +13,7 @@ import orjson
 
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import vulnerability, osv
+from vunnel.utils import osv, vulnerability
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -38,7 +36,6 @@ class Parser(abc.ABC):
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
         skip_download: bool = False,
-        max_workers: int = 16,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -52,7 +49,6 @@ class Parser(abc.ABC):
             security_reference_url.strip("/") if security_reference_url else self._security_reference_url_
         )
         self.skip_download = skip_download
-        self.max_workers = max_workers
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -79,7 +75,7 @@ class Parser(abc.ABC):
     def _download(self) -> None: ...
 
     @abc.abstractmethod
-    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]: ...
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]: ...
 
     @abc.abstractmethod
     def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]: ...
@@ -146,7 +142,7 @@ class SecDBParser(Parser):
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
 
-    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         try:
             with open(f"{self.input_dir_path}/{self._db_filename}") as fh:
                 dbtype_data_dict = orjson.loads(fh.read())
@@ -259,11 +255,11 @@ class OSVParser(Parser):
     _tar_file   = "chainguard.tar.gz"
 
     def _download(self) -> None:
-        '''
+        """
         Download all OSV entry files based on the index file at self.url, which should point to the
         top level all.json file. For each entry in the index, we construct the URL for the individual
         entry file and download it to the input directory.
-        '''
+        """
         self.fixdater.download()
 
         if self.skip_download:
@@ -286,7 +282,7 @@ class OSVParser(Parser):
                 if chunk:
                     fh.write(chunk)
 
-    def _load(self) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         self.logger.info(f"load files for {self.namespace} osv feed")
         try:
             with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz") as tf:
@@ -306,9 +302,9 @@ class OSVParser(Parser):
             self.logger.exception(f"failed to load {self.namespace} osv data")
             raise
 
-    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:
         """
-        Normalize one OSV record to match vunnel requirements. Currently, the OSV schema used 
+        Normalize one OSV record to match vunnel requirements. Currently, the OSV schema used
         by vunnel matches Chainguard, so this is a noop.
 
         Output conforms to the vunnel OS vulnerability schema (schema.OSVSchema, default v1.7.0):
@@ -321,4 +317,4 @@ class OSVParser(Parser):
         # does this for ease of identifying the associated vulnerability when writing records.
         # IE: {"CGA-1234-5678-9abc": {<full osv record>}}
         osv.patch_fix_date(data, self.fixdater)
-        return {data['id']: data}
+        return {data["id"]: data}

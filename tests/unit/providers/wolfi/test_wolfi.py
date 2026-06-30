@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 import shutil
@@ -284,20 +285,30 @@ class TestOSVParser:
         )
 
     def test_load(self, tmpdir, auto_fake_fixdate_finder):
+        import tarfile as tf_mod
+
         p = self._make_parser(tmpdir)
         os.makedirs(p.input_dir_path, exist_ok=True)
-        with open(os.path.join(p.input_dir_path, "CGA-aaaa.json"), "w") as fp:
-            fp.write('{"id": "CGA-aaaa"}')
-        with open(os.path.join(p.input_dir_path, "CGA-bbbb.json"), "w") as fp:
-            fp.write('{"id": "CGA-bbbb"}')
-        with open(os.path.join(p.input_dir_path, "ignore.txt"), "w") as fp:
-            fp.write("not json")
+
+        # Valid CGA IDs must match _cga_id_re: ^CGA(-[23456789cfghjmpqrvwx]{4}){3}$
+        entries = {
+            "CGA-2222-3333-4444.json": b'{"id": "CGA-2222-3333-4444"}',
+            "CGA-5555-6666-7777.json": b'{"id": "CGA-5555-6666-7777"}',
+            "not-a-cga.json": b'{"id": "ignored"}',
+            "ignore.txt": b"not json",
+        }
+        tar_path = os.path.join(p.input_dir_path, p._tar_file)
+        with tf_mod.open(tar_path, "w:gz") as tf:
+            for name, content in entries.items():
+                info = tf_mod.TarInfo(name=name)
+                info.size = len(content)
+                tf.addfile(info, io.BytesIO(content))
 
         results = list(p._load())
 
         assert sorted((release, data["id"]) for release, data in results) == [
-            ("rolling", "CGA-aaaa"),
-            ("rolling", "CGA-bbbb"),
+            ("rolling", "CGA-2222-3333-4444"),
+            ("rolling", "CGA-5555-6666-7777"),
         ]
 
     def test_normalize_wraps_by_id(self, tmpdir, auto_fake_fixdate_finder, osv_record):
