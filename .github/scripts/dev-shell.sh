@@ -93,7 +93,7 @@ source "$DEV_PYTHON_ENV_PATH/bin/activate"
 pids=""
 
 step "Installing editable version of vunnel"
-pip install -e . > /dev/null &
+uv pip install -e . > /dev/null &
 pids="$pids $!"
 
 step "Building grype"

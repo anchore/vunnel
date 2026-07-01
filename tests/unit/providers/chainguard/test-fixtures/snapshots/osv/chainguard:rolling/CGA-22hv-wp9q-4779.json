@@ -1,0 +1,149 @@
+{
+  "identifier": "chainguard:rolling/CGA-22hv-wp9q-4779",
+  "item": {
+    "affected": [
+      {
+        "ecosystem_specific": {
+          "components": [
+            {
+              "advisory_id": "CGA-22hv-wp9q-0001",
+              "component_location": "/app/node_modules/langfuse-core",
+              "component_name": "langfuse-core",
+              "component_purl": "pkg:npm/langfuse-core@3.152.0",
+              "component_type": "npm",
+              "component_version": "3.152.0",
+              "note": "Updated in 3.153.0-r0",
+              "status": "fixed"
+            }
+          ]
+        },
+        "package": {
+          "ecosystem": "Chainguard",
+          "name": "langfuse-3-worker",
+          "purl": "pkg:apk/chainguard/langfuse-3-worker?arch=x86_64"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-02-24",
+                    "kind": "advisory",
+                    "version": "3.153.0-r0"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "3.153.0-r0"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      },
+      {
+        "ecosystem_specific": {
+          "components": [
+            {
+              "advisory_id": "CGA-22hv-wp9q-0002",
+              "component_location": "/app/node_modules/langfuse-core",
+              "component_name": "langfuse-core",
+              "component_purl": "pkg:npm/langfuse-core@3.151.0",
+              "component_type": "npm",
+              "component_version": "3.151.0",
+              "status": "fixed"
+            }
+          ]
+        },
+        "package": {
+          "ecosystem": "Chainguard",
+          "name": "langfuse-fips-3-worker",
+          "purl": "pkg:apk/chainguard/langfuse-fips-3-worker?arch=x86_64"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-02-24",
+                    "kind": "advisory",
+                    "version": "3.152.0-r0"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "3.152.0-r0"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      },
+      {
+        "package": {
+          "ecosystem": "Wolfi",
+          "name": "langfuse-3-worker",
+          "purl": "pkg:apk/wolfi/langfuse-3-worker?arch=aarch64"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-02-24",
+                    "kind": "advisory",
+                    "version": "3.153.0-r0"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "3.153.0-r0"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      }
+    ],
+    "id": "CGA-22hv-wp9q-4779",
+    "modified": "2026-02-24T13:07:08Z",
+    "published": "2026-02-24T13:07:08Z",
+    "references": [
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-24398"
+      }
+    ],
+    "schema_version": "1.7.0",
+    "severity": [
+      {
+        "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+        "type": "CVSS_V3"
+      }
+    ],
+    "summary": "Langfuse: Information disclosure via insecure session handling",
+    "upstream": [
+      "CVE-2026-24398",
+      "GHSA-r354-f388-2fhh"
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.0.json"
+}

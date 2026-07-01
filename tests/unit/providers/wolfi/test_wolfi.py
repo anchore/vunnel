@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 import shutil
+from pathlib import Path
 
+import jsonschema
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.wolfi import Config, Provider, parser
-from vunnel.providers.wolfi.parser import Parser
+from vunnel.providers.wolfi.parser import OSVParser, SecDBParser
+
+OSV_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[4]
+    / "schema"
+    / "vulnerability"
+    / "osv"
+    / "schema-1.7.0.json"
+)
 
 
 class TestParser:
@@ -152,14 +163,14 @@ class TestParser:
         return release, dbtype_data_dict
 
     def test_load(self, mock_raw_data, tmpdir):
-        p = Parser(
+        p = SecDBParser(
             workspace=workspace.Workspace(tmpdir, "test", create=True),
             url="https://packages.wolfi.dev/os/security.json",
             namespace="wolfi",
         )
 
-        os.makedirs(p.secdb_dir_path, exist_ok=True)
-        b = os.path.join(p.secdb_dir_path, "security.json")
+        os.makedirs(p.input_dir_path, exist_ok=True)
+        b = os.path.join(p.input_dir_path, "security.json")
         with open(b, "w") as fp:
             fp.write(mock_raw_data)
 
@@ -173,7 +184,7 @@ class TestParser:
         assert counter == 1
 
     def test_normalize(self, mock_parsed_data, tmpdir, auto_fake_fixdate_finder):
-        p = Parser(
+        p = SecDBParser(
             workspace=workspace.Workspace(tmpdir, "test", create=True),
             url="https://packages.wolfi.dev/os/security.json",
             namespace="wolfi",
@@ -217,6 +228,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
     )
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
     p = Provider(root=workspace.root, config=c)
 
     p.update(None)
@@ -234,6 +246,7 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     c = Config()
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
     p = Provider(
         root=workspace.root,
         config=c,
@@ -242,3 +255,91 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
     p.update(None)
 
     workspace.assert_result_snapshots()
+
+
+class TestOSVParser:
+    @pytest.fixture()
+    def osv_record(self):
+        return {
+            "id": "CGA-test-1234-5678",
+            "severity": [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}],
+            "affected": [
+                {
+                    "package": {"name": "openssl", "ecosystem": "Wolfi"},
+                    "ranges": [
+                        {
+                            "type": "ECOSYSTEM",
+                            "events": [{"introduced": "0"}, {"fixed": "3.0.7-r0"}],
+                        },
+                    ],
+                },
+            ],
+            "published": "2024-09-14T00:00:00Z",
+            "modified": "2024-09-15T00:00:00Z",
+            "upstream": ["CVE-2024-1234"],
+        }
+
+    def _make_parser(self, tmpdir):
+        return OSVParser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.cgr.dev/chainguard/v2/osv/all.json",
+            namespace="wolfi",
+        )
+
+    def test_load(self, tmpdir, auto_fake_fixdate_finder):
+        import tarfile as tf_mod
+
+        p = self._make_parser(tmpdir)
+        os.makedirs(p.input_dir_path, exist_ok=True)
+
+        # Valid CGA IDs must match _cga_id_re: ^CGA(-[23456789cfghjmpqrvwx]{4}){3}$
+        entries = {
+            "CGA-2222-3333-4444.json": b'{"id": "CGA-2222-3333-4444"}',
+            "CGA-5555-6666-7777.json": b'{"id": "CGA-5555-6666-7777"}',
+            "not-a-cga.json": b'{"id": "ignored"}',
+            "ignore.txt": b"not json",
+        }
+        tar_path = os.path.join(p.input_dir_path, p._tar_file)
+        with tf_mod.open(tar_path, "w:gz") as tf:
+            for name, content in entries.items():
+                info = tf_mod.TarInfo(name=name)
+                info.size = len(content)
+                tf.addfile(info, io.BytesIO(content))
+
+        results = list(p._load())
+
+        assert sorted((release, data["id"]) for release, data in results) == [
+            ("rolling", "CGA-2222-3333-4444"),
+            ("rolling", "CGA-5555-6666-7777"),
+        ]
+
+    def test_normalize_wraps_by_id(self, tmpdir, auto_fake_fixdate_finder, osv_record):
+        """OSVParser._normalize returns a {vuln_id: record} mapping.
+
+        The record itself is the input OSV data passed through unchanged
+        (Chainguard OSV already conforms to vunnel's OSV schema); the wrap
+        gives the calling update() loop a uniform {vid: record} shape across
+        secdb and osv parsers.
+        """
+        p = self._make_parser(tmpdir)
+
+        result = p._normalize("rolling", osv_record)
+
+        assert result == {osv_record["id"]: osv_record}
+        assert result[osv_record["id"]] is osv_record  # no copy of the inner record
+
+    def test_normalize_output_matches_osv_schema(self, tmpdir, auto_fake_fixdate_finder, osv_record):
+        """Verify each wrapped record conforms to OSV schema-1.7.0.json.
+
+        Validates against the schema at:
+        https://github.com/anchore/vunnel/blob/main/schema/vulnerability/osv/schema-1.7.0.json
+        """
+        p = self._make_parser(tmpdir)
+        result = p._normalize("rolling", osv_record)
+
+        with open(OSV_SCHEMA_PATH) as f:
+            osv_schema = json.load(f)
+
+        validator = jsonschema.Draft202012Validator(osv_schema)
+        for record in result.values():
+            validator.validate(record)
