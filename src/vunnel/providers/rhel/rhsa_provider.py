@@ -15,6 +15,8 @@ class AffectedRelease:
         rhsa_id: str | None = None,
         module: str | None = None,
         package: str | None = None,
+        product_id: str | None = None,
+        channels: list[str] | None = None,
     ) -> None:
         self.name: str | None = name
         self.version: str | None = version
@@ -23,6 +25,14 @@ class AffectedRelease:
         self.module: str | None = module
         self.package: str | None = package  # the raw "package" field from Hydra JSON API
         self.platform_cpe: str | None = None  # the CPE for the platform, if available
+        # The matched CSAF full product id (FPI) that supplied this fix's version. Unlike platform/cpe
+        # it encodes the target RHEL minor stream, so it is what lets us tell same-base per-stream
+        # fixes apart. Populated during the RHSA lookup; may be None for non-CSAF-sourced versions.
+        self.product_id: str | None = product_id
+        # The sorted, deduped set of extended-support channel tokens (e.g. ["aus", "eus"]) that this
+        # exact build is delivered through. Empty means the build is generally available (shipped via a
+        # normal/GA/non-extended channel). Computed across all FPIs for the build during the RHSA lookup.
+        self.channels: list[str] = channels or []
 
     def as_dict(self) -> dict[str, str | None]:
         return {
@@ -33,6 +43,7 @@ class AffectedRelease:
             "module": self.module,
             "package": self.package,
             "platform_cpe": self.platform_cpe,
+            "product_id": self.product_id,
         }
 
 
@@ -76,14 +87,21 @@ class RHSAProvider(ABC):
         self.urls: list[str] = []
 
     @abstractmethod
-    def get_fixed_version_and_module(self, cve_id: str, ar: AffectedRelease, override_package_name: str | None) -> tuple[str | None, str | None]:
+    def get_fixed_version_and_module(
+        self,
+        cve_id: str,
+        ar: AffectedRelease,
+        override_package_name: str | None,
+    ) -> tuple[str | None, str | None, str | None, list[str]]:
         """
-        Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
+        Retrieve the fixed version, module, matched product_id, and channel set for a given RHSA ID, platform, and package name.
 
         :param rhsa_id: The RHSA ID (e.g., "RHSA-2025:1234").
         :param platform: The platform (e.g., "RHEL 8").
         :param package_name: The name of the package (e.g., "httpd").
-        :return: A tuple containing the fixed version and module.
+        :return: A tuple of (fixed version, module, matched product_id, channels). The product_id encodes the
+            target RHEL minor stream and is used to disambiguate same-base per-stream fixes. channels is the
+            sorted set of extended-support channel tokens (empty when the build is generally available).
         """
 
 
@@ -121,17 +139,22 @@ class CSAFRHSAProvider(RHSAProvider):
         )
         self.urls.extend(self.csaf_parser.urls)
 
-    def get_fixed_version_and_module(self, cve_id: str, ar: AffectedRelease, override_package_name: str | None) -> tuple[str | None, str | None]:
+    def get_fixed_version_and_module(
+        self,
+        cve_id: str,
+        ar: AffectedRelease,
+        override_package_name: str | None,
+    ) -> tuple[str | None, str | None, str | None, list[str]]:
         """
-        Retrieve the fixed version and module for a given RHSA ID, platform, and package name.
+        Retrieve the fixed version, module, matched product_id, and channel set for a given RHSA ID, platform, and package name.
 
         :param cve_id: The CVE being parsed, (e.g., "CVE-2021-1234").
         :param ar: an AffectedRelease object
         :param override_package_name: an override package name (e.g., "httpd") to use instead of ar.name
-        :return: A tuple containing the fixed version and module.
+        :return: A tuple of (fixed version, module, matched product_id, channels).
         """
         normalized_package_name = override_package_name or ar.name
 
         if not normalized_package_name:
-            return None, None
+            return None, None, None, []
         return self.csaf_parser.get_fix_info(cve_id, ar.as_dict(), normalized_package_name)
