@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import enum
 import logging
+import os
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
@@ -72,6 +74,23 @@ _providers: dict[str, type[provider.Provider]] = {
 }
 
 
+class PluginOverrideMode(str, enum.Enum):
+    # fail: a plugin registering a name that already exists as a different class raises (default, historical behavior)
+    FAIL = "fail"
+    # replace: the plugin wins over the built-in of the same name
+    REPLACE = "replace"
+    # ignore: the plugin is dropped when a built-in of the same name already exists (built-in wins)
+    IGNORE = "ignore"
+
+    @classmethod
+    def from_env(cls) -> PluginOverrideMode:
+        raw = os.environ.get("VUNNEL_PLUGIN_OVERRIDE_MODE", "").strip().lower()
+        try:
+            return cls(raw)
+        except ValueError:
+            return cls.FAIL
+
+
 def create(name: str, workspace_path: str, *args: Any, **kwargs: Any) -> provider.Provider:
     return _providers[name](workspace_path, *args, **kwargs)
 
@@ -84,13 +103,26 @@ def versions() -> dict[str, int]:
     return {n: p.version() for (n, p) in _providers.items()}
 
 
-def register(name: str, cls: type[provider.Provider]) -> None:
-    if name in _providers and _providers[name] != cls:
-        raise KeyError(f"provider {name!r} is already registered to another provider class: {_providers[name]!r}")
+def register(name: str, cls: type[provider.Provider], mode: PluginOverrideMode | None = None) -> None:
+    # plugins call register() themselves during load_plugins(), so the override mode is resolved here at call
+    # time from the environment (VUNNEL_PLUGIN_OVERRIDE_MODE) unless an explicit mode is passed. unset/unknown
+    # resolves to FAIL, preserving the historical behavior for any direct caller that doesn't opt in.
+    effective_mode = mode if mode is not None else PluginOverrideMode.from_env()
+    existing = _providers.get(name)
+    if existing is not None and existing != cls:
+        if effective_mode == PluginOverrideMode.REPLACE:
+            logging.warning(f"provider {name!r}: replacing {existing!r} with plugin {cls!r}")
+        elif effective_mode == PluginOverrideMode.IGNORE:
+            logging.warning(f"provider {name!r}: ignoring plugin {cls!r}, keeping existing {existing!r}")
+            return
+        else:
+            raise KeyError(f"provider {name!r} is already registered to another provider class: {existing!r}")
     _providers[name] = cls
 
 
 def load_plugins() -> None:
+    logging.debug(f"plugin override mode: {PluginOverrideMode.from_env().value}")
+
     plugins = entry_points(group="vunnel.plugins.providers")
 
     logging.debug(f"discovered plugins: {len(plugins)}")
