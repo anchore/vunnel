@@ -636,6 +636,10 @@ class Parser:
                         )
                     stream_advisories = tuple(built)
 
+                # Intentional gating asymmetry: the advisory summary below keys on distinct upstream
+                # bases, while the per-stream `advisories` table above keys on distinct full EVRs. For a
+                # same-base multi-minor fix these differ -- the summary keeps its historical "newest
+                # build + its advisory" shape (back-compat) and `advisories` is the complete per-stream list.
                 if len(distinct_base_fixes) > 1:
                     vulnerable_range = _build_vulnerable_range(distinct_base_fixes)
                     self.logger.debug(
@@ -961,7 +965,7 @@ class Parser:
                     # generally-available builds (e.g. ["ga"], ["ga","eus"], ["eus"], ["aus","eus"]);
                     # empty means the channel set is unknown. Emitted only when there are 2+ distinct
                     # fix streams; additive (OS schema
-                    # 1.1.1) and ignored by older grype, which continues to use Version. A downstream
+                    # 1.1.2) and ignored by older grype, which continues to use Version. A downstream
                     # matcher can use this to select the build matching the installed package's own minor.
                     if artifact.advisories:
                         record["Advisories"] = [

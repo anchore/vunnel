@@ -45,8 +45,13 @@ from __future__ import annotations
 import re
 from typing import NamedTuple
 
-# Dot-separated tokens (old format) or hyphen suffix (new format) that mark a pinned-minor extended
+# Dot-separated tokens (old format) or hyphen suffix (new format) that mark a pinned-MINOR extended
 # maintenance stream. Matched case-insensitively as whole tokens and normalized to lowercase tokens.
+# NOTE: ELS is intentionally NOT here. Extended Lifecycle Support is a MAJOR-only stream (e.g.
+# "7Server-ELS", no minor in the prefix), so it never appears as a versioned dot-token alongside a
+# minor the way these do. It is recognized by its own branch in parse_product_id (the trailing
+# "-ELS" marker) and yields minor=None, channel="els". Adding it here would be wrong -- these markers
+# are scanned only against a versioned prefix's tokens, where ELS does not occur.
 _EXTENDED_MARKERS = ("EUS", "E4S", "AUS", "TUS")
 
 # Recognized GENERAL (non-extended) markers. Their presence -- or, in the new format, the absence of
