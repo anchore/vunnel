@@ -621,6 +621,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   ubuntu:
+    downconvert_emit_esm: true
     downconvert_osv_to_os: true
     request_timeout: 125
     runtime:

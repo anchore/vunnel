@@ -15,7 +15,7 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
 
 from . import parser_legacy
-from .os_downconvert import os_identifier_for, osv_to_os
+from .os_downconvert import osv_to_os
 from .usn_fixdate_overlay import USNFixDateOverlay, usn_extra_candidates
 from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
 
@@ -242,13 +242,14 @@ class Parser:
     _fragments_subdir_ = "fragments"
     _normalized_subdir_ = "normalized-cve-data"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
         fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         downconvert_osv_to_os: bool = False,
+        downconvert_emit_esm: bool = True,
     ):
         self.workspace = workspace
         self.fixdater = fixdater if fixdater is not None else fixdate.default_finder(workspace)
@@ -258,6 +259,9 @@ class Parser:
         # are yielded. The legacy normalized-cve-data passthrough already emits OS shape,
         # so when this is enabled every yielded record is OS.
         self.downconvert_osv_to_os = downconvert_osv_to_os
+        # When downconverting, also emit `ubuntu:X.YY+esm` channel records for plain Pro
+        # (ESM). Default on; the frozen-v5 lane sets this off to take base records only.
+        self.downconvert_emit_esm = downconvert_emit_esm
 
         self.archive_path = os.path.join(workspace.input_path, self._archive_filename_)
         self.vex_archive_path = os.path.join(workspace.input_path, self._vex_archive_filename_)
@@ -669,12 +673,12 @@ class Parser:
         """
         os_schema = schema.OSSchema()
         for _osv_identifier, _osv_schema, osv_payload in self._iter_fragments():
-            os_payload = osv_to_os(osv_payload)
+            os_payload = osv_to_os(osv_payload, include_esm=self.downconvert_emit_esm)
             if os_payload is None:
                 continue
-            identifier = os_identifier_for(osv_payload)
-            if identifier is None:
-                continue
+            # identifier is derived from the emitted payload so it can't drift from it.
+            vuln = os_payload["Vulnerability"]
+            identifier = f"{vuln['NamespaceName']}/{vuln['Name'].lower()}"
             yield identifier, os_schema, os_payload
 
     def _load_usn_overlay(self) -> USNFixDateOverlay | None:

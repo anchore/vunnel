@@ -28,6 +28,12 @@ class Config:
     # is no provenance for the inference and won't-fix annotations in the OS shape, so
     # downstream consumers lose that signal.
     downconvert_osv_to_os: bool = True
+    # Only meaningful when `downconvert_osv_to_os` is on: also emit `ubuntu:X.YY+esm`
+    # distro-channel records for plain Ubuntu Pro (ESM), carrying the real Pro fix
+    # version (mirrors RHEL EUS's `rhel:X.Y+eus`). Default on. Set False for the
+    # frozen-v5 lane: it needs the OS-shape down-convert but its build isn't validated
+    # against `+esm` channels, so it takes base records only.
+    downconvert_emit_esm: bool = True
 
 
 class Provider(provider.Provider):
@@ -68,6 +74,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             logger=self.logger,
             downconvert_osv_to_os=self.config.downconvert_osv_to_os,
+            downconvert_emit_esm=self.config.downconvert_emit_esm,
         )
 
     @classmethod

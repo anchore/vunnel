@@ -207,6 +207,18 @@ def _seed_vex_archive(fresh_workspace, fixture_dir):
     )
 
 
+def _seed_esm_cases_archive(fresh_workspace, fixture_dir):
+    # Real Canonical OSV records (netty/unzip/wolfssl) kept in an isolated tree so
+    # they exercise the full parser without perturbing the exact-ordering/snapshot
+    # tests that read the main osv/ fixtures.
+    _build_sample_archive(
+        fixture_dir,
+        source_subdir="osv-esm-cases",
+        archive_prefix="osv",
+        dst_path=os.path.join(fresh_workspace.input_path, "osv-all.tar.xz"),
+    )
+
+
 @pytest.fixture
 def sample_vex_archive(tmp_path, fixture_dir):
     """Build a VEX tar.xz once per test and return its path.
@@ -425,8 +437,7 @@ class TestParserFixDateDeferredToYield:
         with result.SQLiteReader(path) as reader:
             env = next(e for e in reader.each() if "2013-2208" in e.identifier)
         for r in env.item["affected"][0]["ranges"]:
-            assert "anchore" not in r.get("database_specific", {}), \
-                "fragment payload should be raw OSV record, no fix-date patching at write time"
+            assert "anchore" not in r.get("database_specific", {}), "fragment payload should be raw OSV record, no fix-date patching at write time"
 
     def test_yielded_record_has_anchore_when_fixed_event_present(self, fresh_workspace, fixture_dir, fake_fixdate_finder):
         # On yield, patch_fix_date runs and populates database_specific.anchore
@@ -452,9 +463,11 @@ class TestParserFixDateDeferredToYield:
         # Configure the fake finder with a dict keyed by the upstream CVE only. If the
         # parser uses the UBUNTU-CVE id, the lookup falls through and no anchore.fixes
         # gets written; if it uses the upstream, the lookup hits.
-        fake_fixdate_finder(responses={
-            "CVE-2013-2208": [Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
-        })
+        fake_fixdate_finder(
+            responses={
+                "CVE-2013-2208": [Result(date=datetime.date(2013, 7, 15), kind="first-observed", accurate=True)],
+            }
+        )
         _seed_archive(fresh_workspace, fixture_dir)
         p = Parser(workspace=fresh_workspace)
         p._write_fragments()
@@ -577,9 +590,9 @@ class TestParserIteration:
         assert ids == [
             "ubuntu-14.04-lts/ubuntu-cve-2013-2208",
             "ubuntu-14.04-lts/ubuntu-cve-2016-20013",
-            "ubuntu-14.04-lts/ubuntu-cve-2020-36325",   # ← inferred from Pro:14.04/jansson
+            "ubuntu-14.04-lts/ubuntu-cve-2020-36325",  # ← inferred from Pro:14.04/jansson
             "ubuntu-16.04-lts/ubuntu-cve-2016-20013",
-            "ubuntu-16.04-lts/ubuntu-cve-2021-3782",    # ← inferred from Pro:16.04/wayland
+            "ubuntu-16.04-lts/ubuntu-cve-2021-3782",  # ← inferred from Pro:16.04/wayland
             "ubuntu-16.04-lts/ubuntu-cve-2026-1403",
             "ubuntu-18.04-lts/ubuntu-cve-2016-20013",
             "ubuntu-18.04-lts/ubuntu-cve-2021-3782",
@@ -763,9 +776,7 @@ class TestParserLegacyPassthrough:
 
         # No fixdater call should reference CVE-2022-31258 (its only namespace is OSV-covered)
         bionic_filtered_calls = [c for c in calls if c[0] == "CVE-2022-31258"]
-        assert bionic_filtered_calls == [], (
-            f"expected zero fixdater calls for OSV-covered CVE-2022-31258, got {bionic_filtered_calls}"
-        )
+        assert bionic_filtered_calls == [], f"expected zero fixdater calls for OSV-covered CVE-2022-31258, got {bionic_filtered_calls}"
         # And calls for the EOL namespaces DO happen
         assert any(c[0] == "CVE-2012-5124" for c in calls)
         assert any(c[0] == "CVE-2013-6627" for c in calls)
@@ -826,6 +837,7 @@ class TestProviderUpdate:
             p.update(None)
 
         import json
+
         schemas = []
         for f in ws.result_files():
             with open(f) as fh:
@@ -858,6 +870,7 @@ class TestProviderUpdate:
 
         # check mixed-schema output
         import json
+
         schemas = []
         for f in ws.result_files():
             with open(f) as fh:
@@ -899,21 +912,30 @@ class TestVEXHelpers:
     """Pure-function tests for the VEX module."""
 
     def test_distro_label_from_purl(self):
-        assert distro_label_from_purl(
-            "pkg:deb/ubuntu/glibc@2.39-0ubuntu8.7?arch=source&distro=noble",
-        ) == "noble"
+        assert (
+            distro_label_from_purl(
+                "pkg:deb/ubuntu/glibc@2.39-0ubuntu8.7?arch=source&distro=noble",
+            )
+            == "noble"
+        )
         # ESM/Pro channels use compound distro labels
-        assert distro_label_from_purl(
-            "pkg:deb/ubuntu/eglibc@2.19-0ubuntu6.15+esm4?arch=source&distro=esm-infra-legacy/trusty",
-        ) == "esm-infra-legacy/trusty"
+        assert (
+            distro_label_from_purl(
+                "pkg:deb/ubuntu/eglibc@2.19-0ubuntu6.15+esm4?arch=source&distro=esm-infra-legacy/trusty",
+            )
+            == "esm-infra-legacy/trusty"
+        )
         # No distro qualifier → None
         assert distro_label_from_purl("pkg:deb/ubuntu/foo@1.0") is None
         assert distro_label_from_purl("") is None
 
     def test_source_package_from_purl(self):
-        assert source_package_from_purl(
-            "pkg:deb/ubuntu/glibc@2.39-0ubuntu8.7?arch=source&distro=noble",
-        ) == "glibc"
+        assert (
+            source_package_from_purl(
+                "pkg:deb/ubuntu/glibc@2.39-0ubuntu8.7?arch=source&distro=noble",
+            )
+            == "glibc"
+        )
         assert source_package_from_purl("not-a-purl") is None
         assert source_package_from_purl("") is None
 
@@ -925,20 +947,22 @@ class TestVEXHelpers:
         )
         assert is_wont_fix_action(decided) is True
 
-        no_longer_supported = (
-            "This package (for the given release) is no longer supported. "
-            "CVE Notes: ..."
-        )
+        no_longer_supported = "This package (for the given release) is no longer supported. CVE Notes: ..."
         assert is_wont_fix_action(no_longer_supported) is True
 
     def test_is_wont_fix_action_rejects_needs_fixing(self):
-        assert is_wont_fix_action(
-            "This package (for the given release) is vulnerable to the CVE and needs fixing.",
-        ) is False
-        assert is_wont_fix_action(
-            "This package (for the given release) is vulnerable to the CVE, "
-            "needs fixing, and it is being actively worked on.",
-        ) is False
+        assert (
+            is_wont_fix_action(
+                "This package (for the given release) is vulnerable to the CVE and needs fixing.",
+            )
+            is False
+        )
+        assert (
+            is_wont_fix_action(
+                "This package (for the given release) is vulnerable to the CVE, needs fixing, and it is being actively worked on.",
+            )
+            is False
+        )
         assert is_wont_fix_action(None) is False
         assert is_wont_fix_action("") is False
         assert is_wont_fix_action("some random text") is False
@@ -1161,9 +1185,13 @@ class TestSyntheticBaseAffectedBuilder:
         pkg = {"ecosystem": "Ubuntu:Pro:20.04:LTS", "name": name}
         if purl:
             pkg["purl"] = "pkg:deb/ubuntu/glibc@2.31?arch=source&distro=esm-infra/focal"
-        return {"package": pkg, "ecosystem_specific": eco_spec, "ranges": [
-            {"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.31+esm1"}]},
-        ]}
+        return {
+            "package": pkg,
+            "ecosystem_specific": eco_spec,
+            "ranges": [
+                {"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.31+esm1"}]},
+            ],
+        }
 
     def test_rebases_ecosystem(self):
         out = _build_synthetic_base_affected(self._template(), "Ubuntu:20.04:LTS")
@@ -1288,10 +1316,7 @@ class TestProOnlyInferenceIntegration:
                     continue
                 for src in inf.get("source_ecosystems", []):
                     for marker in forbidden_sources:
-                        assert marker not in src, (
-                            f"inference fired off a sub-tier source ({src}); "
-                            "pro_to_base_ecosystem should have excluded this"
-                        )
+                        assert marker not in src, f"inference fired off a sub-tier source ({src}); pro_to_base_ecosystem should have excluded this"
 
     def test_inference_survives_frozen_base_fragment(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # Headline post-EOL scenario: imagine base 14.04 dropped from OSV but Pro:14.04
@@ -1352,6 +1377,7 @@ class TestUSNFixDateOverlay:
 
     def test_empty_overlay_lookups_return_none(self):
         from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+
         overlay = USNFixDateOverlay()
         assert overlay.lookup("any", "any", "any") is None
         assert len(overlay) == 0
@@ -1385,6 +1411,7 @@ class TestUSNOverlayIntegration:
         p = Parser(workspace=fresh_workspace)
         # _iter_fragments reads self._usn_overlay; populate it as get() would
         from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+
         p._usn_overlay = USNFixDateOverlay.from_archive(p.archive_path)
         p._write_fragments()
 
@@ -1412,6 +1439,7 @@ class TestUSNOverlayIntegration:
         # CVE-2013-2208 fixes tpp@1.3.1-3 on Ubuntu:14.04:LTS; no USN in our fixture
         # ships that tuple, so the overlay lookup misses and the fixdater fallback applies.
         from vunnel.providers.ubuntu.usn_fixdate_overlay import USNFixDateOverlay
+
         p._usn_overlay = USNFixDateOverlay.from_archive(p.archive_path)
         p._write_fragments()
 
@@ -1419,9 +1447,7 @@ class TestUSNOverlayIntegration:
         payload = yielded["ubuntu-14.04-lts/ubuntu-cve-2013-2208"]
         fixes = payload["affected"][0]["ranges"][0]["database_specific"]["anchore"]["fixes"]
         tpp_fix = next(f for f in fixes if f["version"] == "1.3.1-3")
-        assert tpp_fix["date"] == "2013-07-15", (
-            f"missing USN tuple should fall through to first-observed mock; got {tpp_fix['date']}"
-        )
+        assert tpp_fix["date"] == "2013-07-15", f"missing USN tuple should fall through to first-observed mock; got {tpp_fix['date']}"
         # And not carrying any USN advisory provenance.
         assert tpp_fix["kind"] == "first-observed"
 
@@ -1443,24 +1469,55 @@ class TestOSDowncoverterHelpers:
 
     def test_base_ecosystem_to_namespace(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_ecosystem_to_os_namespace
+
         assert osv_ecosystem_to_os_namespace("Ubuntu:22.04:LTS") == "ubuntu:22.04"
         assert osv_ecosystem_to_os_namespace("Ubuntu:24.04:LTS") == "ubuntu:24.04"
+        # non-LTS releases carry no `:LTS` suffix (real spellings seen in the feed).
         assert osv_ecosystem_to_os_namespace("Ubuntu:24.10") == "ubuntu:24.10"
         assert osv_ecosystem_to_os_namespace("Ubuntu:25.04") == "ubuntu:25.04"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:25.10") == "ubuntu:25.10"
+        # both bare and `:LTS` spellings of the same release occur in the data.
+        assert osv_ecosystem_to_os_namespace("Ubuntu:26.04") == "ubuntu:26.04"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:26.04:LTS") == "ubuntu:26.04"
 
-    def test_pro_and_subtiers_skipped(self):
+    def test_plain_pro_maps_to_esm_channel(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_ecosystem_to_os_namespace
-        # v3 never emitted Vulnerability records for Pro/FIPS/Realtime/BlueField namespaces;
-        # they have no entry in cve-tracker's codename map. Pro-only-fix data still surfaces
-        # in OS output because inference layers it into the base ecosystem's affected[] list
-        # upstream of this code.
-        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:14.04:LTS") is None
-        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:16.04:LTS") is None
+
+        # plain Ubuntu Pro (ESM) maps to the `ubuntu:X.YY+esm` distro channel,
+        # mirroring RHEL EUS's `rhel:X.Y+eus`. LTS suffix optional.
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:14.04:LTS") == "ubuntu:14.04+esm"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:16.04:LTS") == "ubuntu:16.04+esm"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:22.04:LTS") == "ubuntu:22.04+esm"
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:25.10") == "ubuntu:25.10+esm"
+
+    def test_subtiers_skipped(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_ecosystem_to_os_namespace
+
+        # FIPS / FIPS-updates / Realtime / Nvidia-BlueField rebuild against divergent
+        # code (crypto modules, PREEMPT_RT kernel, separate product) — their fixes can't
+        # resolve a base disclosure, so they never get a channel. The anchored plain-Pro
+        # regex rejects any extra tier token or trailing segment by construction.
         assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:FIPS:22.04:LTS") is None
         assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:FIPS-updates:20.04:LTS") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:FIPS-preview:22.04:LTS") is None
         assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:Realtime:24.04:LTS") is None
         assert osv_ecosystem_to_os_namespace("Ubuntu:Nvidia-BlueField:22.04:LTS") is None
+        # two real trap grammars from the feed put the tier token AFTER the version, so a
+        # naive matcher can misread them: `Ubuntu:Pro:...:Realtime:Kernel` still starts with
+        # `Ubuntu:Pro:` (would look like plain Pro), and `Ubuntu:...:for:NVIDIA:BlueField`
+        # starts with `Ubuntu:<ver>` (would look like a base release). Both must drop.
+        # Sources: CVE-2022-50031, CVE-2025-38213.
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:22.04:LTS:Realtime:Kernel") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:24.04:LTS:Realtime:Kernel") is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:22.04:LTS:for:NVIDIA:BlueField") is None
         assert osv_ecosystem_to_os_namespace("Garbage") is None
+
+    def test_include_esm_flag_off_maps_plain_pro_to_none(self):
+        from vunnel.providers.ubuntu.os_downconvert import osv_ecosystem_to_os_namespace
+
+        # with the emit gate off, plain Pro is dropped like the sub-tiers; base is unaffected.
+        assert osv_ecosystem_to_os_namespace("Ubuntu:Pro:22.04:LTS", include_esm=False) is None
+        assert osv_ecosystem_to_os_namespace("Ubuntu:22.04:LTS", include_esm=False) == "ubuntu:22.04"
 
 
 class TestOSDowncoverter:
@@ -1486,11 +1543,13 @@ class TestOSDowncoverter:
 
     def test_withdrawn_record_is_skipped(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record(withdrawn="2025-09-12T17:13:25Z")
         assert osv_to_os(rec) is None
 
     def test_fixed_event_yields_fixedin_with_version(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         out = osv_to_os(self._osv_record())
         assert out is not None
         vuln = out["Vulnerability"]
@@ -1515,6 +1574,7 @@ class TestOSDowncoverter:
         # Once `patch_fix_date` has run, database_specific.anchore.fixes[] holds the
         # date+kind that downconversion should surface as the v3 `Available` field.
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         rec["affected"][0]["ranges"][0]["database_specific"] = {
             "anchore": {"fixes": [{"version": "1.1.1f-1ubuntu2.20", "date": "2022-09-15", "kind": "advisory"}]},
@@ -1530,6 +1590,7 @@ class TestOSDowncoverter:
         # OR what _build_synthetic_base_affected writes when Pro-only-fix inference
         # synthesizes a base entry.
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         rec["affected"] = [
             {
@@ -1550,6 +1611,7 @@ class TestOSDowncoverter:
         # "affected but no fix yet" — neither wont-fix nor a released fix version.
         # v3 represented this as Version="None", NoAdvisory=False.
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         rec["affected"] = [
             {
@@ -1565,6 +1627,7 @@ class TestOSDowncoverter:
 
     def test_severity_handling_falls_back_to_unknown(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         # missing severity entirely
         rec = self._osv_record()
         rec.pop("severity", None)
@@ -1578,6 +1641,7 @@ class TestOSDowncoverter:
 
     def test_severity_capitalizes_canonical_priority(self):
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         for score, expected in [
             ("negligible", "Negligible"),
@@ -1592,13 +1656,15 @@ class TestOSDowncoverter:
     def test_no_upstream_returns_none(self):
         # No CVE-* id to use as Vulnerability.Name → cannot produce a v3-shape record.
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         rec.pop("upstream", None)
         assert osv_to_os(rec) is None
 
-    def test_pro_only_record_returns_none(self):
-        # Pro/FIPS/Realtime/BlueField fragments don't get downconverted.
+    def test_subtier_record_returns_none(self):
+        # FIPS/Realtime/BlueField fragments don't get downconverted (divergent builds).
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         rec["affected"] = [
             {
@@ -1608,10 +1674,148 @@ class TestOSDowncoverter:
         ]
         assert osv_to_os(rec) is None
 
+    def test_plain_pro_emits_esm_channel_with_verbatim_fix_version(self):
+        # Real Canonical OSV data (CVE-2021-3782 wayland, xenial esm-infra) — a genuine
+        # Pro-only fix. Source: https://ubuntu.com/security/cves/CVE-2021-3782.json
+        # The `~esm`/`+esm` suffix must survive verbatim; VersionFormat stays dpkg.
+        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for, osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-2021-3782", upstream=["CVE-2021-3782"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "wayland"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1.12.0-1~ubuntu16.04.3+esm1"}]}],
+            },
+        ]
+        out = osv_to_os(rec)
+        assert out is not None
+        vuln = out["Vulnerability"]
+        assert vuln["NamespaceName"] == "ubuntu:16.04+esm"
+        fi = vuln["FixedIn"][0]
+        assert fi["Name"] == "wayland"
+        assert fi["NamespaceName"] == "ubuntu:16.04+esm"
+        assert fi["Version"] == "1.12.0-1~ubuntu16.04.3+esm1"
+        assert fi["VersionFormat"] == "dpkg"
+        assert fi["VendorAdvisory"] == {"NoAdvisory": False}
+        assert os_identifier_for(rec) == "ubuntu:16.04+esm/cve-2021-3782"
+
+    def test_plain_pro_epoch_fix_version_passthrough(self):
+        # Real Canonical OSV data (CVE-2025-61985 openssh, focal esm-infra) — Pro-only fix
+        # with an epoch. Source: https://ubuntu.com/security/cves/CVE-2025-61985.json
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-2025-61985", upstream=["CVE-2025-61985"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:20.04:LTS", "name": "openssh"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1:8.2p1-4ubuntu0.13+esm1"}]}],
+            },
+        ]
+        out = osv_to_os(rec)
+        assert out is not None
+        assert out["Vulnerability"]["NamespaceName"] == "ubuntu:20.04+esm"
+        assert out["Vulnerability"]["FixedIn"][0]["Version"] == "1:8.2p1-4ubuntu0.13+esm1"
+
+    def test_plain_pro_dropped_when_include_esm_off(self):
+        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for, osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-2021-3782", upstream=["CVE-2021-3782"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "wayland"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1.12.0-1~ubuntu16.04.3+esm1"}]}],
+            },
+        ]
+        assert osv_to_os(rec, include_esm=False) is None
+        assert os_identifier_for(rec, include_esm=False) is None
+
+    def test_plain_pro_no_fix_emits_no_esm_record(self):
+        # A plain-Pro slice with only `introduced:0` and no fixed event (real shape from
+        # CVE-2016-20013's Pro slices) must NOT produce a `ubuntu:X.YY+esm` record. The
+        # `+esm` channel carries fixes only; the unfixed disclosure lives on the base
+        # `ubuntu:X.YY` record, so a Version="None" +esm entry would just duplicate it.
+        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for, osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-2016-20013", upstream=["CVE-2016-20013"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "glibc"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+            },
+        ]
+        assert osv_to_os(rec) is None
+        assert os_identifier_for(rec) is None
+
+    def test_plain_pro_wont_fix_status_emits_no_esm_record(self):
+        # Same as above but with an explicit wont-fix marker (what _annotate_wont_fix
+        # stamps): a wont-fix Pro slice still yields no `+esm` record — no Version="None".
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-2016-20013", upstream=["CVE-2016-20013"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "glibc"},
+                "database_specific": {"anchore": {"status": "wont-fix"}},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+            },
+        ]
+        assert osv_to_os(rec) is None
+
+    def test_esm_apps_and_infra_share_the_same_channel(self):
+        # esm-apps and esm-infra are both plain Ubuntu:Pro:X.YY ecosystems (the channel lives
+        # in the purl, which the namespace mapping does not consult) — so both resolve to the
+        # same `ubuntu:X.YY+esm`. Real fixes: cobbler (esm-apps) & harfbuzz (esm-infra), xenial.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
+        def _one(name, fixed, purl):
+            rec = self._osv_record(id="UBUNTU-CVE-x", upstream=["CVE-2000-1"])
+            rec["affected"] = [
+                {
+                    "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": name, "purl": purl},
+                    "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": fixed}]}],
+                },
+            ]
+            return osv_to_os(rec)
+
+        apps = _one("cobbler", "2.4.1-0ubuntu2+esm1", "pkg:deb/ubuntu/cobbler@2.4.1?arch=source&distro=esm-apps/xenial")
+        infra = _one("harfbuzz", "1.0.1-1ubuntu0.1+esm1", "pkg:deb/ubuntu/harfbuzz@1.0.1?arch=source&distro=esm-infra/xenial")
+        assert apps["Vulnerability"]["NamespaceName"] == "ubuntu:16.04+esm"
+        assert infra["Vulnerability"]["NamespaceName"] == "ubuntu:16.04+esm"
+        assert apps["Vulnerability"]["FixedIn"][0]["Version"] == "2.4.1-0ubuntu2+esm1"
+        assert infra["Vulnerability"]["FixedIn"][0]["Version"] == "1.0.1-1ubuntu0.1+esm1"
+
+    @pytest.mark.parametrize(
+        "fixed",
+        [
+            "1:2.2.2+dfsg-1ubuntu1+esm5",  # epoch + multi +esm (CVE-2022-35229)
+            "1:1.3-1ubuntu0.1~esm1",  # epoch + ~esm (CVE-2019-15531)
+            "1.8.3-1~ubuntu0.1+esm1",  # ~ubuntu backport + +esm (CVE-2017-5838)
+            "2.6.8-1~ubuntu14.04.0~esm1",  # ~ubuntu + ~esm tilde form (CVE-2019-10899)
+            "2:4.7.6+dfsg~ubuntu-0ubuntu2.29+esm1",  # epoch + +dfsg~ubuntu + +esm (CVE-2022-42898)
+            "1.0.0~rc7+git20190403.029124da-0ubuntu1~16.04.4+esm4",  # rc + git + backport + esm (CVE-2022-29162)
+        ],
+    )
+    def test_weird_pro_fix_versions_pass_through_verbatim(self, fixed):
+        # Real Pro fix strings from the feed must survive byte-for-byte; VersionFormat stays dpkg.
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-x", upstream=["CVE-2000-1"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "pkg"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": fixed}]}],
+            },
+        ]
+        out = osv_to_os(rec)
+        fi = out["Vulnerability"]["FixedIn"][0]
+        assert fi["Version"] == fixed
+        assert fi["VersionFormat"] == "dpkg"
+
     def test_multiple_packages_become_multiple_fixedin(self):
         # Sliced by ecosystem, an envelope still has one affected[] entry per source
         # package. Each becomes one FixedIn (in input order).
         from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
         rec = self._osv_record()
         rec["affected"] = [
             {
@@ -1640,6 +1844,7 @@ class TestOSDowncoverter:
 
     def test_identifier_for_returns_v3_shape(self):
         from vunnel.providers.ubuntu.os_downconvert import os_identifier_for
+
         rec = self._osv_record()
         assert os_identifier_for(rec) == "ubuntu:22.04/cve-2024-1"
 
@@ -1665,9 +1870,10 @@ class TestOSDowncoverterIntegration:
             # Identifier shape: ubuntu:X.YY/cve-...
             assert identifier.startswith("ubuntu:"), identifier
 
-        # Every Pro/FIPS/BlueField slice should be filtered out — only base namespaces remain.
+        # Every namespace is either a base `ubuntu:X.YY` or a plain-Pro `ubuntu:X.YY+esm`
+        # channel. FIPS/Realtime/BlueField slices are still filtered out entirely.
         namespaces = {p["Vulnerability"]["NamespaceName"] for _, _, p in records}
-        assert all(ns.startswith("ubuntu:") and ":Pro" not in ns and "-" not in ns.split(":")[1] for ns in namespaces), namespaces
+        assert all(ns.startswith("ubuntu:") and ":Pro" not in ns and "-" not in ns.split(":")[1].split("+")[0] for ns in namespaces), namespaces
 
     def test_inferred_wont_fix_lands_in_downconverted_output(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # The Pro-only-fix inference path synthesizes base envelopes with
@@ -1691,6 +1897,167 @@ class TestOSDowncoverterIntegration:
         assert wayland["Version"] == "None"
         assert wayland["VendorAdvisory"]["NoAdvisory"] is True
 
+    def test_plain_pro_dual_emit_base_wontfix_and_esm_fix(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Real fixture CVE-2021-3782 (wayland) has a Pro-only fix on Ubuntu:Pro:16.04:LTS
+        # (1.12.0-1~ubuntu16.04.3+esm1) and NO base 16.04 entry. Downconvert must emit the
+        # paired split: base `ubuntu:16.04` carries the synthesized Version="None" wont-fix,
+        # and `ubuntu:16.04+esm` carries the real, verbatim ESM fix version.
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+        by_id = {i: payload for i, _, payload in records}
+
+        base = by_id.get("ubuntu:16.04/cve-2021-3782")
+        assert base is not None, sorted(by_id)
+        base_wayland = next(fi for fi in base["Vulnerability"]["FixedIn"] if fi["Name"] == "wayland")
+        assert base_wayland["Version"] == "None"
+        assert base_wayland["VendorAdvisory"]["NoAdvisory"] is True
+
+        esm = by_id.get("ubuntu:16.04+esm/cve-2021-3782")
+        assert esm is not None, sorted(by_id)
+        assert esm["Vulnerability"]["NamespaceName"] == "ubuntu:16.04+esm"
+        esm_wayland = next(fi for fi in esm["Vulnerability"]["FixedIn"] if fi["Name"] == "wayland")
+        assert esm_wayland["Version"] == "1.12.0-1~ubuntu16.04.3+esm1"
+        assert esm_wayland["VersionFormat"] == "dpkg"
+        assert esm_wayland["NamespaceName"] == "ubuntu:16.04+esm"
+
+        # A base CVE fixed in a standard pocket must NOT get a +esm record. Wayland is
+        # released in the standard pocket on 18.04/20.04/22.04 (no Pro slice for them).
+        assert "ubuntu:18.04+esm/cve-2021-3782" not in by_id
+        assert "ubuntu:20.04+esm/cve-2021-3782" not in by_id
+        assert "ubuntu:22.04+esm/cve-2021-3782" not in by_id
+
+    def test_include_esm_flag_off_suppresses_esm_records(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # VUN-4: the gate off drops every +esm record while base records (incl. the
+        # synthesized base wont-fix) are untouched.
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True, downconvert_emit_esm=False)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+        ids = {i for i, _, _ in records}
+        assert not any("+esm" in i for i in ids), sorted(i for i in ids if "+esm" in i)
+        # base wont-fix disclosure still present
+        assert "ubuntu:16.04/cve-2021-3782" in ids
+
+    def test_real_multi_release_esm_fanout_netty(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Real Canonical record CVE-2022-24823 (netty). Source: ubuntu.com/security/CVE-2022-24823.json.
+        # One CVE spanning 7 Pro releases: 5 carry real Pro fixes (16/18/20/22/24), 14.04 and 26.04
+        # are Pro-tracked-but-unfixed, plus a base non-LTS 25.10 slice. Exercises: multi-release
+        # `+esm` fanout, verbatim passthrough of epoch / `~esm` / `+esm` / `+deb11u2` fix strings,
+        # no-`+esm` for the unfixed Pro slices, and no `+esm` for the base non-LTS release.
+        _seed_esm_cases_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+        by_id = {i: payload for i, _, payload in records}
+
+        # the 5 fixed Pro releases each emit a `+esm` record with the real fix version verbatim.
+        expected_esm = {
+            "ubuntu:16.04+esm/cve-2022-24823": "1:4.0.34-1ubuntu0.1~esm2",
+            "ubuntu:18.04+esm/cve-2022-24823": "1:4.1.7-4ubuntu0.1+esm3",
+            "ubuntu:20.04+esm/cve-2022-24823": "1:4.1.45-1ubuntu0.1~esm2",
+            "ubuntu:22.04+esm/cve-2022-24823": "1:4.1.48-4+deb11u2ubuntu0.1~esm1",
+            "ubuntu:24.04+esm/cve-2022-24823": "1:4.1.48-9ubuntu0.1~esm1",
+        }
+        for ident, version in expected_esm.items():
+            rec = by_id.get(ident)
+            assert rec is not None, sorted(i for i in by_id if "+esm" in i)
+            fi = next(f for f in rec["Vulnerability"]["FixedIn"] if f["Name"] == "netty")
+            assert fi["Version"] == version
+            assert fi["VersionFormat"] == "dpkg"
+            assert fi["VendorAdvisory"] == {"NoAdvisory": False}
+
+        # unfixed Pro slices (14.04, 26.04) and the base non-LTS 25.10 slice get no `+esm` record.
+        assert "ubuntu:14.04+esm/cve-2022-24823" not in by_id
+        assert "ubuntu:26.04+esm/cve-2022-24823" not in by_id
+        assert "ubuntu:25.10+esm/cve-2022-24823" not in by_id
+        # the emitted `+esm` set for this CVE is exactly the 5 fixed releases — no extras.
+        assert {i for i in by_id if "+esm" in i and "2022-24823" in i} == set(expected_esm)
+
+    def test_real_mixed_base_and_esm_fix_unzip(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Real record CVE-2014-9913 (unzip): fixed in Pro on 14.04 (`6.0-9ubuntu1.6`) and in the
+        # standard pocket on 16.04 (`6.0-20ubuntu1.1`). The Pro release emits both a base wont-fix
+        # and a `+esm` fix; the base-fixed release emits only a base record — never a `+esm`.
+        _seed_esm_cases_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+        by_id = {i: payload for i, _, payload in records}
+
+        esm = by_id.get("ubuntu:14.04+esm/cve-2014-9913")
+        assert esm is not None, sorted(by_id)
+        esm_fi = next(f for f in esm["Vulnerability"]["FixedIn"] if f["Name"] == "unzip")
+        assert esm_fi["Version"] == "6.0-9ubuntu1.6"
+
+        base16 = by_id.get("ubuntu:16.04/cve-2014-9913")
+        assert base16 is not None, sorted(by_id)
+        base16_fi = next(f for f in base16["Vulnerability"]["FixedIn"] if f["Name"] == "unzip")
+        assert base16_fi["Version"] == "6.0-20ubuntu1.1"
+
+        # 16.04 is fixed in the standard pocket (no Pro slice) — no `+esm` channel record.
+        assert "ubuntu:16.04+esm/cve-2014-9913" not in by_id
+
+    def test_real_withdrawn_pro_record_dropped_wolfssl(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Real withdrawn record CVE-2014-2901 (wolfssl) carrying a plain-Pro slice. Withdrawn
+        # records are retractions with no OS-schema equivalent — dropped before any `+esm` emit.
+        _seed_esm_cases_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+        ids = {i for i, _, _ in records}
+        assert not any("2014-2901" in i for i in ids), sorted(i for i in ids if "2014-2901" in i)
+
+    def test_real_no_fix_pro_slices_emit_no_esm_records(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Real fixture CVE-2016-20013: its plain-Pro slices (14/16/18/20) are all `introduced:0`
+        # with no fixed event. None may produce a `+esm` record — the base wont-fix is the sole
+        # disclosure. Regression guard for the "+esm Version=None noise" the channel used to emit.
+        _seed_archive(fresh_workspace, fixture_dir)
+        _seed_vex_archive(fresh_workspace, fixture_dir)
+
+        p = Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
+        with patch.object(p, "_download_archive"), patch.object(p, "_download_vex_archive"):
+            records = list(p.get())
+        ids = {i for i, _, _ in records}
+        assert not any("+esm" in i and "2016-20013" in i for i in ids), \
+            sorted(i for i in ids if "+esm" in i and "2016-20013" in i)
+        # the base disclosure is still present.
+        assert "ubuntu:14.04/cve-2016-20013" in ids
+
+    def test_provider_config_emit_esm_off_drops_esm_records(self, helpers, fixture_dir, auto_fake_fixdate_finder):
+        # Frozen-v5 lane, end-to-end: downconvert on but `downconvert_emit_esm` off through the
+        # real Config -> Provider -> Parser plumbing. No `+esm` record lands on disk.
+        import json
+
+        ws = helpers.provider_workspace_helper(name=Provider.name())
+        c = Config()
+        c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+        c.downconvert_osv_to_os = True
+        c.downconvert_emit_esm = False
+
+        p = Provider(root=str(ws.root), config=c)
+        _stage_workspace_for_update(str(ws.root), fixture_dir)
+
+        with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
+            p.update(None)
+
+        namespaces = []
+        for f in ws.result_files():
+            with open(f) as fh:
+                namespaces.append(json.load(fh)["item"]["Vulnerability"]["NamespaceName"])
+        assert namespaces, "expected downconverted records"
+        assert not any(ns.endswith("+esm") for ns in namespaces), sorted(set(namespaces))
+
     def test_default_still_yields_osv_records(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # Sanity: with the toggle off (default), OSV envelopes flow through unchanged.
         _seed_archive(fresh_workspace, fixture_dir)
@@ -1707,6 +2074,7 @@ class TestOSDowncoverterIntegration:
         # End-to-end through Provider.update with the Config flag on, exercising
         # the actual Provider plumbing (not just Parser.__init__).
         import json
+
         ws = helpers.provider_workspace_helper(name=Provider.name())
         c = Config()
         c.runtime.result_store = result.StoreStrategy.FLAT_FILE
