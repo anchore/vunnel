@@ -53,6 +53,29 @@ def test_extract_tar_zst():
             assert (Path(extract_dir) / "test_file.txt").read_text() == "Test content"
 
 
+def test_extract_tar_zst_nested_paths():
+    # exercise the streaming decompression path with nested directories
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        src_dir = Path(tmp_dir) / "src" / "2026"
+        src_dir.mkdir(parents=True)
+        (src_dir / "cve-2026-0001.json").write_text("{}")
+        (src_dir / "cve-2026-0002.json").write_text('{"a": 1}')
+
+        tar_path = Path(tmp_dir) / "advisories.tar"
+        zst_path = Path(tmp_dir) / "advisories.tar.zst"
+        with tarfile.open(tar_path, "w") as tar:
+            tar.add(Path(tmp_dir) / "src", arcname=".")
+        with open(tar_path, "rb") as tar, open(zst_path, "wb") as zst:
+            cctx = zstandard.ZstdCompressor()
+            cctx.copy_stream(tar, zst)
+
+        extract_dir = Path(tmp_dir) / "out"
+        archive.extract(str(zst_path), str(extract_dir))
+
+        assert (extract_dir / "2026" / "cve-2026-0001.json").read_text() == "{}"
+        assert (extract_dir / "2026" / "cve-2026-0002.json").read_text() == '{"a": 1}'
+
+
 @patch("vunnel.utils.archive._extract_tar_zst")
 @patch("vunnel.utils.archive._safe_extract_tar")
 @patch("tarfile.open")

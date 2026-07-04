@@ -5,6 +5,7 @@ import contextlib
 import csv
 import email.utils
 import os
+import shutil
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,9 @@ if TYPE_CHECKING:
 VEX_FEED_LATEST_URL = "https://security.access.redhat.com/data/csaf/v2/vex-feed/archive_latest.txt"
 
 TIMESTAMP_FILE = "archive_timestamp.txt"
+CHANGES_TIMESTAMP_FILE = "changes_timestamp.txt"
+
+ARCHIVE_SUFFIXES = (".tar", ".tar.zst", ".tar.gz", ".tar.xz", ".tar.bz2")
 
 
 class CSAFVEXClient:
@@ -78,6 +82,9 @@ class CSAFVEXClient:
     def _timestamp_path(self) -> str:
         return os.path.join(self.workspace.input_path, TIMESTAMP_FILE)
 
+    def _changes_timestamp_path(self) -> str:
+        return os.path.join(self.workspace.input_path, CHANGES_TIMESTAMP_FILE)
+
     def _local_changes_path(self) -> str:
         return os.path.join(self.workspace.input_path, "changes.csv")
 
@@ -98,13 +105,33 @@ class CSAFVEXClient:
         with open(self._timestamp_path(), "w") as fh:
             fh.write(mod_time.isoformat())
 
+    def _load_changes_timestamp(self) -> datetime | None:
+        ts_path = self._changes_timestamp_path()
+        if os.path.exists(ts_path):
+            with open(ts_path) as fh:
+                return datetime.fromisoformat(fh.read().strip())
+        return None
+
+    def _save_changes_timestamp(self, mod_time: datetime) -> None:
+        with open(self._changes_timestamp_path(), "w") as fh:
+            fh.write(mod_time.isoformat())
+
+    def _clear_changes_timestamp(self) -> None:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(self._changes_timestamp_path())
+
     # ── download helpers ──────────────────────────────────────────────
 
-    def _download_stream(self, url: str, path: str) -> None:
+    def _download_stream(self, url: str, path: str) -> datetime | None:
+        """Download url to path, returning the response Last-Modified (if any)."""
         with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
             for chunk in response.iter_content(chunk_size=65536):
                 if chunk:
                     fh.write(chunk)
+            lm = response.headers.get("Last-Modified")
+        if lm:
+            return email.utils.parsedate_to_datetime(lm)
+        return None
 
     def _head_last_modified(self, url: str) -> datetime | None:
         """HEAD the URL and return Last-Modified as a tz-aware datetime, or None."""
@@ -119,6 +146,7 @@ class CSAFVEXClient:
 
     def _sync(self) -> None:
         os.makedirs(self.advisories_path, exist_ok=True)
+        self._remove_stray_files()
 
         archive_url = self._archive_url()
         self._load_timestamp()
@@ -144,53 +172,53 @@ class CSAFVEXClient:
         self._download_stream(self._deletions_url(), self._local_deletions_path())
         self._process_changes_and_deletions()
 
+    def _remove_stray_files(self) -> None:
+        # leftover archives or partial extractions from interrupted runs would
+        # otherwise persist in the workspace (and any cached copies of it) forever
+        tmp_dir = self._advisories_tmp_path()
+        if os.path.isdir(tmp_dir):
+            self.logger.warning(f"removing stray partial extraction: {tmp_dir}")
+            shutil.rmtree(tmp_dir)
+
+        for name in os.listdir(self.workspace.input_path):
+            if name.endswith(ARCHIVE_SUFFIXES):
+                self.logger.warning(f"removing stray archive: {name}")
+                with contextlib.suppress(OSError):
+                    os.remove(os.path.join(self.workspace.input_path, name))
+
+    def _advisories_tmp_path(self) -> str:
+        return self.advisories_path + ".tmp"
+
     def _download_archive(self, archive_url: str) -> None:
         archive_name = archive_url.rsplit("/", 1)[-1]
         archive_path = os.path.join(self.workspace.input_path, archive_name)
 
         self.logger.info(f"downloading archive: {archive_url}")
-        self._download_stream(archive_url, archive_path)
+        try:
+            remote_mod = self._download_stream(archive_url, archive_path)
 
-        self.logger.info("extracting archive")
-        extract(archive_path, self.advisories_path)
+            # extract to a temp dir and swap so a failed extraction can't
+            # destroy the existing advisories tree
+            self.logger.info("extracting archive")
+            tmp_dir = self._advisories_tmp_path()
+            extract(archive_path, tmp_dir)
 
-        # persist the remote Last-Modified as our timestamp
-        remote_mod = self._head_last_modified(archive_url)
-        if remote_mod:
-            self._save_timestamp(remote_mod)
-        else:
-            # fallback: use current time
-            self._save_timestamp(datetime.now(tz=UTC))
+            if os.path.isdir(self.advisories_path):
+                shutil.rmtree(self.advisories_path)
+            os.rename(tmp_dir, self.advisories_path)
 
-        # clean up the archive file to save disk space
-        with contextlib.suppress(OSError):
-            os.remove(archive_path)
+            self._save_timestamp(remote_mod or datetime.now(tz=UTC))
+            # the new tree supersedes any previously applied changes
+            self._clear_changes_timestamp()
+        finally:
+            # always clean up the archive file to save disk space
+            with contextlib.suppress(OSError):
+                os.remove(archive_path)
 
     def _process_changes_and_deletions(self) -> None:
-        # ── deletions ──
-        deletions_path = self._local_deletions_path()
-        with open(deletions_path, newline="") as fh:
-            reader = csv.reader(fh)
-            for row in reader:
-                deleted_fragment = row[0]
-                with contextlib.suppress(FileNotFoundError):
-                    os.remove(os.path.join(self.advisories_path, deleted_fragment))
+        self._apply_deletions()
 
-        # ── changes ──
-        changes_path = self._local_changes_path()
-        seen_files: set[str] = set()
-        years: set[str] = set()
-        with open(changes_path, newline="") as fh:
-            reader = csv.reader(fh)
-            for row in reader:
-                changed_file = row[0]
-                date_str = row[1]
-                change_date = datetime.fromisoformat(date_str)
-                if self.archive_mod_time and change_date < self.archive_mod_time:
-                    break
-                seen_files.add(changed_file)
-                year = changed_file.split("/")[0]
-                years.add(year)
+        seen_files, years, newest_change = self._collect_pending_changes()
 
         if not seen_files:
             self.logger.info("no changed files newer than archive")
@@ -201,6 +229,51 @@ class CSAFVEXClient:
         for year in years:
             os.makedirs(os.path.join(self.advisories_path, year), exist_ok=True)
 
+        any_failed = self._download_changed_files(seen_files)
+
+        # only advance the watermark when everything landed, so failed files are retried next run
+        if not any_failed and newest_change:
+            self._save_changes_timestamp(newest_change)
+
+    def _apply_deletions(self) -> None:
+        with open(self._local_deletions_path(), newline="") as fh:
+            reader = csv.reader(fh)
+            for row in reader:
+                deleted_fragment = row[0]
+                with contextlib.suppress(FileNotFoundError):
+                    os.remove(os.path.join(self.advisories_path, deleted_fragment))
+
+    def _collect_pending_changes(self) -> tuple[set[str], set[str], datetime | None]:
+        """Read changes.csv (newest first) and return (files, years, newest change date) not yet applied."""
+        # skip changes already applied by a previous run (the watermark), falling
+        # back to the archive timestamp when no changes have been applied yet
+        watermark = self.archive_mod_time
+        changes_applied = self._load_changes_timestamp()
+        if changes_applied and (watermark is None or changes_applied > watermark):
+            watermark = changes_applied
+
+        seen_files: set[str] = set()
+        years: set[str] = set()
+        newest_change: datetime | None = None
+        with open(self._local_changes_path(), newline="") as fh:
+            reader = csv.reader(fh)
+            for row in reader:
+                changed_file = row[0]
+                date_str = row[1]
+                change_date = datetime.fromisoformat(date_str)
+                if watermark and change_date < watermark:
+                    break
+                if newest_change is None or change_date > newest_change:
+                    newest_change = change_date
+                seen_files.add(changed_file)
+                year = changed_file.split("/")[0]
+                years.add(year)
+
+        return seen_files, years, newest_change
+
+    def _download_changed_files(self, seen_files: set[str]) -> bool:
+        """Download the given advisory fragments in parallel, returning True if any failed."""
+        any_failed = False
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = {
                 executor.submit(
@@ -213,4 +286,6 @@ class CSAFVEXClient:
             concurrent.futures.wait(futures.keys())
             for future, changed_file in futures.items():
                 if future.exception() is not None:
+                    any_failed = True
                     self.logger.warning(f"failed to download {changed_file}: {future.exception()}")
+        return any_failed
