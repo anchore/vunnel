@@ -1697,7 +1697,7 @@ class TestOSDowncoverter:
         assert fi["Version"] == "1.12.0-1~ubuntu16.04.3+esm1"
         assert fi["VersionFormat"] == "dpkg"
         assert fi["VendorAdvisory"] == {"NoAdvisory": False}
-        assert os_identifier_for(rec) == "ubuntu:16.04+esm/cve-2021-3782"
+        assert os_identifier_for(out) == "ubuntu:16.04+esm/cve-2021-3782"
 
     def test_plain_pro_epoch_fix_version_passthrough(self):
         # Real Canonical OSV data (CVE-2025-61985 openssh, focal esm-infra) — Pro-only fix
@@ -1717,7 +1717,7 @@ class TestOSDowncoverter:
         assert out["Vulnerability"]["FixedIn"][0]["Version"] == "1:8.2p1-4ubuntu0.13+esm1"
 
     def test_plain_pro_dropped_when_include_esm_off(self):
-        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for, osv_to_os
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
 
         rec = self._osv_record(id="UBUNTU-CVE-2021-3782", upstream=["CVE-2021-3782"])
         rec["affected"] = [
@@ -1727,14 +1727,13 @@ class TestOSDowncoverter:
             },
         ]
         assert osv_to_os(rec, include_esm=False) is None
-        assert os_identifier_for(rec, include_esm=False) is None
 
     def test_plain_pro_no_fix_emits_no_esm_record(self):
         # A plain-Pro slice with only `introduced:0` and no fixed event (real shape from
         # CVE-2016-20013's Pro slices) must NOT produce a `ubuntu:X.YY+esm` record. The
         # `+esm` channel carries fixes only; the unfixed disclosure lives on the base
         # `ubuntu:X.YY` record, so a Version="None" +esm entry would just duplicate it.
-        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for, osv_to_os
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
 
         rec = self._osv_record(id="UBUNTU-CVE-2016-20013", upstream=["CVE-2016-20013"])
         rec["affected"] = [
@@ -1744,7 +1743,6 @@ class TestOSDowncoverter:
             },
         ]
         assert osv_to_os(rec) is None
-        assert os_identifier_for(rec) is None
 
     def test_plain_pro_wont_fix_status_emits_no_esm_record(self):
         # Same as above but with an explicit wont-fix marker (what _annotate_wont_fix
@@ -1843,10 +1841,33 @@ class TestOSDowncoverter:
         assert by_name["linux-gcp"]["Version"] == "5.4.0-100.113"
 
     def test_identifier_for_returns_v3_shape(self):
-        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for
+        from vunnel.providers.ubuntu.os_downconvert import os_identifier_for, osv_to_os
 
         rec = self._osv_record()
-        assert os_identifier_for(rec) == "ubuntu:22.04/cve-2024-1"
+        assert os_identifier_for(osv_to_os(rec)) == "ubuntu:22.04/cve-2024-1"
+
+    def test_esm_mixed_fixed_and_no_fix_packages_keeps_only_fixed(self):
+        # within a single `+esm` fragment, a fixed package survives while an unfixed one
+        # is dropped entirely — no Version="None" line leaks onto the channel (the inner
+        # per-entry guard) and the record still emits because a fix remains (the outer guard).
+        from vunnel.providers.ubuntu.os_downconvert import osv_to_os
+
+        rec = self._osv_record(id="UBUNTU-CVE-x", upstream=["CVE-2000-1"])
+        rec["affected"] = [
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "fixed-pkg"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "1.0-1ubuntu0.1+esm1"}]}],
+            },
+            {
+                "package": {"ecosystem": "Ubuntu:Pro:16.04:LTS", "name": "unfixed-pkg"},
+                "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
+            },
+        ]
+        out = osv_to_os(rec)
+        assert out is not None
+        fixed_in = out["Vulnerability"]["FixedIn"]
+        assert [fi["Name"] for fi in fixed_in] == ["fixed-pkg"]
+        assert fixed_in[0]["Version"] == "1.0-1ubuntu0.1+esm1"
 
 
 class TestOSDowncoverterIntegration:

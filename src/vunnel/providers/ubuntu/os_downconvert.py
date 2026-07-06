@@ -27,8 +27,11 @@ so their fixes can't resolve a base disclosure). The `include_esm` flag gates th
 The base wont-fix disclosure and the `+esm` fix are a paired split: the base
 `ubuntu:X.YY` record carries the `Version:"None"` wont-fix (synthesized by
 `_yield_base_with_inferences` when only Pro has data), and `ubuntu:X.YY+esm`
-carries the actual fix. Base-fixed CVEs (a fix in a standard pocket) never
-produce a `+esm` record — only Pro ecosystems do.
+carries the actual fix. In practice a base-fixed CVE (fix in a standard pocket)
+carries no `+esm` record: plain-Pro packages are byte-identical to base while
+base is supported, so no separate ESM fixed event exists until standard support
+ends. That's a property of Canonical's data, not something enforced here — any
+plain-Pro slice with a real fixed event yields a `+esm` record regardless.
 
 The `+esm` channel carries fixes only: a plain-Pro slice with no fixed event
 (wont-fix or still-pending on Pro) produces no `+esm` record at all. The base
@@ -252,15 +255,12 @@ def osv_to_os(payload: dict[str, Any], include_esm: bool = True) -> dict[str, An
     }
 
 
-def os_identifier_for(payload: dict[str, Any], include_esm: bool = True) -> str | None:
-    """Build the v3-shape `{namespace}/{cve_name.lower()}` identifier for a downconverted record.
+def os_identifier_for(os_payload: dict[str, Any]) -> str:
+    """Build the v3-shape `{namespace}/{cve_name.lower()}` identifier for an emitted OS payload.
 
-    Derived from `osv_to_os` so it returns an identifier exactly when a record
-    is emitted — withdrawn / no-upstream / dropped-tier / empty-`+esm` payloads
-    all resolve to None in one place, never drifting from the emitted record.
+    Takes the payload `osv_to_os` produced (not the OSV input) so the identifier
+    can't drift from the record it names — there's one construction, shared by
+    the parser's yield path.
     """
-    os_payload = osv_to_os(payload, include_esm=include_esm)
-    if os_payload is None:
-        return None
     vuln = os_payload["Vulnerability"]
     return f"{vuln['NamespaceName']}/{vuln['Name'].lower()}"

@@ -15,7 +15,7 @@ from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
 
 from . import parser_legacy
-from .os_downconvert import osv_to_os
+from .os_downconvert import os_identifier_for, osv_to_os
 from .usn_fixdate_overlay import USNFixDateOverlay, usn_extra_candidates
 from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
 
@@ -666,9 +666,10 @@ class Parser:
     def _iter_fragments_downconverted(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         """Yield OSV fragment envelopes rewritten into v3 OS-schema records.
 
-        Pro/FIPS/Realtime/BlueField slices and any envelope without an upstream
-        CVE alias are dropped — v3 never emitted them. Pro-only-fix wont-fix
-        data still appears here because `_yield_base_with_inferences` already
+        Plain Pro (ESM) slices become `ubuntu:X.YY+esm` channel records (gated by
+        `downconvert_emit_esm`); FIPS/Realtime/BlueField slices and any envelope
+        without an upstream CVE alias are dropped — v3 never emitted them. Pro-only-fix
+        wont-fix data still appears here because `_yield_base_with_inferences` already
         merged it into the base ecosystem's affected[] list before this runs.
         """
         os_schema = schema.OSSchema()
@@ -676,10 +677,7 @@ class Parser:
             os_payload = osv_to_os(osv_payload, include_esm=self.downconvert_emit_esm)
             if os_payload is None:
                 continue
-            # identifier is derived from the emitted payload so it can't drift from it.
-            vuln = os_payload["Vulnerability"]
-            identifier = f"{vuln['NamespaceName']}/{vuln['Name'].lower()}"
-            yield identifier, os_schema, os_payload
+            yield os_identifier_for(os_payload), os_schema, os_payload
 
     def _load_usn_overlay(self) -> USNFixDateOverlay | None:
         """Build the (eco, src-pkg, fixed-ver) → USN-published-date index.
