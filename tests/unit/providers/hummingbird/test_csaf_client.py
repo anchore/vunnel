@@ -77,23 +77,6 @@ def serve(monkeypatch, responses: dict, requested: list[str] | None = None) -> N
     monkeypatch.setattr(csaf_client.http, "get", fake_get)
 
 
-def serve_head(monkeypatch, last_modified: str | None) -> None:
-    class HeadResponse:
-        headers = {"Last-Modified": last_modified} if last_modified else {}
-
-        def raise_for_status(self):
-            pass
-
-    monkeypatch.setattr(csaf_client.requests, "head", lambda *a, **k: HeadResponse())
-
-
-def forbid_head(monkeypatch) -> None:
-    def fail(*a, **k):
-        raise AssertionError("unexpected HEAD request")
-
-    monkeypatch.setattr(csaf_client.requests, "head", fail)
-
-
 def make_client(workspace: FakeWorkspace) -> CSAFVEXClient:
     return CSAFVEXClient(workspace=workspace, logger=logging.getLogger("test"), latest_url=FEED_URL)
 
@@ -110,289 +93,167 @@ def advisory_path(workspace: FakeWorkspace, fragment: str) -> str:
     return os.path.join(workspace.input_path, "advisories", fragment)
 
 
-BASE_RESPONSES = {
-    FEED_URL: ARCHIVE_NAME.encode(),
-    CHANGES_URL: b"",
-    DELETIONS_URL: b"",
-}
+def base_responses(archive_files: dict[str, str] | None = None) -> dict:
+    if archive_files is None:
+        archive_files = {"2026/cve-2026-0001.json": "{}"}
+    return {
+        FEED_URL: ARCHIVE_NAME.encode(),
+        ARCHIVE_URL: (tar_zst_bytes(archive_files), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
+        CHANGES_URL: b"",
+        DELETIONS_URL: b"",
+    }
 
 
 class TestArchiveDownload:
-    def test_first_run_downloads_and_extracts(self, tmp_path, monkeypatch):
+    def test_downloads_and_extracts(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (tar_zst_bytes({"2026/cve-2026-0001.json": "{}"}), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        forbid_head(monkeypatch)  # no local timestamp means no staleness check is needed
+        serve(monkeypatch, base_responses())
 
         client = make_client(ws)
 
         assert os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
         assert client.archive_mod_time == ARCHIVE_MOD_TIME
 
-    def test_timestamp_comes_from_get_response(self, tmp_path, monkeypatch):
+    def test_archive_downloaded_every_run(self, tmp_path, monkeypatch):
+        # stateless: even with a fully populated advisories tree the archive is
+        # always re-downloaded and the tree is rebuilt from it
         ws = FakeWorkspace(tmp_path)
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (tar_zst_bytes({"2026/cve-2026-0001.json": "{}"}), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        forbid_head(monkeypatch)
+        write_input(ws, "advisories/2025/cve-2025-0001.json", "{}")
+        requested: list[str] = []
+        serve(monkeypatch, base_responses(), requested)
 
         make_client(ws)
 
-        with open(os.path.join(ws.input_path, csaf_client.TIMESTAMP_FILE)) as fh:
-            assert datetime.fromisoformat(fh.read().strip()) == ARCHIVE_MOD_TIME
+        assert ARCHIVE_URL in requested
+        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
+        assert not os.path.exists(advisory_path(ws, "2025/cve-2025-0001.json"))
 
     def test_archive_file_removed_after_extraction(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (tar_zst_bytes({"2026/cve-2026-0001.json": "{}"}), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        forbid_head(monkeypatch)
+        serve(monkeypatch, base_responses())
 
         make_client(ws)
 
         assert not os.path.exists(os.path.join(ws.input_path, ARCHIVE_NAME))
 
-    def test_up_to_date_archive_not_downloaded(self, tmp_path, monkeypatch):
+    def test_no_state_files_written(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
-        requested: list[str] = []
-        serve(monkeypatch, BASE_RESPONSES, requested)
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        serve(monkeypatch, base_responses())
 
         make_client(ws)
 
-        assert ARCHIVE_URL not in requested
-        assert CHANGES_URL in requested
-        assert DELETIONS_URL in requested
-
-    def test_newer_remote_archive_is_downloaded(self, tmp_path, monkeypatch):
-        ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, "2026-06-01T00:00:00+00:00")
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (tar_zst_bytes({"2026/cve-2026-0001.json": "{}"}), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
-
-        client = make_client(ws)
-
-        assert client.archive_mod_time == ARCHIVE_MOD_TIME
-        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
+        for name in csaf_client.LEGACY_STATE_FILES:
+            assert not os.path.exists(os.path.join(ws.input_path, name))
 
 
 class TestFailureCleanup:
     def test_archive_removed_when_extraction_fails(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (b"not a zst archive", {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        forbid_head(monkeypatch)
+        responses = base_responses()
+        responses[ARCHIVE_URL] = (b"not a zst archive", {"Last-Modified": ARCHIVE_LAST_MODIFIED})
+        serve(monkeypatch, responses)
 
         with pytest.raises(Exception):
             make_client(ws)
 
         assert not os.path.exists(os.path.join(ws.input_path, ARCHIVE_NAME))
-        assert not os.path.exists(os.path.join(ws.input_path, csaf_client.TIMESTAMP_FILE))
 
-    def test_failed_extraction_preserves_existing_advisories(self, tmp_path, monkeypatch):
+    def test_failed_extraction_recovers_on_next_run(self, tmp_path, monkeypatch):
+        # a failed extraction may leave no advisories tree behind, but the next
+        # run re-downloads the archive unconditionally and rebuilds it
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, "2026-06-01T00:00:00+00:00")
         write_input(ws, "advisories/2025/cve-2025-0001.json", "{}")
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (b"not a zst archive", {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        responses = base_responses()
+        responses[ARCHIVE_URL] = (b"not a zst archive", {"Last-Modified": ARCHIVE_LAST_MODIFIED})
+        serve(monkeypatch, responses)
 
         with pytest.raises(Exception):
             make_client(ws)
 
-        assert os.path.exists(advisory_path(ws, "2025/cve-2025-0001.json"))
+        serve(monkeypatch, base_responses())
+
+        client = make_client(ws)
+
+        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
+        assert client.archive_mod_time == ARCHIVE_MOD_TIME
 
 
 class TestStrayFileCleanup:
     def test_stray_archives_and_partial_extractions_removed(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
         write_input(ws, "leaked-archive.tar.zst", "stale bytes")
         write_input(ws, "advisories.tmp/2026/cve-2026-0001.json", "{}")
-        serve(monkeypatch, BASE_RESPONSES)
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        serve(monkeypatch, base_responses())
 
         make_client(ws)
 
         assert not os.path.exists(os.path.join(ws.input_path, "leaked-archive.tar.zst"))
         assert not os.path.exists(os.path.join(ws.input_path, "advisories.tmp"))
 
-    def test_stray_cleanup_keeps_other_input_files(self, tmp_path, monkeypatch):
+    def test_legacy_state_files_removed(self, tmp_path, monkeypatch):
+        # timestamp files from the previous incremental flow linger in cached
+        # workspaces; they must be scrubbed so they don't persist forever
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
-        write_input(ws, "advisories/2026/cve-2026-0001.json", "{}")
-        serve(monkeypatch, BASE_RESPONSES)
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        for name in csaf_client.LEGACY_STATE_FILES:
+            write_input(ws, name, "2026-06-01T00:00:00+00:00")
+        serve(monkeypatch, base_responses())
 
         make_client(ws)
 
-        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
-        assert os.path.exists(os.path.join(ws.input_path, csaf_client.TIMESTAMP_FILE))
+        for name in csaf_client.LEGACY_STATE_FILES:
+            assert not os.path.exists(os.path.join(ws.input_path, name))
 
 
 class TestChangesAndDeletions:
     def test_changes_newer_than_archive_downloaded(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
         changes = b"2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n2026/cve-2026-0001.json,2026-07-01T00:00:00+00:00\n"
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                CHANGES_URL: changes,
-                f"{FEED_BASE}/2026/cve-2026-0002.json": b"{}",
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
-
-        make_client(ws)
-
-        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0002.json"))
-        assert not os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
-
-    def test_watermark_saved_after_changes_applied(self, tmp_path, monkeypatch):
-        ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
-        changes = b"2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n"
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                CHANGES_URL: changes,
-                f"{FEED_BASE}/2026/cve-2026-0002.json": b"{}",
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
-
-        make_client(ws)
-
-        with open(os.path.join(ws.input_path, csaf_client.CHANGES_TIMESTAMP_FILE)) as fh:
-            assert datetime.fromisoformat(fh.read().strip()) == datetime.fromisoformat("2026-07-03T12:00:00+00:00")
-
-    def test_watermark_skips_already_applied_changes(self, tmp_path, monkeypatch):
-        ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
-        write_input(ws, csaf_client.CHANGES_TIMESTAMP_FILE, "2026-07-04T00:00:00+00:00")
-        changes = b"2026/cve-2026-0003.json,2026-07-04T06:00:00+00:00\n2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n"
+        responses = base_responses(archive_files={"2026/cve-2026-9999.json": "{}"})
+        responses[CHANGES_URL] = changes
+        responses[f"{FEED_BASE}/2026/cve-2026-0002.json"] = b"{}"
         requested: list[str] = []
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                CHANGES_URL: changes,
-                f"{FEED_BASE}/2026/cve-2026-0003.json": b"{}",
-            },
-            requested,
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
-
-        make_client(ws)
-
-        assert f"{FEED_BASE}/2026/cve-2026-0003.json" in requested
-        assert f"{FEED_BASE}/2026/cve-2026-0002.json" not in requested
-
-    def test_watermark_not_advanced_when_a_download_fails(self, tmp_path, monkeypatch):
-        ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
-        changes = b"2026/cve-2026-0003.json,2026-07-04T06:00:00+00:00\n2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n"
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                CHANGES_URL: changes,
-                f"{FEED_BASE}/2026/cve-2026-0003.json": b"{}",
-                f"{FEED_BASE}/2026/cve-2026-0002.json": RuntimeError("boom"),
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
-
-        make_client(ws)
-
-        assert not os.path.exists(os.path.join(ws.input_path, csaf_client.CHANGES_TIMESTAMP_FILE))
-
-    def test_archive_refresh_resets_watermark(self, tmp_path, monkeypatch):
-        ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, "2026-06-01T00:00:00+00:00")
-        # a stale watermark newer than the fresh archive must not mask changes since that archive
-        write_input(ws, csaf_client.CHANGES_TIMESTAMP_FILE, "2026-07-04T00:00:00+00:00")
-        changes = b"2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n"
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (tar_zst_bytes({"2026/cve-2026-0001.json": "{}"}), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-                CHANGES_URL: changes,
-                f"{FEED_BASE}/2026/cve-2026-0002.json": b"{}",
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        serve(monkeypatch, responses, requested)
 
         make_client(ws)
 
         assert os.path.exists(advisory_path(ws, "2026/cve-2026-0002.json"))
-        with open(os.path.join(ws.input_path, csaf_client.CHANGES_TIMESTAMP_FILE)) as fh:
-            assert datetime.fromisoformat(fh.read().strip()) == datetime.fromisoformat("2026-07-03T12:00:00+00:00")
+        assert f"{FEED_BASE}/2026/cve-2026-0001.json" not in requested
 
-    def test_archive_refresh_replaces_advisory_tree(self, tmp_path, monkeypatch):
+    def test_changes_reapplied_every_run(self, tmp_path, monkeypatch):
+        # stateless: there is no watermark, so all changes since the archive was
+        # baked are re-downloaded on every run
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, "2026-06-01T00:00:00+00:00")
-        write_input(ws, "advisories/2025/cve-2025-0001.json", "{}")
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                ARCHIVE_URL: (tar_zst_bytes({"2026/cve-2026-0001.json": "{}"}), {"Last-Modified": ARCHIVE_LAST_MODIFIED}),
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        changes = b"2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n"
+        responses = base_responses(archive_files={"2026/cve-2026-9999.json": "{}"})
+        responses[CHANGES_URL] = changes
+        responses[f"{FEED_BASE}/2026/cve-2026-0002.json"] = b"{}"
+        requested: list[str] = []
+        serve(monkeypatch, responses, requested)
+
+        make_client(ws)
+        make_client(ws)
+
+        assert requested.count(f"{FEED_BASE}/2026/cve-2026-0002.json") == 2
+
+    def test_failed_change_download_does_not_fail_run(self, tmp_path, monkeypatch):
+        ws = FakeWorkspace(tmp_path)
+        changes = b"2026/cve-2026-0003.json,2026-07-04T06:00:00+00:00\n2026/cve-2026-0002.json,2026-07-03T12:00:00+00:00\n"
+        responses = base_responses(archive_files={"2026/cve-2026-9999.json": "{}"})
+        responses[CHANGES_URL] = changes
+        responses[f"{FEED_BASE}/2026/cve-2026-0003.json"] = b"{}"
+        responses[f"{FEED_BASE}/2026/cve-2026-0002.json"] = RuntimeError("boom")
+        serve(monkeypatch, responses)
 
         make_client(ws)
 
-        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0001.json"))
-        assert not os.path.exists(advisory_path(ws, "2025/cve-2025-0001.json"))
+        assert os.path.exists(advisory_path(ws, "2026/cve-2026-0003.json"))
+        assert not os.path.exists(advisory_path(ws, "2026/cve-2026-0002.json"))
 
     def test_deletions_remove_files(self, tmp_path, monkeypatch):
         ws = FakeWorkspace(tmp_path)
-        write_input(ws, csaf_client.TIMESTAMP_FILE, ARCHIVE_MOD_TIME.isoformat())
-        write_input(ws, "advisories/2026/cve-2026-0009.json", "{}")
-        serve(
-            monkeypatch,
-            {
-                **BASE_RESPONSES,
-                DELETIONS_URL: b"2026/cve-2026-0009.json\n",
-            },
-        )
-        serve_head(monkeypatch, ARCHIVE_LAST_MODIFIED)
+        responses = base_responses(archive_files={"2026/cve-2026-0009.json": "{}"})
+        responses[DELETIONS_URL] = b"2026/cve-2026-0009.json\n"
+        serve(monkeypatch, responses)
 
         make_client(ws)
 
