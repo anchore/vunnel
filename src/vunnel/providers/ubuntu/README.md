@@ -405,7 +405,13 @@ it via config:
 providers:
   ubuntu:
     downconvert_osv_to_os: true   # default: false
+    downconvert_emit_esm: true    # default: true; only meaningful when downconvert_osv_to_os is on
 ```
+
+`downconvert_emit_esm` controls whether plain Ubuntu Pro (ESM) slices are
+emitted as `ubuntu:X.YY+esm` channel records. Set it `false` for the frozen-v5
+lane, whose build isn't validated against `+esm` channels — plain Pro then maps
+to `None` like the sub-tiers, and only base records are emitted.
 
 When the toggle is on:
 
@@ -422,7 +428,8 @@ When the toggle is on:
 | `upstream[0]` (`CVE-*`) | `Vulnerability.Name` |
 | `severity[type=Ubuntu].score` | `Vulnerability.Severity` (Negligible/Low/Medium/High/Critical, else Unknown) |
 | `Ubuntu:22.04:LTS` ecosystem | `NamespaceName: "ubuntu:22.04"` |
-| `Ubuntu:Pro:*` / FIPS / Realtime / BlueField | **dropped** — v3 never emitted these namespaces |
+| `Ubuntu:Pro:22.04:LTS` (plain ESM) | `NamespaceName: "ubuntu:22.04+esm"` — the `+esm` distro channel (mirrors RHEL EUS's `rhel:X.Y+eus`), carrying the real Pro fix version. Gated by `downconvert_emit_esm`. A plain-Pro slice with no fix emits no `+esm` record (the base wont-fix already discloses it) |
+| `Ubuntu:Pro:FIPS*` / Realtime / BlueField | **dropped** — their builds diverge from base, so their fixes can't resolve a base disclosure |
 | `ranges[].events[].fixed: "x.y.z"` | `FixedIn.Version: "x.y.z"`, `NoAdvisory: false` |
 | no `fixed` + `database_specific.anchore.status == "wont-fix"` | `FixedIn.Version: "None"`, `NoAdvisory: true` |
 | no `fixed`, no wont-fix marker | `FixedIn.Version: "None"`, `NoAdvisory: false` |

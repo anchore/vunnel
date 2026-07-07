@@ -17,10 +17,26 @@ The mapping mirrors v3's `map_parsed` behavior on equivalent inputs:
   no fixed event, no wont-fix      → FixedIn.Version="None", VendorAdvisory.NoAdvisory=False
   database_specific.anchore.fixes[0] → FixedIn.Available (Date/Kind)
 
-Pro/FIPS/Realtime/BlueField fragments are skipped entirely — v3 never emitted
-records for those namespaces. Pro-only-fix data still surfaces here because
-`_yield_base_with_inferences` has already merged wont-fix entries into the
-base ecosystem's affected[] list before this code runs.
+Plain Ubuntu Pro (ESM) fragments — `Ubuntu:Pro:X.YY:LTS` — are emitted as a
+distro channel: `ubuntu:X.YY+esm`, mirroring RHEL EUS's `rhel:X.Y+eus`. The
+real plain-Pro fix version flows through verbatim. FIPS / FIPS-updates /
+Realtime / Nvidia-BlueField still map to None (their builds diverge from base,
+so their fixes can't resolve a base disclosure). The `include_esm` flag gates the
+`+esm` emit; when off, plain Pro maps to None like the sub-tiers.
+
+The base wont-fix disclosure and the `+esm` fix are a paired split: the base
+`ubuntu:X.YY` record carries the `Version:"None"` wont-fix (synthesized by
+`_yield_base_with_inferences` when only Pro has data), and `ubuntu:X.YY+esm`
+carries the actual fix. In practice a base-fixed CVE (fix in a standard pocket)
+carries no `+esm` record: plain-Pro packages are byte-identical to base while
+base is supported, so no separate ESM fixed event exists until standard support
+ends. That's a property of Canonical's data, not something enforced here — any
+plain-Pro slice with a real fixed event yields a `+esm` record regardless.
+
+The `+esm` channel carries fixes only: a plain-Pro slice with no fixed event
+(wont-fix or still-pending on Pro) produces no `+esm` record at all. The base
+`ubuntu:X.YY` wont-fix is the sole disclosure for those — an unfixed `+esm`
+record would just duplicate it with `Version:"None"`.
 """
 
 from __future__ import annotations
@@ -32,29 +48,40 @@ _UBUNTU_PKG_VERSION_FORMAT = "dpkg"
 _UBUNTU_CVE_URL = "https://ubuntu.com/security/{}"
 
 _BASE_ECO_RE = re.compile(r"^Ubuntu:(\d+\.\d+)(?::LTS)?$")
+# plain Ubuntu Pro (ESM) only: `Ubuntu:Pro:<ver>[:LTS]`, anchored so any extra
+# tier token (FIPS, FIPS-updates, Realtime, ...) or trailing segment fails to match.
+_PLAIN_PRO_ECO_RE = re.compile(r"^Ubuntu:Pro:(\d+\.\d+)(?::LTS)?$")
+
+_ESM_SUFFIX = "+esm"
 
 # v3 severity values, mirroring parser_legacy.Severity.json() output.
 _SEVERITY_NAMES = {"Negligible", "Low", "Medium", "High", "Critical", "Unknown"}
 
 
-def osv_ecosystem_to_os_namespace(ecosystem: str) -> str | None:
-    """Map an OSV ecosystem string to v3's `ubuntu:<version>` namespace.
+def osv_ecosystem_to_os_namespace(ecosystem: str, include_esm: bool = True) -> str | None:
+    """Map an OSV ecosystem string to a v3 `ubuntu:<version>[+esm]` namespace.
 
-    Only base Ubuntu releases qualify. Pro/FIPS/Realtime/BlueField return
-    None and are skipped by downconversion — v3 never emitted records for
-    those namespaces, and Pro-only-fix inference already layers wont-fix
-    entries onto the base ecosystem's affected[] list upstream.
+    Base Ubuntu releases map to `ubuntu:<version>`. Plain Ubuntu Pro (ESM)
+    maps to the `ubuntu:<version>+esm` distro channel (mirroring RHEL EUS's
+    `rhel:X.Y+eus`) when `include_esm` is set. FIPS/FIPS-updates/Realtime/
+    Nvidia-BlueField always return None — their builds diverge from base, so
+    their fixes can't resolve a base disclosure.
 
       Ubuntu:22.04:LTS              -> ubuntu:22.04
       Ubuntu:24.10                  -> ubuntu:24.10
-      Ubuntu:Pro:14.04:LTS          -> None
+      Ubuntu:Pro:14.04:LTS          -> ubuntu:14.04+esm   (None if include_esm=False)
+      Ubuntu:Pro:22.04:LTS          -> ubuntu:22.04+esm
       Ubuntu:Pro:FIPS:22.04:LTS     -> None
       Ubuntu:Nvidia-BlueField:22.04 -> None
     """
     m = _BASE_ECO_RE.match(ecosystem)
-    if m is None:
-        return None
-    return f"ubuntu:{m.group(1)}"
+    if m is not None:
+        return f"ubuntu:{m.group(1)}"
+    if include_esm:
+        pm = _PLAIN_PRO_ECO_RE.match(ecosystem)
+        if pm is not None:
+            return f"ubuntu:{pm.group(1)}+esm"
+    return None
 
 
 def _ubuntu_priority_to_severity(score: str) -> str:
@@ -133,12 +160,19 @@ def _fixed_in_for_affected(aff: dict[str, Any], namespace: str) -> list[dict[str
           -> FixedIn(Version="None", NoAdvisory=True)
       - no fix yet (no fixed events, no wont-fix marker)
           -> FixedIn(Version="None", NoAdvisory=False)
+
+    Exception: on a `+esm` channel a no-fix entry yields nothing. That channel
+    carries only real Pro fixes; the unfixed disclosure already lives on the
+    base `ubuntu:X.YY` record, so a `Version="None"` +esm entry would just
+    duplicate it.
     """
     package_name = (aff.get("package") or {}).get("name")
     if not package_name:
         return []
 
     fixed_versions = _fixed_versions_for_affected(aff)
+    if not fixed_versions and namespace.endswith(_ESM_SUFFIX):
+        return []
     if fixed_versions:
         out = []
         for v in fixed_versions:
@@ -166,7 +200,7 @@ def _fixed_in_for_affected(aff: dict[str, Any], namespace: str) -> list[dict[str
     ]
 
 
-def osv_to_os(payload: dict[str, Any]) -> dict[str, Any] | None:
+def osv_to_os(payload: dict[str, Any], include_esm: bool = True) -> dict[str, Any] | None:
     """Convert an OSV envelope payload into a v3-shape `{"Vulnerability": {...}}` dict.
 
     Returns None when the payload can't be downconverted:
@@ -192,7 +226,7 @@ def osv_to_os(payload: dict[str, Any]) -> dict[str, Any] | None:
     fixed_in: list[dict[str, Any]] = []
     for aff in payload.get("affected", []) or []:
         eco = (aff.get("package") or {}).get("ecosystem", "")
-        ns = osv_ecosystem_to_os_namespace(eco)
+        ns = osv_ecosystem_to_os_namespace(eco, include_esm=include_esm)
         if ns is None:
             continue
         # By the slicing invariant, every affected[] entry in a single envelope
@@ -202,6 +236,10 @@ def osv_to_os(payload: dict[str, Any]) -> dict[str, Any] | None:
         fixed_in.extend(_fixed_in_for_affected(aff, ns))
 
     if namespace is None:
+        return None
+    # a `+esm` channel with no real fix left is pure noise — the base wont-fix
+    # already disclosed it (see _fixed_in_for_affected), so emit no record.
+    if namespace.endswith(_ESM_SUFFIX) and not fixed_in:
         return None
 
     return {
@@ -217,14 +255,12 @@ def osv_to_os(payload: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def os_identifier_for(payload: dict[str, Any]) -> str | None:
-    """Build the v3-shape `{namespace}/{cve_name.lower()}` identifier for a downconverted record."""
-    upstream = payload.get("upstream") or []
-    if not upstream or not upstream[0]:
-        return None
-    for aff in payload.get("affected", []) or []:
-        eco = (aff.get("package") or {}).get("ecosystem", "")
-        ns = osv_ecosystem_to_os_namespace(eco)
-        if ns is not None:
-            return f"{ns}/{upstream[0].lower()}"
-    return None
+def os_identifier_for(os_payload: dict[str, Any]) -> str:
+    """Build the v3-shape `{namespace}/{cve_name.lower()}` identifier for an emitted OS payload.
+
+    Takes the payload `osv_to_os` produced (not the OSV input) so the identifier
+    can't drift from the record it names — there's one construction, shared by
+    the parser's yield path.
+    """
+    vuln = os_payload["Vulnerability"]
+    return f"{vuln['NamespaceName']}/{vuln['Name'].lower()}"

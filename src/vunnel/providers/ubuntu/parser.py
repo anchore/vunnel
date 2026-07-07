@@ -242,13 +242,14 @@ class Parser:
     _fragments_subdir_ = "fragments"
     _normalized_subdir_ = "normalized-cve-data"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         workspace: Workspace,
         fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
         downconvert_osv_to_os: bool = False,
+        downconvert_emit_esm: bool = True,
     ):
         self.workspace = workspace
         self.fixdater = fixdater if fixdater is not None else fixdate.default_finder(workspace)
@@ -258,6 +259,9 @@ class Parser:
         # are yielded. The legacy normalized-cve-data passthrough already emits OS shape,
         # so when this is enabled every yielded record is OS.
         self.downconvert_osv_to_os = downconvert_osv_to_os
+        # When downconverting, also emit `ubuntu:X.YY+esm` channel records for plain Pro
+        # (ESM). Default on; the frozen-v5 lane sets this off to take base records only.
+        self.downconvert_emit_esm = downconvert_emit_esm
 
         self.archive_path = os.path.join(workspace.input_path, self._archive_filename_)
         self.vex_archive_path = os.path.join(workspace.input_path, self._vex_archive_filename_)
@@ -662,20 +666,18 @@ class Parser:
     def _iter_fragments_downconverted(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         """Yield OSV fragment envelopes rewritten into v3 OS-schema records.
 
-        Pro/FIPS/Realtime/BlueField slices and any envelope without an upstream
-        CVE alias are dropped — v3 never emitted them. Pro-only-fix wont-fix
-        data still appears here because `_yield_base_with_inferences` already
+        Plain Pro (ESM) slices become `ubuntu:X.YY+esm` channel records (gated by
+        `downconvert_emit_esm`); FIPS/Realtime/BlueField slices and any envelope
+        without an upstream CVE alias are dropped — v3 never emitted them. Pro-only-fix
+        wont-fix data still appears here because `_yield_base_with_inferences` already
         merged it into the base ecosystem's affected[] list before this runs.
         """
         os_schema = schema.OSSchema()
         for _osv_identifier, _osv_schema, osv_payload in self._iter_fragments():
-            os_payload = osv_to_os(osv_payload)
+            os_payload = osv_to_os(osv_payload, include_esm=self.downconvert_emit_esm)
             if os_payload is None:
                 continue
-            identifier = os_identifier_for(osv_payload)
-            if identifier is None:
-                continue
-            yield identifier, os_schema, os_payload
+            yield os_identifier_for(os_payload), os_schema, os_payload
 
     def _load_usn_overlay(self) -> USNFixDateOverlay | None:
         """Build the (eco, src-pkg, fixed-ver) → USN-published-date index.
