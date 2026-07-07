@@ -28,6 +28,7 @@ class Config:
     # Enable allows us to switch to an OSV feed in the future if/when one becomes available
     enable: bool = True
 
+
 class Provider(provider.Provider):
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)

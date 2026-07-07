@@ -35,7 +35,7 @@ def test_parser_selection(
     expected_url = getattr(c, expected_url_attr)
     assert isinstance(p.parser, expected_parser_cls)
     assert p.parser.url == expected_url
-    assert p.schema.name == expected_schema_name
+    assert p._schema.name == expected_schema_name
 
 
 @pytest.mark.parametrize(
@@ -124,7 +124,7 @@ def test_provider_osv_schema(helpers, disable_get_requests, auto_fake_fixdate_fi
     c.runtime.skip_download = True
     p = Provider(root=workspace.root, config=c)
 
-    assert p.schema.version == "1.7.0"
+    assert p._schema.version == "1.7.0"
 
     _make_osv_tar(helpers, workspace)
 
@@ -146,7 +146,7 @@ def test_provider_osv_via_snapshot(helpers, disable_get_requests, monkeypatch, a
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
-    assert p.schema.version == "1.7.0"
+    assert p._schema.version == "1.7.0"
 
     def mock_download():
         return None

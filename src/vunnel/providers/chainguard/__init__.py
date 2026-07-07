@@ -47,7 +47,6 @@ class Provider(provider.Provider):
         self.logger.debug(f"config: {config}")
 
         if self.config.use_osv:
-            self.logger.info("Using OSV data source")
             self.feed_url = self.config.osv_url
             self.parser: Parser = OSVParser(
                 workspace=self.workspace,
@@ -59,7 +58,6 @@ class Provider(provider.Provider):
             )
             self._schema = schema.OSVSchema(version="1.7.0")
         else:
-            self.logger.info("Using SecDB data source")
             self.parser = SecDBParser(
                 workspace=self.workspace,
                 url=config.secdb_url,
@@ -87,6 +85,7 @@ class Provider(provider.Provider):
         return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        self.logger.info(f"Using {'OSV' if self.config.use_osv else 'SecDB'} data source")
         with timer(self.name(), self.logger):
             with self.results_writer() as writer, self.parser:
                 # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)

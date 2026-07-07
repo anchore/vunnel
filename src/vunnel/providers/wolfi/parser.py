@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 class Parser(abc.ABC):
     """Generic implementation of a feed parser for Chainguard and Wolfi, which both secdb and osv build on"""
+
     _release_ = "rolling"
     _input_dir_: str = ""
     _security_reference_url_ = "https://images.chainguard.dev/security"
@@ -45,9 +46,7 @@ class Parser(abc.ABC):
         self.metadata_url = url.strip("/") if url else ""
         self.url = url
         self.namespace = namespace
-        self.security_reference_url = (
-            security_reference_url.strip("/") if security_reference_url else self._security_reference_url_
-        )
+        self.security_reference_url = security_reference_url.strip("/") if security_reference_url else self._security_reference_url_
         self.skip_download = skip_download
 
         if not logger:
@@ -99,7 +98,7 @@ class Parser(abc.ABC):
 class SecDBParser(Parser):
     _input_dir_ = "secdb"
 
-    def __init__(# noqa: PLR0913
+    def __init__(  # noqa: PLR0913
         self,
         workspace,
         url: str,
@@ -252,8 +251,8 @@ class SecDBParser(Parser):
 
 class OSVParser(Parser):
     _input_dir_ = "osv"
-    _cga_id_re  = re.compile(r"^CGA(-[23456789cfghjmpqrvwx]{4}){3}$")
-    _tar_file   = "chainguard.tar.gz"
+    _cga_id_re = re.compile(r"^CGA(-[23456789cfghjmpqrvwx]{4}){3}$")
+    _tar_file = "chainguard.tar.gz"
 
     def _download(self) -> None:
         """
