@@ -29,9 +29,10 @@ class AffectedRelease:
         # it encodes the target RHEL minor stream, so it is what lets us tell same-base per-stream
         # fixes apart. Populated during the RHSA lookup; may be None for non-CSAF-sourced versions.
         self.product_id: str | None = product_id
-        # The sorted, deduped set of extended-support channel tokens (e.g. ["aus", "eus"]) that this
-        # exact build is delivered through. Empty means the build is generally available (shipped via a
-        # normal/GA/non-extended channel). Computed across all FPIs for the build during the RHSA lookup.
+        # The sorted, deduped set of recognized channel tokens (e.g. ["ga"], ["aus", "eus"]) that this
+        # exact build is delivered through. Generally-available builds carry the explicit "ga" token;
+        # an EMPTY list means the channel set is UNKNOWN (no FPI resolved to a recognized channel), NOT
+        # that the build is GA. Computed across all FPIs for the build during the RHSA lookup.
         self.channels: list[str] = channels or []
 
     def as_dict(self) -> dict[str, str | None]:

@@ -25,6 +25,11 @@ class TestParseProductId:
                 "AppStream-8.2.0.Z.EUS:bind-32:9.11.13-6.el8_2.3.x86_64",
                 ProductIdInfo(minor=2, channel="eus"),
             ),
+            # MULTI-DIGIT minor (RHEL 8.10) in an old-format z-stream prefix -> minor 10
+            (
+                "BaseOS-8.10.0.Z.MAIN:glibc-0:2.28-251.el8_10.5.x86_64",
+                ProductIdInfo(minor=10, channel="ga"),
+            ),
             # z-stream, MAIN.EUS marker chain (BaseOS) -> eus
             (
                 "BaseOS-9.4.0.Z.MAIN.EUS:glibc-0:2.34-100.el9_4.x86_64",
@@ -93,6 +98,11 @@ class TestParseProductId:
                 "rhel-9.4::baseos:glibc-0:2.34-100.el9_4",
                 ProductIdInfo(minor=4, channel="ga"),
             ),
+            # MULTI-DIGIT minor (RHEL 8.10) in the new format -> minor 10
+            (
+                "rhel-8.10::baseos:glibc-0:2.28-251.el8_10",
+                ProductIdInfo(minor=10, channel="ga"),
+            ),
             # new format with -eus marker (normalized to lowercase token)
             (
                 "rhel-8.6-eus::appstream:httpd-0:2.4.37-21.el8_6",
@@ -113,6 +123,12 @@ class TestParseProductId:
             # ------------------------------------------------------------------
             (
                 "7Server-ELS:webkitgtk4-0:2.48.3-2.el7_9.x86_64",
+                ProductIdInfo(minor=None, channel="els"),
+            ),
+            # RHEL 6 ELS with an .EXTENSION repo segment after the ELS marker (real bind example
+            # from RHSA-2025:23414) -> still minor None, channel "els"
+            (
+                "6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64",
                 ProductIdInfo(minor=None, channel="els"),
             ),
             ("NServer-ELS:foo-0:1-1.el7.x86_64", ProductIdInfo(minor=None, channel="els")),
@@ -160,6 +176,9 @@ class TestMinorFromDistTag:
             ("0:2.34-100.el9_4", 4),
             ("32:9.11.13-6.el8_2.3", 2),
             ("4.18.0-372.el8_6", 6),
+            # MULTI-DIGIT minor in the dist tag ".el8_10" (RHEL 8.10) -> 10
+            ("0:2.28-251.el8_10.5", 10),
+            ("2.28-251.el8_10", 10),
             # release without epoch still parses
             ("2.34-60.el9_2.7", 2),
             # modular "+elN.M" dist tag -> M

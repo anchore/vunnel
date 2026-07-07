@@ -180,3 +180,63 @@ def test_is_rpm_module_purl(purl: str, expected: bool):
 )
 def test_resolve_module_name_from_purl(purl: PackageURL, expected: str):
     assert resolve_module_name_from_purl(PackageURL.from_string(purl)) == expected
+
+
+class TestChannelsFromFpis:
+    # One backported build is frequently delivered via several channels at once. The published
+    # fixtures happen to ship each build via a single channel, so stub the FPI -> (platform, module,
+    # name, version) resolution and exercise the channel-union logic in channels_from_fpis directly.
+    VERSION = "32:9.11.13-6.el8_4.3"
+    OTHER_VERSION = "32:9.11.13-8.el8_6.1"
+    PLATFORM_CPE = "cpe:/a:redhat:enterprise_linux:8::appstream"
+
+    def _stub_resolution(self, csaf_parser):
+        def resolve(doc, fpi):
+            version = self.OTHER_VERSION if "el8_6" in fpi else self.VERSION
+            return self.PLATFORM_CPE, None, "bind", version
+
+        csaf_parser.platform_module_name_version_from_fpi = resolve
+
+    def test_unions_channels_across_fpis_shipping_the_same_build(self, csaf_parser):
+        self._stub_resolution(csaf_parser)
+        fpis = [
+            # the same exact build delivered via EUS, AUS, and a GA (z-stream MAIN) channel
+            "AppStream-8.4.0.Z.EUS:bind-32:9.11.13-6.el8_4.3.x86_64",
+            "AppStream-8.4.0.Z.AUS:bind-32:9.11.13-6.el8_4.3.x86_64",
+            "AppStream-8.4.0.Z.MAIN:bind-32:9.11.13-6.el8_4.3.x86_64",
+            # a DIFFERENT build (other version): its TUS channel must NOT be unioned in
+            "AppStream-8.6.0.Z.TUS:bind-32:9.11.13-8.el8_6.1.x86_64",
+            # same build but an unrecognized marker (ENS): contributes nothing
+            "AppStream-8.4.0.Z.ENS:bind-32:9.11.13-6.el8_4.3.x86_64",
+        ]
+        channels = csaf_parser.channels_from_fpis(
+            Mock(), fpis, "bind", "cpe:/a:redhat:enterprise_linux:8", self.VERSION, None,
+        )
+        assert channels == ["aus", "eus", "ga"]
+
+    def test_extended_only_build_yields_multiple_extended_channels(self, csaf_parser):
+        self._stub_resolution(csaf_parser)
+        fpis = [
+            "AppStream-8.4.0.Z.AUS:bind-32:9.11.13-6.el8_4.3.x86_64",
+            "AppStream-8.4.0.Z.EUS:bind-32:9.11.13-6.el8_4.3.x86_64",
+        ]
+        channels = csaf_parser.channels_from_fpis(
+            Mock(), fpis, "bind", "cpe:/a:redhat:enterprise_linux:8", self.VERSION, None,
+        )
+        assert channels == ["aus", "eus"]
+
+    def test_all_unrecognized_channels_yield_empty_unknown_set(self, csaf_parser):
+        self._stub_resolution(csaf_parser)
+        fpis = ["AppStream-8.4.0.Z.ENS:bind-32:9.11.13-6.el8_4.3.x86_64"]
+        channels = csaf_parser.channels_from_fpis(
+            Mock(), fpis, "bind", "cpe:/a:redhat:enterprise_linux:8", self.VERSION, None,
+        )
+        # empty means UNKNOWN, not generally available
+        assert channels == []
+
+    def test_no_version_yields_empty(self, csaf_parser):
+        self._stub_resolution(csaf_parser)
+        fpis = ["AppStream-8.4.0.Z.EUS:bind-32:9.11.13-6.el8_4.3.x86_64"]
+        assert csaf_parser.channels_from_fpis(
+            Mock(), fpis, "bind", "cpe:/a:redhat:enterprise_linux:8", None, None,
+        ) == []

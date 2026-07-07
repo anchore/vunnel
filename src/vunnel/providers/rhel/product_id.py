@@ -18,6 +18,7 @@ OLD format -- the platform prefix is ``{Repo}-{MAJOR}.{MINOR}[.{Z}][.{markers}]`
     AppStream-8.4.0.Z.AUS:bar-0:1-1.el8_4.x86_64                  -> minor 4,  channel "aus"
     AppStream-8.8.0.Z.ENS:foo-0:1-1.el8_8.x86_64                  -> minor 8,  channel None (unknown marker)
     7Server-ELS:webkitgtk4-0:2.48.3-2.el7_9.x86_64               -> minor None, channel "els"
+    6Server-ELS.EXTENSION:bind-32:9.8.2-0.68.rc1.el6_10.17.x86_64 -> minor None, channel "els"
 
 NEW format -- the platform prefix is ``rhel-{MAJOR}.{MINOR}[-marker]``::
 
@@ -172,8 +173,9 @@ def parse_product_id(product_id: str | None) -> ProductIdInfo:
         return ProductIdInfo(minor=minor, channel=channel)
 
     # ELS: extended *lifecycle* support is a major-only stream (no minor in the prefix), but it IS an
-    # extended-support channel. Recognize it from the trailing "-ELS" marker even when no minor parses.
-    if re.search(r"(?:^|-)ELS(?::|$)", prefix, flags=re.IGNORECASE):
+    # extended-support channel. Recognize the "-ELS" marker even when no minor parses; it may end the
+    # prefix ("7Server-ELS") or be followed by a dotted repo segment ("6Server-ELS.EXTENSION" on RHEL 6).
+    if re.search(r"(?:^|-)ELS(?:[.:]|$)", prefix, flags=re.IGNORECASE):
         return ProductIdInfo(minor=None, channel="els")
 
     # No recognizable minor or channel (garbage, or a non-RHEL product). Do not guess.
