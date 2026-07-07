@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from vunnel import provider, result, schema
-from vunnel.providers.wolfi.parser import OSVParser, SecDBParser
+from vunnel.providers.wolfi.parser import OSVParser, Parser, SecDBParser
 from vunnel.utils import timer
 
 if TYPE_CHECKING:
@@ -32,6 +32,7 @@ class Config:
 class Provider(provider.Provider):
     # NOTE: schema and distribution version are actually set on init depending
     # on which feed we configure the provider to use.
+    # we use self._schema for this value
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -48,7 +49,7 @@ class Provider(provider.Provider):
         if self.config.use_osv:
             self.logger.info("Using OSV data source")
             self.feed_url = self.config.osv_url
-            self.parser = OSVParser(
+            self.parser: Parser = OSVParser(
                 workspace=self.workspace,
                 url=config.osv_url,
                 namespace=self._namespace,
@@ -56,8 +57,9 @@ class Provider(provider.Provider):
                 logger=self.logger,
                 skip_download=self.config.runtime.skip_download,
             )
-            self.schema = schema.OSVSchema(version="1.7.0")
+            self._schema = schema.OSVSchema(version="1.7.0")
         else:
+            self.logger.info("Using SecDB data source")
             self.parser = SecDBParser(
                 workspace=self.workspace,
                 url=config.secdb_url,
@@ -67,7 +69,7 @@ class Provider(provider.Provider):
                 skip_download=self.config.runtime.skip_download,
             )
             self.feed_url = self.config.secdb_url
-            self.schema = schema.OSSchema()
+            self._schema = schema.OSSchema()
 
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)
@@ -92,7 +94,7 @@ class Provider(provider.Provider):
                     for vuln_id, record in vuln_dict.items():
                         writer.write(
                             identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                            schema=self.schema,
+                            schema=self._schema,
                             payload=record,
                         )
 
