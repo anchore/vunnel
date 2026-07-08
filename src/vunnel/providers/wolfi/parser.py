@@ -71,13 +71,16 @@ class Parser(abc.ABC):
         return urls
 
     @abc.abstractmethod
-    def _download(self) -> None: ...
+    def _download(self) -> None:
+        """Fetch feed data over the network into the workspace input dir (honoring skip_download)."""
 
     @abc.abstractmethod
-    def _load(self) -> Generator[tuple[str, dict[str, Any]]]: ...
+    def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
+        """Read the downloaded input and yield (release, raw-record) pairs."""
 
     @abc.abstractmethod
-    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]: ...
+    def _normalize(self, release: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Convert one raw record into a {vuln_id: record} mapping conforming to the provider's schema."""
 
     @property
     def target_url(self) -> str:
