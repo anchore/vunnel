@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 import os
 from typing import TYPE_CHECKING, Any
@@ -12,6 +13,15 @@ if TYPE_CHECKING:
     from vunnel.workspace import Workspace
 
 from .git import GitWrapper
+
+# Default CVSS vector-string prefix to prepend for each OSV severity type when
+# the score does not already carry a "CVSS:x.y/" prefix. Downstream consumers
+# (e.g. grype-db) expect the full CVSS vector string including this prefix.
+_CVSS_TYPE_PREFIXES = {
+    "CVSS_V2": "CVSS:2.0/",
+    "CVSS_V3": "CVSS:3.0/",
+    "CVSS_V4": "CVSS:4.0/",
+}
 
 
 class Parser:
@@ -48,10 +58,32 @@ class Parser:
                 with open(full_path, encoding="utf-8") as f:
                     yield orjson.loads(f.read())
 
+    def _normalize_severities(self, vuln_entry: dict[str, Any]) -> dict[str, Any]:
+        # Normalize CVSS severity vector strings so that each carries a
+        # "CVSS:x.y/" prefix appropriate to its type. If a score already has a
+        # "CVSS:" prefix (e.g. "CVSS:3.1/...") it is preserved as-is. Empty
+        # scores and entries without severities are left untouched. The input
+        # entry is not mutated; a copy is returned.
+        severities = vuln_entry.get("severity")
+        if not severities:
+            return vuln_entry
+
+        normalized = copy.deepcopy(vuln_entry)
+        for severity in normalized["severity"]:
+            score = severity.get("score", "")
+            if not score or score.startswith("CVSS:"):
+                continue
+            prefix = _CVSS_TYPE_PREFIXES.get(severity.get("type", ""))
+            if prefix:
+                severity["score"] = prefix + score
+
+        return normalized
+
     def _normalize(self, vuln_entry: dict[str, Any], version: str) -> tuple[str, str, dict[str, Any]]:
         # We want to return the OSV record as it is (using OSV schema)
         # We'll transform it into the Grype-specific vulnerability schema
         # on grype-db
+        vuln_entry = self._normalize_severities(vuln_entry)
         vuln_id = vuln_entry["id"]
         vuln_schema = vuln_entry.get("schema_version", "1.7.4")  # TODO: this is a bit of a hack;
 
