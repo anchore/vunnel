@@ -40,10 +40,12 @@ class Provider(provider.Provider):
 
         self.parser = Parser(
             ws=self.workspace,
+            download_timeout=self.config.request_timeout,
             logger=self.logger,
         )
 
-        # this provider requires the previous state from former runs
+        # the parser refreshes its own input (fresh archive download each run),
+        # so the framework must not delete input state out from under it
         provider.disallow_existing_input_policy(config.runtime)
 
     @classmethod

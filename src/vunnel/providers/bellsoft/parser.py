@@ -3,11 +3,13 @@ from __future__ import annotations
 import copy
 import logging
 import os
+import tarfile
 from typing import TYPE_CHECKING, Any
 
 import orjson
 
 from vunnel.tool import fixdate
+from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
 
 if TYPE_CHECKING:
@@ -15,8 +17,6 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from vunnel.workspace import Workspace
-
-from .git import GitWrapper
 
 # Default CVSS vector-string prefix to prepend for each OSV severity type when
 # the score does not already carry a "CVSS:x.y/" prefix. Downstream consumers
@@ -29,32 +29,27 @@ _CVSS_TYPE_PREFIXES = {
 
 
 class Parser:
-    _git_src_url_ = "https://github.com/bell-sw/osv-database.git"
-    _git_src_branch_ = "master"
+    # an unauthenticated archive download (rather than a git clone) avoids any
+    # dependency on a git binary or the host's git configuration
+    _download_url_ = "https://github.com/bell-sw/osv-database/archive/refs/heads/master.tar.gz"
+    _archive_name_ = "osv-database.tar.gz"
 
     def __init__(
         self,
         ws: Workspace,
         fixdater: fixdate.Finder | None = None,
+        download_timeout: int = 125,
         logger: logging.Logger | None = None,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(ws)
         self.fixdater = fixdater
         self.workspace = ws
-        self.git_url = self._git_src_url_
-        self.git_branch = self._git_src_branch_
-        self.urls = [self.git_url]
+        self.download_timeout = download_timeout
+        self.urls = [self._download_url_]
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
-        _checkout_dst_ = os.path.join(self.workspace.input_path, "osv-database")
-        self.git_wrapper = GitWrapper(
-            source=self.git_url,
-            branch=self.git_branch,
-            checkout_dest=_checkout_dst_,
-            logger=self.logger,
-        )
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -63,24 +58,43 @@ class Parser:
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-    def _load(self) -> Generator[dict[str, Any]]:
-        self.logger.info("loading data from git repository")
+    def _archive_path(self) -> str:
+        return os.path.join(self.workspace.input_path, self._archive_name_)
 
-        vuln_data_dir = os.path.join(self.workspace.input_path, "osv-database", "BELL-CVE")
-        for root, dirs, files in os.walk(vuln_data_dir):
-            dirs.sort()
-            for file in sorted(files):
-                if not file.endswith(".json"):
-                    self.logger.debug(f"skipping non-JSON file: {file}")
+    def _download(self) -> None:
+        self.logger.info(f"downloading vulnerability data from {self._download_url_}")
+        req = http.get(self._download_url_, self.logger, stream=True, timeout=self.download_timeout)
+        with open(self._archive_path(), "wb") as fp:
+            for chunk in req.iter_content(chunk_size=65536):
+                fp.write(chunk)
+
+    def _load(self) -> Generator[dict[str, Any]]:
+        self.logger.info("loading data from downloaded archive")
+
+        if not os.path.exists(self._archive_path()):
+            self.logger.warning("no downloaded archive to load")
+            return
+
+        # stream advisories straight out of the tarball rather than extracting
+        # ~16k small files to disk; members are never written out, so hostile
+        # member paths (traversal, symlinks) have nothing to act on. the github
+        # archive nests content under a "<repo>-<branch>/" top-level directory.
+        with tarfile.open(self._archive_path(), mode="r:gz") as tar:
+            for member in tar:
+                if not member.isfile() or "BELL-CVE" not in member.name.split("/"):
                     continue
-                full_path = os.path.join(root, file)
+                if not member.name.endswith(".json"):
+                    self.logger.debug(f"skipping non-JSON file: {member.name}")
+                    continue
+                fh = tar.extractfile(member)
+                if fh is None:
+                    continue
                 try:
-                    with open(full_path, encoding="utf-8") as f:
-                        yield orjson.loads(f.read())
+                    yield orjson.loads(fh.read())
                 except orjson.JSONDecodeError:
                     # one malformed advisory in the upstream repo should not
                     # abort the whole provider run
-                    self.logger.warning(f"skipping malformed advisory file: {full_path}")
+                    self.logger.warning(f"skipping malformed advisory file: {member.name}")
 
     def _normalize_severities(self, vuln_entry: dict[str, Any]) -> dict[str, Any]:
         # Normalize CVSS severity vector strings so that each carries a
@@ -116,9 +130,7 @@ class Parser:
         return vuln_id, vuln_schema, vuln_entry
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
-        # Initialize the git repository
-        self.git_wrapper.delete_repo()
-        self.git_wrapper.clone_repo()
+        self._download()
 
         self.fixdater.download()
 
