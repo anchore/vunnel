@@ -28,10 +28,7 @@ class Parser:
     _git_src_url_ = "https://github.com/bell-sw/osv-database.git"
     _git_src_branch_ = "master"
 
-    def __init__(self, ws: Workspace, logger: logging.Logger | None = None, versions: list[str] | None = None):
-        if versions is None:
-            versions = ["stream", "23", "25"]
-        self.versions = versions
+    def __init__(self, ws: Workspace, logger: logging.Logger | None = None):
         self.workspace = ws
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
@@ -47,16 +44,24 @@ class Parser:
             logger=self.logger,
         )
 
-    def _load(self, version: str) -> Generator[dict[str, Any]]:
+    def _load(self) -> Generator[dict[str, Any]]:
         self.logger.info("loading data from git repository")
 
         vuln_data_dir = os.path.join(self.workspace.input_path, "osv-database", "BELL-CVE")
         for root, dirs, files in os.walk(vuln_data_dir):
             dirs.sort()
             for file in sorted(files):
+                if not file.endswith(".json"):
+                    self.logger.debug(f"skipping non-JSON file: {file}")
+                    continue
                 full_path = os.path.join(root, file)
-                with open(full_path, encoding="utf-8") as f:
-                    yield orjson.loads(f.read())
+                try:
+                    with open(full_path, encoding="utf-8") as f:
+                        yield orjson.loads(f.read())
+                except orjson.JSONDecodeError:
+                    # one malformed advisory in the upstream repo should not
+                    # abort the whole provider run
+                    self.logger.warning(f"skipping malformed advisory file: {full_path}")
 
     def _normalize_severities(self, vuln_entry: dict[str, Any]) -> dict[str, Any]:
         # Normalize CVSS severity vector strings so that each carries a
@@ -79,13 +84,15 @@ class Parser:
 
         return normalized
 
-    def _normalize(self, vuln_entry: dict[str, Any], version: str) -> tuple[str, str, dict[str, Any]]:
+    def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         # We want to return the OSV record as it is (using OSV schema)
         # We'll transform it into the Grype-specific vulnerability schema
         # on grype-db
         vuln_entry = self._normalize_severities(vuln_entry)
         vuln_id = vuln_entry["id"]
-        vuln_schema = vuln_entry.get("schema_version", "1.7.4")  # TODO: this is a bit of a hack;
+        # missing schema_version only matters for its major version: the provider
+        # maps any same-major value to its own pinned schema
+        vuln_schema = vuln_entry.get("schema_version", "1.0.0")
 
         return vuln_id, vuln_schema, vuln_entry
 
@@ -93,12 +100,14 @@ class Parser:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
-        for version in self.versions:
-            for vuln_entry in self._load(version):
-                if "withdrawn" in vuln_entry:
-                    self.logger.debug("skipping withdrawn entry: "+vuln_entry["id"])
-                elif "severity" in vuln_entry and vuln_entry["severity"][0]["type"] == "CVSS_V2":
-                    self.logger.debug("skipping (not supported) CVSS_V2 entry: "+vuln_entry["id"])
-                else:
-                    # Normalize the loaded data
-                    yield self._normalize(vuln_entry, version)
+        for vuln_entry in self._load():
+            if not isinstance(vuln_entry, dict) or not vuln_entry.get("id"):
+                self.logger.warning("skipping advisory without an id")
+            elif "withdrawn" in vuln_entry:
+                self.logger.debug(f"skipping withdrawn entry: {vuln_entry['id']}")
+            else:
+                # Normalize the loaded data. Note: CVSS_V2 severities are kept
+                # deliberately — _normalize_severities gives their bare vectors
+                # the "CVSS:2.0/" prefix that downstream consumers (grype-db)
+                # require to parse them.
+                yield self._normalize(vuln_entry)

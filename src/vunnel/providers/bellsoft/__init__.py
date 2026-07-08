@@ -24,7 +24,10 @@ class Config:
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSVSchema(version="1.7.4")
+    # pin to the newest released OSV schema (vendored in schema/vulnerability/osv/):
+    # 1.x schema releases are additive, so the newest schema validates records
+    # authored against any older 1.x revision, but not vice versa
+    __schema__ = schema.OSVSchema(version="1.7.5")
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
@@ -49,13 +52,17 @@ class Provider(provider.Provider):
 
     @classmethod
     def tags(cls) -> list[str]:
-        return ["vulnerability", "language"]
+        return ["vulnerability", "os"]
 
     @classmethod
     def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
-        candidate = schema.OSVSchema(schema_version)
-        if candidate.major_version == cls.__schema__.major_version:
-            return candidate
+        # a record's declared schema_version is metadata about when upstream
+        # authored it, not which schema we validate against: same-major records
+        # all validate under the provider's pinned schema (1.x revisions are
+        # additive), and the envelope URL must point at a schema file vunnel
+        # actually ships (e.g. upstream declares 1.6.7, which we don't vendor)
+        if schema.OSVSchema(schema_version).major_version == cls.__schema__.major_version:
+            return cls.__schema__
         return None
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
@@ -67,8 +74,8 @@ class Provider(provider.Provider):
                     vuln_schema = self.compatible_schema(vuln_schema_version)
                     if not vuln_schema:
                         self.logger.warning(
-                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} ",
-                            f"as is incompatible with provider schema version {self.__schema__.version}",
+                            f"skipping vulnerability {vuln_id} with schema version {vuln_schema_version} "
+                            f"as it is incompatible with provider schema version {self.__schema__.version}",
                         )
                         continue
                     writer.write(
