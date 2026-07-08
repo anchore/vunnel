@@ -454,7 +454,7 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
         "src/vunnel/result.py",
         "src/vunnel/provider.py",
         "src/vunnel/tool/fixdate/**",
-        "src/vunnel/utils/http_wrapper.py",
+        "src/vunnel/utils/**",
     ]
 
     for search_glob in gate_globs:
@@ -738,7 +738,7 @@ def build_db(cfg: Config):
                     logging.warning(f"failed to fetch cache for {provider!r}, retrying: {e}")
                 else:
                     raise
-        subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file], check=True)
+        subprocess.run([GRYPE_DB, "cache", "restore", "--path", cache_file, "-c", ".grype-db.yaml"], check=True)
         os.remove(cache_file)
 
     # run providers

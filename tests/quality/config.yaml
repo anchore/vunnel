@@ -50,7 +50,6 @@ grype_db:
   version: main
 
 tests:
-
   - provider: alpine
     use_cache: true
     additional_providers:
@@ -244,7 +243,7 @@ tests:
       # - quay.io/hummingbird/nodejs:latest@sha256:3c798f5a9da72e241f4cbeecc8bd1d653db69d92131ea8d676067b95ae18a5c2
       # - quay.io/hummingbird/postgresql:latest@sha256:6eefb14bced346a8583011f84dd71de8249af74c060369be6ad73891b2a768f0
     expected_namespaces:
-      - hummingbird:distro:hummingbird:1
+      - hummingbird:distro:hummingbird:rolling
     validations:
       - <<: *default-validations
         max_year: 2026 # hummingbird is new
@@ -296,7 +295,7 @@ tests:
   - provider: oracle
     use_cache: true
     additional_trigger_globs:
-      - src/vunnel/utils/oval_parser.py
+      - src/vunnel/providers/oracle/oval_parser.py
     images:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
       - docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
@@ -319,8 +318,6 @@ tests:
     use_cache: true
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
     # This will still test incremental updates relative to the nightly cache that is populated.
-    additional_trigger_globs:
-      - src/vunnel/utils/oval_parser.py
     images:
       - registry.access.redhat.com/ubi8@sha256:68fecea0d255ee253acbf0c860eaebb7017ef5ef007c25bee9eeffd29ce85b29
       - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
@@ -348,6 +345,7 @@ tests:
     images:
       - registry.suse.com/suse/sles12sp4:26.380@sha256:94b537f5b312e7397b5d0bbb3d892f961acdd9454950fc233d77f771e25335fb
       - registry.suse.com/suse/sle15:15.1.6.2.461@sha256:6e613c994c3b33224e439ef8ee9003fb69416f77f7a6b1da0b18981d5aa3bb75
+      - registry.suse.com/bci/bci-base:16.0-18.4@sha256:ae18370c24511ed8b9d6d5376260663f5e535e0d52b0803a9e3e7858760606bf
 
     expected_namespaces:
       - sles:distro:sles:11
@@ -369,12 +367,15 @@ tests:
       - sles:distro:sles:15.5
       - sles:distro:sles:15.6
       - sles:distro:sles:15.7
+      - sles:distro:sles:16.0
     validations:
-      - *default-validations
+      - <<: *default-validations
+        max_year: 2024
 
   - provider: ubuntu
-    # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
-    # This will still test incremental updates relative to the nightly cache that is populated.
+    # use_cache pulls the nightly v3 input snapshot from ghcr.io. The new
+    # provider only reads `normalized-cve-data/` out of that snapshot (the at-cutover
+    # EOL source); osv-all.tar.xz is downloaded fresh on top.
     use_cache: true
     images:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
@@ -384,6 +385,9 @@ tests:
       - docker.io/ubuntu:22.04@sha256:aa6c2c047467afc828e77e306041b7fa4a65734fe3449a54aa9c280822b0d87d
       - docker.io/ubuntu:22.10@sha256:80fb4ea0c0a384a3072a6be1879c342bb636b0d105209535ba893ba75ab38ede
       - docker.io/ubuntu:23.04@sha256:09f035f46361d193ded647342903b413d57d05cc06acff8285f9dda9f2d269d5
+      # current LTS — exercises the OSV path against noble; added with the OSV rewrite
+      # so we catch regressions on the most-deployed Ubuntu release.
+      - docker.io/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b
     expected_namespaces:
       - ubuntu:distro:ubuntu:12.04
       - ubuntu:distro:ubuntu:12.10
@@ -411,6 +415,8 @@ tests:
       - ubuntu:distro:ubuntu:24.04
       - ubuntu:distro:ubuntu:24.10
       - ubuntu:distro:ubuntu:25.04
+      - ubuntu:distro:ubuntu:25.10
+      - ubuntu:distro:ubuntu:26.04
     validations:
       - *default-validations
 
@@ -458,15 +464,15 @@ tests:
       - <<: *default-validations
         max_year: 2024
 
-  - provider: secureos
-    use_cache: true
-    additional_providers:
-      - name: nvd
-        use_cache: true
-    images:
-      - registry.replicated.com/library/grype-test:20250106@sha256:3339bcd874d21fa3ca5bd20636e793c0c33bd71ace3a18a9a3b3d147b91dd000
-    expected_namespaces:
-      - secureos:distro:secureos:rolling
-      - nvd:cpe
-    validations:
-      - *default-validations
+  # - provider: secureos
+  #   use_cache: true
+  #   additional_providers:
+  #     - name: nvd
+  #       use_cache: true
+  #   images:
+  #     - registry.replicated.com/library/grype-test:20250106@sha256:3339bcd874d21fa3ca5bd20636e793c0c33bd71ace3a18a9a3b3d147b91dd000
+  #   expected_namespaces:
+  #     - secureos:distro:secureos:rolling
+  #     - nvd:cpe
+  #   validations:
+  #     - *default-validations

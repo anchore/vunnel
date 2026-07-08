@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
-from .parser import Parser
+from .parser import SecDBParser
 
 if TYPE_CHECKING:
     import datetime
@@ -24,6 +24,9 @@ class Config:
     request_timeout: int = 125
     # Override with VUNNEL_PROVIDERS_WOLFI_SECDB_URL
     secdb_url: str = "https://packages.wolfi.dev/os/security.json"
+    # Override with VUNNEL_PROVIDERS_WOLFI_ENABLE
+    # Enable allows us to switch to an OSV feed in the future if/when one becomes available
+    enable: bool = True
 
 
 class Provider(provider.Provider):
@@ -40,12 +43,13 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
-        self.parser = Parser(
+        self.parser = SecDBParser(
             workspace=self.workspace,
             url=config.secdb_url,
             namespace=self._namespace,
             download_timeout=self.config.request_timeout,
             logger=self.logger,
+            skip_download=self.config.runtime.skip_download,
         )
 
         # this provider requires the previous state from former runs
@@ -59,7 +63,15 @@ class Provider(provider.Provider):
     def tags(cls) -> list[str]:
         return ["vulnerability", "os"]
 
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
+
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
+        if not self.config.enable:
+            self.logger.info("Provider is disabled via config, skipping update")
+            return [], 0
+
         with timer(self.name(), self.logger):
             with self.results_writer() as writer, self.parser:
                 # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)

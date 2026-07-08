@@ -22,7 +22,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15])  # corresponds to major versions
+    allow_versions: list[Any] = field(default_factory=lambda: [11, 12, 15, 16])  # corresponds to major versions
 
     def __post_init__(self) -> None:
         self.allow_versions = [str(v).lower() for v in self.allow_versions]

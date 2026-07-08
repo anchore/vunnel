@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   select-providers:
-    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     permissions:
       contents: read
     outputs:
@@ -23,12 +23,12 @@ jobs:
       multicore-providers: ${{ steps.split-providers.outputs.multicore-providers }}
       other-providers: ${{ steps.split-providers.outputs.other-providers }}
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -58,7 +58,7 @@ jobs:
           echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 
   validate-provider-multicore:
-    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=16/ram=32+64/family=c6gd+c5ad+m6gd+c7gd+c5d/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}-multicore-${{ strategy.job-index }}/cpu=16/ram=32+64/family=c6gd+c5ad+m6gd+c7gd+c5d/spot=price-capacity-optimized/retry=when-interrupted
     timeout-minutes: 480
     needs: select-providers
     if: needs.select-providers.outputs.multicore-providers != '[]'
@@ -70,12 +70,12 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -85,8 +85,6 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
-        with:
-          go: true
 
       - name: Run quality gate
         uses: ./.github/actions/quality-gate
@@ -97,7 +95,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   validate-provider:
-    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted
     timeout-minutes: 480
     needs: select-providers
     if: needs.select-providers.outputs.other-providers != '[]'
@@ -109,12 +107,12 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -124,8 +122,6 @@ jobs:
 
       - name: Bootstrap environment
         uses: ./.github/actions/bootstrap
-        with:
-          go: true
 
       - name: Run quality gate
         uses: ./.github/actions/quality-gate
@@ -137,13 +133,13 @@ jobs:
 
   # note: the name for this check is referenced in release.yaml, do not change here without changing there
   Nightly-Quality-Gate:
-    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     needs:
       - validate-provider
       - validate-provider-multicore
     if: ${{ always() && !cancelled() }}
     steps:
-      - uses: runs-on/action@cd2b598b0515d39d78c38a02d529db87d2196d1e #v2.0.3
+      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}

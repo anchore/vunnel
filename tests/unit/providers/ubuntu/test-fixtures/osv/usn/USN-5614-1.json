@@ -1,0 +1,248 @@
+{
+  "schema_version": "1.7.0",
+  "id": "USN-5614-1",
+  "summary": "wayland vulnerability",
+  "details": "It was discovered that Wayland incorrectly handled reference counting\ncertain objects. An attacker could use this issue to cause Wayland to\ncrash, resulting in a denial of service, or possibly execute arbitrary\ncode.\n",
+  "aliases": [],
+  "upstream": [
+    "UBUNTU-CVE-2021-3782"
+  ],
+  "related": [],
+  "published": "2022-09-15T16:43:06Z",
+  "modified": "2026-04-22T07:37:02Z",
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Ubuntu:18.04:LTS",
+        "name": "wayland",
+        "purl": "pkg:deb/ubuntu/wayland@1.16.0-1ubuntu1.1~18.04.4?arch=source&distro=bionic"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "1.16.0-1ubuntu1.1~18.04.4"
+            }
+          ]
+        }
+      ],
+      "versions": [
+        "1.14.0-1",
+        "1.14.0-2",
+        "1.16.0-1ubuntu1.1~18.04.1",
+        "1.16.0-1ubuntu1.1~18.04.3"
+      ],
+      "ecosystem_specific": {
+        "binaries": [
+          {
+            "binary_name": "libwayland-bin",
+            "binary_version": "1.16.0-1ubuntu1.1~18.04.4"
+          },
+          {
+            "binary_name": "libwayland-client0",
+            "binary_version": "1.16.0-1ubuntu1.1~18.04.4"
+          },
+          {
+            "binary_name": "libwayland-cursor0",
+            "binary_version": "1.16.0-1ubuntu1.1~18.04.4"
+          },
+          {
+            "binary_name": "libwayland-egl1",
+            "binary_version": "1.16.0-1ubuntu1.1~18.04.4"
+          },
+          {
+            "binary_name": "libwayland-server0",
+            "binary_version": "1.16.0-1ubuntu1.1~18.04.4"
+          }
+        ],
+        "availability": "No subscription required"
+      },
+      "database_specific": {
+        "cves_map": {
+          "ecosystem": "Ubuntu:18.04:LTS",
+          "cves": [
+            {
+              "id": "CVE-2021-3782",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H"
+                },
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H"
+                },
+                {
+                  "type": "Ubuntu",
+                  "score": "medium"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "Ubuntu:20.04:LTS",
+        "name": "wayland",
+        "purl": "pkg:deb/ubuntu/wayland@1.18.0-1ubuntu0.1?arch=source&distro=focal"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "1.18.0-1ubuntu0.1"
+            }
+          ]
+        }
+      ],
+      "versions": [
+        "1.17.0-1",
+        "1.17.0-1build1",
+        "1.17.0-1build2",
+        "1.18.0-1"
+      ],
+      "ecosystem_specific": {
+        "binaries": [
+          {
+            "binary_name": "libwayland-bin",
+            "binary_version": "1.18.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-client0",
+            "binary_version": "1.18.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-cursor0",
+            "binary_version": "1.18.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-egl1",
+            "binary_version": "1.18.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-server0",
+            "binary_version": "1.18.0-1ubuntu0.1"
+          }
+        ],
+        "availability": "No subscription required"
+      },
+      "database_specific": {
+        "cves_map": {
+          "ecosystem": "Ubuntu:20.04:LTS",
+          "cves": [
+            {
+              "id": "CVE-2021-3782",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H"
+                },
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H"
+                },
+                {
+                  "type": "Ubuntu",
+                  "score": "medium"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "package": {
+        "ecosystem": "Ubuntu:22.04:LTS",
+        "name": "wayland",
+        "purl": "pkg:deb/ubuntu/wayland@1.20.0-1ubuntu0.1?arch=source&distro=jammy"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "1.20.0-1ubuntu0.1"
+            }
+          ]
+        }
+      ],
+      "versions": [
+        "1.19.0-2build1",
+        "1.20.0-1"
+      ],
+      "ecosystem_specific": {
+        "binaries": [
+          {
+            "binary_name": "libwayland-bin",
+            "binary_version": "1.20.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-client0",
+            "binary_version": "1.20.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-cursor0",
+            "binary_version": "1.20.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-egl1",
+            "binary_version": "1.20.0-1ubuntu0.1"
+          },
+          {
+            "binary_name": "libwayland-server0",
+            "binary_version": "1.20.0-1ubuntu0.1"
+          }
+        ],
+        "availability": "No subscription required"
+      },
+      "database_specific": {
+        "cves_map": {
+          "ecosystem": "Ubuntu:22.04:LTS",
+          "cves": [
+            {
+              "id": "CVE-2021-3782",
+              "severity": [
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H"
+                },
+                {
+                  "type": "CVSS_V3",
+                  "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H"
+                },
+                {
+                  "type": "Ubuntu",
+                  "score": "medium"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "references": [
+    {
+      "type": "ADVISORY",
+      "url": "https://ubuntu.com/security/notices/USN-5614-1"
+    },
+    {
+      "type": "REPORT",
+      "url": "https://ubuntu.com/security/CVE-2021-3782"
+    }
+  ]
+}

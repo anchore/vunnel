@@ -265,6 +265,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   chainguard:
+    osv_url: https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -283,6 +284,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
     secdb_url: https://packages.cgr.dev/chainguard/security.json
+    use_osv: false
   chainguard_libraries:
     openvex_url: https://libraries.cgr.dev/openvex/v1/all.json
     request_timeout: 125
@@ -602,6 +604,7 @@ providers:
       - '11'
       - '12'
       - '15'
+      - '16'
     request_timeout: 125
     runtime:
       existing_input: keep
@@ -620,15 +623,12 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   ubuntu:
-    additional_versions: {}
-    enable_rev_history: true
-    git_branch: master
-    git_url: git://git.launchpad.net/ubuntu-cve-tracker
-    parallelism: 8x
+    downconvert_emit_esm: true
+    downconvert_osv_to_os: true
     request_timeout: 125
     runtime:
       existing_input: keep
-      existing_results: keep
+      existing_results: delete-before-write
       import_results_enabled: false
       import_results_host: ''
       import_results_path: providers/{provider_name}/listing.json
@@ -643,6 +643,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   wolfi:
+    enable: true
     request_timeout: 125
     runtime:
       existing_input: keep

@@ -1,10 +1,6 @@
 name: "Bootstrap"
 description: "Bootstrap all tools and dependencies"
 inputs:
-  go-version:
-    description: "Go version to install"
-    required: true
-    default: "1.26.2"
   python-version:
     description: "Python version to install"
     required: true
@@ -15,14 +11,6 @@ inputs:
     description: "UV version to install"
     required: true
     default: "0.5.16"
-  go:
-    description: "Install go"
-    required: true
-    default: "false"
-  tools:
-    description: "Bootstrap tooling"
-    required: true
-    default: "true"
   cache-key-prefix:
     description: "Prefix all cache keys with this value"
     required: true
@@ -33,44 +21,52 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c #v6.4.0
+    # delegates go install + tool cache to go-make/setup, which uses restore-only caching on
+    # non-default branches (and the upstream repo's default branch only writes). This prevents
+    # cache poisoning from PRs and forks.
+    - name: Setup go and tool cache
+      uses: anchore/go-make/.github/actions/setup@430e2175bb166bfd138ef75466adbcc8ddab875f # v0.8.0
       with:
-        go-version: ${{ inputs.go-version }}
-        check-latest: true
-    - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        cache-key-prefix: ${{ inputs.cache-key-prefix }}
+
+    - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
-        enable-cache: true
-    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        # built-in cache is disabled to prevent PRs from poisoning the cache; uv's resolver is
+        # fast enough without it. See cache-poisoning audit for details.
+        enable-cache: false
+
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
       with:
         python-version: ${{ inputs.python-version }}
-    - name: Restore tool cache
-      id: tool-cache
-      if: inputs.tools == 'true'
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-      with:
-        path: ${{ github.workspace }}/.tmp
-        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-tool-${{ hashFiles('Makefile') }}
-    - name: (cache-miss) Bootstrap tools
-      if: steps.tool-cache.outputs.cache-hit != 'true' && inputs.tools == 'true'
-      shell: bash
-      run: make bootstrap
+
     - name: Install apt packages
       if: inputs.bootstrap-apt-packages != ''
       shell: bash
       env:
         APT_PACKAGES: ${{ inputs.bootstrap-apt-packages }}
       run: |
-        # Convert space-separated string to bash array for safe handling
+        # convert space-separated string to bash array for safe handling
         read -ra packages <<< "$APT_PACKAGES"
         if [ ${#packages[@]} -gt 0 ]; then
           DEBIAN_FRONTEND=noninteractive sudo apt update && sudo -E apt install -y "${packages[@]}"
         fi
+
     - name: Install project + dependencies
       shell: bash
       run: uv sync --all-extras --dev
+
+    # tox cache: restore-only on non-default branches and forks to prevent cache poisoning.
     - name: Restore tox cache
-      id: cache-tox
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      if: github.ref != format('refs/heads/{0}', github.event.repository.default_branch) || github.event.repository.fork == true
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .tox
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('tox.ini') }}
+
+    # tox cache: restore + save on the upstream default branch only.
+    - name: Restore and save tox cache
+      if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && github.event.repository.fork == false
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .tox
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('tox.ini') }}
