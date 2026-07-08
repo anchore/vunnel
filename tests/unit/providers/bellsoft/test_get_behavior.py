@@ -27,7 +27,7 @@ def ws(tmp_path):
 
 
 @pytest.fixture()
-def parser(ws):
+def parser(ws, auto_fake_fixdate_finder):
     with (
         patch("vunnel.providers.bellsoft.parser.GitWrapper.clone_repo"),
         patch("vunnel.providers.bellsoft.parser.GitWrapper.delete_repo"),
@@ -63,6 +63,27 @@ def test_v2_only_record_is_kept_and_prefixed(parser, ws):
     results = list(parser.get())
     assert len(results) == 1
     assert results[0][2]["severity"][0]["score"] == "CVSS:2.0/AV:N/AC:L/Au:N/C:P/I:P/A:P"
+
+
+def test_fix_dates_are_patched_onto_ranges(parser, ws):
+    # osv.patch_fix_date annotates database_specific.anchore.fixes with
+    # first-observed dates (faked to 2024-01-01 by auto_fake_fixdate_finder),
+    # which grype-db surfaces as fix availability
+    _write_record(ws, {
+        "id": "BELL-CVE-2020-0007",
+        "schema_version": "1.7.4",
+        "affected": [{
+            "package": {"ecosystem": "Alpaquita:stream", "name": "expat"},
+            "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.7.2-r0"}]}],
+        }],
+    })
+    results = list(parser.get())
+    assert len(results) == 1
+    rng = results[0][2]["affected"][0]["ranges"][0]
+    fixes = rng["database_specific"]["anchore"]["fixes"]
+    assert fixes[0]["version"] == "2.7.2-r0"
+    assert fixes[0]["date"] == "2024-01-01"
+    assert fixes[0]["kind"] == "first-observed"
 
 
 def test_withdrawn_record_is_skipped(parser, ws):

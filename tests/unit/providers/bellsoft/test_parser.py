@@ -7,7 +7,7 @@ from vunnel.providers.bellsoft.parser import Parser
 
 class TestNormalizeSeverities:
     @pytest.fixture()
-    def parser(self, tmpdir):
+    def parser(self, tmpdir, auto_fake_fixdate_finder):
         return Parser(ws=workspace.Workspace(tmpdir, "test", create=True))
 
     def test_normalizes_cvss_v2_without_prefix(self, parser):

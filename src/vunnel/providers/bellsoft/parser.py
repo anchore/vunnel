@@ -7,8 +7,12 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
+from vunnel.utils import osv
+
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -28,7 +32,15 @@ class Parser:
     _git_src_url_ = "https://github.com/bell-sw/osv-database.git"
     _git_src_branch_ = "master"
 
-    def __init__(self, ws: Workspace, logger: logging.Logger | None = None):
+    def __init__(
+        self,
+        ws: Workspace,
+        fixdater: fixdate.Finder | None = None,
+        logger: logging.Logger | None = None,
+    ):
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
+        self.fixdater = fixdater
         self.workspace = ws
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
@@ -43,6 +55,13 @@ class Parser:
             checkout_dest=_checkout_dst_,
             logger=self.logger,
         )
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _load(self) -> Generator[dict[str, Any]]:
         self.logger.info("loading data from git repository")
@@ -100,12 +119,19 @@ class Parser:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
+
+        self.fixdater.download()
+
         for vuln_entry in self._load():
             if not isinstance(vuln_entry, dict) or not vuln_entry.get("id"):
                 self.logger.warning("skipping advisory without an id")
             elif "withdrawn" in vuln_entry:
                 self.logger.debug(f"skipping withdrawn entry: {vuln_entry['id']}")
             else:
+                # annotate each affected range with first-observed fix dates
+                # (database_specific.anchore.fixes), which grype-db surfaces as
+                # fix availability
+                osv.patch_fix_date(vuln_entry, self.fixdater)
                 # Normalize the loaded data. Note: CVSS_V2 severities are kept
                 # deliberately — _normalize_severities gives their bare vectors
                 # the "CVSS:2.0/" prefix that downstream consumers (grype-db)
