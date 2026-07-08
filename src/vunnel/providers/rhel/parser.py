@@ -20,6 +20,7 @@ from cvss import CVSS3
 from dateutil import parser as dt_parser
 
 from vunnel import utils
+from vunnel.providers.rhel.product_id import minor_from_dist_tag, parse_product_id
 from vunnel.providers.rhel.rhsa_provider import AffectedRelease, CSAFRHSAProvider
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
@@ -38,11 +39,16 @@ namespace = "rhel"
 
 FixedIn = namedtuple(
     "FixedIn",
-    ["package", "platform", "version", "module", "advisory", "vulnerable_range", "additional_advisories"],
-    defaults=[None, ()],
+    ["package", "platform", "version", "module", "advisory", "vulnerable_range", "additional_advisories", "advisories"],
+    defaults=[None, (), ()],
 )
 RHSAFixedIn = namedtuple("RHSAFixedIn", ["package", "version"])
 Advisory = namedtuple("Advisory", ["wont_fix", "rhsa_id", "link", "severity"])
+# StreamAdvisory carries one per-stream fix build for a (cve, package, major) group: the advisory
+# that shipped it, the full EVR (including dist tag), and the target RHEL minor + channel set parsed
+# from the advisory's CSAF product_id. Emitted in FixedIn.advisories ONLY when a group has 2+ distinct
+# fix streams, so a downstream matcher can pick the build matching the installed package's own minor.
+StreamAdvisory = namedtuple("StreamAdvisory", ["advisory", "version", "minor", "channels"])
 NamespacePayload = namedtuple("NamespacePayload", ["namespace", "payload"])
 
 
@@ -482,12 +488,16 @@ class Parser:
                     if f"{namespace}:{ar_obj.platform}" in self.skip_namespaces:  # no need to process deny-listed platforms
                         continue
 
+                    final_pid = None
+                    final_channels: list[str] = []
                     if ar_obj.name:
                         if ar_obj.rhsa_id:  # rhsa lookup for version information tends to make version consistent
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj)
+                            rhsa_version, rhsa_module, rhsa_product_id, rhsa_channels = self._fetch_rhsa_fix_version(cve_id, ar_obj)
                             if rhsa_version:
                                 final_v = rhsa_version
                                 final_m = rhsa_module
+                                final_pid = rhsa_product_id
+                                final_channels = rhsa_channels
                             else:
                                 self.logger.debug(
                                     f"{cve_id}, platform={ar_obj.platform} : no matches found for {ar_obj.rhsa_id} and package={ar_obj.name} Falling back to CVE version {ar_obj.version}",  # noqa: E501
@@ -511,7 +521,11 @@ class Parser:
                         possible_packages = set().union(*platform_packages.values()).difference(platform_packages[ar_obj.platform])
 
                         for pkg_name in possible_packages:
-                            rhsa_version, rhsa_module = self._fetch_rhsa_fix_version(cve_id, ar_obj, override_package_name=pkg_name)
+                            rhsa_version, rhsa_module, rhsa_product_id, rhsa_channels = self._fetch_rhsa_fix_version(
+                                cve_id,
+                                ar_obj,
+                                override_package_name=pkg_name,
+                            )
 
                             if rhsa_version:
                                 self.logger.debug(
@@ -519,6 +533,8 @@ class Parser:
                                 )
                                 final_v = rhsa_version
                                 final_m = rhsa_module
+                                final_pid = rhsa_product_id
+                                final_channels = rhsa_channels
 
                                 platform_packages[ar_obj.platform].add(
                                     pkg_name,
@@ -544,6 +560,8 @@ class Parser:
 
                     ar_obj.version = final_v  # store the final_v in the object for future usage
                     ar_obj.module = final_m
+                    ar_obj.product_id = final_pid  # matched CSAF FPI; encodes the target RHEL minor
+                    ar_obj.channels = final_channels  # recognized channels delivering this build ("ga" + extended tiers; empty = unknown)
 
                     key = (ar_obj.name, ar_obj.platform, ar_obj.module)
                     bucket = collected_ar_objs.setdefault(key, [])
@@ -580,6 +598,48 @@ class Parser:
                 # drives matching downstream; this version is the single-constraint fallback.
                 canonical = distinct_base_fixes[-1]
 
+                # Build the stream-aware advisories table: one entry per DISTINCT fix build (full EVR,
+                # not just per upstream base), each with the target RHEL minor + the extended-support
+                # channels delivering it, recovered from its CSAF product_ids. This captures same-base
+                # multi-minor fixes (e.g. .el9_2 vs .el9_3
+                # builds of the same upstream) that the per-base reduction above intentionally collapses.
+                # Populated into FixedIn.advisories ONLY when there are 2+ distinct fix streams; for a
+                # single stream the top-level Version alone suffices (back-compat for old clients).
+                distinct_stream_fixes: list[AffectedRelease] = []
+                seen_stream_versions: set[str] = set()
+                for ar_obj in ar_objs:  # ascending by version
+                    if ar_obj.version in seen_stream_versions:
+                        continue
+                    seen_stream_versions.add(ar_obj.version)
+                    distinct_stream_fixes.append(ar_obj)
+
+                stream_advisories: tuple[StreamAdvisory, ...] = ()
+                if len(distinct_stream_fixes) > 1:
+                    built: list[StreamAdvisory] = []
+                    for ar_obj in reversed(distinct_stream_fixes):  # descending by version (newest first)
+                        info = parse_product_id(ar_obj.product_id)
+                        # The FPI is the authoritative source for the minor, but records resolved off
+                        # the CVE/Hydra path carry no FPI (product_id is None) so parse yields None.
+                        # Fall back to the minor encoded in the fix version's own ``.elN_M`` dist tag
+                        # so a Z-stream/EUS build (e.g. ``0:2.34-60.el9_2.7`` -> 2) still gets a minor;
+                        # a bare GA ``.elN`` build legitimately stays None (only the FPI can supply it).
+                        minor = info.minor if info.minor is not None else minor_from_dist_tag(ar_obj.version)
+                        built.append(
+                            StreamAdvisory(
+                                advisory=_advisory_from_rhsa(ar_obj.rhsa_id),
+                                version=ar_obj.version,
+                                minor=minor,
+                                # channels are unioned across all FPIs for this build during the RHSA lookup;
+                                # includes the explicit "ga" token for generally-available builds; empty = unknown.
+                                channels=ar_obj.channels,
+                            ),
+                        )
+                    stream_advisories = tuple(built)
+
+                # Intentional gating asymmetry: the advisory summary below keys on distinct upstream
+                # bases, while the per-stream `advisories` table above keys on distinct full EVRs. For a
+                # same-base multi-minor fix these differ -- the summary keeps its historical "newest
+                # build + its advisory" shape (back-compat) and `advisories` is the complete per-stream list.
                 if len(distinct_base_fixes) > 1:
                     vulnerable_range = _build_vulnerable_range(distinct_base_fixes)
                     self.logger.debug(
@@ -610,6 +670,7 @@ class Parser:
                         advisory=primary_advisory,
                         vulnerable_range=vulnerable_range,
                         additional_advisories=additional_advisories,
+                        advisories=stream_advisories,
                     ),
                 )
         finally:
@@ -896,6 +957,27 @@ class Parser:
                     # verbatim in preference to deriving "< Version" from the single fix version.
                     if artifact.vulnerable_range:
                         record["VulnerableRange"] = artifact.vulnerable_range
+
+                    # Advisories carries the full per-stream fix table for same-base multi-minor RHSAs:
+                    # every distinct fix build (including the one that became the top-level Version),
+                    # each with the target RHEL minor + the channels delivering it, recovered from the
+                    # CSAF product_ids. Channels lists every recognized channel including "ga" for
+                    # generally-available builds (e.g. ["ga"], ["ga","eus"], ["eus"], ["aus","eus"]);
+                    # empty means the channel set is unknown. Emitted only when there are 2+ distinct
+                    # fix streams; additive (OS schema
+                    # 1.1.2) and ignored by older grype, which continues to use Version. A downstream
+                    # matcher can use this to select the build matching the installed package's own minor.
+                    if artifact.advisories:
+                        record["Advisories"] = [
+                            {
+                                "Advisory": sa.advisory.rhsa_id or "",
+                                "Version": sa.version,
+                                "Minor": sa.minor,
+                                "Channels": sa.channels,
+                            }
+                            for sa in artifact.advisories
+                            if sa.version
+                        ]
 
                     result = self.fixdater.best(
                         vuln_id=cve_id,
