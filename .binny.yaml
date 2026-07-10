@@ -11,7 +11,7 @@ tools:
   # used for running all local and CI tasks
   - name: task
     version:
-      want: v3.51.1
+      want: v3.52.0
     method: github-release
     with:
       repo: go-task/task
