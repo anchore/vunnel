@@ -126,7 +126,7 @@ class TestParser:
                 {
                     "pkg": {
                         "name": "coreutils",
-                        "secfixes": {"0": ["CVE-2016-2781"]},
+                        "secfixes": {"0": ["CVE-2016-2781", "GO-2026-5932"]},
                     },
                 },
                 {
@@ -217,8 +217,28 @@ class TestParser:
                 "CVE-2023-45283",
                 "CVE-2023-45284",
                 "GHSA-jq35-85cj-fj4p",
+                "GO-2026-5932",
             ],
         )
+
+    def test_build_reference_links_unknown_id_scheme(self, tmpdir):
+        # IDs without CVE-/GHSA- prefixes (e.g. GO- IDs, as published in the
+        # minimos and wolfi secdbs) have no generic reference links; the parser
+        # must fall back to just the distro security page instead of crashing.
+        p = SecDBParser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.wolfi.dev/os/security.json",
+            namespace="wolfi",
+        )
+
+        assert p.build_reference_links("GO-2026-5932") == [
+            f"{p.security_reference_url}/GO-2026-5932",
+        ]
+        assert p.build_reference_links("CVE-2016-2781") == [
+            f"{p.security_reference_url}/CVE-2016-2781",
+            "https://www.cve.org/CVERecord?id=CVE-2016-2781",
+            "https://nvd.nist.gov/vuln/detail/CVE-2016-2781",
+        ]
 
 
 def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder):
