@@ -67,7 +67,12 @@ class Parser(abc.ABC):
     def build_reference_links(self, vulnerability_id: str) -> list[str]:
         urls = []
         urls.append(f"{self.security_reference_url}/{vulnerability_id}")
-        urls.extend(vulnerability.build_reference_links(vulnerability_id))
+        # build_reference_links returns None for IDs it does not recognize
+        # (anything not CVE-/GHSA- prefixed, e.g. GO- IDs); guard it the same
+        # way the minimos provider does so such IDs import without crashing.
+        links = vulnerability.build_reference_links(vulnerability_id)
+        if links:
+            urls.extend(links)
         return urls
 
     @abc.abstractmethod
