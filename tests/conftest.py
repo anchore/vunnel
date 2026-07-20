@@ -373,14 +373,18 @@ def _schema_validator(schema_url: str) -> jsonschema.Draft7Validator:
     # load up known schema references into a common registry to prevent network calls
     # see https://python-jsonschema.readthedocs.io/en/latest/referencing/ for more details
 
-    paths = {
-        "schema/vulnerability/nvd/cvss/schema-v2.0.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v2.0.json",
-        "schema/vulnerability/nvd/cvss/schema-v3.0.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.0.json",
-        "schema/vulnerability/nvd/cvss/schema-v3.1.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.1.json",
-    }
+    paths = [
+        ("schema/vulnerability/nvd/cvss/schema-v2.0.json", "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v2.0.json"),
+        ("schema/vulnerability/nvd/cvss/schema-v3.0.json", "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.0.json"),
+        ("schema/vulnerability/nvd/cvss/schema-v3.1.json", "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.1.json"),
+        # CSAF VEX schema references FIRST.org CVSS URLs (same schemas, different URIs)
+        ("schema/vulnerability/nvd/cvss/schema-v2.0.json", "https://www.first.org/cvss/cvss-v2.0.json"),
+        ("schema/vulnerability/nvd/cvss/schema-v3.0.json", "https://www.first.org/cvss/cvss-v3.0.json"),
+        ("schema/vulnerability/nvd/cvss/schema-v3.1.json", "https://www.first.org/cvss/cvss-v3.1.json"),
+    ]
 
     registry = Registry()
-    for path, url in paths.items():
+    for path, url in paths:
         in_repo_path = os.path.join(git_root(), path)
         schema_resource = Resource.from_contents(load_json_schema(in_repo_path))
         registry = registry.with_resource(url, schema_resource)
