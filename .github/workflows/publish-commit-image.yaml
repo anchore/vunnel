@@ -32,7 +32,7 @@ jobs:
       # package write permission is needed for publishing commit images
       packages: write
     steps:
-      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
+      - uses: runs-on/action@4e5f72399b6b17f2e79c511c1b38a315a64d22dc #v2.2.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
