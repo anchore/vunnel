@@ -341,7 +341,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   dhi:
-    advisories_path: osv
+    advisories_path: osv/dhi
     repository_branch: main
     repository_url: https://github.com/docker-hardened-images/advisories.git
     runtime:

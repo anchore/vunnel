@@ -22,7 +22,7 @@ class Config:
     )
     repository_url: str = "https://github.com/docker-hardened-images/advisories.git"
     repository_branch: str = "main"
-    advisories_path: str = "osv"
+    advisories_path: str = "osv/dhi"
 
 
 class Provider(provider.Provider):
