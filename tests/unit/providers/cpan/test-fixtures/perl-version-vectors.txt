@@ -1,0 +1,66 @@
+# Perl version test vectors, measured against perl:5.40-slim.
+#
+# Every row was produced by real perl, not by hand: version->parse($s) and <=> inside
+# perl:5.40-slim. The identical table drives grype's Go comparator, so the two implementations
+# agree pair for pair. Do not edit, reorder, or drop entries here without making the same change
+# on the Go side, or the two silently diverge.
+#
+# The numify and is_alpha columns are recorded for completeness only. Perl_vcmp reads neither, so
+# ordering does not depend on them (1.23_01 > 1.23 because its digits fold into the numeric groups,
+# not because of any pre-release rule).
+
+# normalization
+input          normal              numify         is_alpha
+1.23        -> v1.230.0            1.230          0
+1.2.3       -> v1.2.3              1.002003       0
+v1.2.3      -> v1.2.3              1.002003       0
+1.230       -> v1.230.0            1.230          0
+1.2         -> v1.200.0            1.200          0
+v1.2        -> v1.2.0              1.002000       0
+1.0203      -> v1.20.300           1.020300       0
+0.90380906  -> v0.903.809.60       0.903809060    0
+5.008001    -> v5.8.1              5.008001       0
+5.40.0      -> v5.40.0             5.040000       0
+1.004008    -> v1.4.8              1.004008       0
+1.303       -> v1.303.0            1.303          0
+v1.1.4      -> v1.1.4              1.001004       0
+v0.41.0     -> v0.41.0             0.041000       0
+2.150013    -> v2.150.13           2.150013       0
+0.32        -> v0.320.0            0.320          0
+6.68        -> v6.680.0            6.680          0
+9.31        -> v9.310.0            9.310          0
+1.23_01     -> v1.230.100          1.230100       1
+1.23_1      -> v1.231.0            1.231          1
+0.999920    -> v0.999.920          0.999920       0
+20260726.001-> v20260726.1.0       20260726.001   0
+1.9.9       -> v1.9.9              1.009009       0
+1.10        -> v1.100.0            1.100          0
+1.9         -> v1.900.0            1.900          0
+
+# ordering
+1.23       vs 1.2.3       =>  >
+1.23       vs 1.230       =>  ==
+1.2        vs 1.10        =>  >
+1.9        vs 1.10        =>  >
+v1.2.3     vs 1.2.3       =>  ==
+1.23       vs v1.23.0     =>  >
+1.23       vs v1.230.0    =>  ==
+5.008001   vs 5.8.1       =>  ==
+v1.1.4     vs 1.1.4       =>  ==
+1.23_01    vs 1.23        =>  >
+1.23_01    vs 1.24        =>  <
+0.90380906 vs 0.9038      =>  >
+1.0        vs 1           =>  ==
+v1.2       vs v1.2.0      =>  ==
+
+# parse edges, lax mode
+''          -> FAIL (version required)
+'abc'       -> FAIL (non-numeric data)
+'v'         -> FAIL (dotted-decimal versions require at least three parts)
+'1..2'      -> FAIL (fractional part required)
+'1_2'       -> FAIL (alpha without decimal)
+'1.2.3.4.5' -> v1.2.3.4.5
+'0'         -> v0.0.0
+'v0'        -> v0.0.0
+'.5'        -> v0.500.0
+'1.'        -> v1.0.0
