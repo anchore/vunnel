@@ -1,5 +1,6 @@
 from collections.abc import Generator as IterGenerator
 from dataclasses import dataclass, field
+from typing import Any
 
 from mashumaro import field_options
 from mashumaro.config import BaseConfig
@@ -9,6 +10,7 @@ from mashumaro.mixins.orjson import DataClassORJSONMixin
 class OmitNoneORJSONModel(DataClassORJSONMixin):
     class Config(BaseConfig):
         omit_none = True
+        omit_default = True
 
 
 @dataclass
@@ -247,8 +249,8 @@ class TLP(OmitNoneORJSONModel):
 
 @dataclass
 class Distribution(OmitNoneORJSONModel):
-    text: str
     tlp: TLP
+    text: str | None = None
 
 
 @dataclass
@@ -263,7 +265,7 @@ class Publisher(OmitNoneORJSONModel):
 @dataclass
 class GeneratorEngine(OmitNoneORJSONModel):
     name: str
-    version: str
+    version: str | None = None
 
 
 @dataclass
@@ -294,12 +296,12 @@ class Tracking(OmitNoneORJSONModel):
 class Document(OmitNoneORJSONModel):
     category: str
     csaf_version: str
-    publisher: Publisher
     title: str
     tracking: Tracking
     aggregate_severity: AggregateSeverity | None = None
     distribution: Distribution | None = None
     lang: str | None = None
+    publisher: Publisher | None = None
     notes: list[Note] = field(default_factory=list)
     references: list[Reference] = field(default_factory=list)
 
@@ -309,6 +311,28 @@ class CSAFDoc(OmitNoneORJSONModel):
     document: Document
     product_tree: ProductTree
     vulnerabilities: list[Vulnerability] = field(default_factory=list)
+
+    @classmethod
+    def __pre_deserialize__(cls, d: dict[str, Any]) -> dict[str, Any]:
+        """Resolve $ref pointers that some upstream CSAF producers (e.g. openEuler)
+        emit instead of inline arrays. All observed references point to
+        ``$.vulnerabilities[N].product_status.fixed``; we dereference them so that
+        downstream consumers see concrete ``list[str]`` values."""
+        for vuln in d.get("vulnerabilities", []):
+            fixed = (vuln.get("product_status") or {}).get("fixed", [])
+            for score in vuln.get("scores", []):
+                if isinstance(score.get("products"), dict):
+                    score["products"] = fixed
+            for remediation in vuln.get("remediations", []):
+                if isinstance(remediation.get("product_ids"), dict):
+                    remediation["product_ids"] = fixed
+            for threat in vuln.get("threats", []):
+                if isinstance(threat.get("product_ids"), dict):
+                    threat["product_ids"] = fixed
+            for flag in vuln.get("flags", []):
+                if isinstance(flag.get("product_ids"), dict):
+                    flag["product_ids"] = fixed
+        return d
 
 
 def from_path(path: str) -> CSAFDoc:
