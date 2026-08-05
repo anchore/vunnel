@@ -10,11 +10,6 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
-    groups:
-      minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
 
   - package-ecosystem: "uv"
     directory: "/"
@@ -23,16 +18,6 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 10
-    groups:
-      ruff:
-        patterns:
-          - "ruff"
-      minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
-        exclude-patterns:
-          - "ruff"
     ignore:
       # used to generate Mariner models.
       # pin to keep from introducing needless drift in the models.

@@ -301,6 +301,49 @@ def test_parse(tmpdir, helpers, input_file, expected):
     assert vuln_dict == expected
 
 
+def _arch_versions(fixed_in_list, name):
+    # (Version, Arch-or-None) pairs for one package; arch is absent when it doesn't differentiate
+    return {(f["Version"], f.get("Arch")) for f in fixed_in_list if f["Name"] == name}
+
+
+# mock_per_arch_data holds three real ELSA definitions (verbatim from the prod OVAL) that exercise
+# every branch of _build_fixed_in:
+#   - ELSA-2022-4803 (rsyslog, OL7): x86_64 and aarch64 were respun at DIFFERENT revisions, so arch
+#     differentiates and each (version, arch) is emitted with Arch set.
+#   - ELSA-2025-10073 (firefox, OL10): one fix shared by every arch (a pure gate) -> one arch-less FixedIn.
+#   - ELSA-2024-2961 (osbuild, OL8): two rebuilds, each shipped for BOTH arches -> arch does NOT
+#     differentiate, so it collapses to one arch-less FixedIn per version (must NOT explode to one
+#     per (version, arch), which would create redundant/duplicate rows downstream, e.g. in v5).
+def test_parse_per_arch_fixed_in(tmpdir, helpers):
+    subject = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+
+    mock_data_path = helpers.local_dir("test-fixtures/mock_per_arch_data")
+
+    vuln_dict = subject._parse_oval_data(mock_data_path, subject.config)
+
+    # arch-specific fix: each package keeps both arches explicit so the higher aarch64 revision
+    # (.0.4) can't suppress/over-match a patched x86_64 package (.0.1) — the FP class in ELSA-2022-4803.
+    _, divergent = vuln_dict[("ELSA-2022-4803", "ol:7")]
+    assert _arch_versions(divergent["Vulnerability"]["FixedIn"], "rsyslog") == {
+        ("0:8.24.0-57.0.4.el7_9.3", "aarch64"),
+        ("0:8.24.0-57.0.1.el7_9.3", "x86_64"),
+    }
+
+    # one fix shared by every arch: a single arch-less FixedIn (no Arch key).
+    _, gate = vuln_dict[("ELSA-2025-10073", "ol:10")]
+    assert _arch_versions(gate["Vulnerability"]["FixedIn"], "firefox") == {
+        ("0:128.12.0-1.0.1.el10_0", None),
+    }
+
+    # two rebuilds, each present on BOTH arches: arch is not a differentiator, so emit one arch-less
+    # FixedIn per version, NOT one per (version, arch) (which would duplicate rows once arch is dropped).
+    _, rebuild = vuln_dict[("ELSA-2024-2961", "ol:8")]
+    assert _arch_versions(rebuild["Vulnerability"]["FixedIn"], "osbuild") == {
+        ("0:110-1.el8", None),
+        ("0:110-1.0.1.el8", None),
+    }
+
+
 class TestKspliceFilterer:
     @pytest.mark.parametrize(
         ("input_vulnerability", "expected_output"),

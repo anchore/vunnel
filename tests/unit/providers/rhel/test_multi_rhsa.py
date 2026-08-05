@@ -161,3 +161,30 @@ class TestCVE2024_8088:
         ids = [s["ID"] for s in summaries]
         # both RHSAs that touched this package are surfaced, newest fix first
         assert ids == ["RHSA-2024:9371", "RHSA-2024:6163"]
+
+    def test_emits_stream_aware_advisories_with_parsed_minors(self, hydra_cve, fixture_dir, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        driver = Parser(workspace=ws, skip_namespaces=[])
+        driver.rhsa_provider = _wire_csaf_rhsa_provider(ws, fixture_dir)
+
+        record = self._python39_fixed_in(driver._parse_cve("CVE-2024-8088", hydra_cve))
+
+        # The stream-aware Advisories table carries BOTH fix builds (including the one that became the
+        # top-level Version), newest first, each with the target RHEL minor + the extended-support
+        # channels delivering it, recovered from its CSAF product_ids:
+        #   RHSA-2024:9371 -> AppStream-9.5.0.GA:...3.9.19-8.el9        -> minor 5, generally available (["ga"])
+        #   RHSA-2024:6163 -> AppStream-9.4.0.Z.MAIN.EUS:...3.9.18-3.el9_4.5 -> minor 4, channels ["eus"]
+        assert record["Advisories"] == [
+            {
+                "Advisory": "RHSA-2024:9371",
+                "Version": "0:3.9.19-8.el9",
+                "Minor": 5,
+                "Channels": ["ga"],
+            },
+            {
+                "Advisory": "RHSA-2024:6163",
+                "Version": "0:3.9.18-3.el9_4.5",
+                "Minor": 4,
+                "Channels": ["eus"],
+            },
+        ]

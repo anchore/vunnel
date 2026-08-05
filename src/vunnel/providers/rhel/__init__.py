@@ -34,12 +34,18 @@ class Config:
     csaf_parallelism: int | str = "20x"
     full_sync_interval: int = 2  # in days
     skip_namespaces: list[str] = field(default_factory=lambda: ["rhel:3", "rhel:4"])
-    rhsa_source: str = "CSAF"  # "CSAF" or "OVAL"
+    # legacy field, kept so existing configs still load. The OVAL source has been removed;
+    # CSAF is the only RHSA source now. A value of "OVAL" logs a warning and falls back to CSAF.
+    rhsa_source: str = "CSAF"
     ignore_hydra_errors: bool = False
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
+    # RHEL emits the additive Advisories field (the per-stream fix table for same-base multi-minor
+    # RHSAs), introduced in OS schema 1.1.2 (additive on top of upstream's 1.1.1 Arch addition).
+    # Pinned here rather than bumping the shared OS_SCHEMA_VERSION default so only this provider
+    # advances and other OS providers don't churn.
+    __schema__ = schema.OSSchema("1.1.2")
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):

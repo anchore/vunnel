@@ -71,12 +71,6 @@ providers:
   ubuntu:
     runtime: *runtime
     request_timeout: 20
-    additional_versions:
-      "zzz": "24.24"
-    enable_rev_history: true
-    parallelism: 25
-    git_url: "https://xyz.abc"
-    git_branch: "yoda"
   wolfi:
     runtime: *runtime
     request_timeout: 20

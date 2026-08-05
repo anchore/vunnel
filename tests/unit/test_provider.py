@@ -614,9 +614,7 @@ def test_fetch_listing_document(mock_requests, tmpdir, dummy_provider):
 @patch("vunnel.provider.http.get")
 def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider):
     provider = dummy_provider(populate=False)
-    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
-        tmpdir=tmpdir, port=8080, dummy_provider_factory=dummy_provider
-    )
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(tmpdir=tmpdir, port=8080, dummy_provider_factory=dummy_provider)
 
     with open(tarfile_path, "rb") as f:
         content = f.read()
@@ -648,9 +646,7 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
 def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
-    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
-        tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider
-    )
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider)
     # fetch the tar file
     tarfile_bytes = None
     with open(tarfile_path, "rb") as f:
@@ -701,9 +697,7 @@ def test_fetch_or_use_results_archive(mock_requests, tmpdir, dummy_provider):
 def test_fetch_results_keeps_original_metadata(mock_requests, tmpdir, dummy_provider):
     port = 8080
 
-    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(
-        tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider
-    )
+    tarfile_path, listing_url, entry, listing_path = listing_tar_entry(tmpdir=tmpdir, port=port, dummy_provider_factory=dummy_provider)
     # fetch the tar file
     tarfile_bytes = None
     with open(tarfile_path, "rb") as f:
@@ -981,6 +975,7 @@ def test_provider_versions(tmpdir):
         "epss": 1,
         "fedora": 1,
         "github": 2,
+        "govulndb": 1,
         "hummingbird": 2,
         "kev": 1,
         "mariner": 1,
@@ -1023,6 +1018,7 @@ def test_provider_distribution_versions(tmpdir):
         "epss": 1,
         "fedora": 1,
         "github": 1,
+        "govulndb": 1,
         "hummingbird": 2,
         "kev": 1,
         "mariner": 1,
@@ -1184,3 +1180,99 @@ class TestProvidersWithTags:
         language_providers = providers.providers_with_tags(["language"])
         expected = sorted(set(all_names) - set(language_providers))
         assert result == expected
+
+
+class BuiltinCollisionProvider(provider.Provider):
+    def __init__(self):
+        pass
+
+    @classmethod
+    def name(cls) -> str:
+        return "collision-test"
+
+    def update(self, *args, **kwargs):
+        return [], 0
+
+
+class PluginCollisionProvider(provider.Provider):
+    def __init__(self):
+        pass
+
+    @classmethod
+    def name(cls) -> str:
+        return "collision-test"
+
+    def update(self, *args, **kwargs):
+        return [], 0
+
+
+class TestPluginOverrideMode:
+    @pytest.fixture()
+    def registry(self):
+        # snapshot and restore the module-level registry so tests don't leak state
+        from vunnel import providers
+
+        original = dict(providers._providers)
+        yield providers
+        providers._providers.clear()
+        providers._providers.update(original)
+
+    def test_from_env(self, monkeypatch):
+        from vunnel.providers import PluginOverrideMode
+
+        cases = {
+            "fail": PluginOverrideMode.FAIL,
+            "REPLACE": PluginOverrideMode.REPLACE,
+            "Ignore": PluginOverrideMode.IGNORE,
+            "bogus": PluginOverrideMode.FAIL,
+            "": PluginOverrideMode.FAIL,
+        }
+        for value, expected in cases.items():
+            monkeypatch.setenv("VUNNEL_PLUGIN_OVERRIDE_MODE", value)
+            assert PluginOverrideMode.from_env() == expected
+
+        monkeypatch.delenv("VUNNEL_PLUGIN_OVERRIDE_MODE", raising=False)
+        assert PluginOverrideMode.from_env() == PluginOverrideMode.FAIL
+
+    def test_collision_fail_raises(self, registry):
+        from vunnel.providers import PluginOverrideMode
+
+        registry.register("collision-test", BuiltinCollisionProvider)
+        with pytest.raises(KeyError):
+            registry.register("collision-test", PluginCollisionProvider, mode=PluginOverrideMode.FAIL)
+        assert registry.provider_class("collision-test") is BuiltinCollisionProvider
+
+    def test_collision_replace_plugin_wins(self, registry):
+        from vunnel.providers import PluginOverrideMode
+
+        registry.register("collision-test", BuiltinCollisionProvider)
+        registry.register("collision-test", PluginCollisionProvider, mode=PluginOverrideMode.REPLACE)
+        assert registry.provider_class("collision-test") is PluginCollisionProvider
+
+    def test_collision_ignore_builtin_wins(self, registry):
+        from vunnel.providers import PluginOverrideMode
+
+        registry.register("collision-test", BuiltinCollisionProvider)
+        registry.register("collision-test", PluginCollisionProvider, mode=PluginOverrideMode.IGNORE)
+        assert registry.provider_class("collision-test") is BuiltinCollisionProvider
+
+    def test_non_colliding_registers_in_any_mode(self, registry):
+        from vunnel.providers import PluginOverrideMode
+
+        for mode in (PluginOverrideMode.FAIL, PluginOverrideMode.REPLACE, PluginOverrideMode.IGNORE):
+            registry._providers.pop("collision-test", None)
+            registry.register("collision-test", PluginCollisionProvider, mode=mode)
+            assert registry.provider_class("collision-test") is PluginCollisionProvider
+
+    def test_env_var_used_when_no_explicit_mode(self, registry, monkeypatch):
+        # with no explicit mode, register() resolves from VUNNEL_PLUGIN_OVERRIDE_MODE
+        registry.register("collision-test", BuiltinCollisionProvider)
+        monkeypatch.setenv("VUNNEL_PLUGIN_OVERRIDE_MODE", "replace")
+        registry.register("collision-test", PluginCollisionProvider)
+        assert registry.provider_class("collision-test") is PluginCollisionProvider
+
+    def test_env_var_unset_defaults_to_fail(self, registry, monkeypatch):
+        monkeypatch.delenv("VUNNEL_PLUGIN_OVERRIDE_MODE", raising=False)
+        registry.register("collision-test", BuiltinCollisionProvider)
+        with pytest.raises(KeyError):
+            registry.register("collision-test", PluginCollisionProvider)

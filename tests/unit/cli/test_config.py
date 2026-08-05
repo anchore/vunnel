@@ -127,11 +127,6 @@ def test_full_config(helpers):
             ubuntu=providers.ubuntu.Config(
                 runtime=runtime_cfg,
                 request_timeout=20,
-                additional_versions={"zzz": "24.24"},
-                enable_rev_history=True,
-                parallelism=25,
-                git_url="https://xyz.abc",
-                git_branch="yoda",
             ),
             wolfi=providers.wolfi.Config(
                 runtime=runtime_cfg,

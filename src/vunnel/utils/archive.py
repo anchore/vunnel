@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import shutil
 import tarfile
-import tempfile
 from pathlib import Path
 
 import zstandard
@@ -13,7 +12,7 @@ def extract(path: str, destination_dir: str) -> None:
     if os.path.exists(destination_dir):
         shutil.rmtree(destination_dir)
 
-    if path.endswith(".tar.zst"):
+    if str(path).endswith(".tar.zst"):
         return _extract_tar_zst(path, destination_dir)
 
     # open for reading with transparent compression (supports gz, bz2, and xz)
@@ -27,12 +26,15 @@ def _extract_tar_zst(path: str, unarchive_path: str) -> None:
     archive_path = Path(path).expanduser()
     dctx = zstandard.ZstdDecompressor(max_window_size=2147483648)
 
-    with tempfile.TemporaryFile(suffix=".tar") as ofh:
-        with archive_path.open("rb") as ifh:
-            dctx.copy_stream(ifh, ofh)
-        ofh.seek(0)
-        with tarfile.open(fileobj=ofh, mode="r") as z:
-            return _safe_extract_tar(z, unarchive_path)
+    # stream decompression directly into tar extraction so the decompressed
+    # tarball is never materialized on disk; read_across_frames matches the
+    # whole-stream semantics of copy_stream for multi-frame archives
+    with (
+        archive_path.open("rb") as ifh,
+        dctx.stream_reader(ifh, read_across_frames=True) as reader,
+        tarfile.open(fileobj=reader, mode="r|") as z,
+    ):
+        return _safe_extract_tar(z, unarchive_path)
 
 
 def _safe_extract_tar(tar: tarfile.TarFile, destination_dir: str) -> None:
