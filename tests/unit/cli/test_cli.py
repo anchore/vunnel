@@ -340,6 +340,26 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
       user_agent: null
+  dhi:
+    advisories_path: osv/dhi
+    repository_branch: main
+    repository_url: https://github.com/docker-hardened-images/advisories.git
+    runtime:
+      existing_input: keep
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_download: false
+      skip_newer_archive_check: false
+      user_agent: null
   echo:
     request_timeout: 125
     runtime:
