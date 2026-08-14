@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.6.1",
+  "id": "DHI-CVE-2017-18018-coreutils",
+  "modified": "2026-07-29T00:00:00Z",
+  "published": "2026-07-29T00:00:00Z",
+  "affected": [
+    {
+      "package": {
+        "name": "coreutils",
+        "ecosystem": "Docker Hardened Images:Debian:13",
+        "purl": "pkg:deb/dhi/coreutils?os_distro=debian&os_name=dhi&os_version=13"
+      },
+      "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "9.7-3+dhi4"}]}]
+    }
+  ]
+}
