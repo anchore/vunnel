@@ -5,6 +5,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
+from importlib import metadata
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -23,6 +24,21 @@ DEFAULT_RATE_LIMIT_WAIT = 30.0
 MAX_RATE_LIMIT_WAIT = 300.0  # 5 minutes
 
 
+def default_user_agent() -> str:
+    """
+    Return the default User-Agent string used when a caller does not supply one.
+
+    Format follows the same convention as the per-provider helpers
+    (chainguard_libraries, secureos, fedora) so vunnel always identifies
+    itself when fetching upstream data sources.
+    """
+    try:
+        version = metadata.version("vunnel")
+    except metadata.PackageNotFoundError:
+        version = "unknown"
+    return f"anchore/vunnel-{version}"
+
+
 def _is_rate_limited(response: requests.Response) -> bool:
     """
     Check if response indicates rate limiting.
@@ -30,10 +46,15 @@ def _is_rate_limited(response: requests.Response) -> bool:
     Rate limiting is detected for:
     - 429 (Too Many Requests) - always
     - 503 (Service Unavailable) - only if Retry-After header is present
+    - 403 (Forbidden) - only if Retry-After header is present
+      (GitHub returns 403 + Retry-After for secondary rate limits;
+      see https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)
     """
     if response.status_code == 429:
         return True
-    return response.status_code == 503 and bool(response.headers.get("Retry-After"))
+    if response.status_code in (403, 503):
+        return bool(response.headers.get("Retry-After"))
+    return False
 
 
 def parse_retry_after(header_value: str | None) -> float | None:
@@ -184,7 +205,7 @@ def _extract_hostname(url: str) -> str:
     return hostname if hostname else "unknown"
 
 
-def get(  # noqa: PLR0913, C901
+def get(  # noqa: PLR0913, PLR0915, C901
     url: str,
     logger: logging.Logger,
     retries: int = 5,
@@ -200,11 +221,11 @@ def get(  # noqa: PLR0913, C901
 
     Features:
         - Per-host connection pooling (TCP connection reuse)
-        - Rate limit handling with Retry-After support (429, 503 with header)
+        - Rate limit handling with Retry-After support (429 always; 403 / 503 with header)
         - Exponential backoff on errors
 
     Response handling follows a 3-step fallback:
-        1. Rate limit check (always enforced) - 429 or 503 with Retry-After
+        1. Rate limit check (always enforced) - 429, or 403 / 503 with Retry-After
         2. status_handler (if provided) - caller controls validation
         3. raise_for_status() - default validation with retry on HTTPError
 
@@ -219,7 +240,9 @@ def get(  # noqa: PLR0913, C901
             If the Callable does not raise, the response will be returned, and the caller is responsible for any
             further validation.
             If no Callable is provided, `raise_for_status` is called on the response instead.
-        user_agent: the User-Agent header value. If None or empty, no User-Agent header is set.
+        user_agent: the User-Agent header value. If None (the default), the wrapper sets
+            a vunnel-identifying User-Agent so we always identify ourselves to upstream
+            servers; pass an empty string to skip the header entirely.
         **kwargs: additional args are passed to requests.get unchanged.
     Raises:
         If retries are exhausted, re-raises the exception from the last requests.get attempt.
@@ -230,7 +253,11 @@ def get(  # noqa: PLR0913, C901
 
     """
     headers = kwargs.pop("headers", {})
-    if user_agent:
+    if user_agent is None:
+        # Default: always identify ourselves so providers and upstreams can attribute traffic.
+        # Callers that need to opt out can pass user_agent="".
+        headers.setdefault("User-Agent", default_user_agent())
+    elif user_agent:
         headers["User-Agent"] = user_agent
 
     hostname = _extract_hostname(url)
