@@ -142,17 +142,21 @@ class Finder:
         ecosystem: str | None = None,
         candidates: list[Result] | None = None,
     ) -> Result | None:
-        results = []
-
         ecosystem = self._normalize_ecosystem(ecosystem)
 
         if not fix_version or fix_version in ("None", "0"):
             # if we don't have a fix version, we can't determine a fix date
             return None
 
-        # add high quality candidates first
+        # split candidates by confidence. accurate candidates (e.g. a provider's real ship date)
+        # are trusted alongside strategy results; inaccurate candidates (e.g. an advisory's own
+        # `published` date, which routinely predates the fix) are a last resort only, ranked below
+        # any first-observed date.
+        accurate_candidates: list[Result] = []
+        inaccurate_candidates: list[Result] = []
         if candidates:
-            results.extend([c for c in candidates if c.accurate and c.date])
+            accurate_candidates = [c for c in candidates if c.accurate and c.date]
+            inaccurate_candidates = [c for c in candidates if not c.accurate and c.date]
 
         # Use cached database lookups
         strategy_results, first_observed_results = self._cached_find_from_strategies(
@@ -161,21 +165,20 @@ class Finder:
             fix_version,
             ecosystem,
         )
-        results.extend(strategy_results)
 
-        # add low quality candidates last
-        if candidates:
-            results.extend([c for c in candidates if not c.accurate and c.date])
+        # high-quality results, in priority order: accurate candidates, then strategies.
+        high_quality = accurate_candidates + list(strategy_results)
 
-        # we should select the date from the set of finders that is the highest quality (earlier in the s
-        # results list) but should never be after the first observed date. However, first observed dates are not always
-        # accurate, so we should only enforce this if we have an accurate first observed date (not part of the
-        # first group of observed fixes).
+        # we should select the highest-quality date (earliest in high_quality) but never one after
+        # the first observed date. First observed dates are not always accurate, so we only enforce
+        # that ceiling when we have an accurate first observed date (not part of the first group of
+        # observed fixes).
         #
         # ...If the first observed date is accurate, then follow these rules:
-        # - If a s date is after the first observed date, we should discard it.
-        # - If no s candidates are before the first observed date, we should return the first observed dates.
-        # - If there is no first observed dates, we should return the best s candidates we have.
+        # - If a high-quality date is after the first observed date, we should discard it.
+        # - If none are before the first observed date, we should return the first observed date.
+        # An inaccurate candidate is never preferred over first-observed data; it is only used when
+        # there is no first-observed date at all.
 
         accurate_first_observed = [r for r in first_observed_results if r.accurate]
 
@@ -184,17 +187,18 @@ class Finder:
             first_accurate_observed_date = accurate_first_observed[0].date
 
             if first_accurate_observed_date is not None:
-                filtered_results = [r for r in results if r.date is not None and r.date <= first_accurate_observed_date]
+                filtered_results = [r for r in high_quality if r.date is not None and r.date <= first_accurate_observed_date]
             else:
                 filtered_results = []
             if filtered_results:
-                # return the best/first valid candidates relative to the best first observed date
+                # return the best/first valid candidate relative to the best first observed date
                 return filtered_results[0]
-            # return the first observed date instead of any other candidate
+            # return the first observed date instead of any lower-confidence candidate
             return accurate_first_observed[0]
 
-        # ... If we don't have an accurate first observed date, then treat that as a last resort option
-        results.extend(first_observed_results)
+        # no accurate first observed date: prefer high-quality results, then any first-observed date,
+        # and only then fall back to inaccurate candidates (e.g. the advisory published date).
+        results = high_quality + list(first_observed_results) + inaccurate_candidates
 
         if results:
             # return the best/first candidate we have

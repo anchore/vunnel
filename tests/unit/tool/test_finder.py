@@ -71,6 +71,51 @@ class TestFinder:
         assert result == low_quality
         assert result.date == datetime.date(2023, 1, 2)
 
+    def test_best_inaccurate_candidate_does_not_beat_accurate_first_observed(self):
+        """An inaccurate candidate earlier than an accurate first observed date must not win.
+
+        Regression: govulndb's only candidate is the advisory's `published` date
+        (kind="advisory", accurate=False), which routinely predates the fix. It used to be
+        preferred because it sorts before the (later, real) first-observed date; now the
+        first-observed date wins and the published date is only a last resort.
+        """
+        strategy = self.create_mock_strategy([])
+
+        # real fix ship date, observed by a later build (accurate)
+        first_observed_result = self.create_result("2026-08-13", "first_observed", accurate=True)
+        first_observed = self.create_mock_strategy([first_observed_result])
+
+        finder = Finder([strategy], first_observed)
+
+        # advisory published date: months before the fix existed
+        advisory = self.create_result("2026-05-22", "advisory", accurate=False)
+
+        result = finder.best("GO-2026-5026", "stdlib", "1.25.13", candidates=[advisory])
+
+        assert result == first_observed_result
+        assert result.date == datetime.date(2026, 8, 13)
+
+    def test_best_inaccurate_candidate_does_not_beat_inaccurate_first_observed(self):
+        """Even a not-yet-accurate first observed date beats an inaccurate candidate.
+
+        On the first build that sees a fix, the first-observed date is recorded as
+        accurate=None. It is still a better signal than the advisory published date, so it
+        must be preferred over the inaccurate candidate.
+        """
+        strategy = self.create_mock_strategy([])
+
+        first_observed_result = self.create_result("2026-08-15", "first_observed", accurate=False)
+        first_observed = self.create_mock_strategy([first_observed_result])
+
+        finder = Finder([strategy], first_observed)
+
+        advisory = self.create_result("2026-05-22", "advisory", accurate=False)
+
+        result = finder.best("GO-2026-5026", "stdlib", "1.25.13", candidates=[advisory])
+
+        assert result == first_observed_result
+        assert result.date == datetime.date(2026, 8, 15)
+
     def test_best_with_strategy_results(self):
         """Test that strategy results are included in the prioritization."""
         strategy_result = self.create_result("2023-01-03", "strategy")
