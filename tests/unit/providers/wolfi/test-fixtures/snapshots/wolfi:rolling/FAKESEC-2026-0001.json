@@ -1,0 +1,23 @@
+{
+  "identifier": "wolfi:rolling/FAKESEC-2026-0001",
+  "item": {
+    "Vulnerability": {
+      "CVSS": [],
+      "Description": "",
+      "FixedIn": [
+        {
+          "Name": "binutils",
+          "NamespaceName": "wolfi:rolling",
+          "Version": "0",
+          "VersionFormat": "apk"
+        }
+      ],
+      "Link": "https://images.chainguard.dev/security/FAKESEC-2026-0001",
+      "Metadata": {},
+      "Name": "FAKESEC-2026-0001",
+      "NamespaceName": "wolfi:rolling",
+      "Severity": "Unknown"
+    }
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/os/schema-1.1.0.json"
+}
