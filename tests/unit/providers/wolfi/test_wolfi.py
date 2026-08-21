@@ -234,6 +234,12 @@ class TestParser:
         assert p.build_reference_links("GO-2026-5932") == [
             f"{p.security_reference_url}/GO-2026-5932",
         ]
+        assert p.build_reference_links("RUSTSEC-2024-0006") == [
+            f"{p.security_reference_url}/RUSTSEC-2024-0006",
+        ]
+        assert p.build_reference_links("FAKESEC-2026-0001") == [
+            f"{p.security_reference_url}/FAKESEC-2026-0001",
+        ]
         assert p.build_reference_links("CVE-2016-2781") == [
             f"{p.security_reference_url}/CVE-2016-2781",
             "https://www.cve.org/CVERecord?id=CVE-2016-2781",
@@ -253,7 +259,7 @@ def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder
 
     p.update(None)
 
-    assert workspace.num_result_entries() == 59
+    assert workspace.num_result_entries() == 62
     assert workspace.result_schemas_valid(require_entries=True)
 
 
