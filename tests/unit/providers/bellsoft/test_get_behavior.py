@@ -55,21 +55,22 @@ def test_get_tolerates_empty_severity_list(parser, ws):
 
 
 def test_record_with_v2_and_v3_severity_is_not_dropped(parser, ws):
-    # 3 real upstream records (e.g. BELL-CVE-2010-4478) have [CVSS_V2, CVSS_V3]
+    # a handful of upstream records (e.g. BELL-CVE-2010-4478) carry
+    # [CVSS_V2, CVSS_V3]; the V3 vector is prefixed, the V2 vector is not
     _write_archive(ws, [{"id": "BELL-CVE-2020-0003", "schema_version": "1.7.4", "severity": [V2_BARE, V3]}])
     results = list(parser.get())
     assert len(results) == 1
     scores = [s["score"] for s in results[0][2]["severity"]]
-    assert scores == ["CVSS:2.0/AV:N/AC:L/Au:N/C:P/I:P/A:P", V3["score"]]
+    assert scores == [V2_BARE["score"], V3["score"]]
 
 
-def test_v2_only_record_is_kept_and_prefixed(parser, ws):
-    # ~727 upstream records carry only a bare CVSS_V2 score; grype-db requires
-    # the "CVSS:2.0/" prefix to parse them
+def test_v2_only_record_is_kept_and_left_bare(parser, ws):
+    # the OSV schema's CVSS_V2 pattern matches a bare vector and rejects a
+    # "CVSS:2.0/" prefix, so V2 scores must pass through untouched
     _write_archive(ws, [{"id": "BELL-CVE-2020-0004", "schema_version": "1.7.4", "severity": [V2_BARE]}])
     results = list(parser.get())
     assert len(results) == 1
-    assert results[0][2]["severity"][0]["score"] == "CVSS:2.0/AV:N/AC:L/Au:N/C:P/I:P/A:P"
+    assert results[0][2]["severity"][0]["score"] == "AV:N/AC:L/Au:N/C:P/I:P/A:P"
 
 
 def test_get_handles_flat_archive_layout(parser, ws):

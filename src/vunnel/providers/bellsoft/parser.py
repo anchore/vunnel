@@ -19,10 +19,14 @@ if TYPE_CHECKING:
     from vunnel.workspace import Workspace
 
 # Default CVSS vector-string prefix to prepend for each OSV severity type when
-# the score does not already carry a "CVSS:x.y/" prefix. Downstream consumers
-# (e.g. grype-db) expect the full CVSS vector string including this prefix.
+# the score does not already carry a "CVSS:x.y/" prefix.
+#
+# Only V3 and V4 appear here, because that is what the OSV schema demands: its
+# CVSS_V3 pattern requires a leading "CVSS:3.0/" or "CVSS:3.1/" and its CVSS_V4
+# pattern requires "CVSS:4.0/", while its CVSS_V2 pattern matches a *bare*
+# vector and rejects any "CVSS:2.0/" prefix. Prefixing a V2 score would emit a
+# record that fails the very schema this provider stamps on it.
 _CVSS_TYPE_PREFIXES = {
-    "CVSS_V2": "CVSS:2.0/",
     "CVSS_V3": "CVSS:3.0/",
     "CVSS_V4": "CVSS:4.0/",
 }
@@ -144,8 +148,4 @@ class Parser:
                 # (database_specific.anchore.fixes), which grype-db surfaces as
                 # fix availability
                 osv.patch_fix_date(vuln_entry, self.fixdater)
-                # Normalize the loaded data. Note: CVSS_V2 severities are kept
-                # deliberately — _normalize_severities gives their bare vectors
-                # the "CVSS:2.0/" prefix that downstream consumers (grype-db)
-                # require to parse them.
                 yield self._normalize(vuln_entry)

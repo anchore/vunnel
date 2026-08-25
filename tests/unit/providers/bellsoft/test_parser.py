@@ -10,8 +10,9 @@ class TestNormalizeSeverities:
     def parser(self, tmpdir, auto_fake_fixdate_finder):
         return Parser(ws=workspace.Workspace(tmpdir, "test", create=True))
 
-    def test_normalizes_cvss_v2_without_prefix(self, parser):
-        """CVSS v2 vectors without prefix should get CVSS:2.0/ added."""
+    def test_leaves_bare_cvss_v2_untouched(self, parser):
+        """CVSS v2 vectors must stay bare: the OSV schema's CVSS_V2 pattern
+        rejects a "CVSS:2.0/" prefix (unlike V3/V4, which require one)."""
         vuln_entry = {
             "id": "BELL-CVE-2000-0344",
             "severity": [
@@ -24,7 +25,7 @@ class TestNormalizeSeverities:
 
         result = parser._normalize_severities(vuln_entry)
 
-        assert result["severity"][0]["score"] == "CVSS:2.0/AV:N/AC:L/Au:N/C:N/I:N/A:P"
+        assert result["severity"][0]["score"] == "AV:N/AC:L/Au:N/C:N/I:N/A:P"
         assert result["severity"][0]["type"] == "CVSS_V2"
 
     def test_preserves_cvss_v2_with_prefix(self, parser):
@@ -131,7 +132,7 @@ class TestNormalizeSeverities:
         result = parser._normalize_severities(vuln_entry)
 
         assert len(result["severity"]) == 2
-        assert result["severity"][0]["score"] == "CVSS:2.0/AV:N/AC:L/Au:N/C:N/I:N/A:P"
+        assert result["severity"][0]["score"] == "AV:N/AC:L/Au:N/C:N/I:N/A:P"
         assert result["severity"][1]["score"] == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
 
     def test_handles_empty_score(self, parser):
