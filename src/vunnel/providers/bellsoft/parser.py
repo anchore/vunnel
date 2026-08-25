@@ -18,6 +18,11 @@ if TYPE_CHECKING:
 
     from vunnel.workspace import Workspace
 
+# The OSV schema revision this provider pins, vendored under
+# schema/vulnerability/osv/. Lives here (rather than on the Provider) so the
+# parser can reference it without importing back into the package __init__.
+PINNED_OSV_SCHEMA_VERSION = "1.7.5"
+
 # Default CVSS vector-string prefix to prepend for each OSV severity type when
 # the score does not already carry a "CVSS:x.y/" prefix.
 #
@@ -106,14 +111,23 @@ class Parser:
         # "CVSS:" prefix (e.g. "CVSS:3.1/...") it is preserved as-is. Empty
         # scores and entries without severities are left untouched. The input
         # entry is not mutated; a copy is returned.
+        #
+        # Anything structurally unexpected (severity not a list, a member that
+        # is not an object, a non-string score) is left exactly as found rather
+        # than raising: upstream is ~18k third-party files, and one odd
+        # advisory must not abort the run. Such records are still validated
+        # against the OSV schema downstream, so nothing invalid slips through
+        # silently.
         severities = vuln_entry.get("severity")
-        if not severities:
+        if not severities or not isinstance(severities, list):
             return vuln_entry
 
         normalized = copy.deepcopy(vuln_entry)
         for severity in normalized["severity"]:
+            if not isinstance(severity, dict):
+                continue
             score = severity.get("score", "")
-            if not score or score.startswith("CVSS:"):
+            if not score or not isinstance(score, str) or score.startswith("CVSS:"):
                 continue
             prefix = _CVSS_TYPE_PREFIXES.get(severity.get("type", ""))
             if prefix:
@@ -127,9 +141,19 @@ class Parser:
         # on grype-db
         vuln_entry = self._normalize_severities(vuln_entry)
         vuln_id = vuln_entry["id"]
-        # missing schema_version only matters for its major version: the provider
-        # maps any same-major value to its own pinned schema
-        vuln_schema = vuln_entry.get("schema_version", "1.0.0")
+        # schema_version is optional in OSV (only id and modified are required),
+        # and this value is used for exactly one thing: compatible_schema() reads
+        # its major version to decide whether the record can be written under the
+        # provider's pinned schema. It is never written into the payload or the
+        # envelope. So when upstream doesn't declare one, say we are treating the
+        # record as the version we will actually validate it against, rather than
+        # inventing a version the record never claimed.
+        #
+        # A *present but malformed* value (empty, null, non-string) is passed
+        # through untouched so that compatible_schema rejects it and update()
+        # skips the record -- the bogus value stays in the payload, so emitting
+        # it would write a record that fails the OSV schema.
+        vuln_schema = vuln_entry.get("schema_version", PINNED_OSV_SCHEMA_VERSION)
 
         return vuln_id, vuln_schema, vuln_entry
 

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
-from .parser import Parser
+from .parser import PINNED_OSV_SCHEMA_VERSION, Parser
 
 if TYPE_CHECKING:
     import datetime
@@ -27,7 +27,7 @@ class Provider(provider.Provider):
     # pin to the newest released OSV schema (vendored in schema/vulnerability/osv/):
     # 1.x schema releases are additive, so the newest schema validates records
     # authored against any older 1.x revision, but not vice versa
-    __schema__ = schema.OSVSchema(version="1.7.5")
+    __schema__ = schema.OSVSchema(version=PINNED_OSV_SCHEMA_VERSION)
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
@@ -63,6 +63,13 @@ class Provider(provider.Provider):
         # all validate under the provider's pinned schema (1.x revisions are
         # additive), and the envelope URL must point at a schema file vunnel
         # actually ships (e.g. upstream declares 1.6.7, which we don't vendor)
+        #
+        # defensive: callers derive this from untrusted upstream JSON, so a
+        # non-string (or empty) value must be reported as incompatible rather
+        # than raising on .split(). the parser already coerces these to a
+        # default at ingest, so in practice this only guards other callers.
+        if not isinstance(schema_version, str) or not schema_version:
+            return None
         if schema.OSVSchema(schema_version).major_version == cls.__schema__.major_version:
             return cls.__schema__
         return None
