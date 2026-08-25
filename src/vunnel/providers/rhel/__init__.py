@@ -41,7 +41,11 @@ class Config:
 
 
 class Provider(provider.Provider):
-    __schema__ = schema.OSSchema()
+    # RHEL emits the additive Advisories field (the per-stream fix table for same-base multi-minor
+    # RHSAs), introduced in OS schema 1.1.2 (additive on top of upstream's 1.1.1 Arch addition).
+    # Pinned here rather than bumping the shared OS_SCHEMA_VERSION default so only this provider
+    # advances and other OS providers don't churn.
+    __schema__ = schema.OSSchema("1.1.2")
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):

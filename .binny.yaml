@@ -11,7 +11,7 @@ tools:
   # used for running all local and CI tasks
   - name: task
     version:
-      want: v3.51.1
+      want: v3.52.0
     method: github-release
     with:
       repo: go-task/task
@@ -19,7 +19,7 @@ tools:
   # used for showing the changelog at release
   - name: glow
     version:
-      want: v2.1.2
+      want: v3.0.0
     method: github-release
     with:
       repo: charmbracelet/glow
@@ -35,7 +35,7 @@ tools:
   # used at release to generate the changelog
   - name: crane
     version:
-      want: v0.21.7
+      want: v0.21.9
     method: github-release
     with:
       repo: google/go-containerregistry
@@ -43,7 +43,7 @@ tools:
   # used in quality gate to pull cached provider data
   - name: oras
     version:
-      want: v1.3.2
+      want: v1.3.3
     method: github-release
     with:
       repo: oras-project/oras

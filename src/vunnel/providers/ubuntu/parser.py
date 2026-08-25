@@ -12,7 +12,7 @@ import orjson
 from vunnel import result, schema
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import osv
+from vunnel.utils import osv, silent_remove
 
 from . import parser_legacy
 from .os_downconvert import os_identifier_for, osv_to_os
@@ -649,7 +649,15 @@ class Parser:
                 identifier = f"{vuln.NamespaceName}/{vuln.Name.lower()}"
                 yield identifier, os_schema, {"Vulnerability": vuln.json()}
 
+    def _clean_input(self):
+        # The ubuntu-cve-tracker repo is no longer used and is huge, so delete if it exists
+        # to significantly reduce cache.
+        cve_tracker_path = os.path.join(self.workspace.input_path, "ubuntu-cve-tracker")
+        if os.path.exists(cve_tracker_path):
+            silent_remove(cve_tracker_path, tree=True)
+
     def get(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        self._clean_input()
         self._download_archive()
         self._download_vex_archive()
         self.fixdater.download()

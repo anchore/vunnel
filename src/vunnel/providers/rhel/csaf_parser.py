@@ -3,6 +3,7 @@ import logging
 from packageurl import PackageURL
 
 from vunnel.providers.rhel.csaf_client import CSAFClient
+from vunnel.providers.rhel.product_id import parse_product_id
 from vunnel.utils.csaf_types import CSAFDoc
 from vunnel.workspace import Workspace
 
@@ -130,37 +131,50 @@ class CSAFParser:
         return platform_cpe, module, name, version
 
     # note: this is really taking an ar dict because of a circular import issue. It should be taking an AffectedRelease object.
-    def get_fix_info(self, cve_id: str, ar: dict[str, str | None], normalized_pkg_name: str) -> tuple[str | None, str | None]:
+    def get_fix_info(
+        self,
+        cve_id: str,
+        ar: dict[str, str | None],
+        normalized_pkg_name: str,
+    ) -> tuple[str | None, str | None, str | None, list[str]]:
         """
         Given a CVE ID, an affected release object, and the normalized name of the affected package,
         interrogate CSAF RHSA data to look for an advisory that tells us what version of the package is
         fixed, and the modularity of the package if any.
+
+        Returns a (version, module, product_id, channels) tuple. product_id is the matched CSAF full
+        product id (FPI), which -- unlike the version, product_name, or cpe -- encodes the target RHEL
+        minor stream; the caller uses it to recover the per-stream minor for same-base multi-RHSA
+        handling. ``channels`` is the sorted, deduped set of recognized channel tokens -- including the
+        explicit ``"ga"`` token for generally-available FPIs -- computed across ALL FPIs that ship this
+        exact (version, module) build (e.g. ``["ga"]``, ``["ga", "eus"]``, ``["aus", "eus"]``). It is
+        empty only when NO FPI resolved to a recognized channel (i.e. the channel set is unknown).
 
         The `ar` dict is expected to have the following
         """
         fix_id = ar.get("rhsa_id")
         if not fix_id:
             # This affected release does not reference an advisory; assume it isn't fixed
-            return None, None
+            return None, None, None, []
         doc = self.csaf_client.csaf_doc_for_rhsa(fix_id)
         if not doc:
             # There was no document available for the referenced RHSA. This is unexpected,
             # but logged in the csaf client.
-            return None, None
+            return None, None, None, []
 
         # The CSAF spec allows N vulnerabilities per document. Find the first one whose CVE matches
         # the CVE ID we're looking for fix info for.
         vuln = next((v for v in doc.vulnerabilities if v.cve == cve_id), None)
         if not vuln:
             self.logger.trace(f"{cve_id}: {fix_id} CSAF doc does not claim to fix this CVE")  # type: ignore[attr-defined]
-            return None, None
+            return None, None, None, []
 
         # There are multiple remediations in a CSAF doc, including ones that say things like "no fix available".
         # Choose the "vendor_fix" type remediation that corresponds to the advisory ID mentioned in the affected release.
         remediation = next((r for r in vuln.remediations if r.category == "vendor_fix" and r.url and r.url.endswith(fix_id)), None)
         if not remediation:
             self.logger.trace(f"{cve_id} no remediation obj for {fix_id}")  # type: ignore[attr-defined]
-            return None, None
+            return None, None, None, []
 
         # assume that one of the products listed as rebuilt due to the advisory indicates the first fixed
         # version of the package.
@@ -168,10 +182,67 @@ class CSAFParser:
         ar_plat_cpe = ar.get("platform_cpe")
         if not ar_plat_cpe:
             self.logger.trace(f"{cve_id} no platform cpe for {fix_id}")  # type: ignore[attr-defined]
-            return None, None
+            return None, None, None, []
         self.logger.trace(f"{cve_id} searching {fix_id} based on {ar_plat_cpe} and {normalized_pkg_name}")  # type: ignore[attr-defined]
 
-        return self.best_version_module_from_fpis(doc, fix_id, candidate_full_product_ids, normalized_pkg_name, ar_plat_cpe)
+        version, module, product_id = self.best_version_module_from_fpis(
+            doc,
+            fix_id,
+            candidate_full_product_ids,
+            normalized_pkg_name,
+            ar_plat_cpe,
+        )
+        # Compute the channel set by considering EVERY candidate FPI that ships this same
+        # (name, platform, version, module) build, not just the single "best" one selected above.
+        # One backported build is frequently delivered via several channels at once (e.g. GA + EUS),
+        # and each recognized channel -- including "ga" -- is preserved in the union.
+        channels = self.channels_from_fpis(
+            doc,
+            candidate_full_product_ids,
+            normalized_pkg_name,
+            ar_plat_cpe,
+            version,
+            module,
+        )
+        return version, module, product_id, channels
+
+    def channels_from_fpis(  # noqa: PLR0913
+        self,
+        doc: CSAFDoc,
+        candidate_product_ids: list[str],
+        normalized_pkg_name: str,
+        ar_plat_cpe: str,
+        version: str | None,
+        module: str | None,
+    ) -> list[str]:
+        """Compute the recognized channel set for a chosen (version, module) build.
+
+        Look at ALL candidate FPIs whose package name matches, whose platform CPE lines up, and which
+        resolve to the SAME (version, module) build that was selected as the fix. Each FPI's platform
+        prefix resolves to a recognized channel token -- ``"ga"`` for a generally-available build, or
+        an extended token (``eus``/``e4s``/``aus``/``tus``/``els``) -- or to ``None`` when unrecognized.
+
+        Return the sorted, deduped set of recognized channel tokens (including ``"ga"``) across the
+        matching FPIs. An FPI whose channel is ``None`` (unknown) contributes nothing; a build whose
+        FPIs are ALL unrecognized yields ``[]`` (unknown channel set), which is NOT "generally available".
+        """
+        if not version:
+            return []
+
+        channels: set[str] = set()
+        for fpi in candidate_product_ids:
+            plat, fpi_module, name, fpi_version = self.platform_module_name_version_from_fpi(doc, fpi)
+            if name != normalized_pkg_name or not plat or not plat.startswith(ar_plat_cpe):
+                continue
+            # only union channels for FPIs that ship the exact build we selected as the fix
+            if fpi_version != version or fpi_module != module:
+                continue
+            channel = parse_product_id(fpi).channel
+            if channel is None:
+                # unrecognized channel for this FPI -> contributes nothing to the recognized set
+                continue
+            channels.add(channel)
+        return sorted(channels)
 
     def best_version_module_from_fpis(
         self,
@@ -180,15 +251,16 @@ class CSAFParser:
         candidate_product_ids: list[str],
         normalized_pkg_name: str,
         ar_plat_cpe: str,
-    ) -> tuple[str | None, str | None]:
+    ) -> tuple[str | None, str | None, str | None]:
         """
         Loop over all candidate product IDs, that is, all product IDs that were patched by the RHSA in question,
         and ask the CSAF document for their platform, module, name, and version.
-        Return the first version and module for the first product ID whose package name matches the
+        Return the (version, module, product_id) for the first product ID whose package name matches the
         normalized package name from Hydra, and whose platform CPE starts with the platform CPE from Hydra.
+        The product_id (FPI) is returned so the caller can recover the target RHEL minor from it.
         """
 
-        backup_module, backup_version = None, None
+        backup_module, backup_version, backup_fpi = None, None, None
         for fpi in candidate_product_ids:
             plat, module, name, version = self.platform_module_name_version_from_fpi(doc, fpi)
             # use startswith because we see things like cpe:/a:redhat:enterprise_linux:8 in hydra returns
@@ -199,12 +271,12 @@ class CSAFParser:
                 # them if we can't find a better match.
                 if version and "ael" in version:
                     self.logger.trace(f"found alternative match for {fpi}, {name}, {plat} against {ar_plat_cpe}: {normalized_pkg_name}")  # type: ignore[attr-defined]
-                    backup_module, backup_version = module, version
+                    backup_module, backup_version, backup_fpi = module, version, fpi
                     continue
                 self.logger.trace(f"found match for {fpi}, {name}, {plat} against {ar_plat_cpe}: {normalized_pkg_name}")  # type: ignore[attr-defined]
-                return version, module
+                return version, module, fpi
         if backup_version:
             self.logger.trace(  # type: ignore[attr-defined]
                 f"returning alternative match {backup_version} (module: {backup_module}) for {fix_id} against {ar_plat_cpe}: {normalized_pkg_name}",
             )
-        return backup_version, backup_module
+        return backup_version, backup_module, backup_fpi

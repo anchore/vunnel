@@ -7,7 +7,7 @@ import pytest
 
 from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider
-from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser
+from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser, StreamAdvisory
 from vunnel.providers.rhel.rhsa_provider import RHSAProvider
 
 
@@ -30,10 +30,14 @@ class FakeRHSAProvider(RHSAProvider):
         package_name = override_package_name or ar.name
         if p:
             return next(
-                ((item["Version"], item.get("Module")) for item in p["Vulnerability"]["FixedIn"] if item["Name"] == package_name),
-                (None, None),
+                (
+                    (item["Version"], item.get("Module"), item.get("ProductID"), item.get("Channels", []))
+                    for item in p["Vulnerability"]["FixedIn"]
+                    if item["Name"] == package_name
+                ),
+                (None, None, None, []),
             )
-        return None, None
+        return None, None, None, []
 
 
 class TestParser:
@@ -634,6 +638,23 @@ class TestParser:
                         platform="7",
                         version="7.2-3.el7.1",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        # same-base multi-stream (el7 vs el7.1): the stream-aware advisories table carries
+                        # both builds. minor is None here because these package-only inputs have no CSAF
+                        # product_id to recover the target minor from.
+                        advisories=(
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="7.2-3.el7.1",
+                                minor=None,
+                                channels=[],
+                            ),
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="7.2-3.el7",
+                                minor=None,
+                                channels=[],
+                            ),
+                        ),
                     )
                 ],
             ),
@@ -671,6 +692,30 @@ class TestParser:
                             "|| >= 1:11.19.1, < 1:11.19.1-2.module+el8.1.0+6118+5aaa808b "
                             "|| >= 1:12.16.1, < 1:12.16.1-2.module+el8.1.0+6117+b25a342c"
                         ),
+                        # three distinct streams -> the stream-aware advisories table carries all three
+                        # builds (newest first), independent of the VulnerableRange representation.
+                        advisories=(
+                            # no FPI on these CVE-path records, but the modular "+el8.1.0" dist tag
+                            # supplies the minor (1) via the dist-tag fallback.
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="1:12.16.1-2.module+el8.1.0+6117+b25a342c",
+                                minor=1,
+                                channels=[],
+                            ),
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="1:11.19.1-2.module+el8.1.0+6118+5aaa808b",
+                                minor=1,
+                                channels=[],
+                            ),
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="1:10.19.0-2.module+el8.1.0+6118+5aaa808b",
+                                minor=1,
+                                channels=[],
+                            ),
+                        ),
                     )
                 ],
             ),
@@ -696,11 +741,72 @@ class TestParser:
                         platform="6",
                         version="2:0.12.1.2-2.209.el6_2.1",
                         advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        # same-base multi-stream (el6_1.9 vs el6_2.1) -> both carried in advisories.
+                        # No FPI on these CVE-path records, but the ".el6_M" dist tags supply the
+                        # minors (2 and 1) via the dist-tag fallback.
+                        advisories=(
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="2:0.12.1.2-2.209.el6_2.1",
+                                minor=2,
+                                channels=[],
+                            ),
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="2:0.12.1.2-2.160.el6_1.9",
+                                minor=1,
+                                channels=[],
+                            ),
+                        ),
+                    )
+                ],
+            ),
+            (
+                # glibc CVE-2023-4813 shape: two distinct fix builds on the SAME upstream base (2.34),
+                # resolved off the CVE/Hydra path so they carry NO FPI/product_id. The minor must still
+                # be recovered from each build's own ".elN_M" dist tag (the dist-tag fallback):
+                #   0:2.34-60.el9_2.7 -> minor 2 (Z-stream), 0:2.34-100.el9 -> GA, minor stays None.
+                {
+                    "affected_release": [
+                        {
+                            "product_name": "Red Hat Enterprise Linux 9",
+                            "package": "glibc-0:2.34-60.el9_2.7",
+                        },
+                        {
+                            "product_name": "Red Hat Enterprise Linux 9",
+                            "package": "glibc-0:2.34-100.el9",
+                        },
+                    ],
+                    "name": "CVE-2023-4813",
+                },
+                [
+                    FixedIn(
+                        module=None,
+                        package="glibc",
+                        platform="9",
+                        version="0:2.34-100.el9",
+                        advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                        advisories=(
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="0:2.34-100.el9",
+                                # bare GA ".el9" tag carries no minor; only the FPI could supply one.
+                                minor=None,
+                                channels=[],
+                            ),
+                            StreamAdvisory(
+                                advisory=Advisory(wont_fix=False, rhsa_id=None, link=None, severity=None),
+                                version="0:2.34-60.el9_2.7",
+                                # ".el9_2" Z-stream tag -> minor 2 via the dist-tag fallback.
+                                minor=2,
+                                channels=[],
+                            ),
+                        ),
                     )
                 ],
             ),
         ],
-        ids=["case1" , "case2", "case3", "case4", "case5", "case6", "case7"],
+        ids=["case1" , "case2", "case3", "case4", "case5", "case6", "case7", "case8"],
     )
     def test_parse_affected_releases(self, tmpdir, affected_releases, fixed_ins, mock_rhsa_dict_2):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
@@ -793,8 +899,8 @@ class TestParser:
     @pytest.mark.parametrize(
         "test_id,test_p,test_pkg,expected",
         [
-            ("RHSA-2019:2308", "7", "libguestfs-winsupport", ("0:7.2-3.el7", None)),
-            ("foo", "0", "bar", (None, None)),
+            ("RHSA-2019:2308", "7", "libguestfs-winsupport", ("0:7.2-3.el7", None, None, [])),
+            ("foo", "0", "bar", (None, None, None, [])),
         ],
     )
     def test_fetch_rhsa_fix_version(self, tmpdir, mock_rhsa_dict, test_id, test_p, test_pkg, expected):
