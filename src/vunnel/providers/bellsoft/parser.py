@@ -162,14 +162,22 @@ class Parser:
 
         self.fixdater.download()
 
+        # withdrawn advisories are a routine, expected part of the feed (~26% of
+        # the corpus), so count them and report once rather than logging a line
+        # per record -- a sudden change in the total is the useful signal
+        withdrawn = 0
+
         for vuln_entry in self._load():
             if not isinstance(vuln_entry, dict) or not vuln_entry.get("id"):
                 self.logger.warning("skipping advisory without an id")
             elif "withdrawn" in vuln_entry:
-                self.logger.debug(f"skipping withdrawn entry: {vuln_entry['id']}")
+                withdrawn += 1
             else:
                 # annotate each affected range with first-observed fix dates
                 # (database_specific.anchore.fixes), which grype-db surfaces as
                 # fix availability
                 osv.patch_fix_date(vuln_entry, self.fixdater)
                 yield self._normalize(vuln_entry)
+
+        if withdrawn:
+            self.logger.info(f"skipped {withdrawn} withdrawn advisories")

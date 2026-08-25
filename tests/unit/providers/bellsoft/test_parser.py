@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import tarfile
 from unittest.mock import Mock, patch
@@ -334,6 +335,30 @@ class TestGet:
             [{"id": "BELL-CVE-2020-0005", "schema_version": "1.7.4", "withdrawn": "2024-01-01T00:00:00Z"}],
         )
         assert list(parser.get()) == []
+
+    def test_withdrawn_entries_are_summarized_not_logged_per_record(self, parser, ws, caplog):
+        """Withdrawn advisories are ~26% of the real corpus (4,711 of 18,338), so
+        a line per record buries the log. One summary carries the useful signal."""
+        _advisories(
+            str(ws.input_path),
+            [
+                {"id": f"BELL-CVE-2020-{i:04d}", "schema_version": "1.7.4", "withdrawn": "2024-01-01T00:00:00Z"}
+                for i in range(5)
+            ]
+            + [{"id": "BELL-CVE-2020-9999", "schema_version": "1.7.4"}],
+        )
+        with caplog.at_level(logging.DEBUG):
+            assert [r[0] for r in parser.get()] == ["BELL-CVE-2020-9999"]
+
+        assert not [m for m in caplog.messages if "BELL-CVE-2020-0000" in m]
+        assert "skipped 5 withdrawn advisories" in caplog.messages
+
+    def test_no_withdrawn_summary_when_there_are_none(self, parser, ws, caplog):
+        _advisories(str(ws.input_path), [{"id": "BELL-CVE-2020-9999", "schema_version": "1.7.4"}])
+        with caplog.at_level(logging.DEBUG):
+            list(parser.get())
+
+        assert not [m for m in caplog.messages if "withdrawn" in m]
 
     def test_record_without_an_id_is_skipped(self, parser, ws):
         _write_members(
