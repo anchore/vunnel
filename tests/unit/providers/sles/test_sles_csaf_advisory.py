@@ -8,7 +8,7 @@ import types
 import orjson
 import pytest
 
-from vunnel.providers.sles.csaf_advisory_client import SLESCSAFAdvisoryClient, strip_arch
+from vunnel.providers.sles.csaf_advisory_client import AdvisoryDates, SLESCSAFAdvisoryClient, strip_arch
 from vunnel.providers.sles.csaf_parser import FixDates
 from vunnel.tool.fixdate.finder import Finder
 
@@ -72,7 +72,8 @@ class TestFixDateIndex:
             },
         )
         dates = _client(tmp_path, archive).fix_dates()
-        assert dates == {("CVE-2024-25110", "python3-uamqp-1.5.3-150100.4.13.1"): "2024-02-22"}
+        assert dates.by_cve_nevr == {("CVE-2024-25110", "python3-uamqp-1.5.3-150100.4.13.1"): "2024-02-22"}
+        assert dates.by_nevr == {"python3-uamqp-1.5.3-150100.4.13.1": "2024-02-22"}
 
     def test_earliest_advisory_wins(self, tmp_path):
         """A NEVR is often shipped by several advisories (a later one re-shipping the
@@ -87,7 +88,9 @@ class TestFixDateIndex:
             },
         )
         dates = _client(tmp_path, archive).fix_dates()
-        assert dates[("CVE-2024-0001", "foo-1.0-1.1")] == "2024-03-01"
+        assert dates.by_cve_nevr[("CVE-2024-0001", "foo-1.0-1.1")] == "2024-03-01"
+        # earliest-wins applies to the NEVR-only index too
+        assert dates.by_nevr["foo-1.0-1.1"] == "2024-03-01"
 
     def test_non_utf8_document_is_recovered(self, tmp_path):
         """~185 real documents carry latin-1 bytes in prose while declaring UTF-8.
@@ -103,7 +106,7 @@ class TestFixDateIndex:
         archive = _archive(tmp_path, {"suse-su-broken-1.json": broken})
 
         dates = _client(tmp_path, archive).fix_dates()
-        assert dates == {("CVE-2024-25110", "foo-1.0-1.1"): "2024-02-22"}
+        assert dates.by_cve_nevr == {("CVE-2024-25110", "foo-1.0-1.1"): "2024-02-22"}
 
     def test_non_sle_platforms_are_not_indexed(self, tmp_path):
         """openSUSE and RHSA rebuilds share the archive but can never date a SLES fix."""
@@ -117,7 +120,7 @@ class TestFixDateIndex:
                 ),
             },
         )
-        assert _client(tmp_path, archive).fix_dates() == {}
+        assert _client(tmp_path, archive).fix_dates() == AdvisoryDates()
 
     def test_missing_archive_is_an_error(self, tmp_path):
         client = _client(tmp_path, os.path.join(tmp_path, "absent.tar.bz2"))
@@ -145,7 +148,7 @@ class TestFixDates:
     def test_advisory_date_is_used_when_known(self):
         fix_dates = FixDates(
             Finder(strategies=[], first_observed=_NoStore()),
-            {("CVE-2024-25110", "python3-uamqp-1.5.3-150100.4.13.1"): "2024-02-22"},
+            AdvisoryDates(by_cve_nevr={("CVE-2024-25110", "python3-uamqp-1.5.3-150100.4.13.1"): "2024-02-22"}),
         )
         available = fix_dates.available_for(
             cve_id="CVE-2024-25110",
@@ -163,7 +166,7 @@ class TestFixDates:
         advisory date and must fall through to the finder rather than inventing one."""
         finder = Finder(strategies=[], first_observed=_NoStore())
         finder.first_observed = _NoStore()
-        fix_dates = FixDates(finder, {})
+        fix_dates = FixDates(finder, AdvisoryDates())
         assert (
             fix_dates.available_for(
                 cve_id="CVE-2022-26700",
@@ -174,6 +177,59 @@ class TestFixDates:
             )
             is None
         )
+
+    def test_nevr_only_fallback_dates_a_build_shipped_under_another_cve(self):
+        """SUSE often ships a build without listing every CVE that build fixes, so the
+        exact (CVE, NEVR) key misses. When a build shipped at all, that day is still the
+        day the version became installable -- availability is a property of the build.
+
+        Recovers 180,864 records (7.78% of fixed records) that otherwise fall through to
+        a first-observed date, frequently the build date itself."""
+        fix_dates = FixDates(
+            Finder(strategies=[], first_observed=_NoStore()),
+            AdvisoryDates(by_nevr={"krb5-1.6.3-133.49.66.1": "2015-02-06"}),
+        )
+        available = fix_dates.available_for(
+            cve_id="CVE-2002-2443",
+            namespace="sles:11.4",
+            package="krb5",
+            nevr="krb5-1.6.3-133.49.66.1",
+            version="0:1.6.3-133.49.66.1",
+        )
+        assert available.Date == "2015-02-06"
+        assert available.Kind == "advisory"
+
+    def test_cve_keyed_date_wins_over_the_nevr_fallback(self):
+        """The precise key stays primary. Where both resolve they agree 99.97% of the
+        time, and in every one of the 334 disagreements the NEVR-only date is *earlier*
+        -- the build shipped before any advisory tied it to this CVE -- so the fallback
+        must not be allowed to pull an attributed date backwards."""
+        fix_dates = FixDates(
+            Finder(strategies=[], first_observed=_NoStore()),
+            AdvisoryDates(
+                by_cve_nevr={("CVE-2014-3065", "java-1_6_0-ibm-1.6.0_sr16.2-0.3.1"): "2014-11-19"},
+                by_nevr={"java-1_6_0-ibm-1.6.0_sr16.2-0.3.1": "2013-11-14"},
+            ),
+        )
+        available = fix_dates.available_for(
+            cve_id="CVE-2014-3065",
+            namespace="sles:11.3",
+            package="java-1_6_0-ibm",
+            nevr="java-1_6_0-ibm-1.6.0_sr16.2-0.3.1",
+            version="0:1.6.0_sr16.2-0.3.1",
+        )
+        assert available.Date == "2014-11-19"
+
+    def test_nevr_fallback_does_not_attest(self):
+        """`attests()` must stay on the CVE-keyed index. It asks whether SUSE ever tied
+        this build to *this* CVE; a build that shipped under some other CVE is exactly
+        the pre-fix GA build the won't-borrow rule exists to catch, so widening this
+        would silently undo that (see "Choosing among the fix categories")."""
+        fix_dates = FixDates(
+            Finder(strategies=[], first_observed=_NoStore()),
+            AdvisoryDates(by_nevr={"kernel-default-6.12.0-160000.5.1": "2025-06-01"}),
+        )
+        assert fix_dates.attests("CVE-2025-38250", "kernel-default-6.12.0-160000.5.1") is False
 
     def test_ltss_looks_up_the_plain_namespace(self):
         """`sles:X.Y+ltss` is a namespace this provider introduces, so no historical
@@ -188,7 +244,7 @@ class TestFixDates:
                 seen.append(ecosystem)
                 return []
 
-        fix_dates = FixDates(Finder(strategies=[], first_observed=_Recorder()), {})
+        fix_dates = FixDates(Finder(strategies=[], first_observed=_Recorder()), AdvisoryDates())
         fix_dates.available_for("CVE-2023-53526", "sles:15.5+ltss", "kernel-default", "kernel-default-5.14.21", "0:5.14.21")
 
         assert seen == ["sles:15.5"]
@@ -201,7 +257,7 @@ class TestFixDates:
                 seen.append(ecosystem)
                 return []
 
-        fix_dates = FixDates(Finder(strategies=[], first_observed=_Recorder()), {})
+        fix_dates = FixDates(Finder(strategies=[], first_observed=_Recorder()), AdvisoryDates())
         fix_dates.available_for("CVE-2023-53526", "sles:15.5", "kernel-default", "kernel-default-5.14.21", "0:5.14.21")
 
         assert seen == ["sles:15.5"]
@@ -211,7 +267,7 @@ class TestFixDates:
         so there is no fix date to report."""
         fix_dates = FixDates(
             Finder(strategies=[], first_observed=_NoStore()),
-            {("CVE-2024-0001", "foo-1.0-1.1"): "2024-02-22"},
+            AdvisoryDates(by_cve_nevr={("CVE-2024-0001", "foo-1.0-1.1"): "2024-02-22"}),
         )
         for version in ("None", "0"):
             assert fix_dates.available_for("CVE-2024-0001", "sles:15.5", "foo", "foo-1.0-1.1", version) is None

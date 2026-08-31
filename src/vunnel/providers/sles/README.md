@@ -83,103 +83,52 @@ Two consequences:
 
 ## Choosing among the fix categories
 
-Three `product_status` categories carry a fixed version, and they can name the same
-(namespace, package) at *different* versions. `_choose_fix` picks one: **the lowest
-version wins**, with one exception for a version no advisory ever shipped.
+Three `product_status` categories carry a fixed version — `recommended`, `first_fixed`,
+`fixed` — and they can name the same (namespace, package) at *different* versions.
+`_choose_fix` picks one: **the lowest version wins**, with one exception.
 
-**Lowest, because `FixedIn.Version` is a boundary** — "installed below this is
-vulnerable". Among versions all claimed to fix the CVE, the earliest is the true
-boundary; a higher one reports already-patched installs as vulnerable. This replaced
-`product_status` list order, which was arbitrary: `recommended` alone names one package
-twice in **2,072** triples (`java-*`, `typelib-*`, `wireshark` and friends), and list
-order picked a non-lowest version in **306** of them. All 306 now move down. Adding the
-666 cross-category disagreements below gives 2,738 triples where a version has to be
-chosen — see "Known limitation" for how many of those a single boundary cannot serve.
+Lowest, because `FixedIn.Version` is a boundary — "installed below this is vulnerable".
+Among versions all claimed to fix the CVE the earliest is the true boundary; a higher one
+reports already-patched installs as vulnerable. 2,738 triples need a version chosen at
+all — see "Known limitation" for how many a single boundary cannot serve.
 
-**Do not "fix" this by preferring `first_fixed`.** Per CSAF 2.0 `first_fixed` is the
-first version containing the fix, which is exactly what a boundary wants — but SUSE's
-data does not honour that, and the spec reading is a trap here. Corpus-wide, over
-**2,326,075** (cve, namespace, package) triples:
+Don't prefer `first_fixed` on the strength of the spec ("the first version containing the
+fix"): SUSE's data does not honour that. Where both keys name a build and disagree (666
+triples) `recommended` is never the higher of the two, and where both builds are attested
+by an advisory `recommended` shipped earlier in **523** and `first_fixed` in **none**.
+SUSE's `first_fixed` behaves like "a recent build known to contain the fix". `fixed` is
+effectively dead — one (document, vulnerability) in 64,231 populates it and it never
+survives scoping — but costs nothing to keep in the tuple.
 
-| | triples |
-|---|---|
-| `recommended` only | 2,296,275 (98.72%) |
-| `first_fixed` only | 28,895 (1.24%) |
-| both, same triple | 905 (0.039%) |
-| → versions agree | 239 |
-| → versions disagree | 666 |
-| disagreements where `recommended` is **higher** | **0** |
-
-`recommended` is never above `first_fixed` anywhere in the corpus, so lowest-wins keeps
-`recommended` in all 666 — the reorder changes nothing there. Cross-checking all 666
-against SUSE's own advisory archive shows why that is right: where both builds are
-attested, `recommended` shipped **earlier in 523**, `first_fixed` earlier in **none**,
-median gap **64 days** (max 363). SUSE's `first_fixed` behaves like "a recent build known
-to contain the fix", not "the first". Preferring it would push 613 records above the
-build that demonstrably shipped the fix. `CVE-2024-9143` on `sles:15.7` is the shape:
-`recommended` `0:3.2.3-150700.3.20`, `first_fixed` `0:3.5.0-150700.5.45.2`.
-
-**`fixed` is dead.** Exactly **one** (document, vulnerability) in 64,231 populates it,
-and it never survives scoping. Kept in the tuple because costing nothing beats
-rediscovering it.
-
-### The exception: an unattested version is not a fix
-
-Lowest-wins alone leaves a residue. In **47** of the 666 disagreements only `first_fixed`
-is attested — `recommended` names a pre-fix GA build that no advisory ever shipped for
-that CVE — so the emitted boundary sits *below* the real fix and an unpatched install
-compares as fixed. That is a false negative: 47 of 2,696,427 fixed records (**0.0017%**),
-confined to `CVE-2025-38250` (24 kernel subpackages) and `CVE-2026-58221` (23
-samba/ctdb/ldb subpackages), both on `sles:16.0`.
-
-So a candidate that no advisory attests, beside one that is attested, drops out before
-the version comparison. The evidence is already in hand: `SLESCSAFAdvisoryClient` indexes
-`(CVE, NEVR) -> advisory date` for "Fix dates" below, and `FixDates.attests()` reads that
-same index as evidence rather than as a date.
-
-Two guards keep it from over-reaching, because advisory coverage is only ~58% and an
-index gap must never raise a version:
-
-- **Only across categories.** Competing versions inside `recommended` alone are parallel
-  streams, not a spec disagreement, so attestation is never consulted there.
-- **Only when attestation discriminates.** If every candidate is attested, or none is,
-  the index says nothing and lowest-wins stands unchanged.
+**The exception: a version no advisory attests is not a fix.** In 47 of those 666
+disagreements only `first_fixed` is attested, `recommended` naming a pre-fix GA build no
+advisory ever shipped for that CVE, so lowest-wins would put the boundary *below* the real
+fix and call an unpatched install fixed. So a candidate no advisory attests, standing
+beside one that is, drops out before the version comparison; `FixDates.attests()` reads
+the `(CVE, NEVR)` index from "Fix dates" below as evidence rather than as a date. Advisory
+coverage is only ~58%, so two guards keep an index gap from raising a version: attestation
+is consulted only *across* categories (competing versions inside `recommended` are
+parallel streams, not a spec disagreement), and only when it discriminates.
 
 ### Known limitation
 
 A single `FixedIn` cannot express two parallel version streams, so where a SLES release
 carries two, one boundary is wrong for one of them. **This affects 1,681 of 2,326,075
-(cve, namespace, package) tuples — 0.072%, about 1 in 1,400** — and 1,681 emitted fixed
-records.
+(cve, namespace, package) tuples — 0.072%, about 1 in 1,400.**
 
 A tuple is at risk when its candidate versions span more than one **upstream** version,
 because release order then says nothing across the boundary: `2.11.1-6.40.1` being lower
-than `2.24.0-8.20.1` does not make it a fix for anything in the `2.24.0` line. Of the
-2,738 tuples where `_choose_fix` has to choose at all, 1,057 are rebuilds within one
-upstream version (`0:2.22-100.8.1` vs `0:2.22-100.15.4`) where the lowest is simply
-correct, and the remaining 1,681 are at risk. Every one spans exactly two streams, never
-three.
+than `2.24.0-8.20.1` does not make it a fix for anything in the `2.24.0` line.
+`python-requests` on `sles:12.5` is the shape — SP5 carries `2.11.1-6.x` and `2.24.0-8.x`
+side by side, so the boundary lands on the lower stream and an installed `2.24.0-8.14.1`
+reports fixed while sitting below its own stream's fix. The other 1,057 of the 2,738
+chosen tuples are rebuilds within one upstream version, where the lowest is simply right.
 
-`CVE-2024-35195` / `python-requests` / `sles:12.5` is the shape. SP5 carries `2.11.1-6.x`
-and `2.24.0-8.x` side by side; `recommended` names `0:2.11.1-6.40.1` and
-`0:2.24.0-8.20.1`; the emitted boundary is `0:2.11.1-6.40.1`. The corpus also ships
-`2.24.0-8.14.1` and `2.24.0-8.17.1`, and an install of either sits above the boundary —
-reported fixed — while being below its own stream's fix. Biggest contributors by tuple
-count: `java-1_6_0-ibm` and `java-1_6_0-ibm-fonts` (282 each),
-`typelib-1_0-WebKit2WebExtension-4_0` (212), `java-1_7_0-ibm-devel` (194), `wireshark`
-(122), across 665 CVEs. 1,102 of the 1,681 (65.6%) are on `sles:11.*`, so most of the
-exposure sits on releases long out of support.
-
-Taking the highest instead would invert this into false positives for every install
-patched on the lower stream — a larger set, and the direction this provider consistently
-avoids. Fixing it properly needs several `FixedIn` records per package, which the OS
-schema has no room for.
-
-Note what this number is *not*. It counts tuples where the emitted boundary **cannot** be
-right for both streams, not tuples where a scan will actually miss something: that also
-needs a real build sitting in the unprotected window and someone running it. Narrowing it
-further means arguing about whether a higher stream inherited the lower stream's fix,
-which SUSE's data does not record — so 0.072% is the honest, checkable ceiling.
+Taking the highest instead inverts this into false positives for every install patched on
+the lower stream — a larger set, and the direction this provider consistently avoids.
+Fixing it properly needs several `FixedIn` records per package, which the OS schema has no
+room for. The number counts tuples where the emitted boundary *cannot* be right for both
+streams, not scans that will actually miss something.
 
 ## Scope: SLES only, for now
 
@@ -246,15 +195,11 @@ preference rule as the OVAL parser does. A corpus-wide survey backs that:
 CVE, and the plain track has nothing better to say about that exact (CVE, package) — no
 data, or a bare `known_affected` with no fix — copy the fix into the plain namespace.**
 
-**This is the opposite of what this repo does for Ubuntu Pro/ESM, deliberately.**
-Ubuntu's analogous rule (`ubuntu/README.md`, "Pro-only-fix → base wont-fix inference")
-synthesizes a base **wont-fix** for any (CVE, source-package) Pro lists and base doesn't
-— recording "base users won't get a fix" rather than copying Pro's fixed version down.
-Canonical earns that by encoding the intent structurally: it *omits* the base ecosystem
-from `affected[]`, so base's absence is itself the signal. SUSE's VEX has no equivalent
-— a missing plain entry is just missing — and SUSE ships LTSS-track builds into
-artifacts that report a plain CPE (point 2 below). Don't read the two providers as one
-pattern; the data differs, so the inference does.
+**This is the opposite of what this repo does for Ubuntu Pro/ESM, deliberately.** Ubuntu's
+analogous rule (`ubuntu/README.md`, "Pro-only-fix → base wont-fix inference") synthesizes
+a base **wont-fix** instead of copying Pro's version down, because Canonical *omits* the
+base ecosystem from `affected[]`, making base's absence itself a signal. In SUSE's VEX a
+missing plain entry is just missing. The data differs, so the inference does.
 
 What justifies it:
 
@@ -264,98 +209,60 @@ What justifies it:
    evidence about that package's *code*, whichever channel ships it.
 2. **Plain-CPE artifacts demonstrably carry LTSS-track builds.**
    `registry.suse.com/suse/sles12sp4` reports `cpe:/o:suse:sles:12:sp4` and ships
-   `libpcre1-8.45-8.7.1`, published *only* under `12 SP4-LTSS` and `12 SP4-ESPOS` — no
-   version-bearing `...Server 12 SP4:libpcre1-8.45-8.7.1` exists anywhere in the corpus.
-   That artifact selects `sles:12.4`, where without borrowing the fix is unreachable.
-   SUSE stops plain-track fixes once a SP passes general support, and 100% of the
-   364,705-pair set above is past-general-support SPs, so this is the common shape rather
-   than a one-off.
+   `libpcre1-8.45-8.7.1`, which the corpus publishes *only* under `12 SP4-LTSS` and
+   `12 SP4-ESPOS`; that artifact selects `sles:12.4`, where without borrowing the fix is
+   unreachable. SUSE stops plain-track fixes once a SP passes general support, and 100% of
+   the 364,705-pair set above is past-general-support SPs, so this is the common shape.
 
-**What this section must not claim.** Earlier revisions asserted that a container image
-can never be "on LTSS" and that no real scan selects `sles:X.Y+ltss`. Neither is
-established, and the claim has crept back in more than once — it is not evidence, so
-delete it again if it reappears. We have never examined a paid-LTSS image. syft reads
-`/etc/os-release`'s `CPE_NAME`, so an LTSS-entitled artifact reporting an LTSS CPE would
-be detected and the namespace selected normally; we simply don't know what one reports.
-The OVAL parser's `_release_resolver` docstring says `sles-ltss-release` "is not
-available as a container image", but that is an inherited assertion, not a measurement.
-The rule stands on points 1 and 2 — code lineage, and one observed plain-CPE artifact
-carrying an LTSS-only build — not on `+ltss` being unreachable.
+The rule stands on those two points — code lineage, and an observed plain-CPE artifact
+carrying an LTSS-only build — not on `+ltss` being unreachable. We have never examined a
+paid-LTSS image, and syft reads `/etc/os-release`'s `CPE_NAME`, so an LTSS-entitled
+artifact reporting an LTSS CPE would be detected and the namespace selected normally.
+Don't claim `+ltss` is unreachable, or that a container image can never be "on LTSS":
+neither is established. (The OVAL parser's `_release_resolver` docstring says
+`sles-ltss-release` "is not available as a container image" — an inherited assertion, not
+a measurement.)
 
-`CVE-2022-1271` (`liblzma5`) is the measured quality-gate regression this fixed:
-`recommended` only under `SUSE Linux Enterprise Server 12 SP4-LTSS`, no bare `12 SP4`
-entry, so `sles:12.4` could never reach it — a labeled true positive a locally-built db
-missed entirely.
+`CVE-2022-1271` (`liblzma5`) is the measured quality-gate regression this fixed: fixed
+only under `...Server 12 SP4-LTSS`, so `sles:12.4` could never reach a labeled true
+positive.
 
 Deliberately narrow:
 
-- **One-directional (LTSS → plain).** No reverse borrow: there's no demonstrated false
-  positive driving it, and the SP1 data showed real module/package-scope differences that
-  way (see "Plain vs LTSS" above) that make a blind copy riskier.
+- **One-directional (LTSS → plain).** No reverse borrow: no demonstrated false positive
+  drives it, and the plain-fixed/LTSS-absent set is real module- and package-scope
+  difference (see "Plain vs LTSS" above).
 - **Only real fixed versions cross** — never `known_not_affected` ("0") or won't-fix
   ("None").
-- **Never overrides a real plain answer**: a plain fixed version or `"0"` wins, even
-  where the versions disagree.
+- **Never overrides a real plain answer**: a plain fixed version or `"0"` wins, even where
+  the versions disagree.
 
-**A plain `"None"` it does override.** The rule used to skip any package plain had any
-entry for, including a bare `known_affected` → `"None"` — wrong in the direction that
-produces false positives. Once a SP leaves general support SUSE stops plain-track fixes
-but leaves the `known_affected` line standing, so a plain `"None"` there describes
-*which channel ships the RPM*, not whether the code is fixed; every such namespace is a
-past-general-support SP. Three concrete supports:
+**A plain `"None"` it does override.** Once a SP leaves general support SUSE stops
+plain-track fixes but leaves the `known_affected` line standing, so a plain `"None"` there
+describes *which channel ships the RPM*, not whether the code is fixed — and `"None"` is
+stronger than "unavailable to you": no version fixes this, every version matches, no
+comparison performed. `CVE-2017-6004` gave `libpcre1 → "None"` on `sles:12.4` with the fix
+on `-LTSS` at 8.45-8.7.1, flagging an installed 8.45-8.7.1 that *is* the fix.
 
-1. **`known_affected` isn't reliable as "no fix available"**: in a 1,500-document sample
-   SUSE names the same package both `known_affected` and fixed *within one namespace* in
-   4.3% of cases (632 of 14,555) — the staleness the source-named rule below cleans up.
-2. **SUSE's own plain-CPE images ship LTSS-track builds** — the `sles12sp4` /
-   `libpcre1-8.45-8.7.1` artifact in point 2 above. "No fix available on the plain
-   channel" isn't even true of the thing being scanned.
-3. **`"None"` is stronger than "unavailable to you"**: *no version fixes this; every
-   version matches, no comparison performed.* `CVE-2017-6004` and `CVE-2019-20838` gave
-   `libpcre1 → "None"` on `sles:12.4` with the fix on `-LTSS` at 8.45-8.7.1 — flagging
-   the installed 8.45-8.7.1, which *is* the fix. Siblings `CVE-2017-7245`/`7244`/`7186`
-   were right only because plain had no `known_affected` line.
+The alternative — leaving the fix on `+ltss` only — says nothing to a plain scan:
+`sles:12.4` would carry no record, so an unpatched plain install comes back clean. **We
+would rather sometimes advertise a fix that turns out to be paywalled than emit that false
+negative;** a paywalled fix is a wrong remediation hint on an otherwise correct finding.
+Nor is it a regression: OVAL folded the two tracks into one namespace per version, so
+where only LTSS data existed it already published under the plain namespace, with none of
+these guards. Over a random 6,000-document sample the rule converts **986 plain `"None"`
+records across 117 CVEs**.
 
-**The cost, stated precisely.** "Fixed on LTSS only" *is* expressible — that's what
-`sles:X.Y+ltss` is for, and the fix lands there either way. What a `+ltss`-only record
-cannot do is say anything to a plain scan: `sles:12.4` would carry no record at all, so
-an unpatched plain install comes back clean. That is the alternative being rejected, and
-it is a false negative.
-
-It's rejected because an LTSS-only listing is sometimes a reporting artifact rather than
-a distribution fact. SUSE publishes `libpcre1-8.45-8.7.1` only under `12 SP4-LTSS` and
-`12 SP4-ESPOS`, yet that exact NVR ships inside `registry.suse.com/suse/sles12sp4`, which
-reports a plain CPE (point 2 above). Some fixes SUSE reports as LTSS-only are present on
-plain builds, so confining the record to `+ltss` hides a fix that is really there.
-
-So the trade is deliberate and worth saying plainly: **we would rather sometimes
-advertise a fix that turns out to be paywalled than emit a false negative.** A paywalled
-fix is a wrong remediation hint on a finding that is otherwise correct; the alternatives
-are a `"None"` that calls an already-patched install vulnerable, or silence on a plain
-scan that really is exposed.
-
-It's also not a regression. The OVAL path never distinguished the tracks at all:
-`_release_resolver` collapses every release name into one namespace per version,
-preferring `sles-release` but falling back to `sles-ltss-release` — so where only LTSS
-data existed, OVAL already published it under the plain namespace, with none of the
-guards above. This provider makes the same assumption, more narrowly.
-
-Over a random 6,000-document sample (9.3% of the corpus) this converts **986 plain
-`"None"` records across 117 CVEs**, concentrated in `sles:12.5` (222), `sles:15.6` (179),
-`sles:15.4` (164) and `sles:12.4` (155).
-
-The `"0"` boundary is deliberate and asymmetric: a plain `"0"` is an explicit
+The `"0"` boundary is asymmetric on purpose: a plain `"0"` is an explicit
 `known_not_affected` determination, so borrowing over it would invert SUSE's own "never
-vulnerable there", match every plain version *below* the borrowed one and manufacture
-the false positives this change removes. A 3,000-document sample found 442 real (plain
-`"0"`, LTSS fixed) pairs, so this is load-bearing.
+vulnerable there" and match every plain version *below* the borrowed one — and a
+3,000-document sample found 442 real (plain `"0"`, LTSS fixed) pairs.
 
 **Known limitation.** Some "LTSS fixed, plain absent" pairs are LTSS-only content never
 meant to infer about plain — kernel live-patches (`kgraft-patch-*`), old LTSS-specific
-repackagings — ~4.3% of qualifying pairs corpus-wide. Filtering precisely needs
-cross-document knowledge (does this package exist *anywhere* on plain SLES) unavailable
-one document at a time: a conscious tradeoff, not an oversight — revisit if it proves to
-matter.
+repackagings — ~4.3% of qualifying pairs. Filtering precisely needs cross-document
+knowledge (does this package exist *anywhere* on plain SLES) unavailable one document at a
+time: a conscious tradeoff, revisit if it proves to matter.
 
 ## Won't-fix requires `known_affected`
 
@@ -438,100 +345,89 @@ of its targets.
 A document whose description says MITRE has rejected the CVE ID emits nothing at all;
 `downconvert()` checks that before any scope work, since one VEX document is one CVE.
 
-SUSE keeps publishing affected/fixed data for these. `CVE-2023-45918`'s description
-reads `"DO NOT USE THIS CANDIDATE NUMBER. ... This candidate was withdrawn by its CNA.
-Further investigation showed that it was not a security issue."`, yet the document lists
-**616 `known_affected` products, 425 fixed** and three advisories
-(`SUSE-SU-2024:1132-1`, `1133-1`, `1133-2`), with nothing retracting it
-(`tracking.status` `interim`, no `flags`, `impact: low` its only `threats` entry).
-**CSAF 2.0 has nowhere to encode it**: `document/tracking/status` is
-`enum: ["draft", "final", "interim"]`; `vulnerabilities[].flags[].label` only justifies
-*not affected* (`component_not_present`, `vulnerable_code_not_present`, …), never *not a
-vulnerability*. It is machine-readable one level up (`cveMetadata.state: "REJECTED"`,
-`dateRejected`, `rejectedReasons`), which SUSE mirrors as prose — all this feed has.
+SUSE keeps publishing affected/fixed data for these: `CVE-2023-45918`'s description reads
+`"DO NOT USE THIS CANDIDATE NUMBER. ... This candidate was withdrawn by its CNA."` while
+the document still lists 616 `known_affected` products and 425 fixed. **CSAF 2.0 has
+nowhere to encode the rejection** — `tracking.status` is only draft/final/interim, and
+`flags[].label` justifies *not affected*, never *not a vulnerability* — so SUSE mirrors
+MITRE's `cveMetadata.state: "REJECTED"` as prose, which is all this feed has.
 
-**Matching prose is the wrong layer; this is deliberately the cheap fix.** The
-principled version reads `state: "REJECTED"` off the CVE List / NVD data once, for every
-provider; a rule inside one provider reaches only vendors who mirror MITRE's sentences,
-hence SLES-only. No central filter exists today — the `nvd` provider carries
-`vulnStatus` without branching on it; the nearest precedents are vendor-sourced
-(`ubuntu/os_downconvert.py` drops OSV records with a real `withdrawn` field,
-`alpine/rejections.py` reads Alpine's NAK list). **Revisit this section if a central
-filter ever lands: this rule should be deleted, not maintained.** Tolerable meanwhile:
-MITRE-generated boilerplate, stable 20+ years; anchored to
-`document.notes[category="description"]`, so a phrase in a reference summary can't trip
-it; 40 documents sampled against `cvelistV5` came back **40/40 at `state: "REJECTED"`**.
+**Matching prose is the wrong layer; this is deliberately a stopgap.** The principled
+version reads `state: "REJECTED"` off the CVE List / NVD data once, for every provider; a
+rule inside one provider reaches only vendors who mirror MITRE's sentences, hence
+SLES-only. No central filter exists today — the `nvd` provider carries `vulnStatus`
+without branching on it, and the nearest precedents are vendor-sourced
+(`ubuntu/os_downconvert.py`, `alpine/rejections.py`). **If a central filter ever lands,
+delete this rule rather than maintaining it.** Tolerable meanwhile: MITRE-generated
+boilerplate, stable 20+ years, anchored to `document.notes[category="description"]` so a
+phrase in a reference summary can't trip it; 40 documents sampled against `cvelistV5` came
+back 40/40 at `state: "REJECTED"`.
 
 MITRE has several rejection wordings and SUSE mirrors all of them, so the best-known
-phrase alone catches only a bit over half:
-
-| Marker (matched case-insensitively) | Documents |
-|---|---|
-| `DO NOT USE THIS CANDIDATE NUMBER` | 447 |
-| `has been rejected or withdrawn` (the modern CNA wording) | 312 |
-| `DO NOT USE THIS CVE RECORD` (duplicate-reservation rejections) | 27 |
-| `** REJECT **` (legacy prefix) | 35 |
-| **union, deduped** | **789 of 64,231 (1.23%)** |
-
-The first two barely overlap — one document carries both. A random 120-document sample
-of *non*-matching documents turned up 2 `REJECTED` upstream (`CVE-2023-52802`,
-`CVE-2024-40946`), both using the CNA wording the union now covers; 2/120 ≈ 1.7% against
-1.23% corpus-wide suggests the set is near complete. `** DISPUTED **` (4 documents) and
-`** UNSUPPORTED WHEN ASSIGNED **` (8) stay out: live `PUBLISHED` records upstream —
-disputed means contested, not withdrawn, and unsupported-when-assigned is a real
-vulnerability in already-end-of-life software.
-
-Of the 789, **475 produce in-scope SLES records**, 188 of those only `"0"` (harmless —
-`"0"` can't cause a report). Real surface: **287 CVEs / 24,499 records** across 38
-namespaces, **19,528** fixed versions (reported below the fix) and **4,971** `"None"`
-(reported at *every* version), including `CVE-2023-45918` on `sles:15`. It also discards
-SUSE's fixed-version data for the 238 documents where SUSE shipped a fix anyway — right,
-since a rejected CVE ID is not a vulnerability.
+phrase alone catches only a bit over half. `_REJECTED_CVE_MARKERS` holds four, matched
+case-insensitively: `DO NOT USE THIS CANDIDATE NUMBER`, `has been rejected or withdrawn`
+(the modern CNA wording), `DO NOT USE THIS CVE RECORD` and the legacy `** REJECT **` —
+**789 of 64,231 documents, 1.23%**, whose in-scope surface is **287 CVEs / 24,499
+records**. That includes the 238 documents where SUSE shipped a fix anyway, whose
+fixed-version data goes too: a rejected CVE ID is not a vulnerability.
+`** DISPUTED **` and `** UNSUPPORTED WHEN ASSIGNED **` stay out — both are live
+`PUBLISHED` records upstream, contested or end-of-life rather than withdrawn.
 
 The marker lives in a note the provider was silently failing to read: SUSE puts the CVE
-description in `document.notes` with `category: "description"` — all 447 "CANDIDATE
-NUMBER" documents carry it there, only 270 repeat it under the vulnerability as
-`category: "general"` titled `"CVE description"`. The parser scanned `vuln.notes` for
-`category == "description"`, matching nothing real, so every record here shipped
-`Description: ""`. `_description_for()` now reads the document note, enabling the
-rejection check; zero of the 64,231 documents have an empty one, so the
-`"CVE description"` fallback never fires.
+description in `document.notes` with `category: "description"`, not under the
+vulnerability (where only some documents repeat it, as `category: "general"` titled
+`"CVE description"`). `_description_for()` reads the document note, which is what enables
+this check and what stops every record on this path shipping `Description: ""`.
 
 ## Fix dates
 
-`FixedIn.Available` comes from `fixdate.Finder`, the same machinery the OVAL path uses,
-so switching feeds doesn't drop the field; dates attach only to real fixed versions,
-since the finder returns nothing for `"0"` and `"None"`.
+`FixedIn.Available` comes from `fixdate.Finder`, the same machinery the OVAL path uses, so
+switching feeds doesn't drop the field; dates attach only to real fixed versions, since
+the finder returns nothing for `"0"` and `"None"`.
 
-**Neither SUSE feed dates a fix directly.** `remediations[].date` is empty in both the
-VEX and advisory archives, so a document-level date is the finest granularity available
-— and in VEX even that is unusable: `tracking.initial_release_date` is when SUSE's CVE
-page was created, and 52% of documents share one bulk-generation day (`2023-02-15`).
-OVAL is no better: 77% of its `<issued>` dates are the single day `2022-09-02`, when
-SUSE regenerated the file.
+**Neither SUSE feed dates a fix directly.** `remediations[].date` is empty in both
+archives, and VEX's document-level date is unusable too: `tracking.initial_release_date`
+is when SUSE's CVE page was created, and 52% of documents share one bulk-generation day.
+OVAL is no better — 77% of its `<issued>` dates are the day SUSE regenerated the file.
 
 The advisory archive (`csaf.tar.bz2`, one document per SUSE-SU) is the one place a real
-date exists: there the document is one advisory, so `initial_release_date` is the day
-those packages shipped. `csaf_advisory_client.py` indexes it as
-`(CVE, arch-stripped NEVR) -> earliest release date`, feeding hits to the finder as
-`advisory` candidates; unmatched records fall back to first-observed. Always fetched --
-a fix date is output, not an option. Over 1,500 real documents **58.2% of in-scope SLES
-fixed records get a real advisory date** (37,799 of 64,894), at a 188 MB download and a
-~70s index build holding ~1.4M entries (~0.9 GB peak).
+date exists: there the document *is* one advisory, so `initial_release_date` is the day
+those packages shipped. `csaf_advisory_client.py` indexes it two ways —
+`(CVE, arch-stripped NEVR)` and NEVR alone — feeding hits to the finder as `advisory`
+candidates; unmatched records fall back to first-observed. Always fetched: a fix date is
+output, not an option. Costs a 188 MB download and a ~70s index build (~1.5M entries,
+~0.9 GB peak). 185 documents are not valid UTF-8 and are decoded leniently rather than
+skipped; every field the index reads is ASCII.
 
-Three implementation details:
+**58.48% of emitted fixed tuples get a real advisory date** — 50.70% from the precise
+`(CVE, NEVR)` key, 7.78% from the NEVR-alone fallback.
 
-- **The key omits the product deliberately**: advisories ship to
-  `...Module for Basesystem 15 SP6` where VEX records the base OS, so an exact
-  `(CVE, product, NEVR)` key resolves far fewer tuples; where both resolve, they agree
-  99% of the time.
-- **The remaining ~42% is not a matching bug**: VEX's `recommended` is the *currently
-  shipping* rebuild, not the build that first fixed the CVE, so after a rebuild no
-  advisory ships that NEVR. Looser keys (`(CVE, package name)`, CVE alone) reach 87% or
-  99% coverage at 60% and 29% exactness, tail errors over a decade wide — worse than no
-  date.
-- **185 advisory documents are not valid UTF-8** (latin-1 bytes in prose), decoded
-  leniently, not skipped; every field the index reads is ASCII.
+**Two keys, because availability is a property of the build.** `(CVE, NEVR)` leaves 49%
+unresolved, since SUSE routinely ships a build without listing every CVE it fixes; NEVR
+alone asks when this build shipped at all, which is still exact, because a NEVR names one
+build. Where both resolve they agree for **99.97%** of tuples, and in every disagreement
+the NEVR date is *earlier*, never later — so the precise key stays primary and the
+fallback only fills gaps, because letting it win would pull an attributed date backwards.
+Looser keys are out: `(CVE, package name)` and CVE-alone measured 60% and 29% exactness.
+Both keys omit the product deliberately, since advisories ship to
+`...Module for Basesystem 15 SP6` where VEX records the base OS.
+
+`attests()` reads **only** the CVE-keyed index, never the fallback — see "Choosing among
+the fix categories" above. A build that shipped under some other CVE is exactly the
+pre-fix GA build that rule exists to catch.
+
+The remaining 41.5% is missing data, not a failed lookup: the cited NEVR appears nowhere
+in the archive under any CVE. Two fifths of that bucket is SLES 16 GA builds that shipped
+*as the base OS release* and so have no advisory; most of the rest is kernel subpackage
+fan-out, where `recommended` names a current rebuild that postdates every advisory naming
+the CVE. Keep the `"SUSE Linux Enterprise"` platform filter: the 0.15% of tuples it costs
+come from openSUSE Tumbleweed and Leap, whose ship dates should never date a SLES fix.
+
+Don't clamp the date to the CVE's own year. A clamp fires on 1,451 dated tuples (0.107%),
+1,261 of them from the precise key, so it mostly second-guesses correct attributions — and
+a CVE ID's year is its *assignment* year, not a lower bound on the fix: `CVE-2013-0160` on
+`sles:11.1+ltss` is dated 2012-04-24 because SUSE's advisory really did ship
+`kernel-pae-2.6.32.59-0.15.2` in April 2012.
 
 ## Vendor advisory attribution
 

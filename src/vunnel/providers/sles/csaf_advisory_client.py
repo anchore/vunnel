@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import tarfile
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import orjson
@@ -46,6 +47,20 @@ _ARCHES = frozenset(
 _SLE_PLATFORM_PREFIX = "SUSE Linux Enterprise"
 
 
+@dataclass(frozen=True)
+class AdvisoryDates:
+    """Earliest advisory release dates, indexed two ways.
+
+    `by_cve_nevr` answers "when did an advisory naming this CVE ship this build" -- the
+    precise question, and the primary key. `by_nevr` answers "when did this build ship at
+    all", a property of the build rather than of the CVE, and is the fallback for builds
+    SUSE never listed under the CVE that VEX says they fix. See README.md, "Fix dates".
+    """
+
+    by_cve_nevr: dict[tuple[str, str], str] = field(default_factory=dict)
+    by_nevr: dict[str, str] = field(default_factory=dict)
+
+
 def strip_arch(nevra: str) -> str:
     """'python3-uamqp-1.5.3-150100.4.13.1.x86_64' -> 'python3-uamqp-1.5.3-150100.4.13.1'."""
     head, _, tail = nevra.rpartition(".")
@@ -56,14 +71,12 @@ class SLESCSAFAdvisoryClient:
     """Downloads SUSE's advisory-oriented CSAF archive and indexes the release date of
     every (CVE, package NEVR) it ships.
 
-    This exists only to date the fixes in the CVE-oriented VEX feed, which carries no
-    fix date of its own: its `document.tracking` dates describe when SUSE's CVE page was
+    This exists only to date the fixes in the CVE-oriented VEX feed, which carries no fix
+    date of its own: its `document.tracking` dates describe when SUSE's CVE page was
     created and last touched, not when anything shipped. An advisory document *is* one
-    advisory, so its `initial_release_date` is the date that advisory's packages became
-    available.
-
-    Neither feed has a per-remediation date -- `remediations[].date` is empty in both --
-    so a document-level date is the finest granularity available.
+    advisory, so its `initial_release_date` is the date those packages became available.
+    Neither feed has a per-remediation date (`remediations[].date` is empty in both), so a
+    document-level date is the finest granularity available.
     """
 
     def __init__(
@@ -98,20 +111,19 @@ class SLESCSAFAdvisoryClient:
                 if chunk:
                     fh.write(chunk)
 
-    def fix_dates(self) -> dict[tuple[str, str], str]:
-        """Map (CVE id, arch-stripped NEVR) to the earliest advisory release date (a
-        YYYY-MM-DD string) that shipped that package for that CVE.
+    def fix_dates(self) -> AdvisoryDates:
+        """Index the earliest advisory release date (a YYYY-MM-DD string) of every build
+        the archive ships, by (CVE id, arch-stripped NEVR) and by NEVR alone.
 
-        Keyed without the product, deliberately. The exact (CVE, product, NEVR) key
-        resolves fewer VEX tuples because the two feeds attribute products differently
-        -- an advisory ships to `...Module for Basesystem 15 SP6` where VEX records the
-        base OS -- and on the tuples where both keys resolve, the two agree on the date
-        for 99% of them. Earliest wins where a NEVR was shipped by several advisories.
+        Keyed without the product, deliberately: the two feeds attribute products
+        differently -- an advisory ships to `...Module for Basesystem 15 SP6` where VEX
+        records the base OS -- so an exact (CVE, product, NEVR) key resolves far fewer VEX
+        tuples. Earliest wins where a NEVR was shipped by several advisories.
         """
         if not os.path.exists(self.archive_path):
             raise FileNotFoundError(f"CSAF advisory archive not found at {self.archive_path!r}; call download() first")
 
-        dates: dict[tuple[str, str], str] = {}
+        dates = AdvisoryDates()
         parsed = skipped = 0
         with tarfile.open(self.archive_path, mode="r:bz2") as tar:
             for member in tar:
@@ -127,7 +139,10 @@ class SLESCSAFAdvisoryClient:
                 parsed += 1
                 self._index(doc, dates)
 
-        self.logger.info(f"indexed fix dates from {parsed} advisories ({skipped} unparseable), {len(dates)} (cve, package) keys")
+        self.logger.info(
+            f"indexed fix dates from {parsed} advisories ({skipped} unparseable), "
+            f"{len(dates.by_cve_nevr)} (cve, package) keys, {len(dates.by_nevr)} package keys",
+        )
         return dates
 
     def _load(self, raw: bytes, name: str) -> dict[str, Any] | None:
@@ -136,16 +151,15 @@ class SLESCSAFAdvisoryClient:
         except Exception:  # noqa: S110
             pass
         try:
-            # ~185 documents carry latin-1 bytes in prose while declaring UTF-8. They
-            # parse once the undecodable bytes are replaced, and every field this index
-            # reads (dates, CVE ids, product ids) is ASCII regardless.
+            # ~185 documents carry latin-1 bytes in prose while declaring UTF-8; every
+            # field this index reads (dates, CVE ids, product ids) is ASCII anyway.
             return orjson.loads(raw.decode("utf-8", errors="replace"))
         except Exception:
             self.logger.warning(f"failed to parse CSAF advisory doc {name!r}, skipping")
             return None
 
     @staticmethod
-    def _index(doc: dict[str, Any], dates: dict[tuple[str, str], str]) -> None:
+    def _index(doc: dict[str, Any], dates: AdvisoryDates) -> None:
         released = (doc.get("document") or {}).get("tracking", {}).get("initial_release_date")
         if not released:
             return
@@ -162,7 +176,11 @@ class SLESCSAFAdvisoryClient:
                     platform, _, nevra = product_id.partition(":")
                     if not nevra or not platform.startswith(_SLE_PLATFORM_PREFIX):
                         continue
-                    key = (cve_id, strip_arch(nevra))
-                    known = dates.get(key)
+                    nevr = sys.intern(strip_arch(nevra))
+                    key = (cve_id, nevr)
+                    known = dates.by_cve_nevr.get(key)
                     if known is None or day < known:
-                        dates[key] = day
+                        dates.by_cve_nevr[key] = day
+                    known = dates.by_nevr.get(nevr)
+                    if known is None or day < known:
+                        dates.by_nevr[nevr] = day
