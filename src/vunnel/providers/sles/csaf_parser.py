@@ -14,6 +14,7 @@ from vunnel.utils import rpm
 from vunnel.utils.vulnerability import CVSS, AdvisorySummary, FixAvailability, FixedIn, VendorAdvisory
 from vunnel.utils.vulnerability import Vulnerability as OSVulnerability
 
+from .csaf_advisory_client import AdvisoryDates
 from .parser import PARSER_CONFIG
 from .parser import Parser as OVALParser
 
@@ -55,14 +56,13 @@ _FIX_STATUS_CATEGORIES = ("recommended", "first_fixed", "fixed")
 _CVE_DESCRIPTION_NOTE_TITLE = "CVE description"
 
 # MITRE's rejection boilerplates, as SUSE mirrors them verbatim into the description --
-# lowercased for comparison. See README.md, "Withdrawn (rejected) CVEs", for why this is
-# a prose match rather than a real field, and what the principled fix would be.
+# lowercased for comparison. CSAF has no field for a rejected CVE ID, so this is a prose
+# match; see README.md, "Withdrawn (rejected) CVEs".
 _REJECTED_CVE_MARKERS = (
     "do not use this candidate number",
     "do not use this cve record",
     "** reject **",
-    # both spellings of the modern CNA wording: "...by its CVE Numbering Authority." and,
-    # in one document, the sentence truncated right after "withdrawn".
+    # the modern CNA wording, cut short so both spellings SUSE ships match
     "has been rejected or withdrawn",
 )
 
@@ -127,27 +127,33 @@ class FixDates:
     """Resolves FixedIn.Available for a fixed package.
 
     The VEX feed dates nothing: `remediations[].date` is empty throughout, and the
-    document-level tracking dates describe SUSE's CVE page, not a shipped fix (over half
-    of all documents share one bulk-generation day). So the date comes from
-    vunnel's fixdate.Finder, optionally given a real advisory release date as a
-    candidate -- see SLESCSAFAdvisoryClient, which indexes those by (CVE, NEVR).
+    document-level tracking dates describe SUSE's CVE page, not a shipped fix. So the
+    date comes from vunnel's fixdate.Finder, optionally given a real advisory release
+    date as a candidate -- see SLESCSAFAdvisoryClient, which indexes those by (CVE, NEVR).
     """
 
-    def __init__(self, fixdater: fixdate.Finder, advisory_dates: dict[tuple[str, str], str] | None = None):
+    def __init__(self, fixdater: fixdate.Finder, advisory_dates: AdvisoryDates | None = None):
         self.fixdater = fixdater
-        self.advisory_dates = advisory_dates or {}
+        self.advisory_dates = advisory_dates or AdvisoryDates()
 
     def attests(self, cve_id: str, nevr: str) -> bool:
-        """Whether a SUSE advisory actually shipped this build for this CVE.
+        """Whether a SUSE advisory actually shipped this build **for this CVE**.
 
-        The index is the same one `available_for` dates fixes from, read as evidence
-        rather than as a date -- see "Choosing among the fix categories" in README.md.
+        The CVE-keyed index only, never the NEVR fallback `available_for` uses: a build
+        that shipped under some *other* CVE is exactly the pre-fix GA build the rule
+        exists to catch. See "Choosing among the fix categories" in README.md.
         """
-        return (cve_id.upper(), nevr) in self.advisory_dates
+        return (cve_id.upper(), nevr) in self.advisory_dates.by_cve_nevr
 
     def available_for(self, cve_id: str, namespace: str, package: str, nevr: str, version: str) -> FixAvailability | None:
         candidates = []
-        shipped = _as_date(self.advisory_dates.get((cve_id.upper(), nevr)))
+        # the CVE-keyed date first; failing that, the day this exact build shipped under
+        # any CVE. Availability is a property of the build, so the looser key still
+        # answers "when could you install this version" -- it just can't say the fix was
+        # attributed to this CVE that day. See README.md, "Fix dates".
+        shipped = _as_date(self.advisory_dates.by_cve_nevr.get((cve_id.upper(), nevr))) or _as_date(
+            self.advisory_dates.by_nevr.get(nevr),
+        )
         if shipped:
             candidates.append(fixdate.Result(date=shipped, kind="advisory", version=version))
 
@@ -282,11 +288,9 @@ def _link_for_cve(doc: CSAFDoc, cve_id: str) -> str:
 def _description_for(doc: CSAFDoc, vuln: Vulnerability | None = None) -> str:
     """The CVE description, which SUSE spells at the document level.
 
-    Every document in the corpus carries it as `document.notes` with category
-    "description"; only some also repeat it under the vulnerability, and there it is
-    category "general" titled "CVE description" -- never category "description". So
-    reading only `vuln.notes` for category "description" matches nothing in any real
-    document, which is what left `Description` empty on this path.
+    Every document carries it as `document.notes` with category "description"; only some
+    also repeat it under the vulnerability, where it is category "general" titled "CVE
+    description" -- so reading `vuln.notes` for category "description" matches nothing.
     """
     for note in doc.document.notes:
         if note.category == "description":
@@ -352,17 +356,16 @@ def _choose_fix(candidates: list[_FixCandidate], cve_id: str, fix_dates: FixDate
     vulnerable" -- so among versions all claimed to fix the CVE the earliest is the true
     boundary, and a higher one reports already-patched installs as vulnerable.
 
-    One exception, and only when the candidates disagree *across* categories: a candidate
-    no SUSE advisory ever shipped for this CVE, sitting alongside one that was shipped, is
-    not a fix at all -- it's a pre-fix build SUSE listed anyway -- so it drops out before
-    the lowest-wins comparison. See "Choosing among the fix categories" in README.md for
-    the corpus measurements behind both halves.
+    One exception, and only where the candidates disagree *across* categories: a
+    candidate no SUSE advisory ever shipped for this CVE, standing beside one that was
+    shipped, is a pre-fix build SUSE listed anyway, so it drops out before the comparison.
+    See "Choosing among the fix categories" in README.md.
     """
     pool = candidates
     if fix_dates is not None and len({c.category for c in candidates}) > 1:
         attested = [c for c in candidates if fix_dates.attests(cve_id, c.nevr)]
-        # all-or-nothing attestation says nothing: either every candidate shipped, or the
-        # index simply has no entry for this CVE (coverage is ~58%).
+        # all-or-nothing attestation discriminates nothing: either every candidate
+        # shipped, or the index has no entry for this CVE at all.
         if attested and len(attested) != len(candidates):
             pool = attested
     return min(pool, key=_by_version)
@@ -379,14 +382,14 @@ def _fix_assertions(  # noqa: PLR0913
     """One fixed-version assertion per (namespace, package), across
     recommended/first_fixed/fixed.
 
-    The three categories are gathered together rather than ranked, because SUSE's data
-    doesn't support ranking them -- `_choose_fix` decides. Collecting them first is what
-    makes that possible: the categories can name the same package at different versions,
-    and `recommended` alone can name one package twice.
+    The categories are gathered rather than ranked, because SUSE's data doesn't support
+    ranking them -- `_choose_fix` decides, which needs every candidate in hand: the
+    categories can name the same package at different versions, and `recommended` alone
+    can name one package twice.
 
     Returns the assertions plus a package name -> source RPM name map for everything it
-    resolved -- what _drop_stale_source_records needs. The map is document-wide because a
-    binary's source RPM doesn't vary by service pack.
+    resolved, which is what _drop_stale_source_records needs. The map is document-wide
+    because a binary's source RPM doesn't vary by service pack.
     """
     candidates: dict[tuple[str, str], list[_FixCandidate]] = {}
     package_sources: dict[str, str] = {}
@@ -444,8 +447,8 @@ def _affected_assertions(
     available yet"), matching ubuntu/os_downconvert.py.
 
     A no_fix_planned remediation only decides NoAdvisory -- whether this is a *declared*
-    won't-fix or a fix that may still be coming. It never justifies a record on its own:
-    SUSE sweeps no_fix_planned across sub-packages it never assessed as affected, so
+    won't-fix or a fix that may still be coming. It never justifies a record on its own,
+    because SUSE sweeps no_fix_planned across sub-packages it never assessed as affected;
     only known_affected can put a package here. See README.md.
 
     Entries that name a source package whose binaries end up fixed are retired later, by
@@ -482,9 +485,9 @@ def _assertions(  # noqa: PLR0913
     wins, so a real fixed version is never downgraded to the not-affected ("0") or
     vulnerable ("None") convention by a later, weaker statement about the same package.
 
-    Precedence only ever resolves *between* these three groups. Competing fixed versions
-    for one (namespace, package) are settled inside `_fix_assertions`, which yields one
-    assertion per package, so fold order never decides a version."""
+    Precedence only resolves *between* these three groups; competing fixed versions for
+    one (namespace, package) are settled inside `_fix_assertions`, which yields one
+    assertion per package."""
     fixes, package_sources = _fix_assertions(vuln, scope, advisories, cve_id, logger, fix_dates)
     assertions = [
         *fixes,
@@ -499,15 +502,15 @@ def _borrow_ltss_fixes_into_plain(fixed_by_namespace: dict[str, dict[str, FixedI
     to say about that package for this CVE -- either no entry at all, or a bare
     "vulnerable, no fix" ("None").
 
-    LTSS is the same package lineage continued longer, not a fork, and a container image
-    can never be "on LTSS" -- so an LTSS-only fix would otherwise be unreachable by every
-    container scan. One-directional, and only for real fixed versions.
+    LTSS is the same package lineage continued longer, not a fork, and SUSE's own
+    plain-CPE container images demonstrably ship LTSS-track builds -- so an LTSS-only fix
+    would otherwise be unreachable by the scan that needs it. One-directional, and only
+    for real fixed versions.
 
     A plain "None" does not outrank the fix: once a SP leaves general support SUSE stops
     publishing plain-track fixes but leaves the known_affected line standing, so that
-    "None" describes which channel ships the RPM, not whether the code is fixed -- and
-    SUSE's own plain-CPE container images demonstrably ship the LTSS-track builds. A
-    plain "0" (known_not_affected) *does* outrank it: that is a real determination, and
+    "None" describes which channel ships the RPM, not whether the code is fixed. A plain
+    "0" (known_not_affected) *does* outrank it: that is a real determination, and
     overwriting it would start matching every version below the borrowed one. See
     README.md."""
     for ltss_ns in [ns for ns in fixed_by_namespace if ns.endswith("+ltss")]:
@@ -539,23 +542,22 @@ def _drop_stale_source_records(
 
     SUSE's known_affected list mixes granularities -- it names the source RPM alongside
     the binaries built from it -- and leaves the source-level claim standing after
-    shipping the fix. The per-binary contradictions are masked by the fix-first
-    precedence rule, but a source-named entry has no same-named fix to mask it.
+    shipping the fix. Fix-first precedence masks the per-binary contradictions, but a
+    source-named entry has no same-named fix to mask it.
 
     That record is the widest kind of false positive available: "None" carries no version
     to compare, and grype resolves an installed binary to its source RPM and searches
     under that name too, so one such record matches every binary that source builds, at
     every version.
 
-    Runs after borrowing, so a fix inherited from the LTSS track retires the stale
-    source record just as the plain track's own fix would.
+    Runs after borrowing, so a fix inherited from the LTSS track retires the stale source
+    record just as the plain track's own fix would.
 
-    A *declared* won't-fix is never retired this way. `NoAdvisory=True` means a
-    no_fix_planned remediation names this exact product -- SUSE deliberately saying it
-    will not fix it -- which is a considered statement rather than a line left standing,
-    and it is how SUSE says "this flavor stays vulnerable, use the other one" (see
-    CVE-2023-47627: python-aiohttp is declared won't-fix on SLES 15 SP4 while its sibling
-    python311-aiohttp, from the same source RPM, is fixed). See README.md."""
+    A *declared* won't-fix is never retired this way: `NoAdvisory=True` means a
+    no_fix_planned remediation names this exact product, which is how SUSE says "this
+    flavor stays vulnerable, use the other one" (CVE-2023-47627 declares python-aiohttp
+    won't-fix on SLES 15 SP4 while its sibling python311-aiohttp, same source RPM, is
+    fixed). See README.md."""
     for bucket in fixed_by_namespace.values():
         fixed_sources = {
             source for name, fixed_in in bucket.items() if fixed_in.Version not in ("0", "None") and (source := package_sources.get(name))

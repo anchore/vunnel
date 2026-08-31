@@ -8,6 +8,7 @@ import pytest
 
 from vunnel import result
 from vunnel.providers.sles import Config, Provider
+from vunnel.providers.sles.csaf_advisory_client import AdvisoryDates
 from vunnel.providers.sles.csaf_parser import FixDates, downconvert
 from vunnel.tool.fixdate.finder import Finder
 from vunnel.utils.csaf_types import from_path
@@ -574,7 +575,7 @@ class TestDownconvert:
         # for this CVE.
         fix_dates = FixDates(
             Finder(strategies=[], first_observed=_NoFirstObserved()),
-            {("CVE-2025-38250", "kernel-default-6.12.0-160000.37.1"): "2026-08-25"},
+            AdvisoryDates(by_cve_nevr={("CVE-2025-38250", "kernel-default-6.12.0-160000.37.1"): "2026-08-25"}),
         )
         results = {v.NamespaceName: v for v in downconvert(doc, allow_versions=["16"], fix_dates=fix_dates)}
 
@@ -594,7 +595,7 @@ class TestDownconvert:
         fix_dates = FixDates(
             Finder(strategies=[], first_observed=_NoFirstObserved()),
             # attest only the *higher* of the two competing recommended builds
-            {("CVE-2018-4197", "typelib-1_0-WebKit2WebExtension-4_0-2.24.4-2.47.1"): "2019-06-01"},
+            AdvisoryDates(by_cve_nevr={("CVE-2018-4197", "typelib-1_0-WebKit2WebExtension-4_0-2.24.4-2.47.1"): "2019-06-01"}),
         )
         results = {v.NamespaceName: v for v in downconvert(doc, allow_versions=["12"], fix_dates=fix_dates)}
 
