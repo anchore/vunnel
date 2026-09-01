@@ -7,8 +7,6 @@ import os
 import shlex
 import shutil
 import subprocess
-import tempfile
-from dataclasses import dataclass
 
 from vunnel import utils
 
@@ -23,11 +21,12 @@ class GitWrapper:
         branch: str,
         checkout_dest: str,
         logger: logging.Logger | None = None,
+        timeout: int | None = None,
     ):
         self.src = source
         self.branch = branch
         self.dest = checkout_dest
-        self.workspace = tempfile.gettempdir()
+        self.timeout = timeout
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
@@ -60,7 +59,7 @@ class GitWrapper:
         try:
             self.logger.trace("running: %s", cmd)  # type: ignore[attr-defined]
             cmd_list = shlex.split(cmd)
-            return subprocess.check_output(cmd_list, text=True, stderr=subprocess.PIPE)  # noqa: S603
+            return subprocess.check_output(cmd_list, text=True, stderr=subprocess.PIPE, timeout=self.timeout)  # noqa: S603
         except Exception:
             self.logger.exception("error executing command: %s", cmd)
             raise

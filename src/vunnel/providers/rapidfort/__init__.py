@@ -1,8 +1,10 @@
 """RapidFort security advisories provider.
 
 Ingests vulnerability data from the RapidFort security-advisories GitHub repo
-for Ubuntu and Alpine. Used when scanning RapidFort-curated images (identified
-via maintainer metadata) to apply RapidFort-specific advisory and version checks.
+for Ubuntu, Debian, Alpine, and Red Hat bases. Used when scanning RapidFort-curated
+images (identified via maintainer metadata) to apply RapidFort-specific advisory
+and version checks; release streams are emitted as OS channels (e.g.
+rapidfort-redhat:9+fc43).
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    repo_url: str = "https://github.com/rapidfort/security-advisories.git"
 
 
 class Provider(provider.Provider):
@@ -46,6 +49,8 @@ class Provider(provider.Provider):
         self.parser = Parser(
             workspace=self.workspace,
             logger=self.logger,
+            repo_url=config.repo_url,
+            timeout=config.request_timeout,
         )
 
         provider.disallow_existing_input_policy(config.runtime)
