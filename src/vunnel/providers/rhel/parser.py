@@ -208,8 +208,12 @@ class Parser:
                 with open(os.path.join(dir_path, file), encoding="utf-8") as fp:
                     yield orjson.loads(fp.read())
 
-    # TODO: ALEX, should skip_if_exists be hooked up here? (currently unused)
-    def _sync_cves(self, skip_if_exists=False, do_full_sync=True):  # noqa: PLR0915, PLR0912, C901
+    # note: this intentionally does not take skip_if_exists. Skipping a CVE purely because a file
+    # is already on disk would drop upstream updates; instead _process_minimal_cve() compares the
+    # minimal CVE from the API against the copy on disk and only downloads the full CVE when the
+    # two differ (or when either file is missing), which avoids the same round trips without
+    # sacrificing correctness.
+    def _sync_cves(self, do_full_sync=True):  # noqa: PLR0915, PLR0912, C901
         """
         Download minimal or summary cve and compare it to persisted state on disk. If no persisted state is found or a
         a change is detected, full cve is downloaded
@@ -1048,7 +1052,7 @@ class Parser:
             full_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)
             if not self.skip_download:
                 # download cves
-                self._sync_cves(skip_if_exists)
+                self._sync_cves()
 
             # normalize cve files
             self.logger.debug(f"normalizing CVEs from {full_dir}")
