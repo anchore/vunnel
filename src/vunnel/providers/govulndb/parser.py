@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.providers.govulndb.go_release_dates import GoReleaseDateOverlay, go_extra_candidates
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv, silent_remove
@@ -48,6 +49,7 @@ class Parser:
         self.logger = logger
         self.zip_path = os.path.join(self.workspace.input_path, "vulndb.zip")
         self.extract_dir = os.path.join(self.workspace.input_path, "vulndb")
+        self.release_dates = GoReleaseDateOverlay(logger=self.logger, timeout=self.download_timeout)
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -110,11 +112,13 @@ class Parser:
             self._extract()
 
         # go.dev's OSV records carry no per-fix date; patch in database_specific.anchore.fixes
-        # so the grype OSV transformer's existing fix-availability path picks them up. The
-        # advisory's own `published` date rides along as a low-confidence candidate so the
-        # finder can fall back to it when no first-observed dataset has the fix.
+        # so the grype OSV transformer's existing fix-availability path picks them up. The Go
+        # fix *version* is enough to recover the real fix date: go_extra_candidates resolves the
+        # module/stdlib release date (accurate=True) so it wins over the advisory's low-confidence
+        # published date and the first-observed fallback (pinned to this provider's turn-up date).
         self.fixdater.download()
+        extra_candidates = go_extra_candidates(self.release_dates)
 
         for vuln_entry in self._load():
-            osv.patch_fix_date(vuln_entry, self.fixdater)
+            osv.patch_fix_date(vuln_entry, self.fixdater, extra_candidates=extra_candidates)
             yield self._normalize(vuln_entry)
