@@ -622,6 +622,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
       user_agent: null
+    use_csaf: true
   ubuntu:
     downconvert_emit_esm: true
     downconvert_osv_to_os: true
