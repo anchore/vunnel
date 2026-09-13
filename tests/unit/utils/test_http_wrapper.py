@@ -82,13 +82,22 @@ class TestGetRequests:
         mock_sleep.assert_called_with(22.1)
         mock_logger.warning.assert_called()
         mock_logger.error.assert_not_called()
-        mock_session_get.assert_called_with("http://example.com/some-path", timeout=http.DEFAULT_TIMEOUT, headers={})
+        # When user_agent is None (default) the wrapper now identifies itself.
+        mock_session_get.assert_called_with(
+            "http://example.com/some-path",
+            timeout=http.DEFAULT_TIMEOUT,
+            headers={"User-Agent": http.default_user_agent()},
+        )
 
     @patch("requests.Session.get")
     def test_timeout_is_passed_in(self, mock_session_get, mock_logger, success_response):
         mock_session_get.return_value = success_response
         http.get("http://example.com/some-path", mock_logger, timeout=12345)
-        mock_session_get.assert_called_with("http://example.com/some-path", timeout=12345, headers={})
+        mock_session_get.assert_called_with(
+            "http://example.com/some-path",
+            timeout=12345,
+            headers={"User-Agent": http.default_user_agent()},
+        )
 
     @patch("requests.Session.get")
     def test_user_agent_is_passed_in(self, mock_session_get, mock_logger, success_response):
@@ -102,6 +111,22 @@ class TestGetRequests:
         mock_session_get.return_value = success_response
         http.get("http://example.com/some-path", mock_logger, timeout=12345, user_agent="")
         mock_session_get.assert_called_with("http://example.com/some-path", timeout=12345, headers={})
+
+    @patch("requests.Session.get")
+    def test_default_user_agent_identifies_vunnel(self, mock_session_get, mock_logger, success_response):
+        """When user_agent is omitted (None), the wrapper sets a vunnel-identifying default."""
+        mock_session_get.return_value = success_response
+        http.get("http://example.com/some-path", mock_logger, timeout=12345)
+        called_headers = mock_session_get.call_args.kwargs["headers"]
+        assert called_headers["User-Agent"].startswith("anchore/vunnel-")
+
+    @patch("requests.Session.get")
+    def test_caller_supplied_headers_override_default_user_agent(self, mock_session_get, mock_logger, success_response):
+        """A User-Agent supplied via headers={} should win over the default."""
+        mock_session_get.return_value = success_response
+        http.get("http://example.com/some-path", mock_logger, headers={"User-Agent": "custom/1.0"})
+        called_headers = mock_session_get.call_args.kwargs["headers"]
+        assert called_headers["User-Agent"] == "custom/1.0"
 
     @patch("time.sleep")
     @patch("requests.Session.get")
@@ -393,6 +418,44 @@ class TestRateLimiting:
         assert any("will retry" in msg for msg in logged_warnings)
         assert not any("Rate limited" in msg for msg in logged_warnings)
 
+    @patch("time.sleep")
+    @patch("requests.Session.get")
+    def test_403_with_retry_after_is_rate_limited(self, mock_session_get, mock_sleep, mock_logger):
+        """403 with Retry-After is treated as rate limiting (e.g. GitHub secondary limits)."""
+        rate_limited_response = MagicMock()
+        rate_limited_response.status_code = 403
+        rate_limited_response.headers = {"Retry-After": "5"}
+        rate_limited_response.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
+
+        success_response = MagicMock()
+        success_response.status_code = 200
+        success_response.headers = {}
+
+        mock_session_get.side_effect = [rate_limited_response, success_response]
+
+        result = http.get("http://example.com/api", mock_logger, retries=2)
+
+        assert result == success_response
+        logged_warnings = [call.args[0] for call in mock_logger.warning.call_args_list]
+        assert any("Rate limited" in msg for msg in logged_warnings)
+
+    @patch("time.sleep")
+    @patch("requests.Session.get")
+    def test_403_without_retry_after_is_not_rate_limited(self, mock_session_get, mock_sleep, mock_logger):
+        """403 without Retry-After remains a permission error (no rate-limit handling)."""
+        error_403 = MagicMock()
+        error_403.status_code = 403
+        error_403.headers = {}  # No Retry-After
+        error_403.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
+
+        mock_session_get.return_value = error_403
+
+        with pytest.raises(requests.HTTPError):
+            http.get("http://example.com/api", mock_logger, retries=2, backoff_in_seconds=1)
+
+        logged_warnings = [call.args[0] for call in mock_logger.warning.call_args_list]
+        assert not any("Rate limited" in msg for msg in logged_warnings)
+
 
 class TestConnectionPooling:
     @pytest.fixture
@@ -510,6 +573,20 @@ class TestIsRateLimited:
         """Test that 503 without Retry-After is not rate limited."""
         response = MagicMock()
         response.status_code = 503
+        response.headers = {}
+        assert http._is_rate_limited(response) is False
+
+    def test_403_with_header_is_rate_limited(self):
+        """Test that 403 with Retry-After is rate limited (GitHub secondary limits)."""
+        response = MagicMock()
+        response.status_code = 403
+        response.headers = {"Retry-After": "60"}
+        assert http._is_rate_limited(response) is True
+
+    def test_403_without_header_is_not_rate_limited(self):
+        """Test that 403 without Retry-After is not rate limited (plain forbidden)."""
+        response = MagicMock()
+        response.status_code = 403
         response.headers = {}
         assert http._is_rate_limited(response) is False
 
