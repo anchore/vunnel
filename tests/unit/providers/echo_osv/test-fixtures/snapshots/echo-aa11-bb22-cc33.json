@@ -1,0 +1,56 @@
+{
+  "identifier": "echo-aa11-bb22-cc33",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "Echo:PyPi",
+          "name": "requests",
+          "purl": "pkg:pypi/requests"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-01-01",
+                    "kind": "first-observed",
+                    "version": "2.31.0+echo.1"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "2.0.0"
+              },
+              {
+                "fixed": "2.31.0+echo.1"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2025-99999"
+    ],
+    "database_specific": {
+      "anchore": {
+        "record_type": "advisory"
+      }
+    },
+    "id": "ECHO-aa11-bb22-cc33",
+    "modified": "2026-01-15T10:00:00.000Z",
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://advisory.echohq.com/cve/CVE-2025-99999"
+      }
+    ],
+    "schema_version": "1.7.5"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.5.json"
+}
