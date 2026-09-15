@@ -13,6 +13,7 @@ The mapping mirrors v3's `map_parsed` behavior on equivalent inputs:
   severity[type=Ubuntu]→ Vulnerability.Severity  (Negligible/Low/Medium/High/Critical, or Unknown)
   affected[].package.name → FixedIn.Name (one FixedIn per source package per ecosystem slice)
   ranges[].events[].fixed → FixedIn.Version (the dpkg fix version)
+  status=not-affected              → FixedIn.Version="0", VendorAdvisory.NoAdvisory=False
   no fixed event + status=wont-fix → FixedIn.Version="None", VendorAdvisory.NoAdvisory=True
   no fixed event, no wont-fix      → FixedIn.Version="None", VendorAdvisory.NoAdvisory=False
   database_specific.anchore.fixes[0] → FixedIn.Available (Date/Kind)
@@ -53,6 +54,21 @@ _BASE_ECO_RE = re.compile(r"^Ubuntu:(\d+\.\d+)(?::LTS)?$")
 _PLAIN_PRO_ECO_RE = re.compile(r"^Ubuntu:Pro:(\d+\.\d+)(?::LTS)?$")
 
 _ESM_SUFFIX = "+esm"
+
+# `database_specific.anchore.status` values the emit path stamps on an affected[]
+# entry, read back here. Both are judgements made at yield time from the cached
+# VEX statements, never written into a fragment.
+ANCHORE_STATUS_WONT_FIX = "wont-fix"
+ANCHORE_STATUS_NOT_AFFECTED = "not-affected"
+
+# What "this package is not vulnerable" is spelled as in the OS schema, and the
+# reason it is spelled exactly this way: the consumer treats a package group
+# whose every FixedIn version is the single character `0` as an unaffected
+# package that cancels findings from other sources, and falls back to a
+# `< 0` version constraint the moment one entry in the group is anything else.
+# So a `"0"` has to be the only FixedIn its package has in a record, with no
+# whitespace and no epoch.
+NOT_AFFECTED_VERSION = "0"
 
 # v3 severity values, mirroring parser_legacy.Severity.json() output.
 _SEVERITY_NAMES = {"Negligible", "Low", "Medium", "High", "Critical", "Unknown"}
@@ -109,9 +125,47 @@ def _extract_severity(payload: dict[str, Any]) -> str:
     return "Unknown"
 
 
-def _is_wont_fix(aff: dict[str, Any]) -> bool:
+def _anchore_status(aff: dict[str, Any]) -> str | None:
     anchore = (aff.get("database_specific") or {}).get("anchore") or {}
-    return anchore.get("status") == "wont-fix"
+    status = anchore.get("status")
+    return status if isinstance(status, str) else None
+
+
+def _is_wont_fix(aff: dict[str, Any]) -> bool:
+    return _anchore_status(aff) == ANCHORE_STATUS_WONT_FIX
+
+
+def _is_not_affected(aff: dict[str, Any]) -> bool:
+    return _anchore_status(aff) == ANCHORE_STATUS_NOT_AFFECTED
+
+
+# How Canonical passes on the CVE program's own retraction. All three openings
+# appear in today's feed; matching only the first leaves the majority asserted.
+# Matched case-insensitively with leading whitespace tolerated, so a
+# reformatting upstream does not silently re-admit rejected records.
+_REJECTION_PREFIXES: tuple[str, ...] = (
+    "** reject **",
+    "** disputed **",
+    "rejected reason:",
+)
+
+
+def is_cve_program_rejection(payload: dict[str, Any]) -> bool:
+    """Has the CVE program determined this is not a security issue?
+
+    A rejected CVE would be a knowingly false finding, so it is not emitted.
+    This is the one class of withdrawn record that is a genuine retraction —
+    Canonical otherwise sets `withdrawn` to mean "this record will not be
+    regenerated again", not "this finding was wrong" — and the `details` prose
+    is the only signal published that separates the two.
+
+    Not every rejected record is withdrawn: the `Rejected reason:` form appears
+    on records carrying no `withdrawn` timestamp at all.
+    """
+    details = payload.get("details")
+    if not isinstance(details, str):
+        return False
+    return details.lstrip().lower().startswith(_REJECTION_PREFIXES)
 
 
 def _fixed_versions_for_affected(aff: dict[str, Any]) -> list[str]:
@@ -153,6 +207,10 @@ def _fixed_in_for_affected(aff: dict[str, Any], namespace: str) -> list[dict[str
 
     Encoding rules (mirroring v3):
 
+      - not-affected (status=not-affected, asserted by a VEX statement at any
+        token of this release), which is read before the fix events
+          -> FixedIn(Version="0", NoAdvisory=False), and nothing else for the
+             package: the caller replaces the entry rather than adding to it
       - released-with-version (one or more `fixed` events)
           -> FixedIn(Version=<v>, NoAdvisory=False, Available=<date if known>)
       - wont-fix (no fixed events, status=wont-fix from VEX overlay or
@@ -164,11 +222,34 @@ def _fixed_in_for_affected(aff: dict[str, Any], namespace: str) -> list[dict[str
     Exception: on a `+esm` channel a no-fix entry yields nothing. That channel
     carries only real Pro fixes; the unfixed disclosure already lives on the
     base `ubuntu:X.YY` record, so a `Version="None"` +esm entry would just
-    duplicate it.
+    duplicate it. A negative assertion is the base release's to make for the
+    same reason, so it yields nothing there either.
     """
     package_name = (aff.get("package") or {}).get("name")
     if not package_name:
         return []
+
+    # The clearance is read before the fix events on purpose. Canonical's OSV
+    # generator re-encodes a tracker `not-affected (<version>)` row as a range
+    # fixed at that version, byte-identical to a real fix, so an entry can carry
+    # both a fix event and a clearance — and the clearance is the one that says
+    # what the vulnerable code does. Reading the events first let the encoding
+    # win and put the package back below a boundary it was never under.
+    if _is_not_affected(aff):
+        if namespace.endswith(_ESM_SUFFIX):
+            # the channel carries fix versions only; the clearance belongs to the
+            # base release's record
+            return []
+        return [
+            {
+                "Name": package_name,
+                "NamespaceName": namespace,
+                "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
+                "Version": NOT_AFFECTED_VERSION,
+                "VendorAdvisory": {"NoAdvisory": False},
+                "Available": None,
+            },
+        ]
 
     fixed_versions = _fixed_versions_for_affected(aff)
     if not fixed_versions and namespace.endswith(_ESM_SUFFIX):
@@ -210,9 +291,11 @@ def osv_to_os(payload: dict[str, Any], include_esm: bool = True) -> dict[str, An
     Caller is responsible for choosing the identifier and schema. This
     function just produces the payload.
     """
-    # Withdrawn records are retractions; the OS schema has no withdrawn concept,
-    # so drop them rather than emit an affected-at-all-versions record.
-    if payload.get("withdrawn"):
+    # A `withdrawn` timestamp is NOT a retraction here: Canonical sets it to mark
+    # a record it will not regenerate again, and the majority of withdrawn
+    # records still carry released fix versions, concentrated on releases in
+    # extended support. Only a CVE-program rejection is a real retraction.
+    if is_cve_program_rejection(payload):
         return None
 
     upstream = payload.get("upstream") or []
