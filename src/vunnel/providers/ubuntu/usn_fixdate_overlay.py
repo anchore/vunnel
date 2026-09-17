@@ -16,18 +16,16 @@ overall; plain-Pro tier coverage is 88-100% (the regime the v3-to-OSV cutover
 most needs to backfill). FIPS/Realtime/Nvidia tiers have low USN coverage
 (those tiers don't ship via USN); they fall through to first-observed.
 
-The overlay is read-only — built once per run by streaming the same OSV
-tarball the fragment writer reads. ~150k tuples, ~50 MB in-memory dict.
+The overlay is read-only — built once per run, out of the same single pass
+over the OSV tarball that distils the CVE records. ~150k tuples, ~50 MB
+in-memory dict.
 """
 
 from __future__ import annotations
 
 import logging
-import tarfile
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
-
-import orjson
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -42,48 +40,24 @@ class USNFixDateOverlay:
     a follow-up USN (e.g. USN-X-2 supersedes USN-X-1 with a regression fix
     at the same version). The first one is the actual fix-ship date.
 
-    Build by streaming the OSV tarball — same archive the fragment writer
-    reads — and walking `osv/usn/**/*.json` records. Each USN's top-level
-    `published` field is the authoritative fix-ship date; we associate it
-    with every (eco, src-pkg, fixed-ver) tuple in the USN's `affected[]`.
+    Built from the `osv/usn/**/*.json` records the archive pass hands over.
+    Each USN's top-level `published` field is the authoritative fix-ship date;
+    we associate it with every (eco, src-pkg, fixed-ver) tuple in the USN's
+    `affected[]`.
     """
 
     def __init__(self, logger: logging.Logger | None = None):
         self._index: dict[tuple[str, str, str], date] = {}
         self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
-        self._built = False
 
-    @classmethod
-    def from_archive(cls, archive_path: str, logger: logging.Logger | None = None) -> USNFixDateOverlay:
-        ov = cls(logger=logger)
-        ov.build_from_archive(archive_path)
-        return ov
+    def ingest_record(self, record: dict[str, Any]) -> None:
+        """Index one `osv/usn/**` record, as the pass reading the archive hands it over.
 
-    def build_from_archive(self, archive_path: str) -> None:
-        """Stream the OSV tarball and index every USN's fix-ship dates."""
-        self.logger.info(f"building USN fix-date overlay from {archive_path}")
-        with tarfile.open(archive_path, mode="r:xz") as tar:
-            self._ingest_members(tar)
-        self._built = True
-        self.logger.info(f"USN fix-date overlay built: {len(self._index)} (eco, pkg, ver) tuples")
-
-    def _ingest_members(self, tar: tarfile.TarFile) -> None:
-        for member in tar:
-            if not member.isfile():
-                continue
-            if not (member.name.startswith("osv/usn/") and member.name.endswith(".json")):
-                continue
-            fh = tar.extractfile(member)
-            if fh is None:
-                continue
-            try:
-                record = orjson.loads(fh.read())
-            except orjson.JSONDecodeError:
-                self.logger.warning(f"failed to parse USN record {member.name}")
-                continue
-            self._ingest_record(record)
-
-    def _ingest_record(self, record: dict[str, Any]) -> None:
+        The overlay does not open the archive itself: the same streaming pass
+        that distils the CVE records walks it once and hands the USN members
+        here, because a single-block xz stream costs a full decompression per
+        traversal and one is enough.
+        """
         pub_raw = record.get("published")
         if not pub_raw:
             return
