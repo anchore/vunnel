@@ -85,7 +85,7 @@ class Parser:
     ):
         self.workspace = workspace
         if not fixdater:
-            fixdater = fixdate.default_finder(workspace)
+            fixdater = fixdate.default_finder(workspace, skip_download=skip_download)
         self.fixdater = fixdater
         self.cve_dir_path = os.path.join(workspace.input_path, self.__cve_dir_name__)
         self.rhsa_dir_path = os.path.join(workspace.input_path, self.__rhsa_dir_name__)
@@ -259,11 +259,6 @@ class Parser:
         )
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__last_synced_filename__))
         utils.silent_remove(os.path.join(self.cve_dir_path, self.__cve_download_error_filename__))
-
-        if self.skip_download:
-            self.logger.warning("skip download requested, but fix date finder does not support skipping download")
-        else:
-            self.fixdater.download()
 
         count = self._download_minimal_cve_pages()
 
@@ -1046,6 +1041,8 @@ class Parser:
             self._init_rhsa_data(skip_if_exists=skip_if_exists)
 
             full_dir = os.path.join(self.cve_dir_path, self.__full_dir_name__)
+            # prepare fix dates even when skipping: the finder honors its skip_download flag
+            self.fixdater.download()
             if not self.skip_download:
                 # download cves
                 self._sync_cves(skip_if_exists)

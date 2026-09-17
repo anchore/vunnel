@@ -62,7 +62,7 @@ class Parser:
         self.urls: list[str] = []
         self.user_agent = user_agent
         if not fixdater:
-            fixdater = fixdate.default_finder(workspace)
+            fixdater = fixdate.default_finder(workspace, skip_download=config.runtime.skip_download)
         self.fixdater = fixdater
 
     def __enter__(self) -> Parser:

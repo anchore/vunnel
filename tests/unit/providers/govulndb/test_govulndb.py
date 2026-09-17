@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import orjson
 import pytest
@@ -397,3 +397,13 @@ def test_provider_skip_download(helpers, auto_fake_fixdate_finder, monkeypatch):
     p.update(None)
 
     assert workspace.num_result_entries() == 2
+
+
+def test_parser_default_finder_gets_skip_download(monkeypatch, helpers):
+    default_finder = MagicMock()
+    monkeypatch.setattr("vunnel.providers.govulndb.parser.fixdate.default_finder", default_finder)
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    Parser(ws=workspace, logger=None, skip_download=True)
+
+    default_finder.assert_called_once_with(workspace, skip_download=True)

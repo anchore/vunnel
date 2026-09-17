@@ -62,6 +62,14 @@ class Strategy(abc.ABC):
             "Strategy subclasses must implement the download method to fetch data.",
         )
 
+    def skip_download(self) -> None:  # noqa: B027  # deliberately optional, not every strategy needs the bookkeeping
+        """Record that the caller deliberately skipped the download.
+
+        Callers that honor a skip-download flag must call this instead of download(): it makes
+        no network request, but leaves the strategy willing to serve lookups from whatever data
+        is already on disk. Strategies that need no such bookkeeping can leave this as a no-op.
+        """
+
     @abc.abstractmethod
     def find(
         self,
@@ -82,8 +90,9 @@ class Strategy(abc.ABC):
 
 
 class Finder:
-    def __init__(self, strategies: list[Strategy], first_observed: Strategy, cache_size: int = 10000):
+    def __init__(self, strategies: list[Strategy], first_observed: Strategy, cache_size: int = 10000, skip_download: bool = False):
         self.strategies = strategies
+        self._skip_download = skip_download
         self.first_observed = first_observed
         # Create cached version of database lookups
         self._cached_find_from_strategies = functools.lru_cache(maxsize=cache_size)(self._find_from_strategies_uncached)
@@ -102,6 +111,11 @@ class Finder:
         self._cached_find_from_strategies.cache_clear()
 
     def download(self) -> None:
+        if self._skip_download:
+            self.first_observed.skip_download()
+            for s in self.strategies:
+                s.skip_download()
+            return
         self.first_observed.download()
         for s in self.strategies:
             s.download()

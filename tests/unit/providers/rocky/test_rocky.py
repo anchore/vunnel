@@ -7,6 +7,8 @@ from vunnel import result
 from vunnel.providers.rocky import Config, Provider
 from vunnel.providers.rocky.parser import Parser
 from vunnel.providers.rocky.client import Client
+from vunnel.tool.fixdate.finder import Finder
+from tests.conftest import FakeLocalStrategy
 
 
 @patch("vunnel.providers.rocky.client.Client._download")
@@ -93,3 +95,27 @@ def test_client(mock_http_get, helpers, auto_fake_fixdate_finder):
         mock.call(f"{mock_host}/api/v3/osv/?page=2", logger)
     ]
     mock_http_get.assert_has_calls(expected_calls)
+
+
+def test_parser_skip_download_with_local_fix_dates(helpers, auto_fake_fixdate_finder):
+    # a real Finder in skip mode over a strategy that raises "has not been downloaded" until prepared
+    strategy = FakeLocalStrategy()
+    finder = Finder(strategies=[], first_observed=strategy, skip_download=True)
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    shutil.copytree(helpers.local_dir("test-fixtures"), workspace.input_dir, dirs_exist_ok=True)
+    parser = Parser(ws=workspace, fixdater=finder, skip_download=True)
+
+    with parser:
+        assert len(list(parser.get())) == 3
+
+    assert strategy.ready
+
+
+def test_parser_default_finder_gets_skip_download(monkeypatch, helpers):
+    default_finder = MagicMock()
+    monkeypatch.setattr("vunnel.providers.rocky.parser.fixdate.default_finder", default_finder)
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    Parser(ws=workspace, skip_download=True)
+
+    default_finder.assert_called_once_with(workspace, skip_download=True)
