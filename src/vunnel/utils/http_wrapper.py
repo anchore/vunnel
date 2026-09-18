@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import os
 import random
 import threading
 import time
@@ -314,3 +316,86 @@ def backoff_sleep_interval(interval: int, attempt: int, max_value: None | int = 
         val += random.uniform(0, 1)  # noqa: S311
         # explanation of S311 disable: rng is not used cryptographically
     return val
+
+
+# ---------------------------------------------------------------------------
+# file downloads
+# ---------------------------------------------------------------------------
+
+DEFAULT_CHUNK_SIZE = 65536  # 64k
+
+
+def download_to_file(  # noqa: PLR0913
+    url: str,
+    dest: str | os.PathLike[str],
+    logger: logging.Logger,
+    *,
+    retries: int = 5,
+    backoff_in_seconds: int = 3,
+    timeout: int = DEFAULT_TIMEOUT,
+    max_interval: int = 600,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    **kwargs: Any,
+) -> requests.Response:
+    """Download `url` to `dest`, retrying the whole transfer.
+
+    `get(..., stream=True)` returns once the response headers arrive, so its retry loop
+    only ever covered connect, TLS and status: the body was drained by the caller,
+    outside the loop, and a connection dropped mid-body got no retries at all. Here the
+    body is drained *inside* the loop, which is the difference between `retries=5` being
+    a guarantee and being decoration.
+
+    Bytes land in a sibling `.part` file and are renamed onto `dest` only once the
+    transfer finishes, so a failed run cannot leave a partial file where the next run
+    expects a whole one. The rename is within one directory, and so never crosses a
+    filesystem.
+
+    Returns the response, whose body has already been drained to `dest`; it is useful
+    only for its headers and status.
+
+    Raises:
+        Re-raises the last attempt's exception once retries are exhausted.
+    """
+    dest = os.fspath(dest)
+    parent = os.path.dirname(dest)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    partial = dest + ".part"
+
+    last_exception: Exception | None = None
+
+    for attempt in range(retries + 1):
+        if last_exception:
+            sleep_interval = backoff_sleep_interval(backoff_in_seconds, attempt - 1, max_value=max_interval)
+            logger.warning(f"will retry in {int(sleep_interval)} seconds...")
+            time.sleep(sleep_interval)
+
+        try:
+            # retries=0: this loop owns retrying, so that a failure while reading the
+            # body is retried just like a failure while connecting
+            with (
+                get(url, logger, retries=0, timeout=timeout, stream=True, **kwargs) as response,
+                open(partial, "wb") as fh,
+            ):
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        fh.write(chunk)
+                # the rename must not publish a file the OS still holds in a write buffer
+                fh.flush()
+                os.fsync(fh.fileno())
+
+            os.replace(partial, dest)
+            logger.info(f"downloaded {url} to {dest}")
+            return response
+
+        except Exception as e:
+            last_exception = e
+            logger.warning(f"attempt {attempt + 1} of {retries + 1} failed downloading {url}: {e}")
+
+    with contextlib.suppress(OSError):
+        os.remove(partial)
+
+    if last_exception:
+        logger.error(f"giving up on {url}: {last_exception}")
+        raise last_exception
+    raise Exception("unreachable")

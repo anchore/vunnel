@@ -96,10 +96,7 @@ class CSAFClient:
         return os.path.join(self.workspace.input_path, "deletions.csv")
 
     def _download_stream(self, url: str, path: str) -> None:
-        with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
-            for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
-                if chunk:
-                    fh.write(chunk)
+        http.download_to_file(url, path, self.logger)
 
     def process_changes_and_deletions(self) -> None:
         """process the changes and deletions. deletions.csv is the list of CSAF JSON
