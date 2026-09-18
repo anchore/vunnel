@@ -1,22 +1,21 @@
-"""Resolve authoritative release dates for Go module/stdlib versions, used as
-an accurate fix-availability date source for the go.dev OSV records.
+"""Release dates for the Go versions the go.dev OSV records name as fixed.
 
-go.dev's OSV records carry no per-fix date, and the advisory's own `published`
-field is a disclosure timestamp, not a fix-ship date. But for Go the fix
-*version* is enough to recover the real fix date, because every published Go
-artifact has a knowable release date:
+go.dev's records carry no per-fix date, and their `published` field is a
+disclosure timestamp rather than a fix-ship date. But for Go the fix *version*
+names a published artifact whose release date is knowable:
 
-- **Modules** (incl. the extended stdlib `golang.org/x/...` and third-party
-  modules like `google.golang.org/protobuf`): the Go module proxy exposes the
-  tag date per version at `.../@v/v<version>.info` -> `.Time`. This is the git
-  tag time of the release, which is the moment the fixed version became
-  available. It is authoritative and covers every module version.
+- stdlib/toolchain: golang/go release tags. When a release shipped never
+  changes, so everything already out is served from the committed
+  `go_release_dates_data` table; only newer releases reach go.googlesource.com.
+- extended stdlib (`golang.org/x/...`): the module proxy's `.info` -> `.Time`,
+  the tag time of the release.
 
-- **stdlib / toolchain** (module name `stdlib` or `toolchain`, fixed versions
-  like `1.21.5`): the toolchain isn't a proxy module in a useful form, so we
-  read the `go<version>` tag commit date from the golang/go git mirror at
-  go.googlesource.com. Spot-check: `go1.21.5` -> 2023-12-05, the real release
-  day.
+Third-party modules are deliberately not resolved. Grype's
+`db/v6/build/govulndb_merge.go` drops any GO affected package that an aliased
+GHSA also names, and lets the GHSA's ranges win on the rest, so their dates get
+computed and then discarded -- 3,275 of 3,375 proxy lookups, ~9 minutes a run.
+They fall back to the advisory's published date instead. `stdlib` is the one
+module no GHSA names, so it always survives the merge.
 """
 
 from __future__ import annotations
@@ -27,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.providers.govulndb.go_release_dates_data import GO_RELEASE_DATES
 from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
@@ -39,9 +39,12 @@ if TYPE_CHECKING:
 MODULE_PROXY_URL = "https://proxy.golang.org"
 GO_GIT_URL = "https://go.googlesource.com/go"
 
-# module names in the go vuln db that map to Go toolchain release tags rather
-# than proxy module versions
+# these map to Go toolchain release tags, not proxy module versions
 STDLIB_MODULES = {"stdlib", "toolchain"}
+
+# the extended stdlib; unlike the toolchain these are ordinary proxy modules
+EXTENDED_STDLIB_PREFIX = "golang.org/x/"
+
 USER_AGENT = "vunnel/1.0 (govulndb-provider; +https://github.com/anchore/vunnel)"
 
 
@@ -50,11 +53,10 @@ class GoReleaseDateLookupError(RuntimeError):
 
 
 class GoReleaseDateOverlay:
-    """`(module, version) -> release date` resolver backed by the Go module
-    proxy (modules) and the golang/go git mirror (stdlib/toolchain).
+    """`(module, version) -> release date`, memoized by request URL.
 
-    Results are memoized, negatives included, so repeated lookups for the same
-    tuple never re-hit the network.
+    Keying on the URL rather than `(module, version)` collapses `stdlib` and
+    `toolchain`, which share a release tag. Negatives are cached too.
     """
 
     def __init__(
@@ -64,7 +66,7 @@ class GoReleaseDateOverlay:
         retries: int = 3,
         backoff_in_seconds: int = 3,
     ):
-        self._cache: dict[tuple[str, str], date | None] = {}
+        self._cache: dict[str, date | None] = {}
         self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
         self.timeout = timeout
         self.retries = retries
@@ -72,36 +74,29 @@ class GoReleaseDateOverlay:
 
     def lookup(self, module: str, version: str) -> date | None:
         """Return the release date for a Go (module, version), or None on miss."""
-        if not module or not version:
+        if not module or not version or not is_go_maintained(module):
             return None
 
-        key = (module, version)
-        if key in self._cache:
-            return self._cache[key]
+        stdlib = module in STDLIB_MODULES
 
-        result = self._lookup_stdlib(version) if module in STDLIB_MODULES else self._lookup_module(module, version)
+        if stdlib:
+            tag = _stdlib_version_to_tag(version)
+            released = GO_RELEASE_DATES.get(tag)
+            if released:
+                return date.fromisoformat(released)
+            self.logger.debug(f"{tag} is not in the committed go release-date table, falling back to {GO_GIT_URL}")
+            url = _stdlib_tag_url(tag)
+        else:
+            url = _module_info_url(module, version)
 
-        self._cache[key] = result
+        if url in self._cache:
+            return self._cache[url]
+
+        payload = self._get_gitiles_json(url) if stdlib else self._get_json(url)
+        result = _stdlib_release_date(payload) if stdlib else _module_release_date(payload)
+
+        self._cache[url] = result
         return result
-
-    def _lookup_module(self, module: str, version: str) -> date | None:
-        escaped = _escape_module_path(module)
-        v = version if version.startswith("v") else f"v{version}"
-        url = f"{MODULE_PROXY_URL}/{escaped}/@v/{v}.info"
-        payload = self._get_json(url)
-        if not payload:
-            return None
-        return _parse_iso_date(payload.get("Time"))
-
-    def _lookup_stdlib(self, version: str) -> date | None:
-        tag = _stdlib_version_to_tag(version)
-        url = f"{GO_GIT_URL}/+/refs/tags/{tag}?format=JSON"
-        payload = self._get_gitiles_json(url)
-        if not payload:
-            return None
-        # committer time is the release commit on the release branch
-        committer = payload.get("committer") or payload.get("author") or {}
-        return _parse_gitiles_time(committer.get("time"))
 
     def _get_json(self, url: str) -> dict[str, Any] | None:
         resp = self._get(url)
@@ -127,8 +122,7 @@ class GoReleaseDateOverlay:
 
     def _get(self, url: str) -> requests.Response | None:
         try:
-            # treat 404/410 as an ordinary miss (unknown version) rather than an
-            # error to retry on; only real failures should retry/raise
+            # 404/410 mean unknown version, not a failure worth retrying
             return http.get(
                 url,
                 self.logger,
@@ -142,29 +136,64 @@ class GoReleaseDateOverlay:
             raise GoReleaseDateLookupError(f"go release-date lookup failed for {url}: {e}") from e
 
 
+def is_go_maintained(module: str) -> bool:
+    """The toolchain/stdlib and extended stdlib -- the modules whose dates survive the merge downstream."""
+    return module in STDLIB_MODULES or module.startswith(EXTENDED_STDLIB_PREFIX)
+
+
+def _module_info_url(module: str, version: str) -> str:
+    v = version if version.startswith("v") else f"v{version}"
+    return f"{MODULE_PROXY_URL}/{_escape_module_path(module)}/@v/{v}.info"
+
+
+def _stdlib_tag_url(tag: str) -> str:
+    return f"{GO_GIT_URL}/+/refs/tags/{tag}?format=JSON"
+
+
+def _module_release_date(payload: dict[str, Any] | None) -> date | None:
+    if not payload:
+        return None
+    return _parse_iso_date(payload.get("Time"))
+
+
+def _stdlib_release_date(payload: dict[str, Any] | None) -> date | None:
+    if not payload:
+        return None
+    # committer time is the release commit on the release branch
+    committer = payload.get("committer") or payload.get("author") or {}
+    return _parse_gitiles_time(committer.get("time"))
+
+
 def _stdlib_version_to_tag(version: str) -> str:
     """Map a go vuln db stdlib version to its golang/go release tag.
 
-    Point releases map straight across (`1.25.13` -> `go1.25.13`,
-    `1.27.0` -> `go1.27.0`). Prereleases use the toolchain's compact tag form:
-    the trailing `.0` patch is dropped and the prerelease loses its dots, so
-    `1.27.0-rc.3` -> `go1.27rc3` and `1.20.0-beta.1` -> `go1.20beta1`. The go
-    vuln db lists these RCs as fixed versions because an upcoming minor's RC is
-    often the first shipped artifact carrying a fix.
+    Prereleases use the toolchain's compact form (`1.27.0-rc.3` -> `go1.27rc3`);
+    the go vuln db lists them because an upcoming minor's RC is often the first
+    artifact carrying a fix. Releases drop the `.0` only below 1.21 -- Go tagged
+    the 1.20 series `go1.20`, `go1.20.1`, ... and only started tagging `goX.Y.0`
+    at `go1.21.0`.
     """
     v = version[2:] if version.startswith("go") else version
     if "-" in v:
         base, pre = v.split("-", 1)
-        base = base.removesuffix(".0")
-        pre = pre.replace(".", "")
-        return f"go{base}{pre}"
-    return f"go{v}"
+        return f"go{base.removesuffix('.0')}{pre.replace('.', '')}"
+    return f"go{_release_tag_body(v)}"
+
+
+def _release_tag_body(version: str) -> str:
+    """`1.20.0` -> `1.20`, but leave `1.21.0` and later alone (see _stdlib_version_to_tag)."""
+    base = version.removesuffix(".0")
+    if base == version:
+        return version
+    try:
+        major, minor = (int(part) for part in base.split(".", 1))
+    except ValueError:
+        return version
+    return base if (major, minor) < (1, 21) else version
 
 
 def _escape_module_path(module: str) -> str:
-    """Escape a module path for the module proxy: uppercase letters become
-    `!` + lowercase (e.g. `github.com/Azure/...` -> `github.com/!azure/...`).
-    """
+    """Module proxy path escaping: uppercase becomes `!` + lowercase."""
     return "".join(f"!{c.lower()}" if c.isupper() else c for c in module)
 
 
@@ -196,10 +225,8 @@ def go_extra_candidates(
 ) -> Callable[[str, str, str, str | None], list[_fixdate.Result]] | None:
     """Build the extra-candidates callable for osv.patch_fix_date.
 
-    Returns a function with the signature patch_fix_date expects
-    (vuln_id, package_name, fix_version, ecosystem) -> list[Result]. The
-    release-date candidate is marked accurate=True so it wins against
-    first-observed and the advisory's low-confidence published date.
+    accurate=True so the release date wins against first-observed and the
+    advisory's low-confidence published date.
     """
     if overlay is None:
         return None

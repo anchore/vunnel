@@ -111,11 +111,9 @@ class Parser:
             self._download()
             self._extract()
 
-        # go.dev's OSV records carry no per-fix date; patch in database_specific.anchore.fixes
-        # so the grype OSV transformer's existing fix-availability path picks them up. The Go
-        # fix *version* is enough to recover the real fix date: go_extra_candidates resolves the
-        # module/stdlib release date (accurate=True) so it wins over the advisory's low-confidence
-        # published date and the first-observed fallback (pinned to this provider's turn-up date).
+        # go.dev's OSV records carry no per-fix date, so patch database_specific.anchore.fixes
+        # for the grype OSV transformer. The Go release date is accurate=True, beating the
+        # advisory's published date and the first-observed fallback. See go_release_dates.
         self.fixdater.download()
         extra_candidates = go_extra_candidates(self.release_dates)
 
