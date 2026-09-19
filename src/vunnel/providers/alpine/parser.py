@@ -171,12 +171,8 @@ class Parser:
                         download_url = "/".join([self.metadata_url, rel, file_name])
 
                         self.logger.info(f"Downloading secdb {rel} {db_type}")
-                        r = self._download_url(download_url)
-
                         file_path = os.path.join(rel_dir, file_name)
-                        with open(file_path, "wb") as fp:
-                            for chunk in r.iter_content():
-                                fp.write(chunk)
+                        self._download_url(download_url, file_path)
 
                 except KeyboardInterrupt:
                     raise
@@ -186,9 +182,9 @@ class Parser:
     def _download_metadata_url(self) -> requests.Response:
         return http.get(self.metadata_url, self.logger, timeout=self.download_timeout)
 
-    def _download_url(self, url) -> requests.Response:
+    def _download_url(self, url: str, path: str) -> None:
         self._urls.add(url)
-        return http.get(url, self.logger, stream=True, timeout=self.download_timeout)
+        http.download_to_file(url, path, self.logger, timeout=self.download_timeout)
 
     def _load(self):
         """

@@ -358,12 +358,8 @@ def _fetch_listing_entry_archive(dest: str, entry: distribution.ListingEntry, lo
     archive_path = os.path.join(dest, os.path.basename(urlparse(entry.url, allow_fragments=False).path))
 
     # download the URL for the archive
-    resp = http.get(entry.url, logger=logger, stream=True)
-    resp.raise_for_status()
     logger.debug(f"downloading {entry.url} to {archive_path}")
-    with open(archive_path, "wb") as fp:
-        for chunk in resp.iter_content(chunk_size=None):
-            fp.write(chunk)
+    http.download_to_file(entry.url, archive_path, logger)
 
     logger.debug(f"validating checksum for {archive_path}")
     hashMethod = hasher.Method.parse(entry.distribution_checksum)
