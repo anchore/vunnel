@@ -190,6 +190,19 @@ class TestStrayFileCleanup:
         assert not os.path.exists(os.path.join(ws.input_path, "leaked-archive.tar.zst"))
         assert not os.path.exists(os.path.join(ws.input_path, "advisories.tmp"))
 
+    def test_stray_partial_downloads_removed(self, tmp_path):
+        # a killed process skips download_to_file's own .part cleanup; nothing else in
+        # this provider's flow removes a stray .part left under advisories/<year>/, so
+        # _remove_stray_files must catch it directly (skip_download avoids the full sync,
+        # whose own archive rmtree would otherwise mask whether this swept it)
+        ws = FakeWorkspace(tmp_path)
+        stray = write_input(ws, "advisories/2025/cve-2025-0001.json.part", "half-written")
+        client = CSAFVEXClient(workspace=ws, logger=logging.getLogger("test"), latest_url=FEED_URL, skip_download=True)
+
+        client._remove_stray_files()
+
+        assert not os.path.exists(stray)
+
     def test_legacy_state_files_removed(self, tmp_path, monkeypatch):
         # timestamp files from the previous incremental flow linger in cached
         # workspaces; they must be scrubbed so they don't persist forever

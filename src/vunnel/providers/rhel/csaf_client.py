@@ -153,6 +153,14 @@ class CSAFClient:
         archive_path = self._local_archive_path()
         if not os.path.exists(self.advisories_path):
             os.makedirs(self.advisories_path, exist_ok=True)
+
+        # download_to_file only cleans up its own .part staging file when its own retry loop
+        # exhausts; a killed process (OOM, SIGKILL) skips that, so sweep for leftovers here too
+        for part_file in glob.glob(os.path.join(self.advisories_path, "**", "*.part"), recursive=True):
+            self.logger.warning(f"removing stray partial download: {part_file}")
+            with contextlib.suppress(OSError):
+                os.remove(part_file)
+
         # if there's a new one, the paths won't match and we need to download it
         if not os.path.exists(archive_path):
             # we're going to download a new tarball, however, there could be existing archives already here (with different dates in the name).

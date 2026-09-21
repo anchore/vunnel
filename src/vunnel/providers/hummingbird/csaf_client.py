@@ -4,6 +4,7 @@ import concurrent.futures
 import contextlib
 import csv
 import email.utils
+import glob
 import os
 import shutil
 from datetime import UTC, datetime
@@ -127,6 +128,13 @@ class CSAFVEXClient:
         for name in LEGACY_STATE_FILES:
             with contextlib.suppress(FileNotFoundError):
                 os.remove(os.path.join(self.workspace.input_path, name))
+
+        # download_to_file only cleans up its own .part staging file when its own retry loop
+        # exhausts; a killed process (OOM, SIGKILL) skips that, so sweep for leftovers here too
+        for part_file in glob.glob(os.path.join(self.advisories_path, "**", "*.part"), recursive=True):
+            self.logger.warning(f"removing stray partial download: {part_file}")
+            with contextlib.suppress(OSError):
+                os.remove(part_file)
 
     def _advisories_tmp_path(self) -> str:
         return self.advisories_path + ".tmp"
