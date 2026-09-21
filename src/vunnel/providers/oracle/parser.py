@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bz2
+import contextlib
 import logging
 import os
 import re
@@ -92,10 +93,16 @@ class Parser:
             compressed_path = self.xml_file_path + ".bz2"
             http.download_to_file(self._url_, compressed_path, self.logger, timeout=self.download_timeout)
 
-            with open(compressed_path, "rb") as compressed, open(self.xml_file_path, "wb") as extracted:
-                decompressor = bz2.BZ2Decompressor()
-                for chunk in iter(lambda: compressed.read(65536), b""):
-                    extracted.write(decompressor.decompress(chunk))
+            try:
+                with open(compressed_path, "rb") as compressed, open(self.xml_file_path, "wb") as extracted:
+                    decompressor = bz2.BZ2Decompressor()
+                    for chunk in iter(lambda: compressed.read(65536), b""):
+                        extracted.write(decompressor.decompress(chunk))
+            finally:
+                # the compressed archive is only staging for the decompress step above; keep it from
+                # lingering in the workspace
+                with contextlib.suppress(OSError):
+                    os.remove(compressed_path)
 
         except Exception:
             self.logger.exception("error downloading ELSA file")

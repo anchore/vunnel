@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import bz2
+import os
 import shutil
+from types import SimpleNamespace
 
 import pytest
 from pytest_unordered import unordered
@@ -342,6 +345,29 @@ def test_parse_per_arch_fixed_in(tmpdir, helpers):
         ("0:110-1.el8", None),
         ("0:110-1.0.1.el8", None),
     }
+
+
+def test_download_removes_compressed_archive_after_decompression(tmpdir, monkeypatch):
+    # the compressed .bz2 is only staging for the decompress step; it must not linger in
+    # the workspace once the xml it decompresses to has been written
+    subject = parser.Parser(
+        workspace=workspace.Workspace(tmpdir, "test", create=True),
+        fixdater=SimpleNamespace(download=lambda: None),
+    )
+    payload = b"oracle elsa oval data" * 100
+    compressed = bz2.compress(payload)
+
+    def fake_download_to_file(url, dest, logger, **kwargs):
+        with open(dest, "wb") as fh:
+            fh.write(compressed)
+
+    monkeypatch.setattr(parser.http, "download_to_file", fake_download_to_file)
+
+    subject._download()
+
+    assert not os.path.exists(subject.xml_file_path + ".bz2")
+    with open(subject.xml_file_path, "rb") as fh:
+        assert fh.read() == payload
 
 
 class TestKspliceFilterer:
