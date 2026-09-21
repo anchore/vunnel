@@ -2274,5 +2274,3 @@ class TestProviderUpdate:
 
         assert ws.result_schemas_valid(require_entries=True)
         ws.assert_result_snapshots()
-
-
