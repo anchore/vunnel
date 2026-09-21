@@ -34,10 +34,14 @@ from vunnel.providers.ubuntu.vex_overlay import (
     NO_FIX,
     NOT_AFFECTED,
     WONT_FIX,
+    _is_wont_fix_action,
     canonical_token,
+    codename_of_token,
     distro_label_from_purl,
-    is_wont_fix_action,
+    pocket_of_token,
     source_package_from_purl,
+    token_asserts,
+    token_asserts_findings,
 )
 from vunnel.tool.fixdate.finder import Result
 from vunnel.utils import http_wrapper as http
@@ -417,7 +421,7 @@ class TestRowStore:
         with store as writing:
             writing.write("CVE-2024-1", {})
         assert store.get("CVE-2024-2") is None
-        assert "CVE-2024-1" in store
+        assert store.keys() == {"CVE-2024-1"}
         store.close()
 
     def test_a_read_inside_the_writing_context_sees_what_was_written(self, tmp_path):
@@ -739,23 +743,23 @@ class TestVEXHelpers:
         assert source_package_from_purl("not a purl") is None
 
     def test_is_wont_fix_action_matches_both_canonical_openings(self):
-        assert is_wont_fix_action(
+        assert _is_wont_fix_action(
             "This package (for the given release) is vulnerable to the CVE, the problem is understood, "
             "but the Ubuntu Security Team decided to not fix it.",
         )
-        assert is_wont_fix_action("This package (for the given release) is no longer supported.")
+        assert _is_wont_fix_action("This package (for the given release) is no longer supported.")
 
     def test_is_wont_fix_action_rejects_needs_fixing(self):
-        assert not is_wont_fix_action("This package (for the given release) needs fixing.")
-        assert not is_wont_fix_action(None)
-        assert not is_wont_fix_action("")
+        assert not _is_wont_fix_action("This package (for the given release) needs fixing.")
+        assert not _is_wont_fix_action(None)
+        assert not _is_wont_fix_action("")
 
 
 def _speaks_for(token: str) -> str | None:
     """The base ecosystem a token may assert into, by the two tables that decide it."""
-    if not vex_cache.token_asserts(token):
+    if not token_asserts(token):
         return None
-    version = parser_legacy.ubuntu_version_names.get(vex_cache.codename_of_token(token))
+    version = parser_legacy.ubuntu_version_names.get(codename_of_token(token))
     if version is None:
         return None
     return ReleaseIdentity(channel="Ubuntu", version=version).ecosystem
@@ -763,11 +767,11 @@ def _speaks_for(token: str) -> str | None:
 
 class TestVEXTokens:
     def test_codename_resolution_handles_both_token_shapes(self):
-        assert vex_cache.codename_of_token("focal") == "focal"
-        assert vex_cache.codename_of_token("esm-infra/focal") == "focal"
-        assert vex_cache.codename_of_token("fips-updates/xenial") == "xenial"
+        assert codename_of_token("focal") == "focal"
+        assert codename_of_token("esm-infra/focal") == "focal"
+        assert codename_of_token("fips-updates/xenial") == "xenial"
         # the pocket is on the other side here; taking the tail gives "esm"
-        assert vex_cache.codename_of_token("trusty/esm") == "trusty"
+        assert codename_of_token("trusty/esm") == "trusty"
 
     def test_the_two_spellings_of_the_oldest_esm_pocket_join(self):
         assert canonical_token("trusty/esm") == canonical_token("esm-infra-legacy/trusty")
@@ -806,10 +810,10 @@ class TestVEXTokens:
         # pockets may state anything about a release, and
         # `parser_legacy.ubuntu_version_names` resolves the codename to the
         # release itself.
-        assert vex_cache.pocket_of_token(token) == pocket
+        assert pocket_of_token(token) == pocket
         assert _speaks_for(token) == ecosystem
         # and only a release's own archive may put a finding in its namespace
-        assert vex_cache.token_asserts_findings(token) is (pocket == "")
+        assert token_asserts_findings(token) is (pocket == "")
 
     def test_each_status_becomes_the_disposition_it_means(self, fixture_dir):
         # CVE-2014-3566 carries every status Canonical publishes. At xenial it
@@ -850,7 +854,7 @@ class TestVEXTokens:
         products = [p["@id"] for s in document["statements"] for p in s["products"]]
         assert any("arch=amd64" in p for p in products), "fixture no longer carries a binary product"
         source_products = [p for p in products if "arch=source" in p]
-        assert len(list(vex_cache.distill(document))) == len(source_products)
+        assert len(list(vex_cache._distill(document))) == len(source_products)
 
 
 # ---------------------------------------------------------------------------

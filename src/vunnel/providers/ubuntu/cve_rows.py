@@ -113,9 +113,6 @@ class RowStore:
     def __len__(self) -> int:
         return len(self._offsets)
 
-    def __contains__(self, cve: str) -> bool:
-        return cve in self._offsets
-
     def get(self, cve: str) -> dict[str, Any] | None:
         """The row for one CVE, or None if the archive did not carry it."""
         location = self._offsets.get(cve)

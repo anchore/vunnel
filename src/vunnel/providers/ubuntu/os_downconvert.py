@@ -40,7 +40,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-UBUNTU_PKG_VERSION_FORMAT = "dpkg"
+_UBUNTU_PKG_VERSION_FORMAT = "dpkg"
 _UBUNTU_CVE_URL = "https://ubuntu.com/security/{}"
 
 _BASE_ECO_RE = re.compile(r"^Ubuntu:(\d+\.\d+)(?::LTS)?$")
@@ -57,7 +57,7 @@ _ESM_SUFFIX = "+esm"
 # `< 0` version constraint the moment one entry in the group is anything else.
 # So a `"0"` has to be the only FixedIn its package has in a record, with no
 # whitespace and no epoch.
-NOT_AFFECTED_VERSION = "0"
+_NOT_AFFECTED_VERSION = "0"
 
 # v3 severity values, mirroring parser_legacy.Severity.json() output.
 _SEVERITY_NAMES = {"Negligible", "Low", "Medium", "High", "Critical", "Unknown"}
@@ -241,8 +241,8 @@ def fixed_in_for(state: PackageState, namespace: str) -> list[dict[str, Any]]:
             {
                 "Name": state.package,
                 "NamespaceName": namespace,
-                "VersionFormat": UBUNTU_PKG_VERSION_FORMAT,
-                "Version": NOT_AFFECTED_VERSION,
+                "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
+                "Version": _NOT_AFFECTED_VERSION,
                 "VendorAdvisory": {"NoAdvisory": False},
                 "Available": None,
             },
@@ -253,7 +253,7 @@ def fixed_in_for(state: PackageState, namespace: str) -> list[dict[str, Any]]:
             {
                 "Name": state.package,
                 "NamespaceName": namespace,
-                "VersionFormat": UBUNTU_PKG_VERSION_FORMAT,
+                "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
                 "Version": version,
                 "VendorAdvisory": {"NoAdvisory": False},
                 "Available": state.available.get(version),
@@ -267,7 +267,7 @@ def fixed_in_for(state: PackageState, namespace: str) -> list[dict[str, Any]]:
         {
             "Name": state.package,
             "NamespaceName": namespace,
-            "VersionFormat": UBUNTU_PKG_VERSION_FORMAT,
+            "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
             "Version": "None",
             "VendorAdvisory": {"NoAdvisory": state.wont_fix},
             "Available": None,

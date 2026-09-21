@@ -39,8 +39,8 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
-from . import parser_legacy, vex_cache
-from .vex_overlay import NO_FIX, NOT_AFFECTED, WONT_FIX
+from . import parser_legacy
+from .vex_overlay import BASE_POCKET, NO_FIX, NOT_AFFECTED, WONT_FIX, codename_of_token, pocket_of_token, token_asserts
 
 if TYPE_CHECKING:
     import logging
@@ -50,8 +50,8 @@ if TYPE_CHECKING:
 # mean the same thing to the output and are not named individually.
 STATUS_DNE = "DNE"
 STATUS_RELEASED = "released"
-STATUS_IGNORED = "ignored"
-STATUS_NOT_AFFECTED = "not-affected"
+_STATUS_IGNORED = "ignored"
+_STATUS_NOT_AFFECTED = "not-affected"
 
 # Only files named for a CVE are read; the snapshot directory holds nothing else
 # today, and a stray file should not become a row.
@@ -80,9 +80,9 @@ def disposition_of_status(status: str) -> str | None:
     """
     if status == STATUS_DNE:
         return None
-    if status == STATUS_NOT_AFFECTED:
+    if status == _STATUS_NOT_AFFECTED:
         return NOT_AFFECTED
-    if status == STATUS_IGNORED:
+    if status == _STATUS_IGNORED:
         return WONT_FIX
     if status not in parser_legacy.patch_states:
         return None
@@ -124,7 +124,7 @@ def esm_clearances(cve_file: parser_legacy.CVEFile) -> set[tuple[str, str]]:
     fix version, this one is neither and stops where a version is already on
     record. See `Parser._apply_tracker_clearances`.
 
-    Which pockets count is `vex_cache`'s answer and not a second list kept here,
+    Which pockets count is `vex_overlay`'s answer and not a second list kept here,
     since it is the same claim. That is wider than the three prefixes
     `parser_legacy` hardcodes — it also reaches the `-legacy` spellings and
     `<codename>/esm` — and narrower in the way that matters, because `upstream`
@@ -135,12 +135,12 @@ def esm_clearances(cve_file: parser_legacy.CVEFile) -> set[tuple[str, str]]:
     """
     out: set[tuple[str, str]] = set()
     for ignored in cve_file.ignored_patches:
-        if not ignored.package or not ignored.distro or ignored.status != STATUS_NOT_AFFECTED:
+        if not ignored.package or not ignored.distro or ignored.status != _STATUS_NOT_AFFECTED:
             continue
         if ignored.version and ignored.version[:1].isdigit():
             continue
-        pocket = vex_cache.pocket_of_token(ignored.distro)
-        if pocket == vex_cache.BASE_POCKET or not vex_cache.token_asserts(ignored.distro):
+        pocket = pocket_of_token(ignored.distro)
+        if pocket == BASE_POCKET or not token_asserts(ignored.distro):
             continue
-        out.add((vex_cache.codename_of_token(ignored.distro), ignored.package))
+        out.add((codename_of_token(ignored.distro), ignored.package))
     return out

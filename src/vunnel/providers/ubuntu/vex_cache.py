@@ -1,4 +1,9 @@
-"""Reduce Canonical's OpenVEX feed to one row per CVE, and answer which pocket speaks for what.
+"""Reduce Canonical's OpenVEX feed to one row per CVE.
+
+Which pocket speaks for what is `vex_overlay`'s answer, not this module's: the
+pocket vocabulary (`pocket_of_token`, `codename_of_token`, `token_asserts`,
+`token_asserts_findings`) lives there next to `canonical_token`, since all four
+parse the same `<pocket>/<codename>` token grammar.
 
 Why the feed is read at all
 ---------------------------
@@ -46,96 +51,9 @@ from .vex_overlay import canonical_token, disposition_of, distro_label_from_purl
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-_ESM_SUFFIX = "esm"
-
-# The release's own archive, as `pocket_of_token` spells it.
-BASE_POCKET = ""
-
-
-def codename_of_token(token: str) -> str:
-    """The release codename a token names.
-
-    Tokens come in two shapes and the pocket is on a different side in each:
-
-      focal                    -> focal
-      esm-infra/focal          -> focal      (<pocket>/<codename>)
-      trusty/esm               -> trusty     (<codename>/esm)
-
-    Taking the tail resolves `trusty/esm` to `esm`, which
-    `parser_legacy.ubuntu_version_names` does not know, which reads as "this
-    token names no release" — right for trusty by accident and wrong in general.
-    """
-    head, sep, tail = token.partition("/")
-    if not sep:
-        return head
-    return head if tail == _ESM_SUFFIX else tail
-
-
-def pocket_of_token(token: str) -> str:
-    """The pocket a token names, or the empty string for a release's own archive.
-
-    The mirror of `codename_of_token`, and it has to read the same two shapes:
-
-      focal                    -> ""            (the release archive itself)
-      esm-infra/focal          -> esm-infra
-      trusty/esm               -> esm
-      fips-updates/focal       -> fips-updates
-      bluefield/noble          -> bluefield
-    """
-    head, sep, tail = token.partition("/")
-    if not sep:
-        return BASE_POCKET
-    return tail if tail == _ESM_SUFFIX else head
-
-
-# Which pockets may speak for a release's base namespace at all, and which of
-# them may put a finding there. The two are deliberately different sets.
-#
-# A clearance travels. `not_affected` / `vulnerable_code_not_present` is the
-# security team's researched conclusion that the vulnerable code is not in this
-# release's package, and the team that maintains the extended-support build of a
-# package is the same team maintaining the base one. Canonical publishes that
-# conclusion against whichever pocket it was doing the work for, and a base
-# release left saying nothing — or saying `needs-triage` — is an absence of
-# research rather than a contradiction of it. The pre-OSV provider made the same
-# call: it downgraded a base `needs-triage` to not-affected when an ESM pocket
-# had confirmed it.
-#
-# A finding does not travel. An extended-support pocket rebuilds a package and
-# then states what is true of the rebuild, so `affected` there is not a claim
-# about the base build and would invent findings the vendor never made about it.
-# Only the release's own archive can put a finding in its namespace.
-#
-# `fips`, `fips-updates`, `fips-preview`, `realtime`, `bluefield` and `ros-esm`
-# are in neither set. They are separate builds that map to no output namespace,
-# so nothing they say can be asserted anywhere.
-_POCKETS_THAT_ASSERT: frozenset[str] = frozenset(
-    {
-        BASE_POCKET,
-        "esm-infra",
-        "esm-apps",
-        "esm-infra-legacy",
-        "esm-apps-legacy",
-        # the other way round the tokens are written: `trusty/esm`
-        _ESM_SUFFIX,
-    },
-)
-
-_POCKETS_THAT_ASSERT_FINDINGS: frozenset[str] = frozenset({BASE_POCKET})
-
-
-def token_asserts(token: str) -> bool:
-    """May this token's clearances be asserted into its release's base namespace?"""
-    return pocket_of_token(token) in _POCKETS_THAT_ASSERT
-
-
-def token_asserts_findings(token: str) -> bool:
-    """May this token put a finding in its release's base namespace?"""
-    return pocket_of_token(token) in _POCKETS_THAT_ASSERT_FINDINGS
-
 
 @dataclass(frozen=True)
-class VexStatement:
+class _VexStatement:
     """One published statement about one source package on one distro token."""
 
     cve: str
@@ -157,7 +75,7 @@ def _document_cve(document: dict[str, Any], statements: list[Any]) -> str | None
     return None
 
 
-def distill(document: dict[str, Any]) -> Iterator[VexStatement]:
+def _distill(document: dict[str, Any]) -> Iterator[_VexStatement]:
     """Reduce one VEX document to the statements worth reading.
 
     Only `arch=source` products are read; see the module docstring for why.
@@ -185,7 +103,7 @@ def distill(document: dict[str, Any]) -> Iterator[VexStatement]:
             package = source_package_from_purl(purl)
             if not token or not package:
                 continue
-            yield VexStatement(
+            yield _VexStatement(
                 cve=cve,
                 token=token,
                 package=package,
@@ -206,7 +124,7 @@ def distil_row(document: dict[str, Any]) -> tuple[str, dict[str, Any]] | None:
     """
     triples: list[list[str]] = []
     cve: str | None = None
-    for statement in distill(document):
+    for statement in _distill(document):
         cve = statement.cve
         disposition = disposition_of(statement.status, statement.justification, statement.action_statement)
         if disposition is None:

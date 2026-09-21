@@ -418,7 +418,7 @@ one in its namespace, because a pocket states what is true of its own
 rebuild. `fips`, `realtime`, `bluefield` and `ros-esm` tokens map to no
 output namespace and say nothing anywhere. The two sets are
 `_POCKETS_THAT_ASSERT` and `_POCKETS_THAT_ASSERT_FINDINGS` in
-`vex_cache.py`. The `+esm` channel carries fix versions only and never a
+`vex_overlay.py`. The `+esm` channel carries fix versions only and never a
 `"0"`.
 
 The clearance is read before the fix events for a reason worth knowing:

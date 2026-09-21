@@ -32,8 +32,12 @@ from .vex_overlay import (
     NOT_PRESENT,
     WONT_FIX,
     canonical_token,
+    codename_of_token,
     distro_label_from_purl,
+    pocket_of_token,
     source_package_from_purl,
+    token_asserts,
+    token_asserts_findings,
 )
 
 if TYPE_CHECKING:
@@ -575,10 +579,10 @@ class Parser:
         """
         out: dict[str, list[str]] = defaultdict(list)
         for token in statements:
-            if vex_cache.token_asserts(token):
-                out[vex_cache.codename_of_token(token)].append(token)
+            if token_asserts(token):
+                out[codename_of_token(token)].append(token)
         for tokens in out.values():
-            tokens.sort(key=lambda token: (vex_cache.pocket_of_token(token), token))
+            tokens.sort(key=lambda token: (pocket_of_token(token), token))
         return out
 
     def _merge_release(  # noqa: PLR0913
@@ -694,7 +698,7 @@ class Parser:
         leaves unsaid.
         """
         for token in tokens:
-            speaks_findings = vex_cache.token_asserts_findings(token)
+            speaks_findings = token_asserts_findings(token)
             for package in sorted(statements[token]):
                 disposition = statements[token][package]
                 if disposition == NOT_PRESENT:
