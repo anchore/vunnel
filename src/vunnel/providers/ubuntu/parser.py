@@ -37,7 +37,7 @@ from .vex_overlay import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from types import TracebackType
 
     from vunnel.workspace import Workspace
@@ -204,6 +204,32 @@ _CODENAMES_BY_VERSION = {version: codename for codename, version in parser_legac
 
 def _codename_for_version(version: str) -> str | None:
     return _CODENAMES_BY_VERSION.get(version)
+
+
+def _snapshot_severity(
+    cve_file: parser_legacy.CVEFile | None,
+    rows: dict[str, parser_legacy.Patch] | None = None,
+    packages: Iterable[str] = (),
+) -> str:
+    """What the legacy passthrough would report for this release, for a release it also emits.
+
+    The CVE's own priority, promoted by the per-package priority of any row on
+    this release, which is `map_parsed`'s rule (it walks the same promotion per
+    FixedIn it appends). Both paths emit for the releases they overlap on and
+    the merge's record wins the identifier, so reading only the CVE-level
+    priority would quietly downgrade a severity the passthrough had right.
+    """
+    if cve_file is None:
+        return "Unknown"
+    severity = parser_legacy.parse_severity_from_priority(cve_file)
+    for package in packages:
+        row = (rows or {}).get(package)
+        if row is None or not row.priority:
+            continue
+        promoted = getattr(parser_legacy.Severity, row.priority.capitalize(), None)
+        if promoted is not None:
+            severity = max(promoted, severity)
+    return severity.json()
 
 
 class Parser:
@@ -442,11 +468,10 @@ class Parser:
         cve_file: parser_legacy.CVEFile | None,
     ) -> Iterator[dict[str, Any]]:
         entries = self._entries_by_release(osv_row)
-        severity = severity_of(osv_row.severity) if osv_row is not None else severity_of(None)
-        # both of these are read once per release below and cost a walk of the
-        # whole snapshot file each time they are asked for, which over thirty
-        # releases and a hundred thousand CVEs is the difference between a walk
-        # and a scan
+        severity = severity_of(osv_row.severity) if osv_row is not None else _snapshot_severity(cve_file)
+        # both of these are consulted once per release below, so they are
+        # computed once here rather than re-walking the already-parsed
+        # `cve_file` for every one of the thirty-odd releases
         rows = self._rows_by_codename(cve_file)
         clearances = self._clearances_by_codename(cve_file)
         statements_by_codename = self._statements_by_codename(statements)
@@ -458,19 +483,21 @@ class Parser:
             namespace = osv_ecosystem_to_os_namespace(base_eco)
             if namespace is None:
                 continue
-            # A record the OSV feed does not speak for takes neither the severity
-            # nor the published date of the record it does publish for other
-            # releases. Both are properties of the CVE rather than of a release,
-            # so this is a place the per-CVE walk could improve on what the
-            # release-major one could see — it has the record in hand where the
-            # release-major walk did not — and it deliberately does not, because
-            # widening it is a change to what is emitted rather than to how it is
-            # assembled. `Unknown` is what an untriaged record has always emitted.
+            # A record the OSV feed does not speak for still takes no published
+            # date from the record it does publish for other releases: a date is
+            # a claim about when this release was fixed and the record makes
+            # none. The severity is different — it is a property of the CVE, and
+            # the snapshot states one for this release that the passthrough has
+            # always emitted, so falling back to it beats defaulting to Unknown
+            # and losing to the passthrough on the releases both paths serve.
             published = osv_row.published if (osv_row is not None and from_osv) else None
             self._resolve_fix_dates(cve, published, states)
             fixed_in = [entry for state in states.values() for entry in fixed_in_for(state, namespace)]
             if fixed_in:
-                yield os_record(cve, namespace, severity if from_osv else severity_of(None), fixed_in)
+                identity = release_identity(base_eco)
+                codename = _codename_for_version(identity.version) if identity is not None else None
+                snapshot_severity = _snapshot_severity(cve_file, rows.get(codename) if codename else None, states)
+                yield os_record(cve, namespace, severity if from_osv else snapshot_severity, fixed_in)
 
         yield from self._channel_records(cve, osv_row, entries, statements, severity)
 

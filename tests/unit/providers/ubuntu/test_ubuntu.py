@@ -1231,6 +1231,20 @@ class TestUnionEnumeration:
         # pass, so the assertion above is not vacuous
         assert "ubuntu:12.04/cve-2012-5124" in emitted
 
+    def test_the_merge_reports_the_severity_the_passthrough_would_have(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # Both paths emit for the releases they overlap on and the merge's record
+        # wins the identifier, so the merge reporting a lower severity than the
+        # passthrough is a downgrade nothing else would show. CVE-2026-9001 is
+        # `low` at the CVE level with a `critical` per-package row, which is the
+        # promotion map_parsed applies per FixedIn; 12.04 comes out of the
+        # passthrough and 14.04 out of the merge, and they have to agree.
+        _seed_osv(fresh_workspace, fixture_dir, "osv-pro-inference")
+        _seed_normalized(fresh_workspace, fixture_dir, "normalized-cve-data-severity")
+        emitted = _run_get(fresh_workspace)
+
+        assert emitted["ubuntu:12.04/cve-2026-9001"]["Vulnerability"]["Severity"] == "Critical"
+        assert emitted["ubuntu:14.04/cve-2026-9001"]["Vulnerability"]["Severity"] == "Critical"
+
     def test_the_whole_group_sentinel_holds_across_a_run(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # The consumer reads a package group as unaffected only when every FixedIn
         # in it is exactly the one character `0`. A stray second entry for the same
@@ -2210,4 +2224,5 @@ class TestProviderUpdate:
             p.update(None)
 
         ws.assert_result_snapshots()
+
 
