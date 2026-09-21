@@ -105,6 +105,7 @@ def test_provider_schema(helpers, mock_data_path, expected_written_entries, disa
     [
         ("test-fixtures/single-entry.json",),
         ("test-fixtures/full-page.json",),
+        ("test-fixtures/ssvc-entry.json",),
     ],
 )
 def test_provider_via_snapshot(helpers, mock_data_path, disable_get_requests, mocker, auto_fake_fixdate_finder):
