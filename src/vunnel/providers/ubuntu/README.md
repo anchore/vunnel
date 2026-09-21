@@ -678,13 +678,14 @@ emitted as `ubuntu:X.YY+esm` channel records. Set it `false` for the frozen-v5
 lane, whose build isn't validated against `+esm` channels — plain Pro then maps
 to nothing, like the sub-tiers, and only base records are emitted.
 
-`downconvert_osv_to_os` is still accepted so an existing config loads, and is
-read nowhere: every record is the OS shape now, unconditionally. The flag used
-to pick between emitting native OSV envelopes and downconverting them to this
-shape, but the merge assembles a release's disposition from three sources at
-once and two of them can name a package the OSV record never carried, so there
-is no per-release OSV envelope left to hand out as the other choice. Setting it
-false logs a warning and changes nothing.
+`downconvert_osv_to_os` is still accepted at its default (`true`) so an
+existing config loads, and is read nowhere: every record is the OS shape now,
+unconditionally. The flag used to pick between emitting native OSV envelopes
+and downconverting them to this shape, but the merge assembles a release's
+disposition from three sources at once and two of them can name a package the
+OSV record never carried, so there is no per-release OSV envelope left to hand
+out as the other choice. Setting it `false` raises, since there is nothing
+left it could mean.
 
 ### What the OS shape cannot say
 

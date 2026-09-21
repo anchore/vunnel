@@ -254,14 +254,14 @@ class Parser:
         self.fixdater = fixdater if fixdater is not None else fixdate.default_finder(workspace)
         self.download_timeout = download_timeout
         self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
-        # Accepted so an existing config still loads, and read nowhere else. Every
-        # record this provider emits is now the v3 OS shape: the emit path assembles
-        # a release's disposition from three sources, two of which can speak about a
-        # package the OSV record does not carry, so there is no per-release OSV
-        # envelope left to hand out instead.
+        # Accepted so an existing config setting the default (true) still loads.
+        # Every record this provider emits is now the v3 OS shape: the emit path
+        # assembles a release's disposition from three sources, two of which can
+        # speak about a package the OSV record does not carry, so there is no
+        # per-release OSV envelope left to hand out for `false` to select.
         if not downconvert_osv_to_os:
-            self.logger.warning(
-                "downconvert_osv_to_os is set false; the OSV-native emit path no longer exists and every record is emitted in the OS schema",
+            raise ValueError(
+                "downconvert_osv_to_os=False is no longer supported; the OSV-native emit path no longer exists",
             )
         # Emit `ubuntu:X.YY+esm` channel records for plain Pro (ESM). Default on;
         # the frozen-v5 lane sets this off to take base records only.

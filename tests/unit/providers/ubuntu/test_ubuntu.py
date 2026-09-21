@@ -229,13 +229,17 @@ class TestProvider:
         with pytest.raises(ValueError, match="on_error.input"):
             Provider(root=str(tmpdir), config=c)
 
-    def test_the_removed_downconvert_switch_still_loads(self, fresh_workspace, caplog):
-        # an operator's config may still carry it; it is accepted, warned about
-        # once, and changes nothing about what is emitted
-        with caplog.at_level("WARNING"):
-            Parser(workspace=fresh_workspace, downconvert_osv_to_os=False)
-        assert "downconvert_osv_to_os" in caplog.text
+    def test_the_default_downconvert_switch_still_loads(self, fresh_workspace):
+        # an operator's config may still carry the default value; it is accepted
+        # and changes nothing about what is emitted
+        Parser(workspace=fresh_workspace, downconvert_osv_to_os=True)
         assert Config().downconvert_osv_to_os is True
+
+    def test_the_removed_downconvert_value_is_rejected(self, fresh_workspace):
+        # there is no per-release OSV envelope left to hand out for `false` to
+        # select, so it fails loudly instead of silently changing nothing
+        with pytest.raises(ValueError, match="downconvert_osv_to_os"):
+            Parser(workspace=fresh_workspace, downconvert_osv_to_os=False)
 
 
 # ---------------------------------------------------------------------------

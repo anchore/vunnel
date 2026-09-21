@@ -22,11 +22,11 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    # Accepted so an existing config still loads, and read nowhere else: every record
-    # is emitted in the v3 OS schema. The emit path assembles a release's disposition
-    # from three sources, two of which can speak about a package the OSV record does
-    # not carry, so there is no per-release OSV envelope left to hand out instead.
-    # Setting it false logs a warning and changes nothing.
+    # Accepted at its default (true) so an existing config still loads, and read
+    # nowhere else: every record is emitted in the v3 OS schema. The emit path
+    # assembles a release's disposition from three sources, two of which can speak
+    # about a package the OSV record does not carry, so there is no per-release OSV
+    # envelope left to hand out instead. Setting it false raises.
     downconvert_osv_to_os: bool = True
     # Also emit `ubuntu:X.YY+esm` distro-channel records for plain Ubuntu Pro (ESM),
     # carrying the real Pro fix version (mirrors RHEL EUS's `rhel:X.Y+eus`). Default
