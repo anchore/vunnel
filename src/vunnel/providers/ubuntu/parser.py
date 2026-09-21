@@ -920,6 +920,13 @@ class Parser:
         for filename in sorted(os.listdir(self.normalized_cve_dir)):
             if not tracker.CVE_FILENAME_RE.match(filename):
                 continue
+            osv_payload = self._osv_rows.get(filename)
+            if osv_payload is not None and osv_payload.get("rejected"):
+                # a knowingly false finding; the merge already drops it, and the
+                # legacy passthrough must not resurrect it for a release the
+                # merge does not speak for
+                continue
+
             cve_file = tracker.load(self.normalized_cve_dir, filename, self.logger)
             if cve_file is None:
                 continue

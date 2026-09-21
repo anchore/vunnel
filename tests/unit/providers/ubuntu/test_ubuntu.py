@@ -1184,6 +1184,21 @@ class TestUnionEnumeration:
         # the run did emit, so the assertion above is not vacuous
         assert "ubuntu:22.04/cve-2016-20013" in emitted
 
+    def test_a_rejected_cve_is_not_resurrected_by_the_legacy_passthrough(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # the merge drops a rejected CVE, but the passthrough builds its records
+        # straight from the snapshot and never sees the OSV row. CVE-2026-38969
+        # is a rejection naming only Ubuntu:25.10 in the feed; the snapshot gives
+        # it a precise row, a release the feed does not serve, so the passthrough
+        # is the only path that can emit it.
+        _seed_osv(fresh_workspace, fixture_dir, "osv", extra=_fixture_records(fixture_dir, "osv-rejection-echo"))
+        _seed_normalized(fresh_workspace, fixture_dir, "normalized-cve-data-rejection")
+        emitted = _run_get(fresh_workspace)
+
+        assert not any("2026-38969" in identifier for identifier in emitted)
+        # the CVE beside it in the same snapshot directory is emitted by the same
+        # pass, so the assertion above is not vacuous
+        assert "ubuntu:12.04/cve-2012-5124" in emitted
+
     def test_the_whole_group_sentinel_holds_across_a_run(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # The consumer reads a package group as unaffected only when every FixedIn
         # in it is exactly the one character `0`. A stray second entry for the same
@@ -2117,3 +2132,4 @@ class TestProviderUpdate:
             p.update(None)
 
         ws.assert_result_snapshots()
+
