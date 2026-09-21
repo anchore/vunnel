@@ -217,10 +217,10 @@ Provider.update()
               skip it whole if the CVE program rejected it
               for each base release the feed speaks for:
                 1. the release's own OSV entries, which carry the fix versions
-                2. the Pro-to-base inference, for a package only the
-                   extended-support build names
-                3. the statements at any token of the release
-                4. the snapshot's own rows
+                2. the statements at any token of the release
+                3. the snapshot's own rows
+                4. the Pro-to-base inference, for a package only the
+                   extended-support build names and nothing above spoke about
                 5. the snapshot's extended-support clearances
                 then a fix date per fix version, and one FixedIn per package
               for each plain-Pro slice: the `+esm` channel, fixes only
@@ -279,29 +279,19 @@ the release's own data, and that is the snapshot's job: a release the feed
 names no base build of is served by both, and the passthrough fills in what
 the inference has no access to.
 
-**A statement outranks it.** Where VEX can speak to an inferred package at all
-it agrees with the inference about 98.5% of the time, so deferring on the rest
-is consistent rather than a reversal. A researched clearance restates the
-entry as the `"0"` row; a statement that the release never shipped the package
-means the inference read its omission backwards and the package goes. An
-inferred package carries no `purl` of its own — the Pro entry's names a Pro
-pocket — so the statement is looked up at the base codename explicitly, or the
-pass silently does nothing while appearing to work.
-
-**And so does a snapshot row, because what the inference writes is a guess.**
-Everything else on a package is something Canonical said about it on that
-release; this alone is concluded from an omission. So an entry the inference
-writes is marked `PackageState.inferred`, and the statement and tracker steps
-that run after it replace a guess they contradict while still never
-overwriting a fact. Without the mark a guess is byte for byte a real entry,
-those steps can only ask `if state is not None`, and the vendor's own word is
-dropped for arriving second — which stamps won't-fix over a `needed` the
-vendor is telling us to expect a fix for, in a state consumers routinely
-suppress. Two limits on the correction: only the first token to speak makes
-it, since the release's own archive is read before any pocket and the rest are
-filling silence; and a `released` row is skipped, because it carries a fix
-version rather than a disposition and the fix-version rule below is what reads
-it.
+**Both a statement and a snapshot row outrank it, by running first.** The
+inference is applied last among the five steps that decide a package —
+after the release's own OSV entries, the VEX statements at any of its
+tokens, and the frozen snapshot's rows — so it only ever fills a package
+none of them has an opinion about. There is nothing here for it to
+correct: everything else on a package is something Canonical said about
+it on that release, this alone is concluded from an omission, and running
+last means a real answer is never something the inference has to be told
+apart from. The one thing it still asks explicitly is whether the release
+shipped the package at all: an inferred package carries no `purl` of its
+own — the Pro entry's names a Pro pocket — so a statement that the
+release never shipped it has to be looked up at the base codename by
+hand, or the pass silently does nothing while appearing to work.
 
 ## USN fix-date overlay
 
@@ -395,9 +385,8 @@ per `(cve, source package)`. Won't-fix sets
 renders as `WontFixStatus` and users see as `(won't fix)`. `not_affected`
 splits on its justification. `vulnerable_code_not_present`, or no
 justification at all, is a researched conclusion about a package the release
-ships: the package becomes a `FixedIn` version of exactly `"0"`, and that
-includes packages the Pro-to-base inference put there, where the assertion
-outranks the inference. `component_not_present` says the release does not ship
+ships: the package becomes a `FixedIn` version of exactly `"0"`.
+`component_not_present` says the release does not ship
 the package — the tracker's `DNE`, which this provider has never emitted
 anything for — so the OSV entry is dropped and nothing takes its place. A
 package only the statements name is added: `affected` and
@@ -554,13 +543,14 @@ What it contributes, and in what order:
   by the same mapping `map_parsed` uses: `released` a fix, `ignored`
   won't-fix, `not-affected` the `"0"` row, `DNE` nothing, every other triage
   state a finding with no fix.
-- a combination only the Pro-to-base inference put here is corrected by the
-  row's status, which is Canonical's own record for that release where the
-  inference only guessed at it from the Pro sibling. A `released` row is not a
-  disposition and is left to the fix-version rule above.
 - a VEX statement always outranks the row for disposition, including
   `component_not_present`, which leaves no entry for a row to attach to and
   so is asked about rather than looked for.
+- the row is read before the Pro-to-base inference runs, so a combination the
+  inference would otherwise have guessed at from the Pro sibling instead takes
+  Canonical's own record for the base release, where the snapshot has one. A
+  `released` row is not a disposition and is left to the fix-version rule
+  above.
 - an `ignored_patches[]` clearance is applied last of all, because a clearance
   outranks everything the steps before it put down — including the row read out
   of the same file a moment earlier.

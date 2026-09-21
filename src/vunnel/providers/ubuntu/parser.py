@@ -512,7 +512,7 @@ class Parser:
         out: dict[str, set[str]] = defaultdict(set)
         if cve_file is None:
             return out
-        for codename, package in self._tracker_esm_clearances(cve_file):
+        for codename, package in tracker.esm_clearances(cve_file):
             out[codename].add(package)
         return out
 
@@ -544,25 +544,27 @@ class Parser:
     ) -> tuple[dict[str, PackageState], bool]:
         """What one base release says about one CVE, by source package.
 
-        Six things can decide a package, and the order they are applied in is
+        Five things can decide a package, and the order they are applied in is
         the precedence between them:
 
           1. the release's own OSV entries, which carry the fix versions
-          2. the Pro-to-base inference, for a package only the extended-support
-             build names — Canonical encodes "this will only be fixed on Pro" by
-             omitting the base entry
-          3. the VEX statements at any token of the release. A clearance travels
+          2. the VEX statements at any token of the release. A clearance travels
              from an extended-support pocket to the base release and outranks
              everything, including an OSV fix event, because it is the vendor's
              researched answer about the package and the rest is either an
              encoding of something else or an absence of research. A finding does
              not travel: only the release's own archive can put one here
-          4. the frozen snapshot's own rows, which supply a fix version the feed
+          3. the frozen snapshot's own rows, which supply a fix version the feed
              has stopped carrying and a disposition for a combination neither
              feed mentions at all
+          4. the Pro-to-base inference, for a package only the extended-support
+             build names and every step above has stayed silent about —
+             Canonical encodes "this will only be fixed on Pro" by omitting the
+             base entry. It runs last precisely so it only ever fills silence:
+             nothing above can be a guess for it to be told apart from
           5. the snapshot's extended-support clearances, last, because a
              clearance outranks everything the steps before it put down —
-             including the row step 4 just read out of the same file
+             including the row step 3 just read out of the same file
 
         Returns the packages and whether the record carries the OSV record's own
         top-level fields, which decides whether its `published` date is a
@@ -580,13 +582,21 @@ class Parser:
         states: dict[str, PackageState] = {}
 
         self._apply_osv_entries(entries.get(base_eco, []), statements, states)
-        from_osv = bool(states)
-        from_osv |= self._apply_inference(base_eco, entries, base_statements, states)
         self._apply_statements(base_eco, tokens, statements, states)
 
         if codename is not None and is_base_channel:
             self._apply_tracker_rows(base_eco, rows.get(codename, {}), base_statements, states)
+
+        self._apply_inference(base_eco, entries, base_statements, states)
+
+        if codename is not None and is_base_channel:
             self._apply_tracker_clearances(clearances.get(codename, set()), base_statements, states)
+
+        # a record the OSV feed does not name this release in still gets a
+        # record when the Pro-to-base inference or a statement speaks for it;
+        # only an actual OSV entry (own or a Pro-only sibling) makes it "from
+        # OSV" for the purpose of trusting its top-level published date
+        from_osv = bool(entries.get(base_eco)) or any(pro_to_base_ecosystem(eco) == base_eco for eco in entries)
 
         return states, from_osv
 
@@ -615,60 +625,13 @@ class Parser:
                 state.clear()
 
     @staticmethod
-    def _apply_inference(
-        base_eco: str,
-        entries: dict[str, list[cve_rows.OsvEntry]],
-        base_statements: dict[str, str],
-        states: dict[str, PackageState],
-    ) -> bool:
-        """Step 2: the Pro-to-base inference, reading an omission.
-
-        Canonical encodes "this will only ever be fixed on Pro" by leaving the
-        base entry out, so a package the extended-support build names and the
-        base release does not is presumed vulnerable there with no fix coming.
-
-        A statement is a positive claim about that package in that release and it
-        wins: where VEX can speak to an inferred package at all it agrees with
-        the inference about 98.5% of the time, so deferring on the rest is
-        consistent rather than a reversal. A researched clearance is restated
-        rather than dropped — dropping it leaves the record saying nothing about
-        a package the vendor has explicitly cleared, which is the same thing it
-        says about one nobody has looked at — while a statement that the release
-        does not ship the package at all means the inference read its omission
-        backwards, and the package goes.
-
-        Returns whether it put anything here, since a record it builds alone
-        still carries the OSV record's own top-level fields.
-        """
-        inferred = False
-        for eco in sorted(entries):
-            if pro_to_base_ecosystem(eco) != base_eco:
-                continue
-            for entry in entries[eco]:
-                if entry.package in states:
-                    continue
-                # an inferred package has no purl of its own — the Pro entry's
-                # names a Pro pocket — so the statement has to be looked up at the
-                # base codename explicitly or this silently reads as "VEX says
-                # nothing" while appearing to work
-                disposition = base_statements.get(entry.package)
-                if disposition == NOT_PRESENT:
-                    continue
-                state = PackageState(package=entry.package, ecosystem=base_eco, wont_fix=True, inferred=True)
-                if disposition == NOT_AFFECTED:
-                    state.clear()
-                states[entry.package] = state
-                inferred = True
-        return inferred
-
-    @staticmethod
     def _apply_statements(
         base_eco: str,
         tokens: list[str],
         statements: dict[str, dict[str, str]],
         states: dict[str, PackageState],
     ) -> None:
-        """Step 3: what the VEX statements at the tokens of this release say.
+        """Step 2: what the VEX statements at the tokens of this release say.
 
         This is the half of the union the OSV feed cannot express. A package the
         vendor has cleared is absent from `affected[]`, and so is a package it has
@@ -693,16 +656,6 @@ class Parser:
                 if state is not None:
                     if disposition == NOT_AFFECTED:
                         state.clear()
-                        state.inferred = False
-                    elif state.inferred:
-                        # nothing but the inference's guess is here, and this is
-                        # the vendor's own word about this package on this
-                        # release, so it replaces the guess rather than being
-                        # dropped. Only the first token to speak does this: the
-                        # release's own archive is read before any pocket, and
-                        # clearing the flag leaves the rest filling silence.
-                        state.wont_fix = disposition == WONT_FIX
-                        state.inferred = False
                     continue
                 states[package] = PackageState(
                     package=package,
@@ -718,7 +671,7 @@ class Parser:
         base_statements: dict[str, str],
         states: dict[str, PackageState],
     ) -> None:
-        """Step 4: the frozen snapshot's own rows, for two different jobs.
+        """Step 3: the frozen snapshot's own rows, for two different jobs.
 
         A fix version is a historical fact and the snapshot holds thousands the
         OSV feed has stopped carrying, because Canonical drops a package from a
@@ -744,21 +697,44 @@ class Parser:
                 if new_state is not None:
                     states[package] = new_state
                 continue
-            if state.inferred and not state.cleared and row.status != tracker.STATUS_RELEASED:
-                # same seam as the statement step: the row is the vendor's own
-                # record for this package on this release, and the inference
-                # only guessed at it from the Pro sibling. `released` is skipped
-                # because it is a fix version rather than a disposition, and the
-                # clause below is what reads it.
-                disposition = tracker.disposition_of_status(row.status)
-                if disposition == NOT_AFFECTED:
-                    state.clear()
-                    state.inferred = False
-                elif disposition is not None:
-                    state.wont_fix = disposition == WONT_FIX
-                    state.inferred = False
             if row.status == tracker.STATUS_RELEASED and row.version and not state.cleared and not state.fixed:
                 state.fixed.append(row.version)
+
+    @staticmethod
+    def _apply_inference(
+        base_eco: str,
+        entries: dict[str, list[cve_rows.OsvEntry]],
+        base_statements: dict[str, str],
+        states: dict[str, PackageState],
+    ) -> None:
+        """Step 4: the Pro-to-base inference, reading an omission.
+
+        Canonical encodes "this will only ever be fixed on Pro" by leaving the
+        base entry out, so a package the extended-support build names and the
+        base release does not is presumed vulnerable there with no fix coming —
+        for a package nothing above has already spoken about. Running last means
+        this can only ever fill silence: every step ahead of it — the release's
+        own OSV entries, a VEX statement at any of its tokens, a snapshot row —
+        has already put a real answer down for anything it has an opinion about,
+        so there is nothing here for the inference to be told apart from and
+        nothing to correct if a later step turns out to know better.
+
+        The one thing it still has to ask about explicitly is whether the
+        release shipped the package at all: an inferred package has no purl of
+        its own — the Pro entry's names a Pro pocket — so a statement that the
+        release never shipped it has to be looked up at the base codename by
+        hand, or this silently reads as "VEX says nothing" while appearing to
+        work.
+        """
+        for eco in sorted(entries):
+            if pro_to_base_ecosystem(eco) != base_eco:
+                continue
+            for entry in entries[eco]:
+                if entry.package in states:
+                    continue
+                if base_statements.get(entry.package) == NOT_PRESENT:
+                    continue
+                states[entry.package] = PackageState(package=entry.package, ecosystem=base_eco, wont_fix=True)
 
     @staticmethod
     def _apply_tracker_clearances(
@@ -769,7 +745,7 @@ class Parser:
         """Step 5: the clearances the snapshot holds and no statement repeats.
 
         Last, because a clearance outranks everything the steps before it put
-        down, including the row step 4 just read out of the same file. It
+        down, including the row step 3 just read out of the same file. It
         overrides and never creates: the pre-OSV provider downgraded a row that
         was already there and invented no record, and unlike the VEX clearance
         population this one is unmeasured.
@@ -781,19 +757,6 @@ class Parser:
             if base_statements.get(package) == NOT_PRESENT:
                 continue
             state.clear()
-
-    @staticmethod
-    def _tracker_esm_clearances(cve_file: parser_legacy.CVEFile) -> set[tuple[str, str]]:
-        """The `(codename, source package)` pairs an extended-support pocket cleared in the snapshot.
-
-        A base release row that is an absence of research — `needs-triage` —
-        standing next to an ESM pocket that researched the same source package
-        and concluded the vulnerable code is not there is not a contradiction,
-        and the research wins. It is the same claim a `not_affected` statement at
-        that pocket makes, read out of Canonical's other file for the
-        combinations where there is no statement to read it out of at all.
-        """
-        return tracker.esm_clearances(cve_file)
 
     @staticmethod
     def _tracker_state(row: parser_legacy.Patch, base_eco: str) -> PackageState | None:

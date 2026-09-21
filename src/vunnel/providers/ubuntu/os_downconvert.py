@@ -83,13 +83,6 @@ class PackageState:
     ecosystem: str
     cleared: bool = False
     wont_fix: bool = False
-    # True while nothing but the Pro-to-base inference has spoken about this
-    # package. The inference reads an omission and guesses; a real statement
-    # from the vendor is evidence, and evidence outranks a guess. Without this
-    # flag the two are indistinguishable once written, so the steps after the
-    # inference cannot tell whether deferring to what they hold would be
-    # correcting a guess or overwriting a fact, and they defer to neither.
-    inferred: bool = False
     fixed: list[str] = field(default_factory=list)
     # fix version -> {"Date": ..., "Kind": ...}, filled in by whoever resolved the date
     available: dict[str, dict[str, Any]] = field(default_factory=dict)

@@ -1592,17 +1592,26 @@ class TestProOnlyInference:
         # and the real Pro fix is the `+esm` channel's
         assert _versions(emitted["ubuntu:14.04+esm/cve-2014-0021"], "chrony") == ["1.29-1ubuntu0.1+esm1"]
 
-    # The inference reads an omission and guesses. A statement is the vendor's
-    # own word about that package on that release, so it replaces the guess
-    # rather than being dropped for arriving second. Before `PackageState`
-    # carried `inferred`, the steps after the inference could not tell a guess
-    # from a fact and deferred to neither, which silently discarded the
-    # statement — invisibly, while the guess happened to agree with it.
+    def test_a_pro_only_release_still_takes_the_records_own_fields(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # UBUNTU-CVE-2014-0021 names Ubuntu:Pro:14.04:LTS and nothing else, so the
+        # base record is built entirely by the inference. The record still speaks
+        # for that release — it is the same CVE on the same release, one tier down
+        # — so its severity and published date are the OSV record's rather than
+        # the "nothing here came from OSV" defaults. This is what `from_osv`
+        # decides, and it is read by nothing else in the suite.
+        _seed_osv(fresh_workspace, fixture_dir, "osv-pro-inference")
+        emitted = _run(fresh_workspace)
+        assert emitted["ubuntu:14.04/cve-2014-0021"]["Vulnerability"]["Severity"] == "Low"
+
+    # The inference runs last and only fills silence: the statements step
+    # already applies any VEX statement at the base pocket before the
+    # inference sees the package, so a real answer is never something the
+    # inference has to be told apart from or correct.
     _BASE_ECO = "Ubuntu:14.04:LTS"
     _PRO_ECO = "Ubuntu:Pro:14.04:LTS"
 
-    def _inferred_then_stated(self, disposition):
-        """Run the inference for a Pro-only package, then the statements step over it."""
+    def _stated_then_inferred(self, disposition):
+        """Run the statements step for a Pro-only package's base pocket, then the inference."""
         entries = {
             self._PRO_ECO: [
                 OsvEntry(
@@ -1615,32 +1624,28 @@ class TestProOnlyInference:
         }
         statements = {} if disposition is None else {"rustc": disposition}
         states = {}
-        Parser._apply_inference(self._BASE_ECO, entries, statements, states)
-        assert states["rustc"].inferred is True, "the inference should mark what it guesses"
         Parser._apply_statements(self._BASE_ECO, ["trusty"], {"trusty": statements}, states)
+        Parser._apply_inference(self._BASE_ECO, entries, statements, states)
         return states["rustc"]
 
-    def test_a_stated_wont_fix_keeps_the_label_on_an_inferred_entry(self):
-        state = self._inferred_then_stated(WONT_FIX)
+    def test_a_stated_wont_fix_wins_over_the_inference(self):
+        state = self._stated_then_inferred(WONT_FIX)
         assert state.wont_fix is True
-        assert state.inferred is False, "a statement settles it, so a later token fills silence only"
 
-    def test_a_stated_no_fix_overrides_the_inference_guess(self):
-        # the vendor says the package is vulnerable with a fix still coming, which
-        # contradicts the guess. This is the over-reach the seam exists to fix.
-        state = self._inferred_then_stated(NO_FIX)
+    def test_a_stated_no_fix_wins_over_the_inference(self):
+        # the vendor says the package is vulnerable with a fix still coming,
+        # which is what the inference would have guessed wrong on its own.
+        state = self._stated_then_inferred(NO_FIX)
         assert state.wont_fix is False
-        assert state.inferred is False
 
-    def test_a_stated_clearance_still_wins_over_an_inferred_entry(self):
-        state = self._inferred_then_stated(NOT_AFFECTED)
+    def test_a_stated_clearance_wins_over_the_inference(self):
+        state = self._stated_then_inferred(NOT_AFFECTED)
         assert state.cleared is True
         assert state.wont_fix is False
 
     def test_the_guess_stands_where_the_vendor_says_nothing(self):
-        state = self._inferred_then_stated(None)
+        state = self._stated_then_inferred(None)
         assert state.wont_fix is True
-        assert state.inferred is True, "nothing overrode it, so it is still only a guess"
 
     def test_inferred_packages_join_the_real_ones_in_one_record(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # CVE-2015-20107 on 18.04 has real base entries for python2.7 and python3.6
