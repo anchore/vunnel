@@ -41,13 +41,13 @@ class Provider(provider.Provider):
     # would only churn caches.
     __version__ = 3
 
-    __schema__ = schema.OSVSchema()
+    __schema__ = schema.OSSchema()
     # Distribution version stays at 1 (derived from major_version, which is "1" for
-    # both OSSchema and OSVSchema). Bumping this trips provider.py's "version changed
-    # -> workspace.clear()" logic, which would erase input/normalized-cve-data/ — the
-    # frozen security-tracker snapshot, which nothing can rebuild and which is the only
-    # source for every release the feeds do not carry. Per-envelope schema URLs are the
-    # dispatch signal.
+    # both OSSchema and OSVSchema, so this is unaffected by the schema type above).
+    # Bumping this trips provider.py's "version changed -> workspace.clear()" logic,
+    # which would erase input/normalized-cve-data/ — the frozen security-tracker
+    # snapshot, which nothing can rebuild and which is the only source for every
+    # release the feeds do not carry.
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
