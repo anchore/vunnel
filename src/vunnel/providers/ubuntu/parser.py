@@ -372,7 +372,24 @@ class Parser:
                 self._note_releases(row)
                 records += 1
         self._usn_overlay = overlay
+        if records == 0:
+            self.logger.warning(f"read 0 OSV records from {self.archive_path}; the archive may not match the expected layout")
+        self._warn_unknown_codenames()
         self.logger.info(f"read {records} OSV records over {len(self._base_ecosystems)} releases; USN fix dates: {len(overlay)}")
+
+    def _warn_unknown_codenames(self) -> None:
+        """A base ecosystem the archive names but `ubuntu_version_names` has no codename for.
+
+        The merge skips VEX statements, tracker rows and tracker clearances for
+        such a release entirely (`_merge_release` needs the codename to look any
+        of them up), which is silent otherwise: a new Ubuntu release loses every
+        won't-fix label and clearance the day it is published, until the version
+        table is updated for it.
+        """
+        for eco in sorted(self._base_ecosystems):
+            identity = release_identity(eco)
+            if identity is not None and _codename_for_version(identity.version) is None:
+                self.logger.warning(f"no codename known for Ubuntu {identity.version}; VEX and the tracker snapshot are silent for it")
 
     def _note_releases(self, row: cve_rows.OsvRow) -> None:
         """Remember which releases this record speaks for.

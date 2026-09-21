@@ -86,8 +86,15 @@ def _write_archive(dst: str, fixture_dir: str | None, subdir: str | None, prefix
     return dst
 
 
-def _seed_osv(fresh_workspace, fixture_dir=None, subdir: str | None = "osv", extra: list[dict] | None = None) -> str:
-    return _write_archive(os.path.join(fresh_workspace.input_path, "osv-all.tar.xz"), fixture_dir, subdir, "osv", extra)
+def _seed_osv(
+    fresh_workspace,
+    fixture_dir=None,
+    subdir: str | None = "osv",
+    extra: list[dict] | None = None,
+    prefix: str = "osv",
+) -> str:
+    """`prefix` is the member path inside the tarball; overriding it fakes an upstream re-layout."""
+    return _write_archive(os.path.join(fresh_workspace.input_path, "osv-all.tar.xz"), fixture_dir, subdir, prefix, extra)
 
 
 def _seed_vex(fresh_workspace, fixture_dir=None, subdir: str | None = "vex", extra: list[dict] | None = None) -> str:
@@ -630,6 +637,32 @@ class TestMergeEnumeration:
 
     def test_an_empty_workspace_emits_nothing(self, fresh_workspace, auto_fake_fixdate_finder):
         assert _run(fresh_workspace) == {}
+
+    def test_an_archive_that_matches_no_expected_layout_warns(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder, caplog):
+        # an upstream re-layout opens fine and yields nothing; _served_versions
+        # stays empty, so the passthrough serves every release from a snapshot
+        # frozen at the v3 cutover while the merge emits no base namespace at
+        # all, and expected_namespaces in the quality gate is still satisfied
+        _seed_osv(fresh_workspace, fixture_dir, "osv", prefix="somewhere-else")
+        p = Parser(workspace=fresh_workspace)
+        with caplog.at_level("WARNING"):
+            p._read_osv_archive()
+        assert "read 0 OSV records" in caplog.text
+        assert p._served_versions == set()
+        p._osv_rows.close()
+
+    def test_a_release_with_no_known_codename_warns(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder, caplog):
+        # the day Canonical publishes 26.10, ubuntu_version_names has no codename
+        # for it, so VEX statements, tracker rows and tracker clearances are all
+        # skipped for that release and every cleared package becomes a finding
+        record = _fixture_record(fixture_dir, "osv-canonical-identity/cve/2026/UBUNTU-CVE-2026-41293.json")
+        record["affected"] = [_affected("Ubuntu:26.10", "tomcat9", "unreleased", fixed="9.0.115-1ubuntu0.1")]
+        _seed_osv(fresh_workspace, fixture_dir, "osv-canonical-identity", extra=[record])
+        p = Parser(workspace=fresh_workspace)
+        with caplog.at_level("WARNING"):
+            p._read_osv_archive()
+        assert "no codename known for Ubuntu 26.10" in caplog.text
+        p._osv_rows.close()
 
     def test_a_missing_vex_archive_still_emits_from_osv(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         _seed_osv(fresh_workspace, fixture_dir)
