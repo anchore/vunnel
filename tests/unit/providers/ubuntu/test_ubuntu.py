@@ -1884,6 +1884,14 @@ class TestKnownHuskReleases:
         emitted = _run_get(fresh_workspace)
         assert "ubuntu:24.10/cve-2019-1010305" in emitted
         assert "ubuntu:25.04/cve-2019-1010305" in emitted
+        # The identifiers alone do not discriminate: the merge re-emits the same
+        # two out of the snapshot-keys union whether or not the husk list routed
+        # them. What discriminates is the content, so the feed's own husk record
+        # for this CVE disagrees with the snapshot on both fields — 0.11.0-1 and
+        # negligible against 0.10.1-1 and medium. Reading the release from the
+        # feed instead flips both.
+        assert _versions(emitted["ubuntu:25.04/cve-2019-1010305"], "libmspack") == ["0.10.1-1"]
+        assert emitted["ubuntu:25.04/cve-2019-1010305"]["Vulnerability"]["Severity"] == "Medium"
 
     def test_a_husk_release_is_refused_wherever_the_feed_names_it(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # CVE-2020-21685 names Ubuntu:25.04 beside four live releases, and
@@ -2264,6 +2272,7 @@ class TestProviderUpdate:
         with patch.object(p.parser, "_download_archive"), patch.object(p.parser, "_download_vex_archive"):
             p.update(None)
 
+        assert ws.result_schemas_valid(require_entries=True)
         ws.assert_result_snapshots()
 
 
