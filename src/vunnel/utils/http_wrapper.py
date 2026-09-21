@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import glob
 import os
 import random
 import threading
@@ -327,6 +328,12 @@ def backoff_sleep_interval(interval: int, attempt: int, max_value: None | int = 
 
 DEFAULT_CHUNK_SIZE = 65536  # 64k
 
+# suffix of the staging file download_to_file writes into before publishing to dest;
+# exposed so callers that sweep their workspace for orphaned downloads (left behind by a
+# killed process, rather than cleaned up by download_to_file's own retry-exhaustion path)
+# don't have to re-derive this convention themselves
+PARTIAL_SUFFIX = ".part"
+
 
 def download_to_file(  # noqa: PLR0913
     url: str,
@@ -385,7 +392,7 @@ def download_to_file(  # noqa: PLR0913
     parent = os.path.dirname(dest)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    partial = dest + ".part"
+    partial = dest + PARTIAL_SUFFIX
 
     last_exception: Exception | None = None
 
@@ -424,3 +431,17 @@ def download_to_file(  # noqa: PLR0913
         logger.error(f"giving up on {url}: {last_exception}")
         raise last_exception
     raise Exception("unreachable")
+
+
+def remove_stale_partial_downloads(directory: str, logger: logging.Logger) -> None:
+    """Remove any `.part` staging files left under `directory` by an interrupted download.
+
+    download_to_file only cleans up its own staging file when its own retry loop
+    exhausts; a killed process (OOM, SIGKILL) skips that, so a caller whose downloads
+    aren't reliably retried on every run (e.g. one file per item, only re-fetched if
+    that item changes) should sweep for leftovers on startup.
+    """
+    for part_file in glob.glob(os.path.join(directory, "**", "*" + PARTIAL_SUFFIX), recursive=True):
+        logger.warning(f"removing stray partial download: {part_file}")
+        with contextlib.suppress(OSError):
+            os.remove(part_file)
