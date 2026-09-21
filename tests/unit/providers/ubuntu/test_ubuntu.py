@@ -396,6 +396,18 @@ class TestRowStore:
         assert store.get("CVE-2024-1") is None
         store.close()
 
+    def test_reset_drops_a_previous_runs_index(self, tmp_path):
+        # a retry re-enters the archive readers on the same Parser; the rows the
+        # first attempt wrote must not answer the second one
+        store = RowStore(str(tmp_path / "rows.tsv"))
+        with store as writing:
+            writing.write("CVE-2024-1", {"cve": "CVE-2024-1"})
+        assert store.keys() == {"CVE-2024-1"}
+        store.reset()
+        assert store.keys() == set()
+        assert store.get("CVE-2024-1") is None
+        store.close()
+
     def test_the_file_is_truncated_on_open(self, tmp_path):
         store = RowStore(str(tmp_path / "rows.tsv"))
         with store as writing:
@@ -562,6 +574,27 @@ class TestMergeEnumeration:
         assert not any("2012-5855" in identifier or "2020-36325" in identifier for identifier in emitted)
         # the Pro-to-base inference still fires for a record that does have one
         assert _versions(emitted["ubuntu:14.04/cve-2016-20013"], "eglibc") == ["None"]
+
+    def test_a_second_read_with_the_archive_gone_forgets_the_first(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # provider.update() re-enters _update() on the same Parser under a retry
+        # policy, so a second _read_*_archive() is reachable with the archive no
+        # longer there; it must not answer out of the first attempt's rows
+        _seed_osv(fresh_workspace, fixture_dir)
+        _seed_vex(fresh_workspace, fixture_dir)
+        p = Parser(workspace=fresh_workspace)
+        p._read_osv_archive()
+        p._read_vex_archive()
+        assert p._osv_rows.keys() and p._vex_rows.keys() and p._served_versions
+
+        os.remove(p.archive_path)
+        os.remove(p.vex_archive_path)
+        p._read_osv_archive()
+        p._read_vex_archive()
+        assert p._osv_rows.keys() == set()
+        assert p._vex_rows.keys() == set()
+        assert p._served_versions == set()
+        p._osv_rows.close()
+        p._vex_rows.close()
 
     def test_an_empty_workspace_emits_nothing(self, fresh_workspace, auto_fake_fixdate_finder):
         assert _run(fresh_workspace) == {}

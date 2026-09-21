@@ -313,6 +313,10 @@ class Parser:
         self._served_versions = set()
         self._base_ecosystems = set()
         self._usn_overlay = None
+        # before the early return, not after: `provider.update()` re-enters this
+        # on the same Parser under a retry policy, and the rows a previous
+        # attempt wrote would otherwise still answer `get` on this one
+        self._osv_rows.reset()
 
         if not os.path.isfile(self.archive_path):
             self.logger.warning(
@@ -372,6 +376,8 @@ class Parser:
         produce records, so a failed VEX download degrades rather than empties
         the output.
         """
+        self._vex_rows.reset()
+
         if not os.path.isfile(self.vex_archive_path):
             self.logger.warning(f"VEX archive missing at {self.vex_archive_path}; no statement is read on this run")
             return

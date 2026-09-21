@@ -74,11 +74,21 @@ class RowStore:
         self._read_handle: Any = None
         self._position = 0
 
-    def __enter__(self) -> RowStore:
+    def reset(self) -> None:
+        """Forget every row, so a run never answers out of a previous run's index.
+
+        Entering the writing context does this and truncates the file with it. A
+        run that gives up before writing anything — a missing archive — calls it
+        directly, because the index is what `get` and `keys` answer from and a
+        stale one outlives the run that built it.
+        """
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         self.close()
         self._offsets = {}
         self._position = 0
+
+    def __enter__(self) -> RowStore:
+        self.reset()
         self._write_handle = open(self.path, "wb")
         return self
 
