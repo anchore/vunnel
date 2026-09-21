@@ -61,12 +61,19 @@ CVE_FILENAME_RE = re.compile(r"^CVE-[0-9]{4}-[0-9]+$")
 def disposition_of_status(status: str) -> str | None:
     """What a tracker status means to the emit path, or None if it means nothing.
 
-    This is `map_parsed`'s own mapping, kept in step with it deliberately: the
-    legacy passthrough still emits from these same files for releases the OSV
-    feed does not cover, and the two must not disagree about what a status
-    means. `not-affected` is the `"0"` row, `ignored` is won't-fix, `DNE` is
-    nothing at all, and every remaining status is the security team saying the
-    package is vulnerable with no fix yet.
+    This is `map_parsed`'s own mapping, tied to it by construction rather than
+    by a comment promising they are kept in step: the legacy passthrough still
+    emits from these same files for releases the OSV feed does not cover, both
+    paths run on the releases they overlap on, and the two disagreeing means the
+    same row produces a finding down one path and nothing down the other.
+
+    `not-affected` is the `"0"` row, `ignored` is won't-fix, `DNE` is nothing at
+    all, and a status in `patch_states` beyond those is the security team saying
+    the package is vulnerable with no fix yet. A status in neither mapping —
+    `in-progress` is the live example — means nothing here because it means
+    nothing to `map_parsed`, which drops the row through `check_state`. That is a
+    pre-existing gap in `patch_states` and fixing it belongs there, where it
+    changes both paths deliberately instead of one of them by accident.
 
     `released` is not here: it is a fix at a version, and a version is not a
     disposition.
@@ -77,6 +84,8 @@ def disposition_of_status(status: str) -> str | None:
         return NOT_AFFECTED
     if status == STATUS_IGNORED:
         return WONT_FIX
+    if status not in parser_legacy.patch_states:
+        return None
     return NO_FIX
 
 

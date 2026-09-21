@@ -1362,6 +1362,20 @@ class TestTrackerSnapshot:
         # nothing is emitted for it
         assert _fixed_in_for(emitted["ubuntu:16.04/cve-2014-3566"], "openssl098") == []
 
+    @pytest.mark.parametrize(
+        "status",
+        [*parser_legacy.patch_states, "in-progress", "needs-review", ""],
+    )
+    def test_no_status_yields_a_finding_the_legacy_path_would_drop(self, status):
+        # The property, stated once rather than per status: this path may only
+        # call a row vulnerable where `map_parsed` would too. Both run on the
+        # releases they overlap on and the merge's record wins, so a status only
+        # this side reads is a finding that exists or not depending on which
+        # release it landed on. `in-progress` is the live example — Canonical
+        # publishes it, `patch_states` has never held it.
+        if tracker.disposition_of_status(status) == NO_FIX:
+            assert parser_legacy.check_state(status), f"{status!r} is a finding here and dropped by map_parsed"
+
     def test_a_vex_fixed_statement_takes_the_trackers_version(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # VEX marks trusty/openjdk-6 and trusty/openjdk-7 fixed for CVE-2014-3566
         # and no OSV record carries them, so before the snapshot was read there
