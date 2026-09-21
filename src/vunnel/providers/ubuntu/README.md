@@ -530,7 +530,9 @@ absence of research — `needs-triage` — standing next to an ESM pocket in
 vulnerable code is not there is not a contradiction, and the research wins. It
 is the same claim a `not_affected` statement at that pocket makes, read out of
 Canonical's other file for the combinations where there is no statement to read
-it out of at all. A row whose `version` looks like a version is a fix and not a
+it out of at all. It is not given the same weight: the statement is current and
+measured and overwrites a fix version, this one is neither and backs off where a
+version is already on record. A row whose `version` looks like a version is a fix and not a
 clearance, which is `parser_legacy`'s own test. It overrides and never creates:
 the pre-OSV provider downgraded a row that was already there and invented no
 record.
@@ -552,8 +554,12 @@ What it contributes, and in what order:
   `released` row is not a disposition and is left to the fix-version rule
   above.
 - an `ignored_patches[]` clearance is applied last of all, because a clearance
-  outranks everything the steps before it put down — including the row read out
-  of the same file a moment earlier.
+  outranks every disposition the steps before it put down — including the row
+  read out of the same file a moment earlier. It stops at a fix version: a `"0"`
+  row cancels findings from every other source, and writing one over a version
+  already on record trades a real match for silence on the word of a frozen
+  snapshot. A VEX clearance does overwrite a version, which is the one place the
+  two clearances deliberately differ — see below.
 
 Fix dates for a snapshot-sourced version are resolved the same way as any
 other fix version, through `_resolve_fix_dates` — the USN overlay first, then

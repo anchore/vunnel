@@ -563,8 +563,9 @@ class Parser:
              base entry. It runs last precisely so it only ever fills silence:
              nothing above can be a guess for it to be told apart from
           5. the snapshot's extended-support clearances, last, because a
-             clearance outranks everything the steps before it put down —
-             including the row step 3 just read out of the same file
+             clearance outranks every disposition the steps before it put down —
+             including the row step 3 just read out of the same file. It stops
+             short of a fix version, which is a fact and not a disposition
 
         Returns the packages and whether the record carries the OSV record's own
         top-level fields, which decides whether its `published` date is a
@@ -744,15 +745,23 @@ class Parser:
     ) -> None:
         """Step 5: the clearances the snapshot holds and no statement repeats.
 
-        Last, because a clearance outranks everything the steps before it put
-        down, including the row step 3 just read out of the same file. It
+        Last, because a clearance outranks every disposition the steps before it
+        put down, including the row step 3 just read out of the same file. It
         overrides and never creates: the pre-OSV provider downgraded a row that
         was already there and invented no record, and unlike the VEX clearance
         population this one is unmeasured.
+
+        It stops at a fix version. A `"0"` row cancels findings from every other
+        source for that package, so writing one over a version some source has
+        already established trades a real match for silence on the word of a
+        frozen snapshot. The VEX clearance at `_apply_statements` does overwrite
+        a version, deliberately: it is current, it is measured, and it is the
+        vendor answering about this package today. This one is neither, which is
+        the whole difference between them.
         """
         for package in sorted(clearances):
             state = states.get(package)
-            if state is None or state.cleared:
+            if state is None or state.cleared or state.fixed:
                 continue
             if base_statements.get(package) == NOT_PRESENT:
                 continue

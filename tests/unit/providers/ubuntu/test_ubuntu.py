@@ -185,6 +185,11 @@ def _versions(record: dict, package: str) -> list[str]:
     return [f["Version"] for f in _fixed_in_for(record, package)]
 
 
+def _fixed_versions(state) -> list[str]:
+    """The versions one PackageState renders as, without building a whole record."""
+    return [entry["Version"] for entry in fixed_in_for(state, "ubuntu:14.04")]
+
+
 def _names(record: dict) -> set[str]:
     return {f["Name"] for f in record["Vulnerability"]["FixedIn"]}
 
@@ -1271,6 +1276,33 @@ class TestClearanceOutranksEverything:
         # pocket's row in the snapshot's `ignored_patches`. Reading only VEX
         # leaves this a false positive that the pre-OSV provider suppressed.
         assert _versions(emitted["ubuntu:20.04/cve-2020-21685"], "nasm") == ["0"]
+
+    # The two clearances are not the same rule, and the difference is only
+    # visible when a fix version is already on record for the package.
+    _TRUSTY = "Ubuntu:14.04:LTS"
+
+    def test_a_snapshot_clearance_leaves_a_real_fix_version_alone(self):
+        # a `"0"` row cancels findings from every other source, so writing one
+        # over a version already established trades a real match for silence on
+        # the word of a snapshot frozen in 2024
+        state = PackageState(package="openssl", ecosystem=self._TRUSTY, fixed=["1.1.1f-1ubuntu2.19"])
+        Parser._apply_tracker_clearances({"openssl"}, {}, {"openssl": state})
+        assert _fixed_versions(state) == ["1.1.1f-1ubuntu2.19"]
+
+    def test_a_snapshot_clearance_still_clears_a_package_with_no_fix(self):
+        # the case it exists for is untouched
+        state = PackageState(package="openssl", ecosystem=self._TRUSTY, wont_fix=True)
+        Parser._apply_tracker_clearances({"openssl"}, {}, {"openssl": state})
+        assert _fixed_versions(state) == ["0"]
+
+    def test_a_vex_clearance_does_overwrite_a_fix_version(self):
+        # the other half of the asymmetry, deliberate: VEX is current, measured,
+        # and the vendor answering about this package today, and Canonical
+        # re-encodes `not-affected (<version>)` as a range fixed at that version,
+        # so a fix version is exactly what a clearance has to be able to correct
+        state = PackageState(package="openssl", ecosystem=self._TRUSTY, fixed=["1.1.1f-1ubuntu2.19"])
+        Parser._apply_statements(self._TRUSTY, ["trusty"], {"trusty": {"openssl": NOT_AFFECTED}}, {"openssl": state})
+        assert _fixed_versions(state) == ["0"]
 
     def test_a_pocket_clearance_outranks_a_base_affected(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
         # CVE-2022-4450 on xenial openssl: the base token says `affected`, which

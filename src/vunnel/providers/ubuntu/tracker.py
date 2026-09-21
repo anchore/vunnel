@@ -119,7 +119,10 @@ def esm_clearances(cve_file: parser_legacy.CVEFile) -> set[tuple[str, str]]:
     there is not a contradiction, and the research wins. It is the same claim
     about the same rebuild that a `not_affected` VEX statement at that pocket
     makes, read out of Canonical's other file for the combinations where there
-    is no statement to read it out of at all.
+    is no statement to read it out of at all. The emit path does not give the
+    two the same weight: the statement is current and measured and overwrites a
+    fix version, this one is neither and stops where a version is already on
+    record. See `Parser._apply_tracker_clearances`.
 
     Which pockets count is `vex_cache`'s answer and not a second list kept here,
     since it is the same claim. That is wider than the three prefixes
