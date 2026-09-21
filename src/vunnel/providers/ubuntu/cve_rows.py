@@ -112,6 +112,8 @@ class RowStore:
         if location is None:
             return None
         if self._read_handle is None:
+            if self._write_handle is not None:
+                self._write_handle.flush()
             self._read_handle = open(self.path, "rb")  # noqa: SIM115
         offset, length = location
         self._read_handle.seek(offset)

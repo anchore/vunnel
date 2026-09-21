@@ -377,6 +377,25 @@ class TestRowStore:
         assert "CVE-2024-1" in store
         store.close()
 
+    def test_a_read_inside_the_writing_context_sees_what_was_written(self, tmp_path):
+        # the write handle is buffered, so a lookup made before it is flushed
+        # reads short and fails on the JSON rather than saying what went wrong.
+        # Nothing does this today; it is one line to keep it from being a wrong
+        # answer if the distil pass ever grows a lookup.
+        store = RowStore(str(tmp_path / "rows.tsv"))
+        with store as writing:
+            for i in range(500):
+                writing.write(f"CVE-2024-{i}", {"cve": f"CVE-2024-{i}", "pad": "x" * 200})
+            assert writing.get("CVE-2024-499") == {"cve": "CVE-2024-499", "pad": "x" * 200}
+        store.close()
+
+    def test_a_store_never_entered_reads_as_empty(self, tmp_path):
+        # the missing-archive path never enters the writing context at all
+        store = RowStore(str(tmp_path / "rows.tsv"))
+        assert store.keys() == set()
+        assert store.get("CVE-2024-1") is None
+        store.close()
+
     def test_the_file_is_truncated_on_open(self, tmp_path):
         store = RowStore(str(tmp_path / "rows.tsv"))
         with store as writing:
