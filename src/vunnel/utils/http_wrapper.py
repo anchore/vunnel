@@ -262,14 +262,17 @@ def get(  # noqa: PLR0913, C901
 
             # Step 1: Rate limit check (always enforced, caller cannot bypass)
             if _is_rate_limited(response):
+                # record the rate limit before checking whether we have retries left, so that a
+                # caller with retries=0 (e.g. download_to_file, which owns its own retry loop)
+                # still leaves the host marked as blocked for whoever asks next
+                retry_after = parse_retry_after(response.headers.get("Retry-After"))
+                registry.record_rate_limit(hostname, retry_after)
+
                 # Check if we've exhausted retries - if so, fail now instead of waiting
                 if attempt >= retries:
                     logger.warning(f"Rate limited by {hostname}, no retries remaining")
                     response.raise_for_status()
 
-                # Parse Retry-After and record rate limit
-                retry_after = parse_retry_after(response.headers.get("Retry-After"))
-                registry.record_rate_limit(hostname, retry_after)
                 wait_time = retry_after if retry_after is not None else DEFAULT_RATE_LIMIT_WAIT
                 wait_time = min(wait_time, MAX_RATE_LIMIT_WAIT)
                 logger.warning(f"Rate limited by {hostname}, will retry after {wait_time:.1f}s")
@@ -348,14 +351,36 @@ def download_to_file(  # noqa: PLR0913
     Bytes land in a sibling `.part` file and are renamed onto `dest` only once the
     transfer finishes, so a failed run cannot leave a partial file where the next run
     expects a whole one. The rename is within one directory, and so never crosses a
-    filesystem.
+    filesystem. Not safe to call concurrently for the same `dest`: two callers would
+    stage into, and race to rename, the same `.part` file.
 
-    Returns the response, whose body has already been drained to `dest`; it is useful
-    only for its headers and status.
+    Args:
+        url: the url to download.
+        dest: the local path to publish the finished download to.
+        logger: a logging.Logger that info about the download should be logged to.
+        retries: how many times the whole transfer is re-attempted if it fails.
+        backoff_in_seconds: passed to time.sleep between retries.
+        timeout: passed to requests.get. defaults to 30 seconds.
+        max_interval: caps the exponential backoff between retries.
+        chunk_size: bytes read from the response per iteration while streaming to disk.
+        **kwargs: forwarded to `get()`, except `stream` (always True here) and
+            `status_handler`, which this function does not accept - see Raises.
+
+    Returns:
+        The response, whose body has already been drained to `dest`; it is useful only
+        for its headers and status.
 
     Raises:
+        TypeError: if `status_handler` is passed. A permissive handler could accept a
+            non-2xx response and this function would then write and publish that
+            response's body to `dest` as if it were a valid download.
         Re-raises the last attempt's exception once retries are exhausted.
     """
+    if "status_handler" in kwargs:
+        raise TypeError(
+            "download_to_file does not support status_handler: a response it accepts would still be "
+            "written to dest and published, bypassing the validation atomic publish depends on",
+        )
     dest = os.fspath(dest)
     parent = os.path.dirname(dest)
     if parent:

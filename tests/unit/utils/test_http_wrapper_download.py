@@ -73,6 +73,9 @@ class Origin:
         # request indices (0-based) that should hang up mid-body
         self.hang_up_on: set[int] = set()
         self.hang_up_after_bytes = 1024
+        # request indices (0-based) that should come back rate-limited instead of succeeding
+        self.rate_limit_on: set[int] = set()
+        self.retry_after_seconds = 30
 
     def respond(self, request: requests.PreparedRequest) -> requests.Response:
         index = len(self.requests)
@@ -81,6 +84,12 @@ class Origin:
         response = requests.Response()
         response.url = request.url
         response.request = request
+
+        if index in self.rate_limit_on:
+            response.status_code = 429
+            response.headers = CaseInsensitiveDict({"Retry-After": str(self.retry_after_seconds)})
+            return response
+
         response.status_code = 200
         response.headers = CaseInsensitiveDict({"Content-Length": str(len(self.body)), "Last-Modified": "Fri, 18 Sep 2026 01:53:43 GMT"})
         response.raw = FakeRaw(self.body, fail_after=self.hang_up_after_bytes if index in self.hang_up_on else None)
@@ -110,6 +119,16 @@ def origin():
 def download(dest, logger, **kwargs):
     kwargs.setdefault("backoff_in_seconds", 0)
     return http.download_to_file(URL, dest, logger, **kwargs)
+
+
+class TestMisuse:
+    def test_rejects_status_handler(self, origin, tmp_path, logger):
+        """A status_handler that accepts a non-2xx response would have its body written
+        to dest and published as if it were a valid download - not supported."""
+        dest = str(tmp_path / "archive.tar.bz2")
+
+        with pytest.raises(TypeError, match="status_handler"):
+            download(dest, logger, status_handler=lambda response: None)
 
 
 class TestDownload:
@@ -167,6 +186,29 @@ class TestRetry:
         # a failed download must leave nothing behind for the next run to trip over
         assert not os.path.exists(dest)
         assert not os.path.exists(dest + ".part")
+
+
+class TestRateLimit:
+    def test_honors_retry_after_instead_of_its_own_backoff(self, origin, tmp_path, logger, monkeypatch):
+        """download_to_file forces its inner get() call to retries=0, so a rate-limited
+        response is always get()'s "no retries left" case. That must still record the
+        rate limit (so the next attempt's acquire_slot waits on it) rather than silently
+        falling through to download_to_file's own backoff, which knows nothing about
+        Retry-After and would otherwise hammer a host that just asked to be left alone."""
+        dest = str(tmp_path / "archive.tar.bz2")
+        origin.rate_limit_on = {0}
+        origin.retry_after_seconds = 47  # far outside backoff_in_seconds=0's range below
+
+        sleeps: list[float] = []
+        monkeypatch.setattr(http.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+        download(dest, logger, retries=1, backoff_in_seconds=0)
+
+        downloaded = read_bytes(dest)
+        assert downloaded == BODY
+        assert len(origin.requests) == 2
+        # the wait must come from Retry-After (~47s), not download_to_file's own ~0s backoff
+        assert any(s >= 40 for s in sleeps), f"expected a Retry-After-driven wait, got {sleeps}"
 
 
 class TestStaging:
