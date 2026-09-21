@@ -35,7 +35,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 UBUNTU_PKG_VERSION_FORMAT = "dpkg"
 _UBUNTU_CVE_URL = "https://ubuntu.com/security/{}"
@@ -73,10 +76,11 @@ class PackageState:
     overlay are keyed by, which is the spelling the feed used for an entry that
     came from OSV and the release's canonical spelling for one that did not.
 
-    `cleared` and `fixed` are mutually exclusive by construction: a package
-    cannot be both researched as not carrying the vulnerability and fixed at a
-    version, and a group mixing a `"0"` with a real version stops being read as
-    a clearance at all. Whatever sets `cleared` clears `fixed` with it.
+    `cleared` and `fixed` are mutually exclusive, and the class is what holds
+    that rather than every caller remembering to: a package cannot be both
+    researched as not carrying the vulnerability and fixed at a version, and a
+    group mixing a `"0"` with a real version stops being read as a clearance at
+    all. `clear` drops the versions, and `add_fixed` is a no-op once cleared.
     """
 
     package: str
@@ -86,6 +90,20 @@ class PackageState:
     fixed: list[str] = field(default_factory=list)
     # fix version -> {"Date": ..., "Kind": ...}, filled in by whoever resolved the date
     available: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def add_fixed(self, versions: Iterable[str]) -> None:
+        """Record fix versions for this package, once each and never over a clearance.
+
+        One release can be named twice in the same OSV record — `Ubuntu:26.04`
+        and `Ubuntu:26.04:LTS` during a rename — and both spellings fold to one
+        release here, so the same version arrives twice and would otherwise be
+        encoded as two byte-identical FixedIn rows.
+        """
+        if self.cleared:
+            return
+        for version in versions:
+            if version not in self.fixed:
+                self.fixed.append(version)
 
     def clear(self) -> None:
         """State that the vendor researched this package and found the vulnerable code absent.

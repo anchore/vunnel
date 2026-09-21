@@ -619,7 +619,7 @@ class Parser:
             state = states.get(entry.package)
             if state is None:
                 state = states[entry.package] = PackageState(package=entry.package, ecosystem=entry.ecosystem)
-            state.fixed.extend(entry.fixed)
+            state.add_fixed(entry.fixed)
             if disposition == WONT_FIX:
                 state.wont_fix = True
             elif disposition == NOT_AFFECTED:
@@ -824,7 +824,7 @@ class Parser:
                 state = states.get(entry.package)
                 if state is None:
                     state = states[entry.package] = PackageState(package=entry.package, ecosystem=entry.ecosystem)
-                state.fixed.extend(entry.fixed)
+                state.add_fixed(entry.fixed)
             if not states:
                 continue
             self._resolve_fix_dates(cve, osv_row.published, states)

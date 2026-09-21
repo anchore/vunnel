@@ -306,6 +306,33 @@ class TestReleaseIdentity:
         assert not any(identifier.startswith("ubuntu:26.04-lts") for identifier in emitted)
 
 
+    def test_a_release_named_under_both_spellings_is_fixed_once(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # The fold that makes one release out of two spellings also puts both
+        # entries in front of the same PackageState, so the same fix version
+        # arrives twice. Two byte-identical FixedIn rows for one package is not
+        # what the feed said, and it is live: 26.04 is the release mid-rename.
+        record = _fixture_record(fixture_dir, "osv-canonical-identity/cve/2026/UBUNTU-CVE-2026-41293.json")
+        record["affected"].append(_affected("Ubuntu:26.04", "tomcat9", "resolute", fixed="9.0.115-1ubuntu0.1"))
+        # the same doubling on the Pro side, which the `+esm` channel reads
+        record["affected"].append(_affected("Ubuntu:Pro:26.04", "tomcat11", "esm-apps/resolute", fixed="11.0.18-1ubuntu0.1~esm1"))
+        _seed_osv(fresh_workspace, fixture_dir, "osv-canonical-identity", extra=[record])
+        emitted = _run(fresh_workspace)
+
+        assert _versions(emitted["ubuntu:26.04/cve-2026-41293"], "tomcat9") == ["9.0.115-1ubuntu0.1"]
+        assert _versions(emitted["ubuntu:26.04+esm/cve-2026-41293"], "tomcat11") == ["11.0.18-1ubuntu0.1~esm1"]
+
+    def test_two_spellings_naming_different_versions_keep_both(self, fresh_workspace, fixture_dir, auto_fake_fixdate_finder):
+        # the dedupe is on the version, not on the entry, so a record that really
+        # does state two fixes still states two
+        record = _fixture_record(fixture_dir, "osv-canonical-identity/cve/2026/UBUNTU-CVE-2026-41293.json")
+        record["affected"].append(_affected("Ubuntu:26.04", "tomcat9", "resolute", fixed="9.0.116-1ubuntu0.1"))
+        _seed_osv(fresh_workspace, fixture_dir, "osv-canonical-identity", extra=[record])
+        emitted = _run(fresh_workspace)
+        assert sorted(_versions(emitted["ubuntu:26.04/cve-2026-41293"], "tomcat9")) == [
+            "9.0.115-1ubuntu0.1",
+            "9.0.116-1ubuntu0.1",
+        ]
+
 class TestProToBaseEcosystem:
     """Only the plain ESM tier is inferable; the sub-tiers rebuild divergent code."""
 
