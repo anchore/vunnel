@@ -50,17 +50,12 @@ class SLESCSAFClient:
             self.logger.info("skipping download in SLES CSAF client")
             return
 
-        if not os.path.exists(self.workspace.input_path):
-            os.makedirs(self.workspace.input_path)
-
         self.logger.info(f"downloading {self.archive_url}")
-        with (
-            http.get(self.archive_url, self.logger, stream=True, timeout=self.download_timeout) as response,
-            open(self.archive_path, "wb") as fh,
-        ):
-            for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
-                if chunk:
-                    fh.write(chunk)
+        # ~460MB over a single connection, and the most failure-prone part of this
+        # provider: download_to_file retries around the body rather than only around the
+        # headers, and publishes atomically, so a dropped connection cannot leave a
+        # truncated archive here for iter_docs to choke on.
+        http.download_to_file(self.archive_url, self.archive_path, self.logger, timeout=self.download_timeout)
 
     def iter_docs(self) -> Generator[tuple[str, CSAFDoc]]:
         """Stream-parse the (already downloaded) archive, yielding (cve_id, doc) per member.

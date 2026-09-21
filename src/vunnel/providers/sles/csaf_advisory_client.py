@@ -99,17 +99,8 @@ class SLESCSAFAdvisoryClient:
             self.logger.info("skipping download in SLES CSAF advisory client")
             return
 
-        if not os.path.exists(self.workspace.input_path):
-            os.makedirs(self.workspace.input_path)
-
         self.logger.info(f"downloading {self.archive_url}")
-        with (
-            http.get(self.archive_url, self.logger, stream=True, timeout=self.download_timeout) as response,
-            open(self.archive_path, "wb") as fh,
-        ):
-            for chunk in response.iter_content(chunk_size=65536):
-                if chunk:
-                    fh.write(chunk)
+        http.download_to_file(self.archive_url, self.archive_path, self.logger, timeout=self.download_timeout)
 
     def fix_dates(self) -> AdvisoryDates:
         """Index the earliest advisory release date (a YYYY-MM-DD string) of every build
