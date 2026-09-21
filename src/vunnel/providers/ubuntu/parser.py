@@ -439,10 +439,14 @@ class Parser:
 
     def _parse_json(self, name: str, raw: bytes) -> dict[str, Any] | None:
         try:
-            return orjson.loads(raw)  # type: ignore[no-any-return]
+            data = orjson.loads(raw)
         except orjson.JSONDecodeError:
             self.logger.warning(f"failed to parse {name}")
             return None
+        # a top-level JSON array, or any other non-object shape, is not one of
+        # this feed's records; reading a 100 MB third-party tarball defensively
+        # means not assuming the shape below matches what this returns
+        return data if isinstance(data, dict) else None
 
     # ------------------------------------------------------------------
     # the merge
