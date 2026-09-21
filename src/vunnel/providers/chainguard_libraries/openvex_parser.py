@@ -107,10 +107,7 @@ class OpenVEXParser:
         self.logger.info(f"downloading {self.namespace} openvex {uri_path} to {filepath}")
 
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        r = http.get(uri_path, self.logger, stream=True, timeout=self.download_timeout, user_agent=self.user_agent)
-        with open(filepath, "wb+") as f:
-            for chunk in r.iter_content():
-                f.write(chunk)
+        http.download_to_file(uri_path, filepath, self.logger, timeout=self.download_timeout, user_agent=self.user_agent)
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         """

@@ -293,13 +293,7 @@ class Parser:
 
     def _stream_to_disk(self, url: str, path: str) -> None:
         self.logger.info(f"downloading {url}")
-        with (
-            http.get(url, self.logger, stream=True, timeout=self.download_timeout) as r,
-            open(path, "wb") as fh,
-        ):
-            for chunk in r.iter_content(chunk_size=65536):
-                if chunk:
-                    fh.write(chunk)
+        http.download_to_file(url, path, self.logger, timeout=self.download_timeout)
 
     def _record_schema(self, record: dict[str, Any]) -> schema.Schema:
         return schema.OSVSchema(version=record.get("schema_version", schema.OSV_SCHEMA_VERSION))

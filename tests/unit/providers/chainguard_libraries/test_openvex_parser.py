@@ -82,32 +82,26 @@ class TestOpenVEXParser:
 
     @patch('os.makedirs')
     @patch('os.path.exists')
-    @patch('vunnel.providers.chainguard_libraries.openvex_parser.http.get')
-    @patch('builtins.open', new_callable=mock_open)
-    def test_download_success(self, mock_file, mock_http_get, mock_exists, mock_makedirs, openvex_parser, auto_fake_fixdate_finder):
+    @patch('vunnel.providers.chainguard_libraries.openvex_parser.http.download_to_file')
+    def test_download_success(self, mock_download, mock_exists, mock_makedirs, openvex_parser, auto_fake_fixdate_finder):
         mock_exists.return_value = False
-        mock_response = Mock()
-        mock_response.iter_content.return_value = [b'test data']
-        mock_http_get.return_value = mock_response
 
         openvex_parser._download("test.json")
 
         mock_makedirs.assert_called_with( openvex_parser.workspace.input_path +  "/openvex", exist_ok=True)
-        mock_http_get.assert_called_once_with(
+        mock_download.assert_called_once_with(
             "https://libraries.cgr.dev/openvex/v1/test.json",
+            openvex_parser.workspace.input_path + "/openvex/test.json",
             openvex_parser.logger,
-            stream=True,
             timeout=60,
             user_agent=None,
         )
-        # oras will use this too, so we only need to make certain it was called at least once with the correct path
-        mock_file.assert_called_with(openvex_parser.workspace.input_path + "/openvex/test.json", "wb+")
 
     @patch('os.path.exists')
-    @patch('vunnel.providers.chainguard_libraries.openvex_parser.http.get')
-    def test_download_handles_exception(self, mock_http_get, mock_exists, openvex_parser, auto_fake_fixdate_finder):
+    @patch('vunnel.providers.chainguard_libraries.openvex_parser.http.download_to_file')
+    def test_download_handles_exception(self, mock_download, mock_exists, openvex_parser, auto_fake_fixdate_finder):
         mock_exists.return_value = True
-        mock_http_get.side_effect = Exception("Network error")
+        mock_download.side_effect = Exception("Network error")
 
         # Should raise exception
         with pytest.raises(Exception, match="Network error"):

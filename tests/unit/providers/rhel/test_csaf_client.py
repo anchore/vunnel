@@ -94,3 +94,18 @@ def test_process_changes_and_deletions(mock_workspace, mock_http_get, mock_os_re
     assert doc.document.aggregate_severity.text == "Important"
     doc_self_link = next((r.url for r in doc.document.references if r.category == "self"), None)
     assert doc_self_link.endswith("RHSA-2024:0010")
+
+
+def test_stray_partial_downloads_removed(mock_workspace, mock_http_get, mock_os_remove, mock_tar_extract, latest_file_name):
+    # a killed process skips download_to_file's own .part cleanup, and unlike hummingbird's
+    # stateless flow (which rebuilds advisories/ from scratch every run) this workspace
+    # persists indefinitely across runs, so a stray .part would otherwise linger forever
+    latest_url = "https://example.com/advisories/archive_latest.txt"
+    stray_path = mock_workspace.input_path / "advisories" / "2024" / "stray.json.part"
+    stray_path.dirpath().ensure_dir()
+    stray_path.write("half-written")
+
+    CSAFClient(workspace=mock_workspace, logger=MagicMock(), skip_download=False, max_workers=16, latest_url=latest_url)
+
+    called_paths = [args[0] for args, _ in mock_os_remove.call_args_list]
+    assert str(stray_path) in called_paths

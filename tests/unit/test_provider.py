@@ -527,6 +527,8 @@ def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, arch
 
     mock_requests.return_value.status_code = 200
     mock_requests.return_value.iter_content.return_value = [content]
+    # a real Response returns itself from __enter__; a bare MagicMock returns a new child
+    mock_requests.return_value.__enter__.return_value = mock_requests.return_value
 
     logger = logging.getLogger("test")
 
@@ -537,7 +539,7 @@ def test_fetch_listing_entry_archive(mock_requests, tmpdir, dummy_provider, arch
         compare_dir_tar(tmpdir, unarchived_dir, tarfile_path)
 
         args, _ = mock_requests.call_args
-        assert args == (listing_entry.url,)
+        assert args[0] == listing_entry.url
     else:
         with pytest.raises(raises_type):
             provider._fetch_listing_entry_archive(entry=listing_entry, dest=tmpdir, logger=logger)
@@ -620,6 +622,7 @@ def test_prep_workspace_from_listing_entry(mock_requests, tmpdir, dummy_provider
         content = f.read()
         mock_requests.return_value.status_code = 200
         mock_requests.return_value.iter_content.return_value = [content]
+        mock_requests.return_value.__enter__.return_value = mock_requests.return_value
 
     with tarfile.open(tarfile_path, "r:gz") as tar:
         list_of_files = tar.getnames()

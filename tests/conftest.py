@@ -7,6 +7,7 @@ import os
 import os.path
 import shutil
 import subprocess
+import time
 import uuid
 from unittest import mock
 
@@ -51,6 +52,18 @@ def reset_http_wrapper():
     http_wrapper._reset_for_testing()
     yield
     http_wrapper._reset_for_testing()
+
+
+@pytest.fixture(autouse=True)
+def no_retry_backoff(monkeypatch):
+    """Don't spend real seconds on retry backoff during tests.
+
+    Retries are exponential (3, 6, 12, 24, 48s), so a single test that exercises a failed
+    download costs a minute and a half of wall clock. Tests that assert on the backoff
+    schedule patch `time.sleep` themselves; a decorator patch is applied after fixture
+    setup, so it still takes precedence over this one.
+    """
+    monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
 
 class MockFixDateFinder(Finder):
