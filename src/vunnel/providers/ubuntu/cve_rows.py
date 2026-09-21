@@ -13,8 +13,8 @@ That rules out two obvious shapes: reaching a member by name decompresses
 everything before it, so a per-lookup `extractfile` is a full pass each time,
 and a merge join over the two streams as they arrive is impossible because the
 OSV record and the VEX document for one CVE sit at unrelated positions.
-Extracting the JSON to disk would give the filesystem as an index, at 33 GiB
-for the two feeds, which is worse than the problem it solves.
+Extracting the JSON to disk would give the filesystem as an index, at a cost in
+space the README states, which is worse than the problem it solves.
 
 So each archive is streamed exactly once and each document reduced to the
 fields the output needs, written here as `<cve>\t<json>` with the byte range of

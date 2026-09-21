@@ -391,8 +391,7 @@ tests:
       # plucky, EOL 2026-01-15 and swept — records are served from the frozen
       # tracker snapshot in input/normalized-cve-data/.
       - docker.io/ubuntu:25.04@sha256:27771fb7b40a58237c98e8d3e6b9ecdd9289cec69a857fccfb85ff36294dac20
-      # questing, EOL 2026-07-09 and unswept, still carrying ~13k records —
-      # the release the freeze-at-EOL machinery exists for.
+      # questing, EOL 2026-07-09 and unswept, still carrying ~13k records.
       - docker.io/ubuntu:25.10@sha256:7cc5e35f6567ee8c66d2abb4aab0fd866669e6207c237c3a8f0947a5c7f17092
       # resolute, live, and carries a namespace rename to Ubuntu:26.04:LTS.
       - docker.io/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d

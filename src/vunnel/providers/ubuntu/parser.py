@@ -824,7 +824,9 @@ class Parser:
         """A package only the snapshot names, or None when the row has nothing to state."""
         if row.status == tracker.STATUS_RELEASED:
             if not row.version:
-                # the legacy path omits a released row with no version, and so does this
+                # the legacy path omits a released row with no version at all;
+                # it does emit one for the empty string, which this drops, and
+                # no row in the snapshot carries that
                 return None
             return PackageState(package=row.package or "", ecosystem=base_eco, fixed=[row.version])
         disposition = tracker.disposition_of_status(row.status)
@@ -978,12 +980,13 @@ class Parser:
     def _clean_input(self) -> None:
         """Remove input state nothing reads any more. Silent and idempotent.
 
-        Four directories, all one-time. `ubuntu-cve-tracker` was the cloned
+        Five directories, all one-time. `ubuntu-cve-tracker` was the cloned
         security tracker repo and `distro-info` a fetched release calendar. The
         other three were the re-encoding of the two feeds and the snapshot into
-        per-release SQLite: 12 GB arranged so a release-major walk could read
-        them, which walking by CVE removes the need for. The workspace keeps
-        `input/` between runs, so leaving them would leave the 12 GB for good.
+        per-release SQLite, arranged so a release-major walk could read them,
+        which walking by CVE removes the need for. The workspace keeps `input/`
+        between runs, so leaving them behind would leave them for good; the
+        README has what that costs.
 
         And any `.part` staging file an interrupted download left behind.
         `download_to_file` removes its own only when its own retry loop

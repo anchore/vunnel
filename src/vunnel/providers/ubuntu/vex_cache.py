@@ -140,8 +140,8 @@ def dispositions_by_token(row: dict[str, Any]) -> dict[str, dict[str, str]]:
 
     The two spellings of the oldest ESM pocket — `trusty/esm` and
     `esm-infra-legacy/trusty` — are one pocket written two ways, and both appear
-    on both sides of the join, so they are folded onto one key here. Without
-    that, about 23,000 OSV entries look as though VEX says nothing about them.
+    on both sides of the join, so they are folded onto one key here. The fold and
+    what it is worth live on `canonical_token`.
     """
     out: dict[str, dict[str, str]] = defaultdict(dict)
     for token, package, disposition in row.get("s", []):

@@ -11,10 +11,9 @@ field — that's the moment Canonical pushed the patched package to the archive.
 Real-world spot-check: CVE-2023-38545 (curl) → USN-6429-1 published
 `2023-10-11T11:34:51Z`, which matches the public coordinated disclosure date.
 
-Measured coverage against today's tarball: USN ships 77% of CVE fix tuples
-overall; plain-Pro tier coverage is 88-100% (the regime the v3-to-OSV cutover
-most needs to backfill). FIPS/Realtime/Nvidia tiers have low USN coverage
-(those tiers don't ship via USN); they fall through to first-observed.
+FIPS/Realtime/Nvidia tiers have low USN coverage (those tiers don't ship via
+USN); they fall through to first-observed. See the README for measured
+coverage.
 
 The overlay is read-only — built once per run, out of the same single pass
 over the OSV tarball that distils the CVE records. ~150k tuples, ~50 MB
@@ -113,12 +112,11 @@ def _parse_iso_date(s: str) -> date | None:
 def usn_extra_candidates(
     overlay: USNFixDateOverlay | None,
 ) -> Callable[[str, str, str, str | None], list[_fixdate.Result]] | None:
-    """Build the extra-candidates callable for osv.patch_fix_date.
+    """Build the extra-candidates callable `Parser._resolve_fix_dates` consumes directly.
 
-    Returns a function with the signature patch_fix_date expects
-    (vuln_id, package_name, fix_version, ecosystem) -> list[Result]. The
-    USN-derived candidate is marked accurate=True so it wins against
-    first-observed's lower-confidence results.
+    Returns a function of (vuln_id, package_name, fix_version, ecosystem) ->
+    list[Result]. The USN-derived candidate is marked accurate=True so it wins
+    against first-observed's lower-confidence results.
     """
     if overlay is None or len(overlay) == 0:
         return None

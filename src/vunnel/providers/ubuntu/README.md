@@ -119,8 +119,8 @@ data/ubuntu/
   input/
     osv-all.tar.xz                # today's download (overwritten each run)
     vex-all.tar.xz                # today's download (overwritten each run)
-    osv-rows.tsv                  # one distilled row per CVE (overwritten each run)
-    vex-rows.tsv                  # one distilled row per CVE (overwritten each run)
+    osv-rows.tsv                  # one distilled row per CVE (overwritten each run, a gigabyte either way)
+    vex-rows.tsv                  # one distilled row per CVE (overwritten each run, a gigabyte either way)
     normalized-cve-data/          # frozen tracker snapshot, load-bearing
     grype-db-observed-fix-dates.db
   results/
@@ -292,6 +292,11 @@ shipped the package at all: an inferred package carries no `purl` of its
 own — the Pro entry's names a Pro pocket — so a statement that the
 release never shipped it has to be looked up at the base codename by
 hand, or the pass silently does nothing while appearing to work.
+
+The guess is a good one, which is why it is made at all: where VEX can speak to
+an inferred package the two agree about 98.5% of the time. Running the inference
+last means the other 1.5% is decided by the vendor rather than by precedence
+rules.
 
 ## USN fix-date overlay
 

@@ -529,7 +529,7 @@ class TestParserDownload:
             def __init__(self, data: bytes):
                 self._data = data
 
-            def iter_content(self, chunk_size: int):  # noqa: ARG002
+            def iter_content(self, chunk_size: int):
                 yield self._data
 
             def __enter__(self):
@@ -556,7 +556,7 @@ class TestParserDownload:
         assert not os.path.isdir(ws.input_path)
 
         class FakeResp:
-            def iter_content(self, chunk_size: int):  # noqa: ARG002
+            def iter_content(self, chunk_size: int):
                 yield b"x"
 
             def __enter__(self):
@@ -839,7 +839,7 @@ class TestVEXTokens:
     def test_the_two_spellings_of_the_oldest_esm_pocket_fold_onto_one_key(self, fixture_dir):
         # CVE-2022-49688 states the same clearance at `esm-infra-legacy/trusty`
         # and CVE-2014-3566 at `trusty/esm`; both are the same pocket and the join
-        # has to see them as one or about 23,000 OSV entries look uncovered.
+        # has to see them as one — see `canonical_token` for what that is worth.
         document = _fixture_record(fixture_dir, "vex-cases/cve/2014/CVE-2014-3566.json")
         _cve, row = vex_cache.distil_row(document)
         assert "esm-infra-legacy/trusty" in vex_cache.dispositions_by_token(row)
