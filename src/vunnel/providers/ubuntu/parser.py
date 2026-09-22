@@ -5,44 +5,152 @@ import os
 import re
 import tarfile
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import orjson
 
-from vunnel import result, schema
+from vunnel import schema
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import osv, silent_remove
+from vunnel.utils import silent_remove
 
-from . import parser_legacy
-from .os_downconvert import os_identifier_for, osv_to_os
+from . import cve_rows, parser_legacy, tracker, vex_cache
+from .os_downconvert import (
+    PackageState,
+    fixed_in_for,
+    is_cve_program_rejection,
+    is_esm_namespace,
+    os_identifier_for,
+    os_record,
+    osv_ecosystem_to_os_namespace,
+    severity_of,
+)
 from .usn_fixdate_overlay import USNFixDateOverlay, usn_extra_candidates
-from .vex_overlay import VEXOverlay, distro_label_from_purl, source_package_from_purl
+from .vex_overlay import (
+    NOT_AFFECTED,
+    NOT_PRESENT,
+    WONT_FIX,
+    canonical_token,
+    codename_of_token,
+    distro_label_from_purl,
+    pocket_of_token,
+    source_package_from_purl,
+    token_asserts,
+    token_asserts_findings,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from types import TracebackType
 
     from vunnel.workspace import Workspace
 
 
-_CVE_FILENAME_RE = re.compile(r"^CVE-[0-9]{4}-[0-9]+$")
-
-
-_SCHEMA_VERSION_RE = re.compile(r"/schema-([0-9]+(?:\.[0-9]+){1,2})\.json$")
-
-
-def ecosystem_to_slug(ecosystem: str) -> str:
-    """Map an OSV ecosystem string to a filesystem-safe slug.
-
-    Lowercase and replace `:` with `-`. The mapping is reversible by
-    splitting on `-` against the known ecosystem set, but we don't rely
-    on that — the slug is opaque to callers.
-    """
-    return ecosystem.lower().replace(":", "-")
-
-
 _VERSION_RE = re.compile(r"^\d+\.\d+$")
+
+# One Ubuntu release is published under two ecosystem strings over its life:
+# Canonical appends the `:LTS` segment when the release reaches general
+# availability, so records written before GA name `Ubuntu:26.04` and records
+# written after it name `Ubuntu:26.04:LTS`. `_BASE_ECO_RE` and
+# `_PLAIN_PRO_ECO_RE` in os_downconvert.py already encode that alias with an
+# optional `(?::LTS)?` group; this is the same shape generalized over the
+# channel segments (Pro, Pro:FIPS, Nvidia-BlueField, ...) that sit between
+# `Ubuntu` and the version.
+#
+# Ecosystem strings that don't fit the shape — Canonical also publishes a
+# handful of malformed ones such as `Ubuntu:22.04:LTS:for:NVIDIA:BlueField` —
+# get no identity and name no release.
+_ECOSYSTEM_RE = re.compile(r"^(?P<channel>Ubuntu(?::[A-Za-z][^:]*)*):(?P<version>\d+\.\d+)(?::LTS)?$")
+
+# The channel of a release's own archive; every other channel is an extended
+# support build (`Ubuntu:Pro`, `Ubuntu:Pro:FIPS`, `Ubuntu:Nvidia-BlueField`, ...).
+_BASE_CHANNEL = "Ubuntu"
+
+
+def _version_is_lts(version: str) -> bool:
+    """Is this Ubuntu release version an LTS release?
+
+    Canonical ships an LTS every two years, in April of an even-numbered year,
+    and has done so without exception since 8.04. The `:LTS` segment on the
+    ecosystem string can't answer this on its own: it is absent from every
+    record written before the release reached general availability, and those
+    are exactly the records canonicalisation has to fold in.
+
+    This decides the spelling of a release's identity and nothing else.
+    """
+    year, _, month = version.partition(".")
+    if month != "04" or not year.isdigit():
+        return False
+    return int(year) % 2 == 0
+
+
+@dataclass(frozen=True)
+class ReleaseIdentity:
+    """The release an OSV ecosystem string names, independent of its spelling.
+
+    `channel` is everything the string says other than the release version:
+    `Ubuntu` for a base release, `Ubuntu:Pro`, `Ubuntu:Pro:FIPS-updates`,
+    `Ubuntu:Nvidia-BlueField` and so on. Distinct channels are distinct
+    identities, including the ones that map to no output namespace at all
+    (FIPS, Realtime, BlueField): they are separate builds, not spellings of one
+    thing.
+
+    `version` is the base release the channel derives from, which is what the
+    known-husk list is keyed on.
+    """
+
+    channel: str
+    version: str
+
+    @property
+    def is_lts(self) -> bool:
+        return _version_is_lts(self.version)
+
+    @property
+    def ecosystem(self) -> str:
+        """The canonical spelling: the current one, carrying `:LTS` when the release is one."""
+        return f"{self.channel}:{self.version}:LTS" if self.is_lts else f"{self.channel}:{self.version}"
+
+
+def release_identity(ecosystem: str) -> ReleaseIdentity | None:
+    """Resolve an OSV ecosystem string to the release it names, or None if unrecognized."""
+    m = _ECOSYSTEM_RE.match(ecosystem)
+    if m is None:
+        return None
+    return ReleaseIdentity(channel=m.group("channel"), version=m.group("version"))
+
+
+def canonical_ecosystem(ecosystem: str) -> str:
+    """Fold an ecosystem string onto the canonical spelling of the release it names.
+
+    An unrecognized string is its own canonical form, so nothing is ever merged
+    on a guess.
+    """
+    identity = release_identity(ecosystem)
+    return identity.ecosystem if identity is not None else ecosystem
+
+
+# Releases whose records in today's feed are Canonical's post-sweep residue: a
+# husk of never-regenerated withdrawn records that still names the release.
+# Nothing separates that residue from a healthy release's records except knowing
+# which releases were swept, so the two are named here and served from the
+# frozen tracker snapshot in `input/normalized-cve-data/` instead. The list is a
+# fact, not a heuristic, and Canonical hosts every release from questing on
+# indefinitely, so the set is closed unless that changes.
+_KNOWN_HUSK_RELEASES = frozenset(
+    {
+        # oracular, swept 2025-07-11. The feed carries 157 records for it, 153 of
+        # them withdrawn.
+        "24.10",
+        # plucky, swept 2026-01-20. Same shape: 184 records, 181 withdrawn. The
+        # tracker snapshot is a good substitute — compared against the last
+        # plucky-intact upstream commit over 115,253 (CVE, source package) pairs
+        # it agrees on 99.8% of verdicts, 99.4% of the 36,791 actionable ones,
+        # and on 8,966 of 8,966 fix versions byte for byte.
+        "25.04",
+    },
+)
 
 
 def pro_to_base_ecosystem(ecosystem: str) -> str | None:
@@ -92,146 +200,40 @@ def pro_to_base_ecosystem(ecosystem: str) -> str | None:
     return ":".join(["Ubuntu", *parts[2:]])
 
 
-def _affected_package_names(payload: dict[str, Any]) -> set[str]:
-    """Return the set of source-package names in a record's affected[]."""
-    out: set[str] = set()
-    for a in payload.get("affected", []):
-        pkg = a.get("package", {}).get("name")
-        if pkg:
-            out.add(pkg)
-    return out
+# Version -> codename, inverted from the table the legacy passthrough already
+# carries. VEX and the tracker snapshot name a release by codename and OSV by
+# version.
+_CODENAMES_BY_VERSION = {version: codename for codename, version in parser_legacy.ubuntu_version_names.items()}
 
 
-def _synthesize_missing(
-    pro_affs: list[dict[str, Any]],
-    existing_pkgs: set[str],
-    base_eco: str,
-    pro_eco: str | None,
-) -> list[dict[str, Any]]:
-    """For each Pro affected[] entry whose source-package isn't already in the
-    base envelope, produce a synthesized base affected[] entry tagged with the
-    inference provenance.
+def _codename_for_version(version: str) -> str | None:
+    return _CODENAMES_BY_VERSION.get(version)
+
+
+def _snapshot_severity(
+    cve_file: parser_legacy.CVEFile | None,
+    rows: dict[str, parser_legacy.Patch] | None = None,
+    packages: Iterable[str] = (),
+) -> str:
+    """What the legacy passthrough would report for this release, for a release it also emits.
+
+    The CVE's own priority, promoted by the per-package priority of any row on
+    this release, which is `map_parsed`'s rule (it walks the same promotion per
+    FixedIn it appends). Both paths emit for the releases they overlap on and
+    the merge's record wins the identifier, so reading only the CVE-level
+    priority would quietly downgrade a severity the passthrough had right.
     """
-    new_affs: list[dict[str, Any]] = []
-    for aff in pro_affs:
-        pkg = aff.get("package", {}).get("name")
-        if not pkg or pkg in existing_pkgs:
+    if cve_file is None:
+        return "Unknown"
+    severity = parser_legacy.parse_severity_from_priority(cve_file)
+    for package in packages:
+        row = (rows or {}).get(package)
+        if row is None or not row.priority:
             continue
-        existing_pkgs.add(pkg)
-        synth = _build_synthetic_base_affected(aff, base_eco)
-        synth["database_specific"]["anchore"]["inference"] = {
-            "kind": "pro-only-fix",
-            "source_ecosystems": [pro_eco] if pro_eco else [],
-        }
-        new_affs.append(synth)
-    return new_affs
-
-
-def _build_synthetic_base_affected(template: dict[str, Any], base_eco: str) -> dict[str, Any]:
-    """Build a single synthetic affected[] entry for the base ecosystem.
-
-    Inherits source package name and binary list from the Pro template (binaries
-    on Pro ESM are byte-identical to base while base was supported; carrying
-    them lets binary→source resolution still work downstream). Drops `purl`
-    since its `distro=` qualifier points at a Pro codename (e.g. `esm-infra/jammy`).
-    """
-    src_pkg = dict(template.get("package", {}))
-    src_pkg["ecosystem"] = base_eco
-    src_pkg.pop("purl", None)
-
-    eco_specific: dict[str, Any] = {}
-    if "binaries" in template.get("ecosystem_specific", {}):
-        eco_specific["binaries"] = template["ecosystem_specific"]["binaries"]
-
-    return {
-        "package": src_pkg,
-        "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}]}],
-        "ecosystem_specific": eco_specific,
-        "database_specific": {
-            "anchore": {
-                "status": "wont-fix",
-                # `inference.source_ecosystems` filled in by the caller — the same
-                # base (CVE, source-pkg) may have inferences from multiple Pro slices
-                # (though restriction to plain Pro makes this rare in practice).
-            },
-        },
-    }
-
-
-def slice_by_ecosystem(record: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Group a record's affected[] entries by ecosystem.
-
-    Returns a mapping {ecosystem -> sliced_record}. Each sliced record
-    has the original top-level fields and an affected[] containing only
-    the entries for that ecosystem. Records with no affected[] entries
-    yield an empty mapping.
-    """
-    by_eco: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for aff in record.get("affected", []):
-        eco = aff.get("package", {}).get("ecosystem")
-        if not eco:
-            continue
-        by_eco[eco].append(aff)
-
-    if not by_eco:
-        return {}
-
-    top = {k: v for k, v in record.items() if k != "affected"}
-    return {eco: {**top, "affected": entries} for eco, entries in by_eco.items()}
-
-
-def _schema_from_envelope_url(url: str) -> schema.Schema:
-    """Reconstruct a Schema object from an envelope's schema URL."""
-    m = _SCHEMA_VERSION_RE.search(url)
-    version = m.group(1) if m else "0.0.0"
-    return schema.Schema(version=version, url=url)
-
-
-def _iter_cve_records(tar: tarfile.TarFile) -> Iterator[dict[str, Any]]:
-    """Yield parsed CVE records from a streaming tar (osv/cve/**/*.json only)."""
-    for member in tar:
-        if not member.isfile():
-            continue
-        if not (member.name.startswith("osv/cve/") and member.name.endswith(".json")):
-            continue
-        fh = tar.extractfile(member)
-        if fh is None:
-            continue
-        yield orjson.loads(fh.read())
-
-
-def _annotate_wont_fix(
-    sliced: dict[str, dict[str, Any]],
-    original: dict[str, Any],
-    overlay: VEXOverlay,
-) -> None:
-    """Stamp `affected[].database_specific.anchore.status = "wont-fix"` for slices
-    Canonical's VEX feed marks as won't-fix.
-
-    Join key is (upstream CVE, PURL distro label, source package). The
-    upstream CVE comes from the OSV record's `upstream[0]` (UBUNTU-CVE-* is
-    Canonical's internal id; users and VEX use the upstream CVE). Distro
-    label + source package come from each per-package PURL inside the slice.
-    """
-    upstream = original.get("upstream") or []
-    if not upstream:
-        return
-    cve_id = upstream[0]
-
-    for sliced_record in sliced.values():
-        for aff in sliced_record.get("affected", []):
-            purl = (aff.get("package") or {}).get("purl") or ""
-            distro = distro_label_from_purl(purl)
-            pkg = source_package_from_purl(purl)
-            if not distro or not pkg:
-                continue
-            if not overlay.is_wont_fix(cve_id, distro, pkg):
-                continue
-            db_spec = aff.get("database_specific") or {}
-            anchore = db_spec.get("anchore") or {}
-            anchore["status"] = "wont-fix"
-            db_spec["anchore"] = anchore
-            aff["database_specific"] = db_spec
+        promoted = getattr(parser_legacy.Severity, row.priority.capitalize(), None)
+        if promoted is not None:
+            severity = max(promoted, severity)
+    return severity.json()
 
 
 class Parser:
@@ -239,7 +241,8 @@ class Parser:
     _vex_url_ = "https://security-metadata.canonical.com/vex/vex-all.tar.xz"
     _archive_filename_ = "osv-all.tar.xz"
     _vex_archive_filename_ = "vex-all.tar.xz"
-    _fragments_subdir_ = "fragments"
+    _osv_rows_filename_ = "osv-rows.tsv"
+    _vex_rows_filename_ = "vex-rows.tsv"
     _normalized_subdir_ = "normalized-cve-data"
 
     def __init__(  # noqa: PLR0913
@@ -248,27 +251,45 @@ class Parser:
         fixdater: fixdate.Finder | None = None,
         download_timeout: int = 125,
         logger: logging.Logger | None = None,
-        downconvert_osv_to_os: bool = False,
+        downconvert_osv_to_os: bool = True,
         downconvert_emit_esm: bool = True,
     ):
         self.workspace = workspace
         self.fixdater = fixdater if fixdater is not None else fixdate.default_finder(workspace)
         self.download_timeout = download_timeout
         self.logger = logger if logger is not None else logging.getLogger(self.__class__.__name__)
-        # Opt-in compatibility: rewrite OSV fragments into v3 OS-schema records as they
-        # are yielded. The legacy normalized-cve-data passthrough already emits OS shape,
-        # so when this is enabled every yielded record is OS.
-        self.downconvert_osv_to_os = downconvert_osv_to_os
-        # When downconverting, also emit `ubuntu:X.YY+esm` channel records for plain Pro
-        # (ESM). Default on; the frozen-v5 lane sets this off to take base records only.
+        # Accepted so an existing config setting the default (true) still loads.
+        # Every record this provider emits is now the v3 OS shape: the emit path
+        # assembles a release's disposition from three sources, two of which can
+        # speak about a package the OSV record does not carry, so there is no
+        # per-release OSV envelope left to hand out for `false` to select.
+        if not downconvert_osv_to_os:
+            raise ValueError(
+                "downconvert_osv_to_os=False is no longer supported; the OSV-native emit path no longer exists",
+            )
+        # Emit `ubuntu:X.YY+esm` channel records for plain Pro (ESM). Default on;
+        # the frozen-v5 lane sets this off to take base records only.
         self.downconvert_emit_esm = downconvert_emit_esm
 
         self.archive_path = os.path.join(workspace.input_path, self._archive_filename_)
         self.vex_archive_path = os.path.join(workspace.input_path, self._vex_archive_filename_)
-        self.fragments_dir = os.path.join(workspace.input_path, self._fragments_subdir_)
         self.normalized_cve_dir = os.path.join(workspace.input_path, self._normalized_subdir_)
         self.urls = [self._osv_url_, self._vex_url_]
-        # USN fix-date overlay built lazily in get(); _iter_envelopes_with_fixdate reads it.
+
+        # One compact row per CVE per feed, written as the archive streams past and
+        # read back by offset during the merge.
+        self._osv_rows = cve_rows.RowStore(os.path.join(workspace.input_path, self._osv_rows_filename_))
+        self._vex_rows = cve_rows.RowStore(os.path.join(workspace.input_path, self._vex_rows_filename_))
+
+        # Filled by the OSV pass. `_served_versions` is which base releases today's
+        # feed speaks for, which is what decides whether the tracker snapshot has to
+        # serve a release instead; `_base_ecosystems` is which base namespaces the
+        # merge assembles, which also includes a release the feed carries only an
+        # extended-support build of, since the Pro-to-base inference still speaks
+        # for it.
+        self._served_versions: set[str] = set()
+        self._base_ecosystems: set[str] = set()
+        # USN fix-date overlay, built in the same pass that reads the CVE records.
         self._usn_overlay: USNFixDateOverlay | None = None
 
     def __enter__(self) -> Parser:
@@ -283,6 +304,10 @@ class Parser:
     ) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
+    # ------------------------------------------------------------------
+    # download
+    # ------------------------------------------------------------------
+
     def _download_archive(self) -> None:
         os.makedirs(self.workspace.input_path, exist_ok=True)
         self._stream_to_disk(self._osv_url_, self.archive_path)
@@ -295,339 +320,644 @@ class Parser:
         self.logger.info(f"downloading {url}")
         http.download_to_file(url, path, self.logger, timeout=self.download_timeout)
 
-    def _record_schema(self, record: dict[str, Any]) -> schema.Schema:
-        return schema.OSVSchema(version=record.get("schema_version", schema.OSV_SCHEMA_VERSION))
+    # ------------------------------------------------------------------
+    # the two distil passes
+    # ------------------------------------------------------------------
 
-    def _open_fragment_writer(self, ecosystem: str) -> result.Writer:
-        """Open a writer for a single ecosystem's fragment.
+    def _read_osv_archive(self) -> None:
+        """Stream the OSV tarball once: write the CVE rows and build the USN overlay.
 
-        Uses DELETE_BEFORE_WRITE so any prior fragment for this ecosystem
-        is replaced wholesale. Fragments for ecosystems we don't open
-        this run are left untouched (frozen).
+        Two things are read out of a record rather than written. Whether the CVE
+        program rejected it, which is a fact about the CVE and not about any
+        release the record happens to name — every record in the day's tarball is
+        checked, because upstream never deletes a rejected record and a release
+        the record does not name has to inherit the fact from wherever it was
+        seen. And which releases the feed speaks for at all, which is what
+        decides whether the frozen snapshot serves a release instead.
+
+        Every release the archive names is read, whatever its support status.
+        There is no calendar, no clock and no `now` anywhere in this pass. The
+        one exception is `_KNOWN_HUSK_RELEASES`, whose records are residue from a
+        sweep rather than the release's data, and which are dropped here.
         """
-        os.makedirs(self.fragments_dir, exist_ok=True)
-        path = os.path.join(self.fragments_dir, f"{ecosystem_to_slug(ecosystem)}.db")
-        writer = result.Writer(
-            workspace=self.workspace,
-            result_state_policy=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
-            store_strategy=result.StoreStrategy.SQLITE,
-            write_location=path,
-            logger=self.logger,
-        )
-        return writer.__enter__()
+        self._served_versions = set()
+        self._base_ecosystems = set()
+        self._usn_overlay = None
+        # before the early return, not after: `provider.update()` re-enters this
+        # on the same Parser under a retry policy, and the rows a previous
+        # attempt wrote would otherwise still answer `get` on this one
+        self._osv_rows.reset()
 
-    def _write_fragments(self, vex_overlay: VEXOverlay | None = None) -> None:
-        """Stream the tarball, slice records by ecosystem, write per-ecosystem fragments.
-
-        Each ecosystem encountered in today's tarball gets its fragment
-        file wiped (via DELETE_BEFORE_WRITE) and rewritten. Ecosystems
-        absent from today's tarball are not touched.
-
-        NOTE: `patch_fix_date` is intentionally NOT called here. Fix-date
-        annotations are applied at yield time (in _iter_fragments) so that
-        improvements to the fixdate cache flow through to frozen fragments
-        on the next run without rewriting them.
-
-        Fix DISPOSITION (won't-fix vs other) is the opposite: it's baked
-        into the fragment at write time using today's VEX overlay, so
-        that frozen fragments carry the disposition forward through EOL.
-        When VEX stops publishing for a release, the fragment retains the
-        last-known wont-fix status from when the release was still tracked.
-        """
-        writers: dict[str, result.Writer] = {}
-        exc: BaseException | None = None
-        try:
-            with tarfile.open(self.archive_path, mode="r:xz") as tar:
-                for record in _iter_cve_records(tar):
-                    self._dispatch_record_to_fragments(record, writers, vex_overlay)
-        except BaseException as e:
-            exc = e
-            raise
-        finally:
-            for writer in writers.values():
-                writer.__exit__(type(exc) if exc else None, exc, exc.__traceback__ if exc else None)
-
-    def _dispatch_record_to_fragments(
-        self,
-        record: dict[str, Any],
-        writers: dict[str, result.Writer],
-        vex_overlay: VEXOverlay | None,
-    ) -> None:
-        sliced = slice_by_ecosystem(record)
-        if not sliced:
-            return
-        if vex_overlay is not None:
-            _annotate_wont_fix(sliced, record, vex_overlay)
-        rec_schema = self._record_schema(record)
-        cve_id = record["id"].lower()
-        for eco, sliced_record in sliced.items():
-            if eco not in writers:
-                writers[eco] = self._open_fragment_writer(eco)
-            identifier = f"{ecosystem_to_slug(eco)}/{cve_id}"
-            writers[eco].write(identifier=identifier, schema=rec_schema, payload=sliced_record)
-
-    def _iter_fragments(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
-        """Yield (identifier, schema, payload) from every fragment on disk + inferred entries.
-
-        Three things happen here, all at yield time so that improvements to
-        upstream feeds + the fixdate cache flow through to frozen fragments
-        on the next run without rewriting them:
-
-          1. Real envelopes from each fragment are yielded verbatim (with
-             fix-date patching applied).
-          2. For each base Ubuntu ecosystem with sibling plain-Pro (ESM)
-             fragments, any (CVE, source-pkg) tuple Pro has and base does
-             NOT have produces a synthesized base wont-fix envelope. This
-             reconstructs the signal Canonical encodes by *omission* of the
-             base entry when a CVE will only be fixed in Pro.
-          3. The inference runs from current Pro data every yield, so:
-               - while base is still in OSV: inferred entries fill Pro-only-fix gaps
-               - after base EOLs (frozen base fragment): inferred entries
-                 from continuing Pro coverage layer on top of the frozen state.
-        """
-        if not os.path.isdir(self.fragments_dir):
-            return
-
-        base_paths, pro_paths, unclassified = self._group_fragments_by_base()
-
-        # Yield unclassifiable fragments verbatim (test fixtures with empty affected[],
-        # future shapes we don't recognize, etc.) — never apply inference to them.
-        for path in unclassified:
-            yield from self._iter_envelopes_with_fixdate(path)
-
-        # Pass 1: yield Pro fragments verbatim. (Inference happens during the base pass.)
-        seen_pro_paths: set[str] = set()
-        for paths in pro_paths.values():
-            for path in paths:
-                if path in seen_pro_paths:
-                    continue
-                seen_pro_paths.add(path)
-                yield from self._iter_envelopes_with_fixdate(path)
-
-        # Pass 2: yield base envelopes (real + merged inferences from Pro siblings).
-        # An inferred base entry shares the (base_eco, cve_id) key — and therefore the
-        # envelope identifier — with any real base entry for the same CVE. We must
-        # merge inferred affected[] entries INTO the real envelope before yielding;
-        # emitting a separate envelope would collide under INSERT OR REPLACE and
-        # the synthesized one would overwrite the real data.
-        all_base_ecos = set(base_paths) | set(pro_paths)
-        for base_eco in sorted(all_base_ecos):
-            yield from self._yield_base_with_inferences(
-                base_eco,
-                base_path=base_paths.get(base_eco),
-                pro_paths=pro_paths.get(base_eco, []),
+        if not os.path.isfile(self.archive_path):
+            self.logger.warning(
+                f"OSV archive missing at {self.archive_path}; no release is served from the feeds on this run "
+                "and fix dates fall back to first-observed",
             )
-
-    def _yield_base_with_inferences(
-        self,
-        base_eco: str,
-        base_path: str | None,
-        pro_paths: list[str],
-    ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
-        # Collect real envelopes by cve, keyed so we can merge inferences in.
-        by_cve: dict[str, dict[str, Any]] = {}
-        cve_order: list[str] = []
-
-        if base_path is not None:
-            for env in self._iter_envelopes_with_fixdate(base_path):
-                identifier, sch, payload = env
-                cve = payload.get("id", "")
-                if cve not in by_cve:
-                    cve_order.append(cve)
-                by_cve[cve] = {
-                    "identifier": identifier,
-                    "schema": sch,
-                    "payload": payload,
-                    "had_real": True,
-                }
-
-        if pro_paths:
-            self._merge_inferred_into(by_cve, cve_order, pro_paths, base_eco)
-
-        for cve in cve_order:
-            entry = by_cve[cve]
-            yield entry["identifier"], entry["schema"], entry["payload"]
-
-    def _merge_inferred_into(
-        self,
-        by_cve: dict[str, dict[str, Any]],
-        cve_order: list[str],
-        pro_paths: list[str],
-        base_eco: str,
-    ) -> None:
-        """Walk sibling Pro fragments. For each Pro envelope, append synthesized
-        base entries to the real envelope (if one exists) or create a new
-        envelope. Records the inference provenance.
-        """
-        for pro_path in pro_paths:
-            with result.SQLiteReader(pro_path) as reader:
-                for envelope in reader.each():
-                    self._merge_pro_envelope(envelope, by_cve, cve_order, base_eco)
-
-    def _merge_pro_envelope(
-        self,
-        envelope: result.Envelope,
-        by_cve: dict[str, dict[str, Any]],
-        cve_order: list[str],
-        base_eco: str,
-    ) -> None:
-        payload = envelope.item
-        cve = payload.get("id", "")
-        if not cve:
             return
-        pro_affs = payload.get("affected", [])
-        pro_eco = pro_affs[0].get("package", {}).get("ecosystem") if pro_affs else None
-        target = by_cve.get(cve)
-        existing_pkgs = _affected_package_names(target["payload"]) if target else set()
-        new_affs = _synthesize_missing(pro_affs, existing_pkgs, base_eco, pro_eco)
-        if not new_affs:
-            return
-        if target is None:
-            self._add_synthetic_envelope(by_cve, cve_order, envelope, new_affs, base_eco)
-        else:
-            target["payload"].setdefault("affected", []).extend(new_affs)
 
-    def _add_synthetic_envelope(
-        self,
-        by_cve: dict[str, dict[str, Any]],
-        cve_order: list[str],
-        envelope: result.Envelope,
-        new_affs: list[dict[str, Any]],
-        base_eco: str,
-    ) -> None:
-        template = envelope.item
-        cve = template["id"]
-        synth_payload: dict[str, Any] = {k: v for k, v in template.items() if k != "affected"}
-        synth_payload["affected"] = new_affs
-        upstream = synth_payload.get("upstream") or []
-        osv.patch_fix_date(
-            synth_payload,
-            self.fixdater,
-            vuln_id_override=upstream[0] if upstream else None,
-            extra_candidates=usn_extra_candidates(self._usn_overlay),
-        )
-        by_cve[cve] = {
-            "identifier": f"{ecosystem_to_slug(base_eco)}/{cve.lower()}",
-            "schema": _schema_from_envelope_url(envelope.schema),
-            "payload": synth_payload,
-            "had_real": False,
-        }
-        cve_order.append(cve)
+        overlay = USNFixDateOverlay(logger=self.logger)
+        records = 0
+        with self._osv_rows as rows, tarfile.open(self.archive_path, mode="r:xz") as tar:
+            for name, raw in cve_rows.iter_tar_members(tar, "osv/"):
+                record = self._parse_json(name, raw)
+                if record is None:
+                    continue
+                if name.startswith("osv/usn/"):
+                    overlay.ingest_record(record)
+                    continue
+                if not name.startswith("osv/cve/"):
+                    # `osv/lsn/**` is Canonical's livepatch stream; it names no
+                    # source package this provider can emit against
+                    continue
+                row = cve_rows.distil_osv(record, is_cve_program_rejection(record))
+                if row is None:
+                    continue
+                rows.write(row.cve, row.to_payload())
+                self._note_releases(row)
+                records += 1
+        self._usn_overlay = overlay
+        if records == 0:
+            self.logger.warning(f"read 0 OSV records from {self.archive_path}; the archive may not match the expected layout")
+        self._warn_unknown_codenames()
+        self.logger.info(f"read {records} OSV records over {len(self._base_ecosystems)} releases; USN fix dates: {len(overlay)}")
 
-    def _iter_envelopes_with_fixdate(
-        self,
-        fragment_path: str,
-    ) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
-        """Read a fragment file, apply yield-time fix-date patching, yield envelopes."""
-        extra_candidates = usn_extra_candidates(self._usn_overlay)
-        with result.SQLiteReader(fragment_path) as reader:
-            for envelope in reader.each():
-                payload = envelope.item
-                # patch_fix_date keys the lookup by vuln_id. The OSV record's `id` is
-                # the Canonical-internal `UBUNTU-CVE-*`; the fix-date cache keys by the
-                # upstream `CVE-*`. Pass the upstream override so the lookup hits.
-                upstream = payload.get("upstream") or []
-                osv.patch_fix_date(
-                    payload,
-                    self.fixdater,
-                    vuln_id_override=upstream[0] if upstream else None,
-                    extra_candidates=extra_candidates,
-                )
-                yield (
-                    envelope.identifier,
-                    _schema_from_envelope_url(envelope.schema),
-                    payload,
-                )
+    def _warn_unknown_codenames(self) -> None:
+        """A base ecosystem the archive names but `ubuntu_version_names` has no codename for.
 
-    def _group_fragments_by_base(self) -> tuple[dict[str, str], dict[str, list[str]], list[str]]:
-        """Index fragments by their ecosystem.
-
-        Returns (base_paths, pro_paths, unclassified_paths):
-          - base_paths[base_eco]      → path to that base ecosystem's fragment, if present
-          - pro_paths[base_eco]       → paths to plain-Pro sibling fragments of base_eco
-          - unclassified_paths        → paths whose ecosystem couldn't be read (e.g. a
-                                         hand-crafted test fragment or a future shape we
-                                         don't recognize); yielded verbatim, no inference.
-
-        Sub-tier fragments (FIPS / Realtime / Nvidia-BlueField) end up in base_paths
-        keyed by their own ecosystem — they're yielded verbatim, with no inference
-        applied (pro_to_base_ecosystem returns None for them).
-
-        Fragment ecosystem is read from the first envelope's
-        `affected[0].package.ecosystem` to avoid reverse-engineering the
-        slug; every envelope in a fragment shares the same ecosystem by
-        the slicing invariant.
+        The merge skips VEX statements, tracker rows and tracker clearances for
+        such a release entirely (`_merge_release` needs the codename to look any
+        of them up), which is silent otherwise: a new Ubuntu release loses every
+        won't-fix label and clearance the day it is published, until the version
+        table is updated for it.
         """
-        base_paths: dict[str, str] = {}
-        pro_paths: dict[str, list[str]] = {}
-        unclassified: list[str] = []
-        for filename in sorted(os.listdir(self.fragments_dir)):
-            if not filename.endswith(".db"):
+        for eco in sorted(self._base_ecosystems):
+            identity = release_identity(eco)
+            if identity is not None and _codename_for_version(identity.version) is None:
+                self.logger.warning(f"no codename known for Ubuntu {identity.version}; VEX and the tracker snapshot are silent for it")
+
+    def _note_releases(self, row: cve_rows.OsvRow) -> None:
+        """Remember which releases this record speaks for.
+
+        A release is served from the feeds when its own archive appears in them.
+        A release the feed carries only an extended-support build of is not: the
+        Pro-to-base inference still puts records in its base namespace, but the
+        base release's own data is gone and the snapshot is what holds it.
+        """
+        for entry in row.entries:
+            identity = release_identity(entry.ecosystem)
+            if identity is None or identity.version in _KNOWN_HUSK_RELEASES:
                 continue
-            path = os.path.join(self.fragments_dir, filename)
-            eco = self._ecosystem_of_fragment(path)
-            if eco is None:
-                unclassified.append(path)
+            if identity.channel == _BASE_CHANNEL:
+                self._served_versions.add(identity.version)
+                self._base_ecosystems.add(identity.ecosystem)
                 continue
-            base = pro_to_base_ecosystem(eco)
-            if base is None:
-                base_paths[eco] = path
-            else:
-                pro_paths.setdefault(base, []).append(path)
-        return base_paths, pro_paths, unclassified
+            base = pro_to_base_ecosystem(identity.ecosystem)
+            if base is not None:
+                self._base_ecosystems.add(base)
+
+    def _read_vex_archive(self) -> None:
+        """Stream the VEX tarball once, writing one row per CVE.
+
+        A missing archive leaves no rows, which means no clearance and no
+        won't-fix label from VEX on this run. The OSV rows and the snapshot still
+        produce records, so a failed VEX download degrades rather than empties
+        the output.
+        """
+        self._vex_rows.reset()
+
+        if not os.path.isfile(self.vex_archive_path):
+            self.logger.warning(f"VEX archive missing at {self.vex_archive_path}; no statement is read on this run")
+            return
+
+        with self._vex_rows as rows, tarfile.open(self.vex_archive_path, mode="r:xz") as tar:
+            for name, raw in cve_rows.iter_tar_members(tar, "vex/cve/"):
+                document = self._parse_json(name, raw)
+                if document is None:
+                    continue
+                distilled = vex_cache.distil_row(document)
+                if distilled is None:
+                    continue
+                cve, row = distilled
+                rows.write(cve, row)
+        self.logger.info(f"read VEX statements for {len(self._vex_rows)} CVEs")
+
+    def _parse_json(self, name: str, raw: bytes) -> dict[str, Any] | None:
+        try:
+            data = orjson.loads(raw)
+        except orjson.JSONDecodeError:
+            self.logger.warning(f"failed to parse {name}")
+            return None
+        # a top-level JSON array, or any other non-object shape, is not one of
+        # this feed's records; reading a 100 MB third-party tarball defensively
+        # means not assuming the shape below matches what this returns
+        return data if isinstance(data, dict) else None
+
+    # ------------------------------------------------------------------
+    # the merge
+    # ------------------------------------------------------------------
+
+    def _iter_merged(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
+        """Walk every CVE any source names and emit one record per namespace it speaks for.
+
+        The walk is by CVE because every source is keyed by CVE and assembling
+        one release's answer means seeing all three at once: the OSV record for
+        the fix versions, the VEX statements for what is and is not affected, and
+        the frozen snapshot for what neither current feed states. A release-major
+        walk has to hold one release's worth of every source to do the same job.
+
+        The three key sets are unioned rather than driven off OSV, because a
+        CVE with no OSV record is real in both directions: the statements alone
+        account for over a hundred thousand findings on the extended-support
+        releases, and the snapshot carries CVEs the feed never published.
+        """
+        os_schema = schema.OSSchema()
+        snapshot = tracker.snapshot_keys(self.normalized_cve_dir)
+        for cve in sorted(self._osv_rows.keys() | self._vex_rows.keys() | snapshot):
+            osv_payload = self._osv_rows.get(cve)
+            osv_row = cve_rows.OsvRow.from_payload(osv_payload) if osv_payload is not None else None
+            if osv_row is not None and osv_row.rejected:
+                # a knowingly false finding on every release, including the ones
+                # the record does not name
+                continue
+            vex_payload = self._vex_rows.get(cve)
+            statements = vex_cache.dispositions_by_token(vex_payload) if vex_payload is not None else {}
+            cve_file = tracker.load(self.normalized_cve_dir, cve, self.logger) if cve in snapshot else None
+            for payload in self._records_for_cve(cve, osv_row, statements, cve_file):
+                yield os_identifier_for(payload), os_schema, payload
+
+    def _records_for_cve(
+        self,
+        cve: str,
+        osv_row: cve_rows.OsvRow | None,
+        statements: dict[str, dict[str, str]],
+        cve_file: parser_legacy.CVEFile | None,
+    ) -> Iterator[dict[str, Any]]:
+        entries = self._entries_by_release(osv_row)
+        severity = severity_of(osv_row.severity) if osv_row is not None else _snapshot_severity(cve_file)
+        # both of these are consulted once per release below, so they are
+        # computed once here rather than re-walking the already-parsed
+        # `cve_file` for every one of the thirty-odd releases
+        rows = self._rows_by_codename(cve_file)
+        clearances = self._clearances_by_codename(cve_file)
+        statements_by_codename = self._statements_by_codename(statements)
+
+        for base_eco in sorted(self._base_ecosystems):
+            states, from_osv = self._merge_release(base_eco, entries, statements, statements_by_codename, rows, clearances)
+            if not states:
+                continue
+            namespace = osv_ecosystem_to_os_namespace(base_eco)
+            if namespace is None:
+                continue
+            # A record the OSV feed does not speak for still takes no published
+            # date from the record it does publish for other releases: a date is
+            # a claim about when this release was fixed and the record makes
+            # none. The severity is different — it is a property of the CVE, and
+            # the snapshot states one for this release that the passthrough has
+            # always emitted, so falling back to it beats defaulting to Unknown
+            # and losing to the passthrough on the releases both paths serve.
+            published = osv_row.published if (osv_row is not None and from_osv) else None
+            self._resolve_fix_dates(cve, published, states)
+            fixed_in = [entry for state in states.values() for entry in fixed_in_for(state, namespace)]
+            if fixed_in:
+                identity = release_identity(base_eco)
+                codename = _codename_for_version(identity.version) if identity is not None else None
+                snapshot_severity = _snapshot_severity(cve_file, rows.get(codename) if codename else None, states)
+                yield os_record(cve, namespace, severity if from_osv else snapshot_severity, fixed_in)
+
+        yield from self._channel_records(cve, osv_row, entries, statements, severity)
+
+    def _entries_by_release(self, osv_row: cve_rows.OsvRow | None) -> dict[str, list[cve_rows.OsvEntry]]:
+        """The record's entries grouped by the release each names, canonically.
+
+        Grouping is by canonical identity and not by the literal ecosystem
+        string, so a record naming a release both with and without the `:LTS`
+        suffix is one release here. The entries keep whatever spelling upstream
+        gave them; only the key is canonical.
+        """
+        out: dict[str, list[cve_rows.OsvEntry]] = defaultdict(list)
+        if osv_row is None:
+            return out
+        for entry in osv_row.entries:
+            out[canonical_ecosystem(entry.ecosystem)].append(entry)
+        return out
 
     @staticmethod
-    def _ecosystem_of_fragment(path: str) -> str | None:
-        """Peek the ecosystem string from a fragment by reading one envelope."""
-        try:
-            with result.SQLiteReader(path) as reader:
-                for envelope in reader.each():
-                    for aff in envelope.item.get("affected", []):
-                        eco = aff.get("package", {}).get("ecosystem")
-                        if eco:
-                            return eco
-                    return None
-        except Exception:
+    def _rows_by_codename(cve_file: parser_legacy.CVEFile | None) -> dict[str, dict[str, parser_legacy.Patch]]:
+        """The snapshot's own rows for every release it names, by codename then package.
+
+        `patches` holds one row per release under its bare codename. A `DNE` row
+        is the release saying it never shipped the package, so there is nothing
+        for a record to be about and it is dropped here rather than carried and
+        skipped per release.
+        """
+        out: dict[str, dict[str, parser_legacy.Patch]] = defaultdict(dict)
+        if cve_file is None:
+            return out
+        for patch in cve_file.patches:
+            if not patch.package or not patch.distro or not patch.status or patch.status == tracker.STATUS_DNE:
+                continue
+            out[patch.distro][patch.package] = patch
+        return out
+
+    def _clearances_by_codename(self, cve_file: parser_legacy.CVEFile | None) -> dict[str, set[str]]:
+        """The snapshot's extended-support clearances, by codename."""
+        out: dict[str, set[str]] = defaultdict(set)
+        if cve_file is None:
+            return out
+        for codename, package in tracker.esm_clearances(cve_file):
+            out[codename].add(package)
+        return out
+
+    @staticmethod
+    def _statements_by_codename(statements: dict[str, dict[str, str]]) -> dict[str, list[str]]:
+        """Which tokens may speak for which release, in precedence order.
+
+        The release's own archive first, so that a pocket only fills what it
+        leaves unsaid. A token whose pocket may say nothing about a base
+        namespace, or whose codename the version table does not know, resolves
+        to no release and is silent.
+        """
+        out: dict[str, list[str]] = defaultdict(list)
+        for token in statements:
+            if token_asserts(token):
+                out[codename_of_token(token)].append(token)
+        for tokens in out.values():
+            tokens.sort(key=lambda token: (pocket_of_token(token), token))
+        return out
+
+    def _merge_release(  # noqa: PLR0913
+        self,
+        base_eco: str,
+        entries: dict[str, list[cve_rows.OsvEntry]],
+        statements: dict[str, dict[str, str]],
+        statements_by_codename: dict[str, list[str]],
+        rows: dict[str, dict[str, parser_legacy.Patch]],
+        clearances: dict[str, set[str]],
+    ) -> tuple[dict[str, PackageState], bool]:
+        """What one base release says about one CVE, by source package.
+
+        Five things can decide a package, and the order they are applied in is
+        the precedence between them:
+
+          1. the release's own OSV entries, which carry the fix versions
+          2. the VEX statements at any token of the release. A clearance travels
+             from an extended-support pocket to the base release and outranks
+             everything, including an OSV fix event, because it is the vendor's
+             researched answer about the package and the rest is either an
+             encoding of something else or an absence of research. A finding does
+             not travel: only the release's own archive can put one here
+          3. the frozen snapshot's own rows, which supply a fix version the feed
+             has stopped carrying and a disposition for a combination neither
+             feed mentions at all
+          4. the Pro-to-base inference, for a package only the extended-support
+             build names and every step above has stayed silent about —
+             Canonical encodes "this will only be fixed on Pro" by omitting the
+             base entry. It runs last precisely so it only ever fills silence:
+             nothing above can be a guess for it to be told apart from
+          5. the snapshot's extended-support clearances, last, because a
+             clearance outranks every disposition the steps before it put down —
+             including the row step 3 just read out of the same file. It stops
+             short of a fix version, which is a fact and not a disposition
+
+        Returns the packages and whether the record carries the OSV record's own
+        top-level fields, which decides whether its `published` date is a
+        candidate for a fix date.
+        """
+        identity = release_identity(base_eco)
+        codename = _codename_for_version(identity.version) if identity is not None else None
+        is_base_channel = identity is not None and identity.channel == _BASE_CHANNEL
+        tokens = statements_by_codename.get(codename, []) if codename else []
+        # the release's own archive, which is the only token that may put a
+        # finding in its namespace and the only one that can say the release
+        # never shipped a package at all
+        base_statements = statements.get(codename, {}) if codename else {}
+
+        states: dict[str, PackageState] = {}
+
+        self._apply_osv_entries(entries.get(base_eco, []), statements, states)
+        self._apply_statements(base_eco, tokens, statements, states)
+
+        if codename is not None and is_base_channel:
+            self._apply_tracker_rows(base_eco, rows.get(codename, {}), base_statements, states)
+
+        self._apply_inference(base_eco, entries, base_statements, states)
+
+        if codename is not None and is_base_channel:
+            self._apply_tracker_clearances(clearances.get(codename, set()), base_statements, states)
+
+        # a record the OSV feed does not name this release in still gets a
+        # record when the Pro-to-base inference or a statement speaks for it;
+        # only an actual OSV entry (own or a Pro-only sibling) makes it "from
+        # OSV" for the purpose of trusting its top-level published date
+        from_osv = bool(entries.get(base_eco)) or any(pro_to_base_ecosystem(eco) == base_eco for eco in entries)
+
+        return states, from_osv
+
+    def _apply_osv_entries(
+        self,
+        own: list[cve_rows.OsvEntry],
+        statements: dict[str, dict[str, str]],
+        states: dict[str, PackageState],
+    ) -> None:
+        """Step 1: the release's own OSV entries, which are where fix versions come from."""
+        for entry in own:
+            token = distro_label_from_purl(entry.purl)
+            package = source_package_from_purl(entry.purl)
+            disposition = self._disposition(statements, token, package)
+            if disposition == NOT_PRESENT:
+                # the release does not ship the package, so there is nothing for
+                # a record to be about; the entry it contradicts is dropped
+                continue
+            state = states.get(entry.package)
+            if state is None:
+                state = states[entry.package] = PackageState(package=entry.package, ecosystem=entry.ecosystem)
+            state.add_fixed(entry.fixed)
+            if disposition == WONT_FIX:
+                state.wont_fix = True
+            elif disposition == NOT_AFFECTED:
+                state.clear()
+
+    @staticmethod
+    def _apply_statements(
+        base_eco: str,
+        tokens: list[str],
+        statements: dict[str, dict[str, str]],
+        states: dict[str, PackageState],
+    ) -> None:
+        """Step 2: what the VEX statements at the tokens of this release say.
+
+        This is the half of the union the OSV feed cannot express. A package the
+        vendor has cleared is absent from `affected[]`, and so is a package it has
+        looked at and not fixed where no OSV record exists for the release at all,
+        so enumerating the OSV entries alone drops every statement of the first
+        kind and a long tail of the second.
+
+        A clearance overrides whatever is already here and everything else is
+        only added where nothing has spoken about the package at all. The
+        release's own archive is read first so that a pocket only fills what it
+        leaves unsaid.
+        """
+        for token in tokens:
+            speaks_findings = token_asserts_findings(token)
+            for package in sorted(statements[token]):
+                disposition = statements[token][package]
+                if disposition == NOT_PRESENT:
+                    continue
+                if disposition != NOT_AFFECTED and not speaks_findings:
+                    continue
+                state = states.get(package)
+                if state is not None:
+                    if disposition == NOT_AFFECTED:
+                        state.clear()
+                    continue
+                states[package] = PackageState(
+                    package=package,
+                    ecosystem=base_eco,
+                    cleared=disposition == NOT_AFFECTED,
+                    wont_fix=disposition == WONT_FIX,
+                )
+
+    def _apply_tracker_rows(
+        self,
+        base_eco: str,
+        rows: dict[str, parser_legacy.Patch],
+        base_statements: dict[str, str],
+        states: dict[str, PackageState],
+    ) -> None:
+        """Step 3: the frozen snapshot's own rows, for two different jobs.
+
+        A fix version is a historical fact and the snapshot holds thousands the
+        OSV feed has stopped carrying, because Canonical drops a package from a
+        release's `affected[]` when it stops tracking it there and the version
+        goes with it. So a package either feed mentions, carrying no fix version,
+        takes the snapshot's `released` version.
+
+        A disposition from the snapshot is older news, so it is read only where
+        neither feed mentions the package at all. A statement always outranks a
+        row, including the one that says the release never shipped the package —
+        which leaves nothing behind for a row to attach to, so it has to be asked
+        about rather than looked for: without that, a row saying the package was
+        fixed at a version would put back the package the vendor says was never
+        there.
+        """
+        for package in sorted(rows):
+            row = rows[package]
+            if base_statements.get(package) == NOT_PRESENT:
+                continue
+            state = states.get(package)
+            if state is None:
+                new_state = self._tracker_state(row, base_eco)
+                if new_state is not None:
+                    states[package] = new_state
+                continue
+            if row.status == tracker.STATUS_RELEASED and row.version and not state.cleared and not state.fixed:
+                state.fixed.append(row.version)
+
+    @staticmethod
+    def _apply_inference(
+        base_eco: str,
+        entries: dict[str, list[cve_rows.OsvEntry]],
+        base_statements: dict[str, str],
+        states: dict[str, PackageState],
+    ) -> None:
+        """Step 4: the Pro-to-base inference, reading an omission.
+
+        Canonical encodes "this will only ever be fixed on Pro" by leaving the
+        base entry out, so a package the extended-support build names and the
+        base release does not is presumed vulnerable there with no fix coming —
+        for a package nothing above has already spoken about. Running last means
+        this can only ever fill silence: every step ahead of it — the release's
+        own OSV entries, a VEX statement at any of its tokens, a snapshot row —
+        has already put a real answer down for anything it has an opinion about,
+        so there is nothing here for the inference to be told apart from and
+        nothing to correct if a later step turns out to know better.
+
+        The one thing it still has to ask about explicitly is whether the
+        release shipped the package at all: an inferred package has no purl of
+        its own — the Pro entry's names a Pro pocket — so a statement that the
+        release never shipped it has to be looked up at the base codename by
+        hand, or this silently reads as "VEX says nothing" while appearing to
+        work.
+        """
+        for eco in sorted(entries):
+            if pro_to_base_ecosystem(eco) != base_eco:
+                continue
+            for entry in entries[eco]:
+                if entry.package in states:
+                    continue
+                if base_statements.get(entry.package) == NOT_PRESENT:
+                    continue
+                states[entry.package] = PackageState(package=entry.package, ecosystem=base_eco, wont_fix=True)
+
+    @staticmethod
+    def _apply_tracker_clearances(
+        clearances: set[str],
+        base_statements: dict[str, str],
+        states: dict[str, PackageState],
+    ) -> None:
+        """Step 5: the clearances the snapshot holds and no statement repeats.
+
+        Last, because a clearance outranks every disposition the steps before it
+        put down, including the row step 3 just read out of the same file. It
+        overrides and never creates: the pre-OSV provider downgraded a row that
+        was already there and invented no record, and unlike the VEX clearance
+        population this one is unmeasured.
+
+        It stops at a fix version. A `"0"` row cancels findings from every other
+        source for that package, so writing one over a version some source has
+        already established trades a real match for silence on the word of a
+        frozen snapshot. The VEX clearance at `_apply_statements` does overwrite
+        a version, deliberately: it is current, it is measured, and it is the
+        vendor answering about this package today. This one is neither, which is
+        the whole difference between them.
+        """
+        for package in sorted(clearances):
+            state = states.get(package)
+            if state is None or state.cleared or state.fixed:
+                continue
+            if base_statements.get(package) == NOT_PRESENT:
+                continue
+            state.clear()
+
+    @staticmethod
+    def _tracker_state(row: parser_legacy.Patch, base_eco: str) -> PackageState | None:
+        """A package only the snapshot names, or None when the row has nothing to state."""
+        if row.status == tracker.STATUS_RELEASED:
+            if not row.version:
+                # the legacy path omits a released row with no version at all;
+                # it does emit one for the empty string, which this drops, and
+                # no row in the snapshot carries that
+                return None
+            return PackageState(package=row.package or "", ecosystem=base_eco, fixed=[row.version])
+        disposition = tracker.disposition_of_status(row.status)
+        if disposition is None:
             return None
-        return None
+        return PackageState(
+            package=row.package or "",
+            ecosystem=base_eco,
+            cleared=disposition == NOT_AFFECTED,
+            wont_fix=disposition == WONT_FIX,
+        )
+
+    @staticmethod
+    def _disposition(statements: dict[str, dict[str, str]], token: str | None, package: str | None) -> str | None:
+        if not token or not package:
+            return None
+        return statements.get(canonical_token(token), {}).get(package)
+
+    def _channel_records(
+        self,
+        cve: str,
+        osv_row: cve_rows.OsvRow | None,
+        entries: dict[str, list[cve_rows.OsvEntry]],
+        statements: dict[str, dict[str, str]],
+        severity: str,
+    ) -> Iterator[dict[str, Any]]:
+        """The `ubuntu:X.YY+esm` records, which carry the real plain-Pro fix versions.
+
+        Enumeration here is the OSV record alone: the channel states fix versions
+        and nothing else, so a statement can only remove an entry from it and the
+        snapshot has nothing to add. A cleared package is dropped rather than
+        stated, because the clearance belongs to the base release's record.
+        """
+        if osv_row is None:
+            return
+        for eco in sorted(entries):
+            identity = release_identity(eco)
+            if identity is None or identity.version in _KNOWN_HUSK_RELEASES:
+                continue
+            namespace = osv_ecosystem_to_os_namespace(eco, include_esm=self.downconvert_emit_esm)
+            if namespace is None or not is_esm_namespace(namespace):
+                continue
+            states: dict[str, PackageState] = {}
+            for entry in entries[eco]:
+                token = distro_label_from_purl(entry.purl)
+                package = source_package_from_purl(entry.purl)
+                if self._disposition(statements, token, package) in (NOT_AFFECTED, NOT_PRESENT):
+                    continue
+                state = states.get(entry.package)
+                if state is None:
+                    state = states[entry.package] = PackageState(package=entry.package, ecosystem=entry.ecosystem)
+                state.add_fixed(entry.fixed)
+            if not states:
+                continue
+            self._resolve_fix_dates(cve, osv_row.published, states)
+            fixed_in = [item for state in states.values() for item in fixed_in_for(state, namespace)]
+            if fixed_in:
+                yield os_record(cve, namespace, severity, fixed_in)
+
+    def _resolve_fix_dates(self, cve: str, published: str | None, states: dict[str, PackageState]) -> None:
+        """Date every fix version in the record, however it got there.
+
+        A version the snapshot supplied is a fix like any other and gets its date
+        the same way. The candidates are the USN that shipped the fix, which is
+        the moment the patched package reached the archive, and the record's own
+        `published` as a low-confidence fallback; the finder picks the most
+        accurate of them and of whatever its own strategies know.
+        """
+        extra = usn_extra_candidates(self._usn_overlay)
+        for state in states.values():
+            for version in state.fixed:
+                candidates: list[fixdate.Result] = []
+                if extra is not None:
+                    candidates.extend(extra(cve, state.package, version, state.ecosystem))
+                if published:
+                    # it isn't clear that a record's published date is the fix
+                    # date, so it is offered as the inaccurate candidate it is
+                    candidates.append(fixdate.Result(date=published, kind="advisory", accurate=False))  # type: ignore[arg-type]
+                result = self.fixdater.best(
+                    vuln_id=cve,
+                    cpe_or_package=state.package,
+                    fix_version=version,
+                    ecosystem=state.ecosystem,
+                    candidates=candidates,
+                )
+                if result and result.date:
+                    state.available[version] = {"Date": result.date.isoformat(), "Kind": result.kind}
+
+    # ------------------------------------------------------------------
+    # the frozen snapshot, for releases the feeds do not serve
+    # ------------------------------------------------------------------
 
     def _osv_covers_legacy_namespace(self, ns: str) -> bool:
-        """Return True if today's OSV feed covers a legacy namespace `ubuntu:X.YY`.
+        """Does today's feed speak for the legacy namespace `ubuntu:X.YY`?
 
-        Used to filter normalized-cve-data passthrough down to the at-cutover
-        EOL set — we never want to emit legacy records for a release that
-        OSV (or a frozen fragment for that release) already covers.
-        Checks the base ecosystem only (`ubuntu-X.YY-lts.db` or `ubuntu-X.YY.db`);
-        Pro/FIPS variants persisting after the base ecosystem drops is fine —
-        they emit their own fragments, base release falls through to legacy.
+        A release the feed names is emitted from the merge, so the passthrough
+        must not emit it too. A release named in `_KNOWN_HUSK_RELEASES` is never
+        in this set, whatever residue the archive still carries for it, so the
+        snapshot serves it. So is a release the feed carries only an
+        extended-support build of: the Pro-to-base inference still puts records
+        in its base namespace, and the snapshot fills in the base data the
+        inference has no access to.
         """
-        version = ns.split(":")[-1]
-        return any(os.path.exists(os.path.join(self.fragments_dir, candidate)) for candidate in (f"ubuntu-{version}-lts.db", f"ubuntu-{version}.db"))
+        return ns.split(":")[-1] in self._served_versions
 
     def _iter_normalized_cve_data(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         """Read input/normalized-cve-data/ via the vendored v3 map_parsed.
 
-        Emits OS-schema envelopes for at-cutover EOL releases only — namespaces
-        whose base ecosystem is in today's OSV feed (or a frozen fragment) are
-        skipped. The filter is applied BEFORE map_parsed so fixdater isn't
-        queried for releases we'd discard anyway.
+        Emits OS-schema envelopes for the releases the feeds do not serve. The
+        filter is applied BEFORE map_parsed so fixdater isn't queried for
+        releases we'd discard anyway.
         """
         if not os.path.isdir(self.normalized_cve_dir):
             return
 
         os_schema = schema.OSSchema()
         for filename in sorted(os.listdir(self.normalized_cve_dir)):
-            if not _CVE_FILENAME_RE.match(filename):
+            if not tracker.CVE_FILENAME_RE.match(filename):
                 continue
-            full = os.path.join(self.normalized_cve_dir, filename)
-            try:
-                with open(full, "rb") as f:
-                    cve_file = parser_legacy.CVEFile.from_dict(orjson.loads(f.read()))
-            except Exception:
-                self.logger.exception(f"failed to load normalized cve {full}")
+            osv_payload = self._osv_rows.get(filename)
+            if osv_payload is not None and osv_payload.get("rejected"):
+                # a knowingly false finding; the merge already drops it, and the
+                # legacy passthrough must not resurrect it for a release the
+                # merge does not speak for
                 continue
 
-            # Drop patches for releases OSV already covers. map_parsed would
+            cve_file = tracker.load(self.normalized_cve_dir, filename, self.logger)
+            if cve_file is None:
+                continue
+
+            # Drop patches for releases the feeds already cover. map_parsed would
             # otherwise call fixdater.best() per released patch — wasted work
             # for jammy/noble/etc. that we'd filter out post-mapping.
             cve_file.patches = [
@@ -643,78 +973,45 @@ class Parser:
                 identifier = f"{vuln.NamespaceName}/{vuln.Name.lower()}"
                 yield identifier, os_schema, {"Vulnerability": vuln.json()}
 
-    def _clean_input(self):
-        # The ubuntu-cve-tracker repo is no longer used and is huge, so delete if it exists
-        # to significantly reduce cache.
-        cve_tracker_path = os.path.join(self.workspace.input_path, "ubuntu-cve-tracker")
-        if os.path.exists(cve_tracker_path):
-            silent_remove(cve_tracker_path, tree=True)
+    # ------------------------------------------------------------------
+    # run
+    # ------------------------------------------------------------------
+
+    def _clean_input(self) -> None:
+        """Remove input state nothing reads any more. Silent and idempotent.
+
+        Five directories, all one-time. `ubuntu-cve-tracker` was the cloned
+        security tracker repo and `distro-info` a fetched release calendar. The
+        other three were the re-encoding of the two feeds and the snapshot into
+        per-release SQLite, arranged so a release-major walk could read them,
+        which walking by CVE removes the need for. The workspace keeps `input/`
+        between runs, so leaving them behind would leave them for good; the
+        README has what that costs.
+
+        And any `.part` staging file an interrupted download left behind.
+        `download_to_file` removes its own only when its own retry loop
+        exhausts, so a hard kill (OOM, SIGKILL) mid-archive skips that — and
+        `input/` surviving between runs is the same reason the directories
+        above have to be named here: nothing else would ever remove it.
+        """
+        for name in ("ubuntu-cve-tracker", "distro-info", "fragments", "vex-fragments", "tracker-index"):
+            silent_remove(os.path.join(self.workspace.input_path, name), tree=True)
+        http.remove_stale_partial_downloads(self.workspace.input_path, self.logger)
 
     def get(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
         self._clean_input()
         self._download_archive()
         self._download_vex_archive()
         self.fixdater.download()
-        vex_overlay = self._load_vex_overlay()
-        self._usn_overlay = self._load_usn_overlay()
-        self._write_fragments(vex_overlay=vex_overlay)
-        # legacy first; OSV last (policy-only — identifier shapes don't collide)
-        yield from self._iter_normalized_cve_data()
-        if self.downconvert_osv_to_os:
-            yield from self._iter_fragments_downconverted()
-        else:
-            yield from self._iter_fragments()
-
-    def _iter_fragments_downconverted(self) -> Iterator[tuple[str, schema.Schema, dict[str, Any]]]:
-        """Yield OSV fragment envelopes rewritten into v3 OS-schema records.
-
-        Plain Pro (ESM) slices become `ubuntu:X.YY+esm` channel records (gated by
-        `downconvert_emit_esm`); FIPS/Realtime/BlueField slices and any envelope
-        without an upstream CVE alias are dropped — v3 never emitted them. Pro-only-fix
-        wont-fix data still appears here because `_yield_base_with_inferences` already
-        merged it into the base ecosystem's affected[] list before this runs.
-        """
-        os_schema = schema.OSSchema()
-        for _osv_identifier, _osv_schema, osv_payload in self._iter_fragments():
-            os_payload = osv_to_os(osv_payload, include_esm=self.downconvert_emit_esm)
-            if os_payload is None:
-                continue
-            yield os_identifier_for(os_payload), os_schema, os_payload
-
-    def _load_usn_overlay(self) -> USNFixDateOverlay | None:
-        """Build the (eco, src-pkg, fixed-ver) → USN-published-date index.
-
-        Streams `osv/usn/**` out of the downloaded OSV tarball. If the archive
-        is missing or unreadable, log and proceed without an overlay — fix-date
-        annotations fall back to first-observed + CVE.published, same as before
-        the USN overlay was added. No regression on miss.
-        """
-        if not os.path.isfile(self.archive_path):
-            self.logger.warning(
-                f"OSV archive missing at {self.archive_path}; USN fix-date overlay unavailable, fix dates will fall back to first-observed",
-            )
-            return None
         try:
-            return USNFixDateOverlay.from_archive(self.archive_path, logger=self.logger)
-        except Exception:
-            self.logger.exception("failed to build USN fix-date overlay; falling back to first-observed")
-            return None
-
-    def _load_vex_overlay(self) -> VEXOverlay | None:
-        """Build the won't-fix overlay from the downloaded VEX archive.
-
-        If the archive is missing or unreadable, log a warning and proceed
-        without an overlay — the fragments still get written with full OSV
-        data, just without won't-fix annotations on this run. Frozen
-        fragments from prior runs retain whatever they were written with.
-        """
-        if not os.path.isfile(self.vex_archive_path):
-            self.logger.warning(
-                f"VEX archive missing at {self.vex_archive_path}; won't-fix annotations will be absent on this run",
-            )
-            return None
-        try:
-            return VEXOverlay.from_archive(self.vex_archive_path, logger=self.logger)
-        except Exception:
-            self.logger.exception("failed to build VEX overlay; won't-fix annotations will be absent on this run")
-            return None
+            self._read_osv_archive()
+            self._read_vex_archive()
+            # the snapshot first and the merge last (policy-only, with one case
+            # where it is not: a release the feed carries only an extended-support
+            # build of is emitted by both, and the merge's record is the one that
+            # has seen every source)
+            yield from self._iter_normalized_cve_data()
+            yield from self._iter_merged()
+        finally:
+            self._osv_rows.close()
+            self._vex_rows.close()

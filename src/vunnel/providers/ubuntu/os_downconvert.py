@@ -1,48 +1,44 @@
-"""Downconvert per-record OSV envelopes into v3's OS-schema Vulnerability shape.
+"""The v3 OS-schema record this provider emits, and the rules that decide each FixedIn.
 
-This is an opt-in compatibility path for consumers stuck on a grype-db build
-process that pre-dates the OSV transformer. When enabled, OSV envelopes
-yielded out of the per-ecosystem fragments are rewritten into the same
-`{"Vulnerability": {...}}` payload the v3 ubuntu provider produced. The
-normalized-cve-data legacy passthrough is left alone — it already emits OS.
+Every record leaves here in the same `{"Vulnerability": {...}}` shape the v3
+ubuntu provider produced, whichever source decided it. The emit path assembles
+one CVE from three sources at once — the OSV feed, the OpenVEX feed and the
+frozen tracker snapshot — and two of them can speak about a package the OSV
+record does not carry, so there is no per-release OSV envelope to convert: the
+disposition is assembled directly and the encoding rules live here.
 
-The mapping mirrors v3's `map_parsed` behavior on equivalent inputs:
+The encoding, for one source package on one namespace:
 
-  OSV ecosystem        → OS NamespaceName        (Ubuntu:22.04:LTS → ubuntu:22.04)
-  upstream[0]          → Vulnerability.Name      (UBUNTU-CVE-* is internal; CVE-* is what v3 emitted)
-  severity[type=Ubuntu]→ Vulnerability.Severity  (Negligible/Low/Medium/High/Critical, or Unknown)
-  affected[].package.name → FixedIn.Name (one FixedIn per source package per ecosystem slice)
-  ranges[].events[].fixed → FixedIn.Version (the dpkg fix version)
-  no fixed event + status=wont-fix → FixedIn.Version="None", VendorAdvisory.NoAdvisory=True
-  no fixed event, no wont-fix      → FixedIn.Version="None", VendorAdvisory.NoAdvisory=False
-  database_specific.anchore.fixes[0] → FixedIn.Available (Date/Kind)
+  not-affected                     → FixedIn.Version="0", VendorAdvisory.NoAdvisory=False
+  one or more fix versions         → one FixedIn per version, plus its fix date
+  no fix, won't fix                → FixedIn.Version="None", VendorAdvisory.NoAdvisory=True
+  no fix, not stated as won't fix  → FixedIn.Version="None", VendorAdvisory.NoAdvisory=False
 
-Plain Ubuntu Pro (ESM) fragments — `Ubuntu:Pro:X.YY:LTS` — are emitted as a
-distro channel: `ubuntu:X.YY+esm`, mirroring RHEL EUS's `rhel:X.Y+eus`. The
-real plain-Pro fix version flows through verbatim. FIPS / FIPS-updates /
-Realtime / Nvidia-BlueField still map to None (their builds diverge from base,
-so their fixes can't resolve a base disclosure). The `include_esm` flag gates the
-`+esm` emit; when off, plain Pro maps to None like the sub-tiers.
+  upstream CVE          → Vulnerability.Name    (Canonical's `UBUNTU-CVE-*` is internal)
+  severity[type=Ubuntu] → Vulnerability.Severity (Negligible/Low/Medium/High/Critical, or Unknown)
 
-The base wont-fix disclosure and the `+esm` fix are a paired split: the base
-`ubuntu:X.YY` record carries the `Version:"None"` wont-fix (synthesized by
-`_yield_base_with_inferences` when only Pro has data), and `ubuntu:X.YY+esm`
-carries the actual fix. In practice a base-fixed CVE (fix in a standard pocket)
-carries no `+esm` record: plain-Pro packages are byte-identical to base while
-base is supported, so no separate ESM fixed event exists until standard support
-ends. That's a property of Canonical's data, not something enforced here — any
-plain-Pro slice with a real fixed event yields a `+esm` record regardless.
+Plain Ubuntu Pro (ESM) is emitted as a distro channel, `ubuntu:X.YY+esm`,
+mirroring RHEL EUS's `rhel:X.Y+eus`, and carries the real Pro fix version
+verbatim. FIPS / FIPS-updates / Realtime / Nvidia-BlueField map to no namespace:
+their builds diverge from base, so their fixes cannot resolve a base disclosure.
+The `include_esm` flag gates the `+esm` emit; when off, plain Pro maps to None
+like the sub-tiers.
 
-The `+esm` channel carries fixes only: a plain-Pro slice with no fixed event
-(wont-fix or still-pending on Pro) produces no `+esm` record at all. The base
-`ubuntu:X.YY` wont-fix is the sole disclosure for those — an unfixed `+esm`
-record would just duplicate it with `Version:"None"`.
+The `+esm` channel carries fixes only. A plain-Pro package with no fix version
+produces no `+esm` FixedIn, and a clearance is the base release's to state, so
+that produces none either: the base `ubuntu:X.YY` record is the sole disclosure
+for both, and an unfixed or cleared `+esm` entry would only duplicate it. A
+`+esm` record with nothing left is not emitted at all.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 _UBUNTU_PKG_VERSION_FORMAT = "dpkg"
 _UBUNTU_CVE_URL = "https://ubuntu.com/security/{}"
@@ -54,8 +50,71 @@ _PLAIN_PRO_ECO_RE = re.compile(r"^Ubuntu:Pro:(\d+\.\d+)(?::LTS)?$")
 
 _ESM_SUFFIX = "+esm"
 
+# What "this package is not vulnerable" is spelled as in the OS schema, and the
+# reason it is spelled exactly this way: the consumer treats a package group
+# whose every FixedIn version is the single character `0` as an unaffected
+# package that cancels findings from other sources, and falls back to a
+# `< 0` version constraint the moment one entry in the group is anything else.
+# So a `"0"` has to be the only FixedIn its package has in a record, with no
+# whitespace and no epoch.
+_NOT_AFFECTED_VERSION = "0"
+
 # v3 severity values, mirroring parser_legacy.Severity.json() output.
 _SEVERITY_NAMES = {"Negligible", "Low", "Medium", "High", "Critical", "Unknown"}
+
+
+@dataclass
+class PackageState:
+    """What one namespace's record says about one source package, before it is encoded.
+
+    Four sources can put a package here — the release's own OSV entries, the
+    Pro-to-base inference, a VEX statement at any token of the release, and the
+    frozen tracker snapshot — and each of them sets one of these fields. The
+    encoding into FixedIn entries is `fixed_in_for` and nothing else reads it.
+
+    `ecosystem` is the OSV ecosystem string the fix-date lookup and the USN
+    overlay are keyed by, which is the spelling the feed used for an entry that
+    came from OSV and the release's canonical spelling for one that did not.
+
+    `cleared` and `fixed` are mutually exclusive, and the class is what holds
+    that rather than every caller remembering to: a package cannot be both
+    researched as not carrying the vulnerability and fixed at a version, and a
+    group mixing a `"0"` with a real version stops being read as a clearance at
+    all. `clear` drops the versions, and `add_fixed` is a no-op once cleared.
+    """
+
+    package: str
+    ecosystem: str
+    cleared: bool = False
+    wont_fix: bool = False
+    fixed: list[str] = field(default_factory=list)
+    # fix version -> {"Date": ..., "Kind": ...}, filled in by whoever resolved the date
+    available: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def add_fixed(self, versions: Iterable[str]) -> None:
+        """Record fix versions for this package, once each and never over a clearance.
+
+        One release can be named twice in the same OSV record — `Ubuntu:26.04`
+        and `Ubuntu:26.04:LTS` during a rename — and both spellings fold to one
+        release here, so the same version arrives twice and would otherwise be
+        encoded as two byte-identical FixedIn rows.
+        """
+        if self.cleared:
+            return
+        for version in versions:
+            if version not in self.fixed:
+                self.fixed.append(version)
+
+    def clear(self) -> None:
+        """State that the vendor researched this package and found the vulnerable code absent.
+
+        The fix versions go with it for the reason on the class: a clearance and
+        a fix version in one group cancel each other out downstream.
+        """
+        self.cleared = True
+        self.wont_fix = False
+        self.fixed = []
+        self.available = {}
 
 
 def osv_ecosystem_to_os_namespace(ecosystem: str, include_esm: bool = True) -> str | None:
@@ -80,8 +139,12 @@ def osv_ecosystem_to_os_namespace(ecosystem: str, include_esm: bool = True) -> s
     if include_esm:
         pm = _PLAIN_PRO_ECO_RE.match(ecosystem)
         if pm is not None:
-            return f"ubuntu:{pm.group(1)}+esm"
+            return f"ubuntu:{pm.group(1)}{_ESM_SUFFIX}"
     return None
+
+
+def is_esm_namespace(namespace: str) -> bool:
+    return namespace.endswith(_ESM_SUFFIX)
 
 
 def _ubuntu_priority_to_severity(score: str) -> str:
@@ -101,155 +164,127 @@ def _ubuntu_priority_to_severity(score: str) -> str:
     return "Unknown"
 
 
-def _extract_severity(payload: dict[str, Any]) -> str:
-    """Pull v3's Severity from OSV's severity[] array (type=Ubuntu wins)."""
-    for entry in payload.get("severity", []) or []:
+def severity_of(severity: list[dict[str, Any]] | None) -> str:
+    """Pull v3's Severity from OSV's severity[] array (type=Ubuntu wins).
+
+    A CVE no OSV record carries has no severity[] to read and is emitted
+    `Unknown`, which is what the provider has always emitted for an untriaged
+    record.
+    """
+    for entry in severity or []:
         if entry.get("type") == "Ubuntu":
             return _ubuntu_priority_to_severity(entry.get("score", ""))
     return "Unknown"
 
 
-def _is_wont_fix(aff: dict[str, Any]) -> bool:
-    anchore = (aff.get("database_specific") or {}).get("anchore") or {}
-    return anchore.get("status") == "wont-fix"
+# How Canonical passes on the CVE program's own rejected-record text. Every
+# record carrying either prefix in the feed is REJECTED at the CVE program;
+# checked against every prefix-matched record in the feed, with zero
+# exceptions in either direction. A third prefix, "** disputed **", was
+# matched here previously: every record carrying it is a published, live CVE,
+# not a rejection, so it suppressed real findings and was removed. Matched
+# case-insensitively with leading whitespace tolerated, so a reformatting
+# upstream does not silently re-admit rejected records.
+_REJECTION_PREFIXES: tuple[str, ...] = (
+    "** reject **",
+    "rejected reason:",
+)
 
 
-def _fixed_versions_for_affected(aff: dict[str, Any]) -> list[str]:
-    """Return the list of `fixed` versions across all ranges of an affected entry.
+def is_cve_program_rejection(payload: dict[str, Any]) -> bool:
+    """Has the CVE program determined this is not a security issue?
 
-    A single affected entry typically has one range with one `fixed` event;
-    multi-event ranges are rare. If multiple fixed events appear, emit a
-    FixedIn for each (matches what v3 would do if cve-tracker had listed
-    multiple "released" patches for the same source package).
+    A rejected CVE would be a knowingly false finding, so it is not emitted.
+    This is the one class of withdrawn record that is a genuine retraction —
+    Canonical otherwise sets `withdrawn` to mean "this record will not be
+    regenerated again", not "this finding was wrong" — and the `details` prose
+    is the only signal published that separates the two. It is a proxy for the
+    CVE program's own record state, not that state itself: it matches
+    Canonical's re-rendering of a rejected record's `details` text, so a
+    rejection Canonical never re-rendered into `details` is missed.
+
+    Not every rejected record is withdrawn: the `Rejected reason:` form appears
+    on records carrying no `withdrawn` timestamp at all. A record carrying
+    `** DISPUTED **` is not matched here: it is a live, published CVE.
+
+    It is read once, as the archive streams past, and carried on the CVE's row
+    as a boolean. A rejection is a fact about the CVE and not about any release
+    the record happens to name, and the releases it names are only the ones the
+    vendor was still publishing for when the rejection landed — so a release the
+    record does not name has to inherit it, and the VEX statements it would
+    otherwise be rebuilt from carry no `details` to be asked.
     """
-    out: list[str] = []
-    for r in aff.get("ranges", []) or []:
-        for ev in r.get("events", []) or []:
-            fv = ev.get("fixed")
-            if fv:
-                out.append(fv)
-    return out
+    details = payload.get("details")
+    if not isinstance(details, str):
+        return False
+    return details.lstrip().lower().startswith(_REJECTION_PREFIXES)
 
 
-def _fix_available_for_version(aff: dict[str, Any], version: str) -> dict[str, Any] | None:
-    """Look up `database_specific.anchore.fixes[]` for the given fix version.
+def fixed_in_for(state: PackageState, namespace: str) -> list[dict[str, Any]]:
+    """Encode one package's disposition as zero or more FixedIn entries.
 
-    `patch_fix_date` (called at yield time) writes entries like
-    `{"version": "...", "date": "YYYY-MM-DD", "kind": "..."}` per fixed
-    event. We re-emit Date/Kind in v3's `Available` shape so consumers
-    can use it the same way they do for normalized-cve-data records.
+    The clearance is read before the fix versions on purpose. Canonical's OSV
+    generator re-encodes a tracker `not-affected (<version>)` row as a range
+    fixed at that version, byte-identical to the encoding of a real fix, so an
+    entry can arrive carrying both — and the clearance is the one that says what
+    the vulnerable code does. Reading the versions first let the encoding win and
+    put the package back below a boundary it was never under.
     """
-    for r in aff.get("ranges", []) or []:
-        db_spec = r.get("database_specific") or {}
-        anchore = db_spec.get("anchore") or {}
-        for entry in anchore.get("fixes", []) or []:
-            if entry.get("version") == version and entry.get("date"):
-                return {"Date": entry["date"], "Kind": entry.get("kind")}
-    return None
+    esm = is_esm_namespace(namespace)
 
-
-def _fixed_in_for_affected(aff: dict[str, Any], namespace: str) -> list[dict[str, Any]]:
-    """Convert one OSV affected[] entry into one or more FixedIn dicts.
-
-    Encoding rules (mirroring v3):
-
-      - released-with-version (one or more `fixed` events)
-          -> FixedIn(Version=<v>, NoAdvisory=False, Available=<date if known>)
-      - wont-fix (no fixed events, status=wont-fix from VEX overlay or
-        Pro-only-fix inference)
-          -> FixedIn(Version="None", NoAdvisory=True)
-      - no fix yet (no fixed events, no wont-fix marker)
-          -> FixedIn(Version="None", NoAdvisory=False)
-
-    Exception: on a `+esm` channel a no-fix entry yields nothing. That channel
-    carries only real Pro fixes; the unfixed disclosure already lives on the
-    base `ubuntu:X.YY` record, so a `Version="None"` +esm entry would just
-    duplicate it.
-    """
-    package_name = (aff.get("package") or {}).get("name")
-    if not package_name:
-        return []
-
-    fixed_versions = _fixed_versions_for_affected(aff)
-    if not fixed_versions and namespace.endswith(_ESM_SUFFIX):
-        return []
-    if fixed_versions:
-        out = []
-        for v in fixed_versions:
-            entry: dict[str, Any] = {
-                "Name": package_name,
+    if state.cleared:
+        if esm:
+            # the channel carries fix versions only; the clearance belongs to the
+            # base release's record
+            return []
+        return [
+            {
+                "Name": state.package,
                 "NamespaceName": namespace,
                 "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
-                "Version": v,
+                "Version": _NOT_AFFECTED_VERSION,
                 "VendorAdvisory": {"NoAdvisory": False},
-                "Available": _fix_available_for_version(aff, v),
-            }
-            out.append(entry)
-        return out
+                "Available": None,
+            },
+        ]
 
-    no_advisory = _is_wont_fix(aff)
+    if state.fixed:
+        return [
+            {
+                "Name": state.package,
+                "NamespaceName": namespace,
+                "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
+                "Version": version,
+                "VendorAdvisory": {"NoAdvisory": False},
+                "Available": state.available.get(version),
+            }
+            for version in state.fixed
+        ]
+
+    if esm:
+        return []
     return [
         {
-            "Name": package_name,
+            "Name": state.package,
             "NamespaceName": namespace,
             "VersionFormat": _UBUNTU_PKG_VERSION_FORMAT,
             "Version": "None",
-            "VendorAdvisory": {"NoAdvisory": no_advisory},
+            "VendorAdvisory": {"NoAdvisory": state.wont_fix},
             "Available": None,
         },
     ]
 
 
-def osv_to_os(payload: dict[str, Any], include_esm: bool = True) -> dict[str, Any] | None:
-    """Convert an OSV envelope payload into a v3-shape `{"Vulnerability": {...}}` dict.
-
-    Returns None when the payload can't be downconverted:
-      - no `upstream[0]` CVE id (v3 always emitted `CVE-*` names, never internal ids)
-      - no affected[] entries map to a base Ubuntu namespace (Pro-only fragment, etc.)
-
-    Caller is responsible for choosing the identifier and schema. This
-    function just produces the payload.
-    """
-    # Withdrawn records are retractions; the OS schema has no withdrawn concept,
-    # so drop them rather than emit an affected-at-all-versions record.
-    if payload.get("withdrawn"):
-        return None
-
-    upstream = payload.get("upstream") or []
-    if not upstream:
-        return None
-    cve_name = upstream[0]
-    if not cve_name:
-        return None
-
-    namespace: str | None = None
-    fixed_in: list[dict[str, Any]] = []
-    for aff in payload.get("affected", []) or []:
-        eco = (aff.get("package") or {}).get("ecosystem", "")
-        ns = osv_ecosystem_to_os_namespace(eco, include_esm=include_esm)
-        if ns is None:
-            continue
-        # By the slicing invariant, every affected[] entry in a single envelope
-        # shares the same ecosystem — so we'll only see one namespace here.
-        if namespace is None:
-            namespace = ns
-        fixed_in.extend(_fixed_in_for_affected(aff, ns))
-
-    if namespace is None:
-        return None
-    # a `+esm` channel with no real fix left is pure noise — the base wont-fix
-    # already disclosed it (see _fixed_in_for_affected), so emit no record.
-    if namespace.endswith(_ESM_SUFFIX) and not fixed_in:
-        return None
-
+def os_record(cve: str, namespace: str, severity: str, fixed_in: list[dict[str, Any]]) -> dict[str, Any]:
+    """Assemble the v3-shape `{"Vulnerability": {...}}` payload."""
     return {
         "Vulnerability": {
-            "Name": cve_name,
+            "Name": cve,
             "NamespaceName": namespace,
             "Description": "",
-            "Severity": _extract_severity(payload),
+            "Severity": severity,
             "Metadata": {},
-            "Link": _UBUNTU_CVE_URL.format(cve_name),
+            "Link": _UBUNTU_CVE_URL.format(cve),
             "FixedIn": fixed_in,
         },
     }
@@ -258,9 +293,9 @@ def osv_to_os(payload: dict[str, Any], include_esm: bool = True) -> dict[str, An
 def os_identifier_for(os_payload: dict[str, Any]) -> str:
     """Build the v3-shape `{namespace}/{cve_name.lower()}` identifier for an emitted OS payload.
 
-    Takes the payload `osv_to_os` produced (not the OSV input) so the identifier
-    can't drift from the record it names — there's one construction, shared by
-    the parser's yield path.
+    Takes the payload `os_record` produced (not the inputs it was built from) so
+    the identifier can't drift from the record it names — there's one
+    construction, shared by the parser's yield path.
     """
     vuln = os_payload["Vulnerability"]
     return f"{vuln['NamespaceName']}/{vuln['Name'].lower()}"
