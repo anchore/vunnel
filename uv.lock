@@ -1562,6 +1562,7 @@ dev = [
     { name = "types-python-dateutil" },
     { name = "types-pyyaml" },
     { name = "types-requests" },
+    { name = "urllib3" },
     { name = "uv-dynamic-versioning" },
     { name = "yardstick" },
 ]
@@ -1612,6 +1613,7 @@ dev = [
     { name = "types-python-dateutil", specifier = ">=2.9.0.20250809" },
     { name = "types-pyyaml", specifier = ">=6.0.12.5,<7.0.0.0" },
     { name = "types-requests", specifier = ">=2.28.11.7,<3.0.0.0" },
+    { name = "urllib3", specifier = ">=2.6.3" },
     { name = "uv-dynamic-versioning", specifier = ">=0.6.0" },
     { name = "yardstick", specifier = ">=0.16.0" },
 ]

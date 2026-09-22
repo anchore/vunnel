@@ -163,20 +163,20 @@ tasks:
   ## Generated data tasks #################################
 
   update-go-release-dates:
-    desc: Rewrite the committed Go toolchain release-date table from golang/go
+    desc: Rewrite the committed Go release-date tables (toolchain tags and vulndb module fix versions)
     summary: |
-      Regenerates src/vunnel/providers/govulndb/go_release_dates_data.py.
+      Regenerates src/vunnel/providers/govulndb/go_release_dates_data.py from the
+      golang/go tag history, and go_module_release_dates_data.py from the module fix
+      versions the current go vulndb names (dated via the Go module proxy).
 
-      The output is a pure function of the golang/go tag history, so this leaves
-      the worktree clean unless Go has shipped a release the table is missing.
-      Automation can therefore run this and open a PR iff `git diff` is non-empty.
+      Committed dates are never re-fetched, so this leaves the worktree clean unless
+      something changed: Go shipped a release, the vulndb names a new fix version or no
+      longer names an old one, or a version the proxy didn't know before now has a date.
+      A lookup that fails leaves the table as it was. Exits non-zero, writing nothing,
+      if every lookup failed, or if the golang/go clone or vulndb download fails.
+      oss-release runs it weekly and opens a PR iff `git diff` is non-empty.
     cmds:
       - "uv run python scripts/generate-go-release-dates.py"
-
-  check-go-release-dates:
-    desc: Fail if the committed Go release-date table is missing a release
-    cmds:
-      - "uv run python scripts/generate-go-release-dates.py --check"
 
   ## Testing tasks #################################
 

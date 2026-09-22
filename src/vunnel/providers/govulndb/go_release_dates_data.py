@@ -2,7 +2,7 @@
 
 DO NOT EDIT BY HAND -- regenerate with `task update-go-release-dates`.
 
-Keyed by golang/go release tag, the form `_stdlib_version_to_tag` produces.
+Keyed by golang/go release tag, the form `stdlib_version_to_tag` produces.
 Dates are the UTC date of the commit each tag points at, generated from https://github.com/golang/go.
 """
 
