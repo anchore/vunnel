@@ -160,6 +160,24 @@ tasks:
     cmds:
       - "uv run mypy --config-file ./pyproject.toml src/vunnel"
 
+  ## Generated data tasks #################################
+
+  update-go-release-dates:
+    desc: Rewrite the committed Go toolchain release-date table from golang/go
+    summary: |
+      Regenerates src/vunnel/providers/govulndb/go_release_dates_data.py.
+
+      The output is a pure function of the golang/go tag history, so this leaves
+      the worktree clean unless Go has shipped a release the table is missing.
+      Automation can therefore run this and open a PR iff `git diff` is non-empty.
+    cmds:
+      - "uv run python scripts/generate-go-release-dates.py"
+
+  check-go-release-dates:
+    desc: Fail if the committed Go release-date table is missing a release
+    cmds:
+      - "uv run python scripts/generate-go-release-dates.py --check"
+
   ## Testing tasks #################################
 
   unit:

@@ -1,11 +1,9 @@
 """Release dates for every Go toolchain version published so far.
 
-DO NOT EDIT BY HAND -- regenerate with:
-
-    uv run python -m vunnel.providers.govulndb.generate_go_release_dates
+DO NOT EDIT BY HAND -- regenerate with `task update-go-release-dates`.
 
 Keyed by golang/go release tag, the form `_stdlib_version_to_tag` produces.
-Generated from https://github.com/golang/go on 2026-09-18; 384 tags.
+Dates are the UTC date of the commit each tag points at, generated from https://github.com/golang/go.
 """
 
 from __future__ import annotations
@@ -15,7 +13,7 @@ GO_RELEASE_DATES: dict[str, str] = {
     "go1.0.1": "2012-04-26",
     "go1.0.2": "2012-06-14",
     "go1.0.3": "2012-09-21",
-    "go1.1rc2": "2013-05-06",
+    "go1.1rc2": "2013-05-07",
     "go1.1rc3": "2013-05-08",
     "go1.1": "2013-05-13",
     "go1.1.1": "2013-06-13",
@@ -24,18 +22,18 @@ GO_RELEASE_DATES: dict[str, str] = {
     "go1.2rc3": "2013-11-01",
     "go1.2rc4": "2013-11-13",
     "go1.2rc5": "2013-11-18",
-    "go1.2": "2013-11-29",
+    "go1.2": "2013-11-28",
     "go1.2.1": "2014-03-03",
     "go1.2.2": "2014-05-05",
-    "go1.3beta1": "2014-04-21",
-    "go1.3beta2": "2014-05-20",
+    "go1.3beta1": "2014-04-22",
+    "go1.3beta2": "2014-05-21",
     "go1.3rc1": "2014-06-02",
     "go1.3rc2": "2014-06-13",
     "go1.3": "2014-06-19",
     "go1.3.1": "2014-08-13",
     "go1.3.2": "2014-09-25",
     "go1.3.3": "2014-10-01",
-    "go1.4beta1": "2014-10-29",
+    "go1.4beta1": "2014-10-30",
     "go1.4rc1": "2014-11-17",
     "go1.4rc2": "2014-12-02",
     "go1.4": "2014-12-11",
@@ -371,7 +369,7 @@ GO_RELEASE_DATES: dict[str, str] = {
     "go1.25.5": "2025-12-02",
     "go1.25.6": "2026-01-15",
     "go1.25.7": "2026-02-04",
-    "go1.25.8": "2026-03-05",
+    "go1.25.8": "2026-03-06",
     "go1.25.9": "2026-04-07",
     "go1.25.10": "2026-05-07",
     "go1.25.11": "2026-06-02",
@@ -382,7 +380,7 @@ GO_RELEASE_DATES: dict[str, str] = {
     "go1.26rc2": "2026-01-15",
     "go1.26rc3": "2026-02-04",
     "go1.26.0": "2026-02-10",
-    "go1.26.1": "2026-03-05",
+    "go1.26.1": "2026-03-06",
     "go1.26.2": "2026-04-07",
     "go1.26.3": "2026-05-07",
     "go1.26.4": "2026-06-02",

@@ -25,8 +25,8 @@
               "anchore": {
                 "fixes": [
                   {
-                    "date": "2023-08-02",
-                    "kind": "advisory",
+                    "date": "2023-08-01",
+                    "kind": "release",
                     "version": "0.10.0"
                   }
                 ]

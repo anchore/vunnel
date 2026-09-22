@@ -49,7 +49,10 @@ class Parser:
         self.logger = logger
         self.zip_path = os.path.join(self.workspace.input_path, "vulndb.zip")
         self.extract_dir = os.path.join(self.workspace.input_path, "vulndb")
-        self.release_dates = GoReleaseDateOverlay(logger=self.logger, timeout=self.download_timeout)
+        # note: deliberately not download_timeout -- that is sized for the vulndb zip, and these
+        # are single-document metadata reads. With skip_download the overlay serves the committed
+        # release table and nothing else, so the run stays offline.
+        self.release_dates = GoReleaseDateOverlay(logger=self.logger, offline=self.skip_download)
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -111,8 +114,10 @@ class Parser:
         # for the grype OSV transformer. The Go release date is accurate=True, beating the
         # advisory's published date and the first-observed fallback. See go_release_dates.
         self.fixdater.download()
-        extra_candidates = go_extra_candidates(self.release_dates)
 
         for vuln_entry in self._load():
+            # per advisory: whether a third-party module's date is worth resolving depends on
+            # this record's aliases (see go_release_dates.should_resolve)
+            extra_candidates = go_extra_candidates(self.release_dates, vuln_entry.get("aliases"))
             osv.patch_fix_date(vuln_entry, self.fixdater, extra_candidates=extra_candidates)
             yield self._normalize(vuln_entry)
