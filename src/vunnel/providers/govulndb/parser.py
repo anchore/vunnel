@@ -12,7 +12,7 @@ import orjson
 from vunnel.providers.govulndb.go_release_dates import GoReleaseDateOverlay, go_extra_candidates
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
-from vunnel.utils import osv, silent_remove
+from vunnel.utils import osv
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -60,13 +60,9 @@ class Parser:
 
     def _download(self) -> None:
         os.makedirs(self.workspace.input_path, exist_ok=True)
-        silent_remove(self.zip_path)
         self.logger.info(f"downloading go vulnerability database from {self.url}")
-        r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
-        with open(self.zip_path, "wb") as fp:
-            for chunk in r.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    fp.write(chunk)
+        # no need to remove the previous zip first: download_to_file publishes atomically
+        http.download_to_file(self.url, self.zip_path, self.logger, timeout=self.download_timeout)
 
     def _extract(self) -> None:
         shutil.rmtree(self.extract_dir, ignore_errors=True)

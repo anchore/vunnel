@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bz2
+import contextlib
 import logging
 import os
 import re
@@ -85,14 +86,23 @@ class Parser:
 
         try:
             self.logger.info(f"downloading ELSA from {self._url_}")
-            r = http.get(self._url_, self.logger, stream=True, timeout=self.download_timeout)
-            if r.status_code != 200:
-                raise Exception(f"GET {self._url_} failed with HTTP error {r.status_code}")
+            # Land the compressed archive on disk before decompressing it. Feeding the
+            # stream straight into the decompressor meant a dropped connection could not
+            # be resumed -- and left a partially decompressed XML file that looks whole to
+            # everything downstream.
+            compressed_path = self.xml_file_path + ".bz2"
+            http.download_to_file(self._url_, compressed_path, self.logger, timeout=self.download_timeout)
 
-            with open(self.xml_file_path, "wb") as extracted:
-                decompressor = bz2.BZ2Decompressor()
-                for chunk in r.iter_content(chunk_size=1024):
-                    extracted.write(decompressor.decompress(chunk))
+            try:
+                with open(compressed_path, "rb") as compressed, open(self.xml_file_path, "wb") as extracted:
+                    decompressor = bz2.BZ2Decompressor()
+                    for chunk in iter(lambda: compressed.read(65536), b""):
+                        extracted.write(decompressor.decompress(chunk))
+            finally:
+                # the compressed archive is only staging for the decompress step above; keep it from
+                # lingering in the workspace
+                with contextlib.suppress(OSError):
+                    os.remove(compressed_path)
 
         except Exception:
             self.logger.exception("error downloading ELSA file")

@@ -48,7 +48,11 @@ def test_overrides_disabled(mock_requests, tmpdir):
 
 @patch("vunnel.providers.nvd.overrides.http.get")
 def test_overrides_enabled(mock_requests, overrides_tar, tmpdir):
-    mock_requests.return_value = MagicMock(status_code=200, iter_content=lambda: [open(overrides_tar, "rb").read()])
+    with open(overrides_tar, "rb") as fh:
+        payload = fh.read()
+    response = MagicMock(status_code=200, iter_content=lambda chunk_size=None: [payload])  # noqa: ARG005
+    response.__enter__.return_value = response
+    mock_requests.return_value = response
     subject = overrides.NVDOverrides(
         enabled=True,
         url="http://localhost:8080/failed",

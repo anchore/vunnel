@@ -117,13 +117,7 @@ class Parser:
             major_version,
             download_url,
         )
-        r = http.get(download_url, self.logger, stream=True, timeout=self.download_timeout)
-
-        with open(oval_file_path, "wb") as fp:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:
-                    fp.write(chunk)
-                    fp.flush()
+        http.download_to_file(download_url, oval_file_path, self.logger, timeout=self.download_timeout)
 
         return oval_file_path
 

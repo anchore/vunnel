@@ -56,11 +56,7 @@ class SecurityRejections:
             try:
                 self._urls.add(download_url)
                 self.logger.info(f"downloading security-rejections {db_type} from: {download_url}")
-                r = http.get(download_url, self.logger, stream=True, timeout=self.download_timeout)
-
-                with open(file_path, "wb") as fp:
-                    for chunk in r.iter_content():
-                        fp.write(chunk)
+                http.download_to_file(download_url, file_path, self.logger, timeout=self.download_timeout)
 
             except Exception:
                 self.logger.warning(f"failed to download security-rejections {db_type}, continuing without it", exc_info=True)
