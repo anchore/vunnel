@@ -127,6 +127,17 @@ def refused(url):
         ("1.19.0", "go1.19"),
         ("1.21.0", "go1.21.0"),
         ("1.24.0", "go1.24.0"),
+        ("1.10.0", "go1.10"),
+        # go 1.0 is tagged `go1`, not `go1.0`, but its point releases keep the `.0`
+        ("1.0.0", "go1"),
+        ("1.0", "go1"),
+        ("1", "go1"),
+        ("go1", "go1"),
+        ("1.0.1", "go1.0.1"),
+        # there is no go0; "0" is osv's "introduced at the beginning" sentinel
+        ("0", None),
+        ("0.0.0", None),
+        ("0.1.0", None),
         # govulndb's semver floor: "every 1.21 prerelease and later". Go tags no such
         # release, and building one anyway produced the bogus tag "go1.210".
         ("1.21.0-0", None),
@@ -729,6 +740,9 @@ def test_committed_module_table_is_well_formed():
         ("stdlib", "1.20.0", datetime.date(2023, 2, 1)),
         ("toolchain", "1.24.0", datetime.date(2025, 2, 11)),
         ("stdlib", "1.21.0-rc.4", datetime.date(2023, 8, 2)),
+        # go 1.0 shipped as tag `go1`
+        ("stdlib", "1.0.0", datetime.date(2012, 3, 28)),
+        ("stdlib", "1.0.1", datetime.date(2012, 4, 26)),
         # tagged 2026-03-05 in US Pacific, which is 2026-03-06 UTC
         ("stdlib", "1.25.8", datetime.date(2026, 3, 6)),
         ("golang.org/x/net", "0.17.0", datetime.date(2023, 10, 10)),

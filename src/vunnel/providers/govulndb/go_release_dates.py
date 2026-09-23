@@ -97,7 +97,8 @@ _EARLIEST_RELEASE = date(2009, 11, 10)
 # matches just before a trailing newline, which would let "evil.com/mod\n" through.
 _MODULE_PATH_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9._~/-]*")
 _MODULE_VERSION_RE = re.compile(r"v?[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[0-9a-zA-Z.-]+)?(?:\+[0-9a-zA-Z.-]+)?")
-RELEASE_TAG_RE = re.compile(r"go[0-9]+(?:\.[0-9]+){0,2}(?:(?:rc|beta)[0-9]+)?")
+# there is no go0: the first release is `go1`
+RELEASE_TAG_RE = re.compile(r"go[1-9][0-9]*(?:\.[0-9]+){0,2}(?:(?:rc|beta)[0-9]+)?")
 
 # go only ever tags rc and beta prereleases
 _PRERELEASE_RE = re.compile(r"(?:rc|beta)[0-9]+")
@@ -410,15 +411,18 @@ def stdlib_version_to_tag(version: str) -> str | None:
 
 
 def _release_tag_body(version: str) -> str:
-    """`1.20.0` -> `1.20`, but leave `1.21.0` and later alone (see stdlib_version_to_tag)."""
-    base = version.removesuffix(".0")
-    if base == version:
-        return version
+    """`1.20.0` -> `1.20` and `1.0.0` -> `1` (Go 1.0 is tagged `go1`), but leave `1.21.0`
+    and later alone (see stdlib_version_to_tag)."""
+    parts = version.split(".")
     try:
-        major, minor = (int(part) for part in base.split(".", 1))
+        major, minor = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
     except ValueError:
         return version
-    return base if (major, minor) < (1, 21) else version
+    if (major, minor) >= (1, 21):
+        return version
+    while len(parts) > 1 and parts[-1] == "0":
+        parts.pop()
+    return ".".join(parts)
 
 
 def module_info_url(module: str, version: str) -> str | None:
