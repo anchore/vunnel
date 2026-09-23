@@ -136,7 +136,8 @@ class Parser:
 
         # go.dev's OSV records carry no per-fix date, so patch database_specific.anchore.fixes
         # for the grype OSV transformer. The Go release date is accurate=True, beating the
-        # advisory's published date and the first-observed fallback. See go_release_dates.
+        # advisory's published date; an earlier accurate first-observed date still caps it.
+        # See go_release_dates.
         self.fixdater.download()
 
         # all release-date network traffic happens here, once, before the per-record loop;

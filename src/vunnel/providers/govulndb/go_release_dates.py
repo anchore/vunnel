@@ -368,8 +368,10 @@ def _answered_or_raise(response: requests.Response) -> None:
 def go_extra_candidates(dates: ReleaseDates) -> osv.ExtraCandidatesCallable:
     """Build the extra-candidates callable for osv.patch_fix_date.
 
-    accurate=True so the release date wins against first-observed and the
-    advisory's low-confidence published date.
+    accurate=True ranks the release date ahead of the advisory's low-confidence
+    published date and any inaccurate first-observed date. An accurate first-observed
+    date still caps it: Finder.best returns the first-observed date instead when the
+    release date is later.
     """
 
     def candidates(vuln_id: str, package_name: str, fix_version: str, ecosystem: str | None) -> list[fixdate.Result]:
