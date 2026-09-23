@@ -164,6 +164,7 @@ tasks:
 
   update-go-release-dates:
     desc: Rewrite the committed Go release-date tables (toolchain tags and vulndb module fix versions)
+    deps: [tools]
     summary: |
       Regenerates src/vunnel/providers/govulndb/go_release_dates_data.py from the
       golang/go tag history, and go_module_release_dates_data.py from the module fix
