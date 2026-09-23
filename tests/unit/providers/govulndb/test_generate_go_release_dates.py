@@ -53,7 +53,7 @@ def records(*pairs):
 
 def test_new_versions_are_dated_or_recorded_unknown(generator):
     def handler(url):
-        return ok("2023-08-01T17:46:51Z") if "x/image" in url else status(404)
+        return ok("2023-08-01T17:46:51Z") if url == generator.module_info_url("golang.org/x/image", "0.10.0") else status(404)
 
     session = FakeSession(handler)
 
@@ -97,7 +97,7 @@ def test_a_straggler_never_rewrites_the_table(generator, failure):
     that couldn't be asked is left for next time, and everything that was answered still lands."""
 
     def handler(url):
-        return ok("2026-09-01T00:00:00Z") if "answered" in url else failure
+        return ok("2026-09-01T00:00:00Z") if url == generator.module_info_url("example.com/answered", "1.0.0") else failure
 
     table = generator.build_module_table(
         records(("example.com/known", "1.0.0"), ("example.com/new", "1.0.0"), ("example.com/answered", "1.0.0")),
@@ -151,7 +151,7 @@ def test_main_writes_what_it_learned_despite_stragglers(generator, monkeypatch, 
     monkeypatch.setattr(
         generator,
         "proxy_session",
-        lambda: FakeSession(lambda url: ok("2026-09-01T00:00:00Z") if "a.io" in url else status(503)),
+        lambda: FakeSession(lambda url: ok("2026-09-01T00:00:00Z") if url == generator.module_info_url("a.io/m", "1.0.0") else status(503)),
     )
     monkeypatch.setattr("sys.argv", ["generate-go-release-dates.py"])
 

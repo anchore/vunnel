@@ -4,6 +4,7 @@ import datetime
 import logging
 import time
 from types import SimpleNamespace
+from urllib.parse import urlparse
 
 import pytest
 import requests
@@ -383,7 +384,8 @@ def test_stdlib_miss_asks_gitiles_once_per_tag(fake_http):
 
 
 def test_module_miss_asks_the_proxy(fake_http):
-    fake = fake_http(lambda url: response(content=PROXY_BODY) if "x/image" in url else response(status_code=404, content=b"not found"))
+    image = "https://proxy.golang.org/golang.org/x/image/@v/v0.10.0.info"
+    fake = fake_http(lambda url: response(content=PROXY_BODY) if url == image else response(status_code=404, content=b"not found"))
 
     dates = resolver().resolve([("golang.org/x/image", "0.10.0"), ("example.com/gone", "1.0.0")])
 
@@ -566,7 +568,7 @@ def test_a_host_answering_only_non_answers_is_abandoned(monkeypatch, status):
 
 def test_one_dead_host_does_not_stop_the_others(fake_http):
     def handler(url):
-        if url.startswith("https://go.googlesource.com"):
+        if urlparse(url).netloc == "go.googlesource.com":
             return response(status_code=429)
         return response(content=PROXY_BODY)
 
