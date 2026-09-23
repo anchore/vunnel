@@ -88,6 +88,8 @@ DEFAULT_DEADLINE_SECONDS = 120.0
 # committed, a garbage one would be believed forever.
 _EARLIEST_RELEASE = date(2009, 11, 10)
 
+_MONTHS = {m: i for i, m in enumerate(("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), 1)}
+
 # Module paths and versions come from upstream data and are interpolated into a
 # URL, so they are validated against an allowlist rather than escaped: anything
 # that could change which URL is being requested -- a scheme, an authority, a
@@ -519,9 +521,12 @@ def _parse_gitiles_time(s: str | None) -> date | None:
     """Parse a gitiles git-time string, e.g. `Tue Dec 05 18:12:56 2023 +0000`, as a UTC date."""
     if not isinstance(s, str) or not s:
         return None
+    # gitiles always answers in English, but strptime's %a/%b follow LC_TIME, so map the
+    # month by hand and leave strptime only the locale-independent numeric fields
     try:
-        parsed = datetime.strptime(s, "%a %b %d %H:%M:%S %Y %z")
-    except ValueError:
+        _weekday, month, day, clock, year, offset = s.split()
+        parsed = datetime.strptime(f"{year} {_MONTHS[month]} {day} {clock} {offset}", "%Y %m %d %H:%M:%S %z")
+    except (ValueError, KeyError):
         return None
     return _as_utc_date(parsed)
 

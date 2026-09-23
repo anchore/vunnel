@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import locale
 import logging
 import time
 from types import SimpleNamespace
@@ -681,6 +682,9 @@ def test_out_of_range_gitiles_timestamp_is_a_miss(fake_http):
         ("Wed Mar 04 17:30:00 2026 -0800", datetime.date(2026, 3, 5)),
         ("Tue Feb 11 09:24:39 2025 -0800", datetime.date(2025, 2, 11)),
         ("not a git time", None),
+        ("Tue Dex 05 18:12:56 2023 +0000", None),
+        # a two-digit year is not silently read as 20xx
+        ("Tue Dec 05 18:12:56 23 +0000", None),
         (None, None),
     ],
 )
@@ -688,6 +692,20 @@ def test_gitiles_times_are_normalized_to_utc(fake_http, git_time, expected):
     payload = b'{"committer":{}}' if git_time is None else b')]}\'\n{"committer":{"time":"' + git_time.encode() + b'"}}'
     fake_http(lambda url: response(content=payload))
     assert resolver().resolve([("stdlib", "1.99.0")]).lookup("stdlib", "1.99.0") == expected
+
+
+def test_gitiles_times_parse_under_a_non_english_locale(fake_http):
+    """gitiles answers in English whatever LC_TIME says, and strptime's %a/%b would follow LC_TIME."""
+    previous = locale.setlocale(locale.LC_TIME)
+    try:
+        locale.setlocale(locale.LC_TIME, "de_DE.UTF-8")
+    except locale.Error:
+        pytest.skip("de_DE.UTF-8 locale not installed")
+    try:
+        fake_http(lambda url: response(content=GITILES_BODY))
+        assert resolver().resolve([("stdlib", "1.99.0")]).lookup("stdlib", "1.99.0") == datetime.date(2023, 12, 5)
+    finally:
+        locale.setlocale(locale.LC_TIME, previous)
 
 
 @pytest.mark.parametrize(
