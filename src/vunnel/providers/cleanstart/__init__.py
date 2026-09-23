@@ -11,7 +11,13 @@ if TYPE_CHECKING:
     import datetime
 
 PROVIDER_NAME = "cleanstart"
-SCHEMA = schema.OSVSchema()
+
+# CleanStart advisories declare schema_version 1.7.3 and carry their CVE/GHSA
+# identifiers in `upstream`, a field OSV added in 1.7 — the 1.6.1 default that
+# OSVSchema() returns predates it entirely. Pinned to the version the records
+# actually declare; schema/vulnerability/osv/schema-1.7.3.json is vendored from
+# the ossf/osv-schema v1.7.3 tag.
+SCHEMA = schema.OSVSchema(version="1.7.3")
 
 
 @dataclass
