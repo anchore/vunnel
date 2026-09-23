@@ -97,6 +97,10 @@ class Parser:
            etc.) using only the composite relationship IDs + platform IDs.
         """
         tree = doc.product_tree
+        if tree is None:
+            # spec-legal document-only CSAF doc (no product_tree/vulnerabilities at
+            # all) -- nothing to subset.
+            return None
 
         # step 1: find hummingbird platform IDs from branch CPEs
         platform_ids: set[str] = set()
