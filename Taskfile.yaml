@@ -160,6 +160,25 @@ tasks:
     cmds:
       - "uv run mypy --config-file ./pyproject.toml src/vunnel"
 
+  ## Generated data tasks #################################
+
+  update-go-release-dates:
+    desc: Rewrite the committed Go release-date tables (toolchain tags and vulndb module fix versions)
+    deps: [tools]
+    summary: |
+      Regenerates src/vunnel/providers/govulndb/go_release_dates_data.py from the
+      golang/go tag history, and go_module_release_dates_data.py from the module fix
+      versions the current go vulndb names (dated via the Go module proxy).
+
+      Committed dates are never re-fetched, so this leaves the worktree clean unless
+      something changed: Go shipped a release, the vulndb names a new fix version or no
+      longer names an old one, or a version the proxy didn't know before now has a date.
+      A lookup that fails leaves the table as it was. Exits non-zero, writing nothing,
+      if every lookup failed, or if the golang/go clone or vulndb download fails.
+      oss-release runs it weekly and opens a PR iff `git diff` is non-empty.
+    cmds:
+      - "uv run python scripts/generate-go-release-dates.py"
+
   ## Testing tasks #################################
 
   unit:

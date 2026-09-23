@@ -9,6 +9,13 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.providers.govulndb.go_release_dates import (
+    SOURCE_URLS,
+    ReleaseDateResolver,
+    ReleaseDates,
+    fixed_versions,
+    go_extra_candidates,
+)
 from vunnel.tool import fixdate
 from vunnel.utils import http_wrapper as http
 from vunnel.utils import osv
@@ -34,6 +41,7 @@ class Parser:
         skip_download: bool = False,
         fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
+        release_date_resolver: ReleaseDateResolver | None = None,
     ):
         if not fixdater:
             fixdater = fixdate.default_finder(ws)
@@ -42,12 +50,15 @@ class Parser:
         self.url = url or self._source_url_
         self.download_timeout = download_timeout
         self.skip_download = skip_download
-        self.urls = [self.url]
+        self.urls = [self.url, *SOURCE_URLS]
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
         self.zip_path = os.path.join(self.workspace.input_path, "vulndb.zip")
         self.extract_dir = os.path.join(self.workspace.input_path, "vulndb")
+        # With skip_download the resolver serves the committed release-date tables and
+        # nothing else, so the run stays offline.
+        self.release_date_resolver = release_date_resolver or ReleaseDateResolver(logger=self.logger, offline=self.skip_download)
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -98,6 +109,24 @@ class Parser:
         vuln_schema = vuln_entry["schema_version"]
         return vuln_id, vuln_schema, vuln_entry
 
+    def _resolve_release_dates(self) -> ReleaseDates:
+        # outside the fallback: a record that isn't JSON should fail the run as itself, not
+        # first be reported as a release-date failure. fixed_versions skips shapes it doesn't
+        # understand, so nothing else can escape from here.
+        pairs = fixed_versions(self._load())
+        # the resolver handles network failures itself; anything else it raises is a bug,
+        # and a fix-date enrichment must never cost the run, so carry on with what the
+        # committed tables know
+        try:
+            return self.release_date_resolver.resolve(pairs)
+        except Exception:
+            self.logger.exception("go release-date resolve failed; using the committed release-date tables only")
+        try:
+            return self.release_date_resolver.committed()
+        except Exception:
+            self.logger.exception("committed go release-date tables are unreadable; no go release dates this run")
+            return ReleaseDates({}, {})
+
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         if self.skip_download:
             self.logger.info(f"skipping download; using existing data under {self.extract_dir}")
@@ -105,12 +134,17 @@ class Parser:
             self._download()
             self._extract()
 
-        # go.dev's OSV records carry no per-fix date; patch in database_specific.anchore.fixes
-        # so the grype OSV transformer's existing fix-availability path picks them up. The
-        # advisory's own `published` date rides along as a low-confidence candidate so the
-        # finder can fall back to it when no first-observed dataset has the fix.
+        # go.dev's OSV records carry no per-fix date, so patch database_specific.anchore.fixes
+        # for the grype OSV transformer. The Go release date is accurate=True, beating the
+        # advisory's published date; an earlier accurate first-observed date still caps it.
+        # See go_release_dates.
         self.fixdater.download()
 
+        # all release-date network traffic happens here, once, before the per-record loop;
+        # the loop only consults the frozen result
+        release_dates = self._resolve_release_dates()
+        extra_candidates = go_extra_candidates(release_dates)
+
         for vuln_entry in self._load():
-            osv.patch_fix_date(vuln_entry, self.fixdater)
+            osv.patch_fix_date(vuln_entry, self.fixdater, extra_candidates=extra_candidates)
             yield self._normalize(vuln_entry)
