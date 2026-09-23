@@ -9,10 +9,10 @@ import pytest
 from vunnel import result
 from vunnel.providers.sles import Config, Provider
 from vunnel.providers.sles.csaf_advisory_client import AdvisoryDates
-from vunnel.providers.sles.csaf_parser import FixDates, downconvert
+from vunnel.providers.sles.csaf_parser import FixDates, _ProductBuilds, _resolve_orphan_binaries, downconvert
 from vunnel.tool.fixdate.finder import Finder
 from vunnel.utils.csaf_types import from_path
-from vunnel.utils.vulnerability import VendorAdvisory
+from vunnel.utils.vulnerability import FixedIn, VendorAdvisory
 
 
 class _NoFirstObserved:
@@ -48,15 +48,20 @@ FIXTURE_CVES = [
     "cve-2022-46283",
 ]
 
-# Real, subsetted CVEs used only in standalone TestDownconvert cases below (not part of
-# the provider-level snapshot pipeline, since they're SLES 11/12 data and the provider
-# snapshot tests are scoped to allow_versions=["15"]).
+# Real, subsetted CVEs used only in standalone TestDownconvert cases below, not in the
+# provider-level snapshot pipeline: most are SLES 11/12 data, which the snapshot tests'
+# allow_versions=["15"] scope excludes anyway, and the 15.x ones carry enough platforms
+# and advisory references that snapshotting them would bury the behavior these cases
+# assert directly.
 _LTSS_ONLY_FIX_CVE = "cve-2022-1271"  # liblzma5 fixed ONLY under -LTSS -- proves the LTSS->plain fix-borrowing rule
 _LTSS_SPACE_SPELLING_CVE = "cve-2018-16881"  # platform spelled "...11 SP1 LTSS" (space, no hyphen)
 _UNASSESSED_WONT_FIX_CVE = "cve-2002-20001"  # no_fix_planned swept onto packages never asserted known_affected
 _AFFECTED_NO_FIX_CVE = "cve-2022-24735"  # redis known_affected with no fix on 15.2, really fixed on 15.3/15.4/15.5
 _SOURCE_NAMED_AFFECTED_CVE = "cve-2015-3217"  # source `pcre` known_affected alongside a real fix for its binaries
 _MANGLED_PURL_SOURCE_CVE = "cve-2018-4197"  # same, but the source entry's own purl carries no upstream= qualifier
+# SLES 15 SP1's fix list covers 9 of the 11 openldap2 binaries known_affected there; SP2's
+# covers all 11 at the identical build. Both orphan-binary remedies in one document.
+_ORPHAN_BINARY_CVE = "cve-2019-13057"
 _LTSS_FIX_VS_PLAIN_AFFECTED_CVE = "cve-2017-6004"  # plain known_affected for libpcre1, fixed only on -LTSS/-ESPOS
 _LTSS_FIX_VS_PLAIN_NOT_AFFECTED_CVE = "cve-2019-19966"  # plain known_not_affected for the kernel, real fix on -LTSS
 _REJECTED_CANDIDATE_CVE = "cve-2023-45918"  # withdrawn: MITRE's "DO NOT USE THIS CANDIDATE NUMBER" wording
@@ -306,6 +311,76 @@ class TestDownconvert:
         assert plain["pcre2"] == "None"
         for binary in ("libpcre2-8-0", "libpcre2-16-0", "libpcre2-32-0", "libpcre2-posix2"):
             assert plain[binary] == "None"
+
+    def test_orphan_binary_inherits_the_build_that_fixed_its_siblings(self, fixture_dir):
+        """One level down from the source-named drop: a *binary* SUSE lists
+        known_affected whose fix list, in the same namespace, covers its siblings but
+        not it.
+
+        CVE-2019-13057 on plain SLES 15 SP1 is the real case. `known_affected` names 11
+        openldap2 binaries; `vendor_fix` names 9 of them at 2.4.46-9.19.2, omitting
+        libldap-data and openldap2-ppolicy-check-password. SUSE's *own* SP2 fix list for
+        the same CVE carries all 11 at the identical 2.4.46-9.19.2 build, and the purl
+        proves it is one build: libldap-data-2.4.46-9.19.2 is
+        `upstream=openldap2-2.4.46-9.19.2.src.rpm`, same source NVR as the SP1 fix.
+
+        So "None" here asserts "vulnerable at every version" about a binary that same
+        build patched. The SLE 15 SP1 base image ships libldap-data-2.4.46-9.53.1 and
+        libldap-2_4-2-2.4.46-9.53.1 from one source RPM: the latter is suppressed by its
+        fix entry, the former was reported NOT-FIXED with no version to compare.
+
+        The boundary comes from SUSE's own build rather than being inferred -- the rule
+        only fires when the document publishes that package at the sibling's source NVR.
+        """
+        doc = from_path(os.path.join(fixture_dir, f"{_ORPHAN_BINARY_CVE}.json"))
+        results = {v.NamespaceName: v for v in downconvert(doc, allow_versions=["15"])}
+
+        plain = {f.Name: f.Version for f in results["sles:15.1"].FixedIn}
+        # the siblings SUSE did list keep their own fix...
+        assert plain["libldap-2_4-2"] == "0:2.4.46-9.19.2"
+        assert plain["openldap2"] == "0:2.4.46-9.19.2"
+        # ...and the omitted binary gets the boundary from the same source build,
+        # epoch-prefixed like every other SLES version, rather than "None".
+        assert plain["libldap-data"] == "0:2.4.46-9.19.2"
+
+    def test_orphan_binary_is_retired_when_only_the_source_record_can_answer(self, fixture_dir):
+        """The other remedy, in the same document. openldap2-ppolicy-check-password is
+        orphaned on SLES 15 SP1 exactly as libldap-data is, but it is built on its own
+        version stream (SP2 fixes it at 1.2-9.19.2, not 2.4.46-9.19.2), so no build of
+        it carries the source NVR the SP1 siblings were fixed at. There is no honest
+        boundary to inherit -- pasting the siblings' 2.4.46-9.19.2 onto a 1.2-x install
+        would compare across streams and stay wrong.
+
+        It is dropped instead, and only because `openldap2` -- the source RPM's own name
+        -- is a fixed record in this namespace. grype resolves an installed binary to
+        its source RPM and searches under that name too, so an unpatched
+        openldap2-ppolicy-check-password still matches via `openldap2`
+        (exact-indirect-match), and a patched one still produces the "Distro Not
+        Vulnerable" ignore. Without that record the drop would be a false negative,
+        which is why the rule requires it.
+        """
+        doc = from_path(os.path.join(fixture_dir, f"{_ORPHAN_BINARY_CVE}.json"))
+        results = {v.NamespaceName: v for v in downconvert(doc, allow_versions=["15"])}
+
+        plain = {f.Name: f.Version for f in results["sles:15.1"].FixedIn}
+        assert "openldap2-ppolicy-check-password" not in plain
+        # the record that answers the source-indirect search is still there
+        assert plain["openldap2"] == "0:2.4.46-9.19.2"
+
+    def test_orphan_rule_is_silent_where_the_namespace_fixes_nothing(self, fixture_dir):
+        """Same scoping as the source-named drop: the rule needs SUSE to contradict
+        itself *in this namespace*. SLES 15 SP1-LTSS lists the same 11 openldap2
+        binaries known_affected and publishes no fix for any of them, so every one is a
+        genuine "vulnerable, no fix available" claim -- including the two the plain
+        track resolves.
+        """
+        doc = from_path(os.path.join(fixture_dir, f"{_ORPHAN_BINARY_CVE}.json"))
+        results = {v.NamespaceName: v for v in downconvert(doc, allow_versions=["15"])}
+
+        ltss = {f.Name: f.Version for f in results["sles:15.1+ltss"].FixedIn}
+        assert ltss["libldap-data"] == "None"
+        assert ltss["openldap2-ppolicy-check-password"] == "None"
+        assert ltss["openldap2"] == "None"
 
     def test_wont_fix_requires_known_affected(self, fixture_dir):
         """no_fix_planned alone isn't enough to justify emitting a won't-fix record.
@@ -664,6 +739,78 @@ class TestDownconvert:
             description.text = f"{marker} some real vulnerability"
             results = {v.NamespaceName: v for v in downconvert(doc, allow_versions=["15"])}
             assert {f.Name: f.Version for f in results["sles:15.1"].FixedIn} == {"mailx": "0:12.5-1.87"}, marker
+
+
+class TestOrphanBinaryGuards:
+    """The two conditions that stop the orphan-binary rule, built by hand rather than
+    from a fixture: neither shape occurs in the 1,200-document corpus sample this rule
+    was measured on (zero declared won't-fix records sit beside a same-source fix), so
+    there is no real document to subset for them -- but both are load-bearing, and a
+    regression in either is a false negative rather than a visible failure.
+    """
+
+    @staticmethod
+    def _record(name, version, *, no_advisory=False):
+        return FixedIn(
+            Name=name,
+            NamespaceName="sles:15.1",
+            VersionFormat="rpm",
+            Version=version,
+            Module=None,
+            VendorAdvisory=VendorAdvisory(NoAdvisory=no_advisory, AdvisorySummary=[]),
+        )
+
+    def _builds(self):
+        # foo builds two binaries; neither is published at the source NVR of the other's
+        # fix, so only the retire branch can apply
+        return _ProductBuilds(
+            source_by_package={"libfoo": "foo", "libfoo-data": "foo", "foo": "foo"},
+            source_nvr_by_build={("libfoo", "0:1.0-1.1"): "foo-1.0-1.1", ("foo", "0:1.0-1.1"): "foo-1.0-1.1"},
+            build_from_source={},
+        )
+
+    def test_declared_wont_fix_is_never_retired(self):
+        """A `no_fix_planned` remediation naming the exact product is SUSE stating a
+        position -- how they say one flavor stays vulnerable while its sibling is fixed
+        (CVE-2023-47627 declares python-aiohttp won't-fix on SLES 15 SP4 while the
+        same-source python311-aiohttp is fixed). Retiring that drops a real,
+        vendor-confirmed exposure. Same carve-out as _drop_stale_source_records.
+        """
+        bucket = {
+            "foo": self._record("foo", "0:1.0-1.1"),
+            "libfoo-data": self._record("libfoo-data", "None", no_advisory=True),
+        }
+        _resolve_orphan_binaries({"sles:15.1": bucket}, self._builds(), "CVE-2024-0001", None, logging.getLogger(__name__))
+
+        assert bucket["libfoo-data"].Version == "None"
+
+    def test_record_stands_when_no_source_named_record_can_answer(self):
+        """Without a record named for the source RPM, dropping is a false negative:
+        grype's source-indirect search would find nothing under `foo` either, so an
+        unpatched libfoo-data becomes invisible to both match paths. Corpus-wide this is
+        the common case -- 326 of 363 orphans -- so the rule leaves them alone and the
+        false positive stays SUSE's to fix.
+        """
+        bucket = {
+            "libfoo": self._record("libfoo", "0:1.0-1.1"),
+            "libfoo-data": self._record("libfoo-data", "None"),
+        }
+        _resolve_orphan_binaries({"sles:15.1": bucket}, self._builds(), "CVE-2024-0001", None, logging.getLogger(__name__))
+
+        assert bucket["libfoo-data"].Version == "None"
+
+    def test_record_is_retired_once_the_source_named_record_exists(self):
+        """The pair to the case above: same bucket plus a fixed `foo`, which is what
+        makes the drop safe. Proves the guard is what holds the record, not some other
+        condition."""
+        bucket = {
+            "libfoo": self._record("libfoo", "0:1.0-1.1"),
+            "foo": self._record("foo", "0:1.0-1.1"),
+            "libfoo-data": self._record("libfoo-data", "None"),
+        }
+        _resolve_orphan_binaries({"sles:15.1": bucket}, self._builds(), "CVE-2024-0001", None, logging.getLogger(__name__))
+
+        assert "libfoo-data" not in bucket
 
 
 def test_provider_via_snapshot_csaf(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):

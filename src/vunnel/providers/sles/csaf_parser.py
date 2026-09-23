@@ -4,7 +4,7 @@ import datetime
 import functools
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, NamedTuple
 
 from packageurl import PackageURL
@@ -202,6 +202,124 @@ def _in_scope_platform_namespaces(product_tree: ProductTree, allow_set: set[str]
     return namespaces
 
 
+def _qualifiers(parsed: PackageURL) -> dict[str, str]:
+    return parsed.qualifiers if isinstance(parsed.qualifiers, dict) else {}
+
+
+def _name_and_version(parsed: PackageURL) -> tuple[str, str]:
+    """(package name, epoch-prefixed version) from an already-parsed purl.
+
+    The epoch default is what actually runs: no in-scope SLES product in the corpus
+    carries an `epoch=` qualifier at all. The only purls that do are the RHEL-derived
+    (`.elN`) builds of the Liberty Linux / Manager Client Tools products sharing this
+    feed, which the CPE scope excludes -- so assuming zero is right by scope, and worth
+    rechecking if that scope ever widens.
+    """
+    epoch = _qualifiers(parsed).get("epoch", "0")
+    return parsed.name, f"{epoch}:{parsed.version}"
+
+
+def _fix_from_purl(purl: str | None) -> tuple[str, str] | None:
+    """(package name, epoch-prefixed version) from a product_tree purl, or None."""
+    if not purl:
+        return None
+    return _name_and_version(PackageURL.from_string(purl))
+
+
+_SRC_RPM_SUFFIX = ".src.rpm"
+
+
+def _source_nvr_of(parsed: PackageURL) -> str | None:
+    upstream = _qualifiers(parsed).get("upstream")
+    if not upstream or not upstream.endswith(_SRC_RPM_SUFFIX):
+        return None
+    return upstream[: -len(_SRC_RPM_SUFFIX)]
+
+
+def _source_nvr(purl: str | None) -> str | None:
+    """The source RPM's NVR, from a product_tree purl's `upstream=` qualifier.
+
+    `pkg:rpm/suse/libpcre1@8.39-8.3.1?upstream=pcre-8.39-8.3.1.src.rpm` ->
+    "pcre-8.39-8.3.1". Identifies the *build*, where _source_rpm_name identifies the
+    package: two binaries carrying the same source NVR came out of one source build.
+    """
+    if not purl:
+        return None
+    return _source_nvr_of(PackageURL.from_string(purl))
+
+
+def _source_name_of(nvr: str) -> str:
+    # "pcre-8.39-8.3.1" -> "pcre"; a bare "pcre.src.rpm" has no version to strip
+    name, _, release = nvr.rpartition("-")
+    name, _, version = name.rpartition("-")
+    if name and release and version[:1].isdigit():
+        return name
+    return nvr
+
+
+def _source_rpm_name(purl: str | None) -> str | None:
+    """The source RPM's name, from a product_tree purl's `upstream=` qualifier.
+
+    `pkg:rpm/suse/libpcre1@8.39-8.3.1?upstream=pcre-8.39-8.3.1.src.rpm` -> "pcre".
+
+    Only version-bearing (fix) purls are worth asking: SUSE's version-less branches
+    often carry no `upstream=` at all (`pkg:rpm/suse/webkit2gtk3@`), which is exactly
+    why _affected_assertions reads source names off the *fixed* products instead. A
+    version-less `upstream=` is worse than absent -- "java-1_7_1-ibm.src.rpm" has no
+    version to strip, so the heuristic below reads it as "java" and would group
+    unrelated JDKs. _product_builds only ever asks about version-bearing purls.
+    """
+    nvr = _source_nvr(purl)
+    return None if nvr is None else _source_name_of(nvr)
+
+
+class _ProductBuilds(NamedTuple):
+    """Every version-bearing product in a document, indexed by build.
+
+    Deliberately spans the whole product tree rather than `_DocumentScope.products`:
+    the build that can supply an orphaned binary's fix boundary is usually published
+    under a *different* platform (SLE 15 SP2 ships libldap-data-2.4.46-9.19.2 where SP1
+    never lists it), and one source build produces the same binary NVR wherever it
+    ships, so where the node was found doesn't change what it says.
+
+    Version-less branches are excluded throughout -- their purls mangle both the package
+    name and the `upstream=` qualifier. See _source_rpm_name.
+    """
+
+    # package name -> its source RPM's name
+    source_by_package: dict[str, str]
+    # (package name, epoch-prefixed version) -> the source NVR that produced it
+    source_nvr_by_build: dict[tuple[str, str], str]
+    # (package name, source NVR) -> epoch-prefixed version, plus the NEVR to date it by
+    build_from_source: dict[tuple[str, str], tuple[str, str]]
+
+
+def _product_builds(product_tree: ProductTree) -> _ProductBuilds:
+    source_by_package: dict[str, str] = {}
+    source_nvr_by_build: dict[tuple[str, str], str] = {}
+    build_from_source: dict[tuple[str, str], tuple[str, str]] = {}
+
+    for product_id, purl in product_tree.product_id_to_purl.items():
+        parsed = PackageURL.from_string(purl)
+        if not parsed.version:
+            continue
+        source_nvr = _source_nvr_of(parsed)
+        if source_nvr is None:
+            continue
+        package, version = _name_and_version(parsed)
+        source_by_package.setdefault(package, _source_name_of(source_nvr))
+        source_nvr_by_build.setdefault((package, version), source_nvr)
+        # product_id is the NEVR here -- version branches are named for the build, and
+        # it is the same string _fix_assertions files fix dates under.
+        build_from_source.setdefault((package, source_nvr), (version, product_id))
+
+    return _ProductBuilds(
+        source_by_package=source_by_package,
+        source_nvr_by_build=source_nvr_by_build,
+        build_from_source=build_from_source,
+    )
+
+
 @dataclass(frozen=True)
 class _DocumentScope:
     """The part of a document's product tree this provider cares about."""
@@ -210,6 +328,11 @@ class _DocumentScope:
     platforms: dict[str, str]
     # product_id, as product_status and remediations spell it -> resolved package
     products: dict[str, _ScopedProduct]
+    # every build in the document, in scope or not -- see _ProductBuilds
+    builds: _ProductBuilds
+
+
+_NO_BUILDS = _ProductBuilds(source_by_package={}, source_nvr_by_build={}, build_from_source={})
 
 
 def _in_scope(product_tree: ProductTree, allow_set: set[str] | None) -> _DocumentScope:
@@ -217,7 +340,7 @@ def _in_scope(product_tree: ProductTree, allow_set: set[str] | None) -> _Documen
     packages related to them. product_status and remediations are lookups against this."""
     platforms = _in_scope_platform_namespaces(product_tree, allow_set)
     if not platforms:
-        return _DocumentScope(platforms={}, products={})
+        return _DocumentScope(platforms={}, products={}, builds=_NO_BUILDS)
 
     products = {}
     for rel in product_tree.relationships:
@@ -229,44 +352,7 @@ def _in_scope(product_tree: ProductTree, allow_set: set[str] | None) -> _Documen
             package=rel.product_reference,
             purl=product_tree.purl_for_product_id(rel.product_reference),
         )
-    return _DocumentScope(platforms=platforms, products=products)
-
-
-def _fix_from_purl(purl: str | None) -> tuple[str, str] | None:
-    """(package name, epoch-prefixed version) from a product_tree purl, or None."""
-    if not purl:
-        return None
-    parsed = PackageURL.from_string(purl)
-    epoch = parsed.qualifiers.get("epoch", "0") if isinstance(parsed.qualifiers, dict) else "0"
-    return parsed.name, f"{epoch}:{parsed.version}"
-
-
-_SRC_RPM_SUFFIX = ".src.rpm"
-
-
-def _source_rpm_name(purl: str | None) -> str | None:
-    """The source RPM's name, from a product_tree purl's `upstream=` qualifier.
-
-    `pkg:rpm/suse/libpcre1@8.39-8.3.1?upstream=pcre-8.39-8.3.1.src.rpm` -> "pcre".
-
-    Only version-bearing (fix) purls are worth asking: SUSE's version-less branches
-    often carry no `upstream=` at all (`pkg:rpm/suse/webkit2gtk3@`), which is exactly
-    why _affected_assertions reads source names off the *fixed* products instead.
-    """
-    if not purl:
-        return None
-    parsed = PackageURL.from_string(purl)
-    qualifiers = parsed.qualifiers if isinstance(parsed.qualifiers, dict) else {}
-    upstream = qualifiers.get("upstream")
-    if not upstream or not upstream.endswith(_SRC_RPM_SUFFIX):
-        return None
-    nvr = upstream[: -len(_SRC_RPM_SUFFIX)]
-    # "pcre-8.39-8.3.1" -> "pcre"; a bare "pcre.src.rpm" has no version to strip
-    name, _, release = nvr.rpartition("-")
-    name, _, version = name.rpartition("-")
-    if name and release and version[:1].isdigit():
-        return name
-    return nvr
+    return _DocumentScope(platforms=platforms, products=products, builds=_product_builds(product_tree))
 
 
 def _vendor_advisories(doc: CSAFDoc) -> list[AdvisorySummary]:
@@ -571,6 +657,112 @@ def _drop_stale_source_records(
             del bucket[name]
 
 
+def _resolve_orphan_binaries(
+    fixed_by_namespace: dict[str, dict[str, FixedIn]],
+    builds: _ProductBuilds,
+    cve_id: str,
+    fix_dates: FixDates | None,
+    logger: logging.Logger,
+) -> None:
+    """Give a boundary to -- or retire -- a "None" record for a *binary* whose source
+    RPM this namespace fixes under a sibling binary's name.
+
+    The mirror of _drop_stale_source_records one level down. SUSE's fix lists sometimes
+    cover only part of the binary set `known_affected` names: for CVE-2019-13057 the
+    SLES 15 SP1 `vendor_fix` list has 9 of the 11 openldap2 binaries, omitting
+    libldap-data, while SP2's list has all 11 at the *identical* 2.4.46-9.19.2 build.
+    "None" then asserts "vulnerable at every version" about a binary the same source
+    build patched -- an unfixable finding on a fully patched host.
+
+    Two remedies, and which one applies is decided by what the document can prove:
+
+    - **Inherit.** If the document publishes a build of this binary from the same source
+      NVR the sibling was fixed at, that build's version is the boundary, and it is
+      SUSE's own number rather than one inferred. Lowest wins among several, for the
+      reason _choose_fix gives.
+    - **Retire.** Otherwise, drop the record only when this namespace also has a fixed
+      record named after the *source* RPM. grype resolves an installed binary to its
+      source RPM and searches under that name too (`exact-indirect-match`), so that
+      record keeps an unpatched install detectable, and keeps producing the "Distro Not
+      Vulnerable" ignore a patched one relies on. Without it a drop is a false negative,
+      so the record stands and the false positive is SUSE's to fix.
+
+    A *declared* won't-fix is never touched, same boundary as _drop_stale_source_records:
+    `no_fix_planned` naming the exact product is SUSE stating a position, and it is how
+    they say one flavor stays vulnerable while its sibling is fixed.
+    """
+    for namespace, bucket in fixed_by_namespace.items():
+        fixed_nvrs = _fixed_source_nvrs(bucket, builds)
+
+        for name in list(bucket):
+            record = bucket[name]
+            source = _orphaned_under(record, builds, fixed_nvrs)
+            if source is None:
+                continue
+
+            chosen = _same_build_of(name, fixed_nvrs[source], builds)
+            if chosen is not None:
+                available = fix_dates.available_for(cve_id, namespace, name, chosen.nevr, chosen.version) if fix_dates else None
+                bucket[name] = replace(record, Version=chosen.version, Available=available)
+                logger.debug(
+                    f"{cve_id}: {namespace}/{name} inherited {chosen.version} from the {source} build that fixed its siblings",
+                )
+                continue
+
+            source_record = bucket.get(source)
+            if source_record is not None and source_record.Version not in ("0", "None"):
+                del bucket[name]
+                logger.debug(
+                    f"{cve_id}: {namespace}/{name} retired; {source} is fixed here and answers the source-indirect search",
+                )
+
+
+def _fixed_source_nvrs(bucket: dict[str, FixedIn], builds: _ProductBuilds) -> dict[str, set[str]]:
+    """Source RPM -> the source NVRs this namespace fixed it at.
+
+    A source is present with an empty set when it is fixed here by a build that can't be
+    identified, which is still the answer the retire branch needs.
+    """
+    fixed_nvrs: dict[str, set[str]] = {}
+    for name, fixed_in in bucket.items():
+        if fixed_in.Version in ("0", "None"):
+            continue
+        source = builds.source_by_package.get(name)
+        if not source:
+            continue
+        nvrs = fixed_nvrs.setdefault(source, set())
+        nvr = builds.source_nvr_by_build.get((name, fixed_in.Version))
+        if nvr:
+            nvrs.add(nvr)
+    return fixed_nvrs
+
+
+def _orphaned_under(record: FixedIn, builds: _ProductBuilds, fixed_nvrs: dict[str, set[str]]) -> str | None:
+    """The source RPM that leaves this record orphaned, or None where the rule doesn't
+    apply: anything but a bare "None", a declared won't-fix, an unresolvable source, a
+    record named for the source RPM itself (_drop_stale_source_records' business), or a
+    source this namespace never fixed."""
+    if record.Version != "None":
+        return None
+    if record.VendorAdvisory and record.VendorAdvisory.NoAdvisory:
+        return None
+    source = builds.source_by_package.get(record.Name)
+    if source is None or source == record.Name or source not in fixed_nvrs:
+        return None
+    return source
+
+
+def _same_build_of(package: str, source_nvrs: set[str], builds: _ProductBuilds) -> _FixCandidate | None:
+    """The package as this document publishes it out of one of those source builds --
+    the only boundary for it the document can actually attest. Lowest wins."""
+    candidates = [
+        _FixCandidate(category="inherited", version=build[0], nevr=build[1])
+        for nvr in source_nvrs
+        if (build := builds.build_from_source.get((package, nvr))) is not None
+    ]
+    return min(candidates, key=_by_version) if candidates else None
+
+
 def _downconvert_vulnerability(
     vuln: Vulnerability,
     doc: CSAFDoc,
@@ -602,6 +794,9 @@ def _downconvert_vulnerability(
 
     _borrow_ltss_fixes_into_plain(fixed_by_namespace)
     _drop_stale_source_records(fixed_by_namespace, package_sources)
+    # after both, so a borrowed fix counts as this namespace's fix and a retired
+    # source-named record can't be mistaken for the source-indirect safety net
+    _resolve_orphan_binaries(fixed_by_namespace, scope.builds, cve_id, fix_dates, logger)
 
     if not fixed_by_namespace:
         return []

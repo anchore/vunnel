@@ -340,6 +340,57 @@ so it drops 17,191 records in the same sample — 21.3% of all `"None"` records,
 naming genuine binaries, including every unfixed kernel record — while catching only 166
 of its targets.
 
+## Orphaned binary `known_affected` entries
+
+One level below the source-named problem: a `vendor_fix` list sometimes covers only
+*part* of the binary set `known_affected` names for the same product, so the document
+says "affected, no fix" about a binary the same source build patched.
+
+`CVE-2019-13057`, plain SLES 15 SP1: `known_affected` names eleven openldap2 binaries,
+`vendor_fix` names nine of them at `2.4.46-9.19.2`, omitting `libldap-data` and
+`openldap2-ppolicy-check-password`. SUSE's own SP2 list for that CVE carries all eleven
+at the identical build, and the purl settles that it is one build —
+`libldap-data-2.4.46-9.19.2` is `upstream=openldap2-2.4.46-9.19.2.src.rpm`. The SLE 15
+SP1 base image ships `libldap-data` and `libldap-2_4-2` both at `2.4.46-9.53.1` from one
+source RPM: the second is suppressed by its fix entry, the first was reported NOT-FIXED
+with no version to compare against. Reported upstream to SUSE.
+
+`_resolve_orphan_binaries` has two remedies, and the document decides which applies:
+
+**Inherit** — where the document publishes a build of that binary carrying the source
+NVR its sibling was fixed at, that build's version is the boundary. It is SUSE's own
+number for that package out of that build, not one inferred from a sibling's. Lowest
+wins among several, for the reason under "Choosing among the fix categories".
+
+**Retire** — otherwise, drop the record, but only when this namespace also has a fixed
+record named after the **source RPM**. grype resolves an installed binary to its source
+RPM and searches under that name too (`exact-indirect-match`), so that record keeps an
+unpatched install detectable, and keeps producing the "Distro Not Vulnerable" ignore
+that suppresses matches on packages owned by the RPM. Without it a drop is a false
+negative on both paths, so the record stands and the false positive stays SUSE's to fix.
+
+Neither remedy touches a **declared won't-fix** (`NoAdvisory=True`), same boundary as
+the source-named drop.
+
+Rejected alternative: inheriting the sibling's own fix version whenever the siblings
+agree on one. It fires on 360 of the 363, but only 36 can be shown to sit on the same
+upstream version stream as that fix — `openldap2-ppolicy-check-password` is on `1.2-x`
+while its siblings were fixed at `2.4.46-9.19.2`, so pasting that across would compare
+streams and stay wrong. Rejected alternative in the other direction: dropping every
+orphan. 326 of the 363 have no source-named record to fall back on, and a dropped record
+also stops vetoing owned-package matches, so the FP would be traded for an FN.
+
+Measured over the same 1,202-document sample (1.9% of the corpus): **363 orphaned
+records across 27 CVEs**, 4.5% of all `"None"` records. The rule acts on **43** of them
+— 8 inherited, 35 retired — and an A/B over identical documents removes exactly those 35
+records and changes exactly those 8 versions, touching no `"None"`-free record. **None**
+of the 363 carries a `no_fix_planned` remediation, so the carve-out costs nothing today;
+it is there because SUSE does use that mechanism elsewhere (`CVE-2023-47627` fixes
+`python311-aiohttp` on SLES 15 SP5 while declaring the same-source `python-aiohttp`
+won't-fix). The remaining ~320 stay as they are: they need SUSE's fix lists to be
+completed, and guessing a boundary for them is how a false positive becomes a false
+negative.
+
 ## Withdrawn (rejected) CVEs
 
 A document whose description says MITRE has rejected the CVE ID emits nothing at all;
