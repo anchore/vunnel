@@ -1,0 +1,5407 @@
+{
+ "dists": {
+  "CGI-Session": {
+   "advisories": [
+    {
+     "affected_versions": [
+      "<4.49"
+     ],
+     "cves": [
+      "CVE-2026-56016"
+     ],
+     "description": "CGI::Session::ID::md5 versions before 4.49 for Perl generate predictable session ids from low-entropy sources.  The generate_id method builds the session id from a MD5 digest of the process id, the epoch time, and the built-in rand() function. All three are predictable, low-entropy sources: the PID is drawn from a small range, the epoch time can be guessed or read from the HTTP Date header, and Perl's rand() is unsuitable for security purposes because it is predictable and reversible.  An attacker who predicts a session id can impersonate the corresponding session and bypass authentication.",
+     "distribution": "CGI-Session",
+     "fixed_versions": [
+      ">=4.49"
+     ],
+     "id": "CPANSA-CGI-Session-2026-56016",
+     "references": [
+      "https://metacpan.org/release/MARKSTOS/CGI-Session-4.49/changes",
+      "https://metacpan.org/release/MARKSTOS/CGI-Session-4.49/source/lib/CGI/Session/ID/md5.pm",
+      "http://www.openwall.com/lists/oss-security/2026/07/01/6"
+     ],
+     "reported": "2026-07-01",
+     "severity": null
+    },
+    {
+     "affected_versions": [
+      "<4.10"
+     ],
+     "cves": [
+      "CVE-2006-1279"
+     ],
+     "description": "CGI::Session 4.03-1 allows local users to overwrite arbitrary files via a symlink attack on temporary files used by (1) Driver::File, (2) Driver::db_file, and possibly (3) Driver::sqlite.\n",
+     "distribution": "CGI-Session",
+     "fixed_versions": [],
+     "id": "CPANSA-CGI-Session-2006-1279",
+     "references": [
+      "http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=356555",
+      "http://secunia.com/advisories/19211",
+      "http://www.securityfocus.com/bid/17177",
+      "http://www.osvdb.org/23865",
+      "http://www.vupen.com/english/advisories/2006/0946",
+      "https://exchange.xforce.ibmcloud.com/vulnerabilities/25285"
+     ],
+     "reported": "2006-03-19",
+     "severity": null
+    },
+    {
+     "affected_versions": [
+      "<4.12"
+     ],
+     "cves": [],
+     "description": "possible SQL injection attack\n",
+     "distribution": "CGI-Session",
+     "fixed_versions": [
+      ">=4.12"
+     ],
+     "id": "CPANSA-CGI-Session-2006-01",
+     "references": [
+      "https://rt.cpan.org/Public/Bug/Display.html?id=18578"
+     ],
+     "reported": "2006-04-06",
+     "severity": null
+    }
+   ],
+   "main_module": "CGI::Session",
+   "versions": [
+    {
+     "date": "2001-10-30T08:59:10",
+     "version": "0.01"
+    },
+    {
+     "date": "2002-05-10T12:04:15",
+     "version": "2.0"
+    },
+    {
+     "date": "2002-05-10T17:38:46",
+     "version": "2.1"
+    },
+    {
+     "date": "2002-05-14T18:21:39",
+     "version": "2.2"
+    },
+    {
+     "date": "2002-05-17T18:02:23",
+     "version": "2.4"
+    },
+    {
+     "date": "2002-05-27T09:52:46",
+     "version": "2.7"
+    },
+    {
+     "date": "2002-06-06T08:08:21",
+     "version": "2.9"
+    },
+    {
+     "date": "2002-06-06T08:36:26",
+     "version": "2.91"
+    },
+    {
+     "date": "2002-06-18T18:15:57",
+     "version": "2.92"
+    },
+    {
+     "date": "2002-08-26T08:23:54",
+     "version": "2.94"
+    },
+    {
+     "date": "2002-11-27T07:20:47",
+     "version": "3.1"
+    },
+    {
+     "date": "2002-11-27T12:27:59",
+     "version": "3.2"
+    },
+    {
+     "date": "2002-11-28T03:19:31",
+     "version": "v3.2.2.1"
+    },
+    {
+     "date": "2002-11-28T03:26:41",
+     "version": "3.3"
+    },
+    {
+     "date": "2002-11-28T03:44:39",
+     "version": "3.4"
+    },
+    {
+     "date": "2002-11-28T06:55:29",
+     "version": "3.5"
+    },
+    {
+     "date": "2002-11-28T17:12:32",
+     "version": "3.6"
+    },
+    {
+     "date": "2002-11-29T21:29:53",
+     "version": "3.7"
+    },
+    {
+     "date": "2002-12-03T16:26:55",
+     "version": "3.8"
+    },
+    {
+     "date": "2002-12-04T07:37:02",
+     "version": "3.9"
+    },
+    {
+     "date": "2002-12-09T09:02:18",
+     "version": "3.10"
+    },
+    {
+     "date": "2002-12-09T20:09:24",
+     "version": "3.11"
+    },
+    {
+     "date": "2003-03-09T11:26:21",
+     "version": "3.91"
+    },
+    {
+     "date": "2003-03-10T02:42:16",
+     "version": "3.92"
+    },
+    {
+     "date": "2003-03-14T13:21:20",
+     "version": "3.93"
+    },
+    {
+     "date": "2003-05-02T20:12:40",
+     "version": "3.94"
+    },
+    {
+     "date": "2003-07-26T13:51:31",
+     "version": "3.95"
+    },
+    {
+     "date": "2005-02-09T08:35:23",
+     "version": "4.00_01"
+    },
+    {
+     "date": "2005-02-09T09:54:17",
+     "version": "4.00_02"
+    },
+    {
+     "date": "2005-02-11T08:23:00",
+     "version": "4.00_03"
+    },
+    {
+     "date": "2005-02-17T03:24:21",
+     "version": "4.00_04"
+    },
+    {
+     "date": "2005-02-22T17:56:43",
+     "version": "4.00_05"
+    },
+    {
+     "date": "2005-02-24T18:46:45",
+     "version": "4.00_06"
+    },
+    {
+     "date": "2005-03-13T19:18:37",
+     "version": "4.00_07"
+    },
+    {
+     "date": "2005-03-15T16:48:17",
+     "version": "4.00_08"
+    },
+    {
+     "date": "2005-07-22T02:00:21",
+     "version": "4.00_09"
+    },
+    {
+     "date": "2005-09-01T05:57:49",
+     "version": "4.00"
+    },
+    {
+     "date": "2005-09-01T16:25:46",
+     "version": "4.01"
+    },
+    {
+     "date": "2005-09-02T15:51:20",
+     "version": "4.02"
+    },
+    {
+     "date": "2005-09-24T02:12:22",
+     "version": "4.02_01"
+    },
+    {
+     "date": "2005-10-05T23:22:54",
+     "version": "4.03"
+    },
+    {
+     "date": "2006-03-02T03:00:28",
+     "version": "4.04"
+    },
+    {
+     "date": "2006-03-04T00:08:26",
+     "version": "4.05"
+    },
+    {
+     "date": "2006-03-09T03:13:06",
+     "version": "4.06"
+    },
+    {
+     "date": "2006-03-09T12:09:28",
+     "version": "4.07"
+    },
+    {
+     "date": "2006-03-16T02:38:25",
+     "version": "4.08"
+    },
+    {
+     "date": "2006-03-17T04:08:57",
+     "version": "4.09"
+    },
+    {
+     "date": "2006-03-28T07:00:52",
+     "version": "4.10"
+    },
+    {
+     "date": "2006-04-03T19:33:30",
+     "version": "4.11"
+    },
+    {
+     "date": "2006-04-07T14:34:06",
+     "version": "4.12"
+    },
+    {
+     "date": "2006-04-12T17:05:18",
+     "version": "4.13"
+    },
+    {
+     "date": "2006-06-11T11:36:57",
+     "version": "4.14"
+    },
+    {
+     "date": "2006-11-24T14:10:38",
+     "version": "4.20_1"
+    },
+    {
+     "date": "2006-12-05T02:08:37",
+     "version": "4.20"
+    },
+    {
+     "date": "2008-03-22T02:42:57",
+     "version": "4.29_1"
+    },
+    {
+     "date": "2008-03-28T01:45:56",
+     "version": "4.29_2"
+    },
+    {
+     "date": "2008-04-26T01:31:34",
+     "version": "4.30"
+    },
+    {
+     "date": "2008-06-16T14:44:06",
+     "version": "4.31"
+    },
+    {
+     "date": "2008-06-17T21:35:03",
+     "version": "4.32"
+    },
+    {
+     "date": "2008-07-08T01:27:59",
+     "version": "4.33"
+    },
+    {
+     "date": "2008-07-13T02:39:59",
+     "version": "4.34"
+    },
+    {
+     "date": "2008-07-16T00:36:46",
+     "version": "4.35"
+    },
+    {
+     "date": "2008-09-13T15:45:06",
+     "version": "4.36"
+    },
+    {
+     "date": "2008-10-23T02:57:30",
+     "version": "4.37"
+    },
+    {
+     "date": "2008-11-01T03:47:46",
+     "version": "4.38"
+    },
+    {
+     "date": "2008-12-16T01:22:42",
+     "version": "4.39"
+    },
+    {
+     "date": "2009-01-03T01:18:15",
+     "version": "4.40"
+    },
+    {
+     "date": "2009-03-21T02:01:09",
+     "version": "4.41"
+    },
+    {
+     "date": "2009-08-26T13:38:39",
+     "version": "4.42"
+    },
+    {
+     "date": "2010-12-12T00:32:27",
+     "version": "4.43"
+    },
+    {
+     "date": "2011-06-06T20:48:07",
+     "version": "4.44"
+    },
+    {
+     "date": "2011-07-02T01:33:33",
+     "version": "4.45"
+    },
+    {
+     "date": "2011-07-08T14:34:42",
+     "version": "4.46"
+    },
+    {
+     "date": "2011-07-08T19:31:44",
+     "version": "4.47"
+    },
+    {
+     "date": "2011-07-11T13:02:37",
+     "version": "4.48"
+    },
+    {
+     "date": "2021-02-08T07:00:20",
+     "version": "4.49"
+    },
+    {
+     "date": "2026-06-30T13:06:47",
+     "version": "4.49"
+    }
+   ]
+  },
+  "DBD-SQLite": {
+   "advisories": [
+    {
+     "affected_versions": [
+      ">=1.00,<=1.02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.03,<=1.04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.05"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.06"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.07"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.08"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.09"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.10,<=1.11"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.12"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.13"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.14"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.19_01,<=1.22_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.22_05,<=1.26_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.26_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.26_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.26_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.26_05,<=1.26_06"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.26_07,<=1.27"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.28_01,<=1.28_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.29,<=1.30_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.30_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.30_04,<=1.31"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.32_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.32_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.32_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.32_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.33"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.34_01,<=1.34_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.36_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.36_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.36_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.36_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.37"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.38_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.38_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.38_03,<=1.40"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.41_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.41_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.41_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.41_04,<=1.41_05"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.41_06"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.41_07,<=1.43_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.43_03,<=1.43_07"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.43_08,<=1.44"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.45_01,<=1.45_05"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.45_06,<=1.46"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.47_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.47_02,<1.47_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.47_05,<=1.48"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.49_01,<=1.49_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.49_03,<=1.49_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.49_05"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.49_06"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.49_07,<=1.50"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.51_01,<=1.51_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.51_04"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.51_05"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.51_06"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.51_07,<=1.54"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.55_01"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.55_02"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.55_03"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.55_04,<=1.55_05"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      "=1.55_06"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=1.55_07,<=1.58"
+     ],
+     "cves": [
+      "CVE-2018-8740"
+     ],
+     "description": "In SQLite through 3.22.0, databases whose schema is corrupted using a CREATE TABLE AS statement could cause a NULL pointer dereference, related to build.c and prepare.c.\n",
+     "distribution": "DBD-SQLite",
+     "fixed_versions": [],
+     "id": "CPANSA-DBD-SQLite-2018-8740-sqlite",
+     "references": [
+      "https://www.sqlite.org/cgi/src/timeline?r=corrupt-schema",
+      "https://bugs.launchpad.net/ubuntu/+source/sqlite3/+bug/1756349",
+      "https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=6964",
+      "https://www.sqlite.org/cgi/src/vdiff?from=1774f1c3baf0bc3d&to=d75e67654aa9620b",
+      "http://www.securityfocus.com/bid/103466",
+      "https://lists.debian.org/debian-lts-announce/2019/01/msg00009.html",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-05/msg00050.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PU4NZ6DDU4BEM3ACM3FM6GLEPX56ZQXK/",
+      "https://usn.ubuntu.com/4205-1/",
+      "https://usn.ubuntu.com/4394-1/",
+      "https://lists.debian.org/debian-lts-announce/2020/08/msg00037.html",
+      "https://lists.apache.org/thread.html/rf4c02775860db415b4955778a131c2795223f61cb8c6a450893651e4@%3Cissues.bookkeeper.apache.org%3E",
+      "https://lists.apache.org/thread.html/r58af02e294bd07f487e2c64ffc0a29b837db5600e33b6e698b9d696b@%3Cissues.bookkeeper.apache.org%3E"
+     ],
+     "reported": "2018-03-17",
+     "severity": "high"
+    }
+   ],
+   "main_module": "DBD::SQLite",
+   "versions": [
+    {
+     "date": "2002-02-19T18:56:55",
+     "version": "0.05"
+    },
+    {
+     "date": "2002-02-22T07:29:26",
+     "version": "0.06"
+    },
+    {
+     "date": "2002-02-23T11:19:51",
+     "version": "0.07"
+    },
+    {
+     "date": "2002-02-25T12:59:46",
+     "version": "0.08"
+    },
+    {
+     "date": "2002-02-27T19:46:01",
+     "version": "0.09"
+    },
+    {
+     "date": "2002-02-28T11:11:10",
+     "version": "0.10"
+    },
+    {
+     "date": "2002-03-13T12:16:23",
+     "version": "0.11"
+    },
+    {
+     "date": "2002-03-21T16:49:25",
+     "version": "0.12"
+    },
+    {
+     "date": "2002-03-26T22:39:39",
+     "version": "0.13"
+    },
+    {
+     "date": "2002-03-28T15:59:02",
+     "version": "0.14"
+    },
+    {
+     "date": "2002-04-02T10:48:10",
+     "version": "0.15"
+    },
+    {
+     "date": "2002-06-17T23:50:53",
+     "version": "0.16"
+    },
+    {
+     "date": "2002-06-26T13:59:05",
+     "version": "0.17"
+    },
+    {
+     "date": "2002-07-12T13:46:37",
+     "version": "0.18"
+    },
+    {
+     "date": "2002-08-13T22:19:45",
+     "version": "0.19"
+    },
+    {
+     "date": "2002-10-17T16:25:57",
+     "version": "0.20"
+    },
+    {
+     "date": "2002-10-18T07:08:42",
+     "version": "0.21"
+    },
+    {
+     "date": "2002-12-18T18:02:11",
+     "version": "0.22"
+    },
+    {
+     "date": "2002-12-29T16:25:29",
+     "version": "0.23"
+    },
+    {
+     "date": "2003-01-29T16:47:23",
+     "version": "0.24"
+    },
+    {
+     "date": "2003-03-06T22:24:48",
+     "version": "0.25"
+    },
+    {
+     "date": "2003-07-31T15:16:06",
+     "version": "0.26"
+    },
+    {
+     "date": "2003-08-18T20:17:31",
+     "version": "0.27"
+    },
+    {
+     "date": "2003-08-25T13:42:07",
+     "version": "0.28"
+    },
+    {
+     "date": "2003-12-05T15:42:05",
+     "version": "0.29"
+    },
+    {
+     "date": "2004-02-08T18:45:02",
+     "version": "0.30"
+    },
+    {
+     "date": "2004-02-14T19:18:16",
+     "version": "0.31"
+    },
+    {
+     "date": "2004-07-21T21:19:33",
+     "version": "1.00"
+    },
+    {
+     "date": "2004-08-01T04:49:09",
+     "version": "1.01"
+    },
+    {
+     "date": "2004-08-02T18:35:42",
+     "version": "1.02"
+    },
+    {
+     "date": "2004-08-09T15:43:59",
+     "version": "1.03"
+    },
+    {
+     "date": "2004-08-23T15:14:21",
+     "version": "1.04"
+    },
+    {
+     "date": "2004-09-10T15:46:34",
+     "version": "1.05"
+    },
+    {
+     "date": "2004-09-21T17:26:28",
+     "version": "1.06"
+    },
+    {
+     "date": "2004-10-12T09:07:33",
+     "version": "1.07"
+    },
+    {
+     "date": "2005-02-26T13:47:33",
+     "version": "1.08"
+    },
+    {
+     "date": "2005-06-20T15:42:32",
+     "version": "1.09"
+    },
+    {
+     "date": "2005-12-01T20:56:30",
+     "version": "1.10"
+    },
+    {
+     "date": "2005-12-02T19:13:29",
+     "version": "1.11"
+    },
+    {
+     "date": "2006-04-10T02:24:08",
+     "version": "1.12"
+    },
+    {
+     "date": "2006-09-08T05:02:06",
+     "version": "1.13"
+    },
+    {
+     "date": "2007-09-19T19:25:09",
+     "version": "1.14"
+    },
+    {
+     "date": "2009-03-27T11:11:41",
+     "version": "1.19_01"
+    },
+    {
+     "date": "2009-03-28T16:46:41",
+     "version": "1.19_02"
+    },
+    {
+     "date": "2009-03-30T21:58:59",
+     "version": "1.19_03"
+    },
+    {
+     "date": "2009-03-31T20:31:37",
+     "version": "1.19_04"
+    },
+    {
+     "date": "2009-04-02T04:24:12",
+     "version": "1.19_05"
+    },
+    {
+     "date": "2009-04-03T19:21:54",
+     "version": "1.19_06"
+    },
+    {
+     "date": "2009-04-04T00:49:42",
+     "version": "1.19_07"
+    },
+    {
+     "date": "2009-04-04T04:29:03",
+     "version": "1.19_08"
+    },
+    {
+     "date": "2009-04-05T03:16:37",
+     "version": "1.19_09"
+    },
+    {
+     "date": "2009-04-05T19:43:04",
+     "version": "1.19_10"
+    },
+    {
+     "date": "2009-04-07T14:00:36",
+     "version": "1.20"
+    },
+    {
+     "date": "2009-04-08T01:24:11",
+     "version": "1.21"
+    },
+    {
+     "date": "2009-04-08T02:05:13",
+     "version": "1.22_01"
+    },
+    {
+     "date": "2009-04-08T11:49:36",
+     "version": "1.22_02"
+    },
+    {
+     "date": "2009-04-09T09:40:39",
+     "version": "1.22_03"
+    },
+    {
+     "date": "2009-04-11T01:58:53",
+     "version": "1.22_04"
+    },
+    {
+     "date": "2009-04-14T15:52:05",
+     "version": "1.22_05"
+    },
+    {
+     "date": "2009-04-15T14:59:20",
+     "version": "1.22_06"
+    },
+    {
+     "date": "2009-04-16T05:40:28",
+     "version": "1.22_07"
+    },
+    {
+     "date": "2009-04-17T09:08:15",
+     "version": "1.22_08"
+    },
+    {
+     "date": "2009-04-19T09:53:00",
+     "version": "1.23"
+    },
+    {
+     "date": "2009-04-22T02:14:33",
+     "version": "1.24_01"
+    },
+    {
+     "date": "2009-04-23T00:50:02",
+     "version": "1.24_02"
+    },
+    {
+     "date": "2009-04-23T10:20:49",
+     "version": "1.25"
+    },
+    {
+     "date": "2009-05-05T06:04:00",
+     "version": "1.26_01"
+    },
+    {
+     "date": "2009-06-19T06:56:29",
+     "version": "1.26_02"
+    },
+    {
+     "date": "2009-08-12T06:01:13",
+     "version": "1.26_03"
+    },
+    {
+     "date": "2009-10-06T06:23:40",
+     "version": "1.26_04"
+    },
+    {
+     "date": "2009-10-15T04:05:19",
+     "version": "1.26_05"
+    },
+    {
+     "date": "2009-10-28T11:16:12",
+     "version": "1.26_06"
+    },
+    {
+     "date": "2009-11-16T01:47:37",
+     "version": "1.26_07"
+    },
+    {
+     "date": "2009-11-23T11:15:09",
+     "version": "1.27"
+    },
+    {
+     "date": "2009-12-23T11:44:07",
+     "version": "1.28_01"
+    },
+    {
+     "date": "2010-01-03T05:56:21",
+     "version": "1.28_02"
+    },
+    {
+     "date": "2010-01-08T09:14:18",
+     "version": "1.29"
+    },
+    {
+     "date": "2010-03-10T15:55:37",
+     "version": "1.30_01"
+    },
+    {
+     "date": "2010-03-30T11:45:57",
+     "version": "1.30_02"
+    },
+    {
+     "date": "2010-05-31T03:13:24",
+     "version": "1.30_03"
+    },
+    {
+     "date": "2010-08-25T09:25:41",
+     "version": "1.30_04"
+    },
+    {
+     "date": "2010-08-27T15:31:59",
+     "version": "1.30_05"
+    },
+    {
+     "date": "2010-09-09T01:49:17",
+     "version": "1.30_06"
+    },
+    {
+     "date": "2010-09-15T07:30:11",
+     "version": "1.31"
+    },
+    {
+     "date": "2010-12-10T05:14:51",
+     "version": "1.32_01"
+    },
+    {
+     "date": "2011-03-07T06:57:51",
+     "version": "1.32_02"
+    },
+    {
+     "date": "2011-05-12T05:05:38",
+     "version": "1.32_03"
+    },
+    {
+     "date": "2011-05-20T02:39:29",
+     "version": "1.32_04"
+    },
+    {
+     "date": "2011-05-30T07:39:31",
+     "version": "1.33"
+    },
+    {
+     "date": "2011-09-21T16:26:23",
+     "version": "1.34_01"
+    },
+    {
+     "date": "2011-10-21T06:13:45",
+     "version": "1.34_02"
+    },
+    {
+     "date": "2011-11-01T03:51:19",
+     "version": "1.34_03"
+    },
+    {
+     "date": "2011-11-29T00:16:47",
+     "version": "1.35"
+    },
+    {
+     "date": "2012-01-19T06:15:08",
+     "version": "1.36_01"
+    },
+    {
+     "date": "2012-02-23T04:11:05",
+     "version": "1.36_02"
+    },
+    {
+     "date": "2012-05-07T22:56:21",
+     "version": "1.36_03"
+    },
+    {
+     "date": "2012-05-19T09:46:14",
+     "version": "1.36_04"
+    },
+    {
+     "date": "2012-06-09T14:43:03",
+     "version": "1.37"
+    },
+    {
+     "date": "2012-09-24T10:18:25",
+     "version": "1.38_01"
+    },
+    {
+     "date": "2013-04-09T05:03:21",
+     "version": "1.38_02"
+    },
+    {
+     "date": "2013-05-21T05:14:23",
+     "version": "1.38_03"
+    },
+    {
+     "date": "2013-05-29T07:11:57",
+     "version": "1.38_04"
+    },
+    {
+     "date": "2013-05-31T04:39:53",
+     "version": "1.38_05"
+    },
+    {
+     "date": "2013-06-09T15:10:40",
+     "version": "1.39"
+    },
+    {
+     "date": "2013-07-28T05:31:53",
+     "version": "1.40"
+    },
+    {
+     "date": "2013-08-27T06:41:37",
+     "version": "1.41_01"
+    },
+    {
+     "date": "2013-08-29T18:53:29",
+     "version": "1.41_02"
+    },
+    {
+     "date": "2013-09-04T17:57:50",
+     "version": "1.41_03"
+    },
+    {
+     "date": "2014-01-12T01:19:09",
+     "version": "1.41_04"
+    },
+    {
+     "date": "2014-01-22T03:53:26",
+     "version": "1.41_05"
+    },
+    {
+     "date": "2014-02-12T02:53:38",
+     "version": "1.41_06"
+    },
+    {
+     "date": "2014-03-13T13:44:52",
+     "version": "1.41_07"
+    },
+    {
+     "date": "2014-03-19T15:29:13",
+     "version": "1.42"
+    },
+    {
+     "date": "2014-03-25T18:50:08",
+     "version": "1.43_01"
+    },
+    {
+     "date": "2014-03-25T19:58:13",
+     "version": "1.43_02"
+    },
+    {
+     "date": "2014-06-12T05:01:15",
+     "version": "1.43_03"
+    },
+    {
+     "date": "2014-07-21T01:13:47",
+     "version": "1.43_04"
+    },
+    {
+     "date": "2014-07-21T05:45:41",
+     "version": "1.43_05"
+    },
+    {
+     "date": "2014-07-22T00:31:31",
+     "version": "1.43_06"
+    },
+    {
+     "date": "2014-07-29T17:03:09",
+     "version": "1.43_07"
+    },
+    {
+     "date": "2014-08-21T09:01:11",
+     "version": "1.43_08"
+    },
+    {
+     "date": "2014-10-20T07:50:46",
+     "version": "1.43_09"
+    },
+    {
+     "date": "2014-10-22T14:15:00",
+     "version": "1.44"
+    },
+    {
+     "date": "2014-10-22T15:33:37",
+     "version": "1.45_01"
+    },
+    {
+     "date": "2014-10-23T08:21:27",
+     "version": "1.45_02"
+    },
+    {
+     "date": "2014-10-24T17:57:53",
+     "version": "1.45_03"
+    },
+    {
+     "date": "2014-10-28T08:28:00",
+     "version": "1.45_04"
+    },
+    {
+     "date": "2014-11-25T04:07:43",
+     "version": "1.45_05"
+    },
+    {
+     "date": "2014-11-26T08:52:49",
+     "version": "1.45_06"
+    },
+    {
+     "date": "2014-12-10T06:23:03",
+     "version": "1.46"
+    },
+    {
+     "date": "2015-02-17T07:00:46",
+     "version": "1.47_01"
+    },
+    {
+     "date": "2015-04-16T13:30:38",
+     "version": "1.47_02"
+    },
+    {
+     "date": "2015-04-16T14:45:00",
+     "version": "1.47_03"
+    },
+    {
+     "date": "2015-05-01T17:37:17",
+     "version": "1.47_04"
+    },
+    {
+     "date": "2015-05-08T13:49:32",
+     "version": "1.47_05"
+    },
+    {
+     "date": "2015-06-11T16:10:44",
+     "version": "1.48"
+    },
+    {
+     "date": "2015-08-04T11:18:05",
+     "version": "1.49_01"
+    },
+    {
+     "date": "2015-10-10T03:43:45",
+     "version": "1.49_02"
+    },
+    {
+     "date": "2015-11-05T05:52:27",
+     "version": "1.49_03"
+    },
+    {
+     "date": "2015-11-24T12:59:11",
+     "version": "1.49_04"
+    },
+    {
+     "date": "2016-01-11T13:32:43",
+     "version": "1.49_05"
+    },
+    {
+     "date": "2016-01-15T03:40:44",
+     "version": "1.49_06"
+    },
+    {
+     "date": "2016-01-21T01:11:59",
+     "version": "1.49_07"
+    },
+    {
+     "date": "2016-01-30T00:55:58",
+     "version": "1.49_08"
+    },
+    {
+     "date": "2016-02-10T15:04:42",
+     "version": "1.50"
+    },
+    {
+     "date": "2016-02-20T01:03:50",
+     "version": "1.51_01"
+    },
+    {
+     "date": "2016-02-20T01:49:29",
+     "version": "1.51_02"
+    },
+    {
+     "date": "2016-02-20T11:06:51",
+     "version": "1.51_03"
+    },
+    {
+     "date": "2016-03-07T04:33:35",
+     "version": "1.51_04"
+    },
+    {
+     "date": "2016-06-23T01:22:57",
+     "version": "1.51_05"
+    },
+    {
+     "date": "2016-10-15T00:21:14",
+     "version": "1.51_06"
+    },
+    {
+     "date": "2016-10-16T05:16:29",
+     "version": "1.51_07"
+    },
+    {
+     "date": "2016-11-15T13:02:35",
+     "version": "1.52"
+    },
+    {
+     "date": "2016-11-26T01:34:30",
+     "version": "1.53_01"
+    },
+    {
+     "date": "2016-12-24T02:36:45",
+     "version": "1.54"
+    },
+    {
+     "date": "2017-01-03T15:42:47",
+     "version": "1.55_01"
+    },
+    {
+     "date": "2017-01-07T16:49:21",
+     "version": "1.55_02"
+    },
+    {
+     "date": "2017-02-14T01:31:43",
+     "version": "1.55_03"
+    },
+    {
+     "date": "2017-11-21T17:07:32",
+     "version": "1.55_04"
+    },
+    {
+     "date": "2017-12-15T18:52:29",
+     "version": "1.55_05"
+    },
+    {
+     "date": "2018-01-27T07:33:51",
+     "version": "1.55_06"
+    },
+    {
+     "date": "2018-01-27T07:42:58",
+     "version": "1.55_07"
+    },
+    {
+     "date": "2018-02-28T09:01:25",
+     "version": "1.56"
+    },
+    {
+     "date": "2018-03-21T06:45:29",
+     "version": "1.57_01"
+    },
+    {
+     "date": "2018-03-28T11:56:19",
+     "version": "1.58"
+    },
+    {
+     "date": "2018-09-16T19:25:50",
+     "version": "1.59_01"
+    },
+    {
+     "date": "2018-09-30T06:09:34",
+     "version": "1.59_02"
+    },
+    {
+     "date": "2018-11-03T12:14:20",
+     "version": "1.59_03"
+    },
+    {
+     "date": "2018-12-01T02:42:29",
+     "version": "1.60"
+    },
+    {
+     "date": "2018-12-01T08:01:30",
+     "version": "1.61_01"
+    },
+    {
+     "date": "2018-12-01T09:10:18",
+     "version": "1.61_02"
+    },
+    {
+     "date": "2018-12-19T13:03:22",
+     "version": "1.61_03"
+    },
+    {
+     "date": "2018-12-22T06:37:21",
+     "version": "1.61_04"
+    },
+    {
+     "date": "2018-12-28T17:59:27",
+     "version": "1.62"
+    },
+    {
+     "date": "2019-01-25T22:31:45",
+     "version": "1.63_01"
+    },
+    {
+     "date": "2019-02-13T19:09:44",
+     "version": "1.63_02"
+    },
+    {
+     "date": "2019-02-14T16:56:40",
+     "version": "1.63_03"
+    },
+    {
+     "date": "2019-05-24T16:39:18",
+     "version": "1.63_04"
+    },
+    {
+     "date": "2019-07-11T17:50:51",
+     "version": "1.63_05"
+    },
+    {
+     "date": "2019-08-12T09:02:59",
+     "version": "1.64"
+    },
+    {
+     "date": "2020-01-18T01:56:18",
+     "version": "1.65_01"
+    },
+    {
+     "date": "2020-02-08T13:02:59",
+     "version": "1.65_02"
+    },
+    {
+     "date": "2020-07-26T16:42:08",
+     "version": "1.65_03"
+    },
+    {
+     "date": "2020-08-30T02:14:15",
+     "version": "1.66"
+    },
+    {
+     "date": "2020-11-24T12:57:56",
+     "version": "1.67_01"
+    },
+    {
+     "date": "2020-12-05T17:06:24",
+     "version": "1.67_02"
+    },
+    {
+     "date": "2021-03-30T21:37:13",
+     "version": "1.67_03"
+    },
+    {
+     "date": "2021-05-30T22:56:01",
+     "version": "1.67_04"
+    },
+    {
+     "date": "2021-06-12T23:39:11",
+     "version": "1.67_05"
+    },
+    {
+     "date": "2021-06-14T03:49:54",
+     "version": "1.67_06"
+    },
+    {
+     "date": "2021-06-19T00:57:41",
+     "version": "1.67_07"
+    },
+    {
+     "date": "2021-07-22T05:30:17",
+     "version": "1.68"
+    },
+    {
+     "date": "2021-07-29T21:09:19",
+     "version": "1.69_01"
+    },
+    {
+     "date": "2021-07-30T14:21:39",
+     "version": "1.69_02"
+    },
+    {
+     "date": "2021-08-01T10:20:33",
+     "version": "1.70"
+    },
+    {
+     "date": "2021-12-01T17:03:29",
+     "version": "1.71_01"
+    },
+    {
+     "date": "2022-01-06T20:51:05",
+     "version": "1.71_02"
+    },
+    {
+     "date": "2022-02-23T10:49:28",
+     "version": "1.71_03"
+    },
+    {
+     "date": "2022-02-26T00:59:40",
+     "version": "1.71_04"
+    },
+    {
+     "date": "2022-02-26T02:49:09",
+     "version": "1.71_05"
+    },
+    {
+     "date": "2022-03-12T02:54:15",
+     "version": "1.71_06"
+    },
+    {
+     "date": "2022-10-25T18:36:30",
+     "version": "1.71_07"
+    },
+    {
+     "date": "2022-11-03T16:28:17",
+     "version": "1.72"
+    },
+    {
+     "date": "2023-07-09T01:04:52",
+     "version": "1.73_01"
+    },
+    {
+     "date": "2023-09-19T17:26:03",
+     "version": "1.74"
+    },
+    {
+     "date": "2024-09-17T14:05:40",
+     "version": "1.75_01"
+    },
+    {
+     "date": "2024-10-19T04:47:07",
+     "version": "1.76"
+    },
+    {
+     "date": "2025-11-24T04:21:58",
+     "version": "1.77_01"
+    },
+    {
+     "date": "2025-11-24T08:08:46",
+     "version": "1.77_02"
+    },
+    {
+     "date": "2025-12-27T02:02:17",
+     "version": "1.77_03"
+    },
+    {
+     "date": "2026-01-02T01:23:08",
+     "version": "1.78"
+    }
+   ]
+  },
+  "Data-FormValidator": {
+   "advisories": [
+    {
+     "affected_versions": [
+      "<=4.66"
+     ],
+     "cves": [
+      "CVE-2011-2201"
+     ],
+     "description": "The Data::FormValidator module 4.66 and earlier for Perl, when untaint_all_constraints is enabled, does not properly preserve the taint attribute of data, which might allow remote attackers to bypass the taint protection mechanism via form input.\n",
+     "distribution": "Data-FormValidator",
+     "fixed_versions": [
+      ">4.66"
+     ],
+     "id": "CPANSA-Data-FormValidator-2011-2201",
+     "references": [
+      "http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=629511",
+      "http://www.openwall.com/lists/oss-security/2011/06/13/13",
+      "https://bugzilla.redhat.com/show_bug.cgi?id=712694",
+      "http://www.openwall.com/lists/oss-security/2011/06/12/3",
+      "http://www.securityfocus.com/bid/48167",
+      "https://rt.cpan.org/Public/Bug/Display.html?id=61792",
+      "http://lists.fedoraproject.org/pipermail/package-announce/2011-September/065416.html",
+      "http://www.openwall.com/lists/oss-security/2011/06/13/5"
+     ],
+     "reported": "2011-09-14",
+     "severity": null
+    }
+   ],
+   "main_module": "Data::FormValidator",
+   "versions": [
+    {
+     "date": "2001-06-19T21:43:01",
+     "version": "1.3"
+    },
+    {
+     "date": "2001-06-22T16:36:08",
+     "version": "1.4"
+    },
+    {
+     "date": "2001-06-25T17:02:43",
+     "version": "1.4"
+    },
+    {
+     "date": "2001-06-28T15:13:01",
+     "version": "1.5"
+    },
+    {
+     "date": "2001-07-18T14:23:17",
+     "version": "v1.5.1"
+    },
+    {
+     "date": "2001-09-23T22:42:22",
+     "version": "1.6"
+    },
+    {
+     "date": "2001-11-03T18:16:00",
+     "version": "1.7"
+    },
+    {
+     "date": "2002-02-14T22:45:46",
+     "version": "1.8"
+    },
+    {
+     "date": "2002-02-18T02:20:12",
+     "version": "1.9"
+    },
+    {
+     "date": "2002-04-21T13:42:36",
+     "version": "1.10"
+    },
+    {
+     "date": "2002-06-29T21:04:14",
+     "version": "1.11"
+    },
+    {
+     "date": "2002-10-07T02:06:39",
+     "version": "1.91"
+    },
+    {
+     "date": "2002-12-23T23:36:37",
+     "version": "1.92"
+    },
+    {
+     "date": "2003-03-08T13:10:33",
+     "version": "1.93"
+    },
+    {
+     "date": "2003-03-23T03:01:57",
+     "version": "2.00"
+    },
+    {
+     "date": "2003-04-02T15:18:15",
+     "version": "2.01"
+    },
+    {
+     "date": "2003-04-09T15:54:50",
+     "version": "2.02"
+    },
+    {
+     "date": "2003-04-10T16:12:40",
+     "version": "2.03"
+    },
+    {
+     "date": "2003-04-12T02:58:35",
+     "version": "2.04"
+    },
+    {
+     "date": "2003-04-20T22:23:44",
+     "version": "2.10"
+    },
+    {
+     "date": "2003-04-24T02:51:03",
+     "version": "2.10"
+    },
+    {
+     "date": "2003-05-11T21:29:55",
+     "version": "3.00"
+    },
+    {
+     "date": "2003-05-16T04:06:05",
+     "version": "3.01"
+    },
+    {
+     "date": "2003-05-26T23:18:18",
+     "version": "3.1"
+    },
+    {
+     "date": "2003-05-27T19:41:01",
+     "version": "3.11"
+    },
+    {
+     "date": "2003-06-23T01:27:03",
+     "version": "3.12"
+    },
+    {
+     "date": "2003-11-02T21:19:10",
+     "version": "3.13"
+    },
+    {
+     "date": "2003-11-03T17:59:41",
+     "version": "3.14"
+    },
+    {
+     "date": "2003-11-30T20:36:41",
+     "version": "3.15"
+    },
+    {
+     "date": "2004-01-04T01:37:01",
+     "version": "3.49_1"
+    },
+    {
+     "date": "2004-01-12T22:04:27",
+     "version": "3.50"
+    },
+    {
+     "date": "2004-02-27T04:19:47",
+     "version": "3.51"
+    },
+    {
+     "date": "2004-03-21T17:42:11",
+     "version": "3.52"
+    },
+    {
+     "date": "2004-03-23T02:33:53",
+     "version": "3.53"
+    },
+    {
+     "date": "2004-03-24T14:55:49",
+     "version": "3.54"
+    },
+    {
+     "date": "2004-04-17T02:30:02",
+     "version": "3.56"
+    },
+    {
+     "date": "2004-04-22T02:26:41",
+     "version": "3.57"
+    },
+    {
+     "date": "2004-05-05T21:55:00",
+     "version": "3.58"
+    },
+    {
+     "date": "2004-07-02T17:48:51",
+     "version": "3.59"
+    },
+    {
+     "date": "2004-09-28T02:25:35",
+     "version": "3.61"
+    },
+    {
+     "date": "2004-10-09T04:00:51",
+     "version": "3.62"
+    },
+    {
+     "date": "2004-11-17T22:27:13",
+     "version": "3.63"
+    },
+    {
+     "date": "2005-05-20T01:25:45",
+     "version": "4.00_01"
+    },
+    {
+     "date": "2005-07-03T19:37:11",
+     "version": "4.00_02"
+    },
+    {
+     "date": "2005-07-20T02:07:36",
+     "version": "3.70"
+    },
+    {
+     "date": "2005-07-31T17:36:02",
+     "version": "3.71"
+    },
+    {
+     "date": "2005-08-14T16:09:26",
+     "version": "4.00"
+    },
+    {
+     "date": "2005-08-20T18:20:14",
+     "version": "4.01"
+    },
+    {
+     "date": "2005-09-01T02:31:29",
+     "version": "4.02"
+    },
+    {
+     "date": "2005-12-23T01:00:49",
+     "version": "4.10"
+    },
+    {
+     "date": "2006-01-03T23:49:53",
+     "version": "4.11"
+    },
+    {
+     "date": "2006-01-06T02:14:25",
+     "version": "4.12"
+    },
+    {
+     "date": "2006-02-10T02:48:33",
+     "version": "4.13"
+    },
+    {
+     "date": "2006-02-17T18:48:14",
+     "version": "4.14"
+    },
+    {
+     "date": "2006-06-13T01:12:23",
+     "version": "4.20"
+    },
+    {
+     "date": "2006-07-01T15:42:37",
+     "version": "4.21_01"
+    },
+    {
+     "date": "2006-07-11T01:45:51",
+     "version": "4.30"
+    },
+    {
+     "date": "2006-08-21T23:43:58",
+     "version": "4.40"
+    },
+    {
+     "date": "2006-10-03T18:16:57",
+     "version": "4.49_1"
+    },
+    {
+     "date": "2006-12-05T02:41:19",
+     "version": "4.50"
+    },
+    {
+     "date": "2007-07-14T03:36:00",
+     "version": "4.51"
+    },
+    {
+     "date": "2007-10-19T19:41:46",
+     "version": "4.52"
+    },
+    {
+     "date": "2007-10-20T20:02:19",
+     "version": "4.50"
+    },
+    {
+     "date": "2007-10-21T13:30:20",
+     "version": "4.54"
+    },
+    {
+     "date": "2007-10-21T15:50:42",
+     "version": "4.55"
+    },
+    {
+     "date": "2007-10-31T16:49:55",
+     "version": "4.56"
+    },
+    {
+     "date": "2007-11-02T02:55:19",
+     "version": "4.57"
+    },
+    {
+     "date": "2008-06-16T18:28:54",
+     "version": "4.60"
+    },
+    {
+     "date": "2008-06-16T18:46:47",
+     "version": "4.61"
+    },
+    {
+     "date": "2009-01-03T17:14:18",
+     "version": "4.62"
+    },
+    {
+     "date": "2009-01-03T17:49:48",
+     "version": "4.63"
+    },
+    {
+     "date": "2009-12-31T03:22:00",
+     "version": "4.65"
+    },
+    {
+     "date": "2010-02-24T14:33:48",
+     "version": "4.66"
+    },
+    {
+     "date": "2011-11-12T02:18:45",
+     "version": "4.67"
+    },
+    {
+     "date": "2011-11-12T03:11:55",
+     "version": "4.70"
+    },
+    {
+     "date": "2012-10-02T20:40:09",
+     "version": "4.71"
+    },
+    {
+     "date": "2012-11-01T15:14:05",
+     "version": "4.80"
+    },
+    {
+     "date": "2013-07-19T12:31:06",
+     "version": "4.81"
+    },
+    {
+     "date": "2017-02-23T15:15:37",
+     "version": "4.82"
+    },
+    {
+     "date": "2017-02-23T16:39:53",
+     "version": "4.83"
+    },
+    {
+     "date": "2017-02-25T15:12:25",
+     "version": "4.84"
+    },
+    {
+     "date": "2017-02-25T20:34:08",
+     "version": 4.85
+    },
+    {
+     "date": "2017-03-26T19:39:49",
+     "version": 4.86
+    },
+    {
+     "date": "2017-08-28T12:41:42",
+     "version": 4.88
+    }
+   ]
+  },
+  "ExtUtils-ParseXS": {
+   "advisories": [
+    {
+     "affected_versions": [
+      "<3.35"
+     ],
+     "cves": [
+      "CVE-2016-1238"
+     ],
+     "description": "(1) cpan/Archive-Tar/bin/ptar, (2) cpan/Archive-Tar/bin/ptardiff, (3) cpan/Archive-Tar/bin/ptargrep, (4) cpan/CPAN/scripts/cpan, (5) cpan/Digest-SHA/shasum, (6) cpan/Encode/bin/enc2xs, (7) cpan/Encode/bin/encguess, (8) cpan/Encode/bin/piconv, (9) cpan/Encode/bin/ucmlint, (10) cpan/Encode/bin/unidump, (11) cpan/ExtUtils-MakeMaker/bin/instmodsh, (12) cpan/IO-Compress/bin/zipdetails, (13) cpan/JSON-PP/bin/json_pp, (14) cpan/Test-Harness/bin/prove, (15) dist/ExtUtils-ParseXS/lib/ExtUtils/xsubpp, (16) dist/Module-CoreList/corelist, (17) ext/Pod-Html/bin/pod2html, (18) utils/c2ph.PL, (19) utils/h2ph.PL, (20) utils/h2xs.PL, (21) utils/libnetcfg.PL, (22) utils/perlbug.PL, (23) utils/perldoc.PL, (24) utils/perlivp.PL, and (25) utils/splain.PL in Perl 5.x before 5.22.3-RC2 and 5.24 before 5.24.1-RC2 do not properly remove . (period) characters from the end of the includes directory array, which might allow local users to gain privileges via a Trojan horse module under the current working directory.",
+     "distribution": "ExtUtils-ParseXS",
+     "fixed_versions": [
+      ">=3.35"
+     ],
+     "id": "CPANSA-ExtUtils-ParseXS-2016-1238",
+     "references": [
+      "http://lists.opensuse.org/opensuse-security-announce/2019-08/msg00002.html",
+      "http://perl5.git.perl.org/perl.git/commit/cee96d52c39b1e7b36e1c62d38bcd8d86e9a41ab",
+      "http://www.debian.org/security/2016/dsa-3628",
+      "http://www.nntp.perl.org/group/perl.perl5.porters/2016/07/msg238271.html",
+      "http://www.securityfocus.com/bid/92136",
+      "http://www.securitytracker.com/id/1036440",
+      "https://h20566.www2.hpe.com/portal/site/hpsc/public/kb/docDisplay?docId=emr_na-c05240731",
+      "https://lists.apache.org/thread.html/7f6a16bc0fd0fd5e67c7fd95bd655069a2ac7d1f88e42d3c853e601c%40%3Cannounce.apache.org%3E",
+      "https://lists.debian.org/debian-lts-announce/2018/11/msg00016.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/2FBQOCV3GBAN2EYZUM3CFDJ4ECA3GZOK/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/DOFRQWJRP2NQJEYEWOMECVW3HAMD5SYN/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/TZBNQH3DMI7HDELJAZ4TFJJANHXOEDWH/",
+      "https://rt.perl.org/Public/Bug/Display.html?id=127834",
+      "https://security.gentoo.org/glsa/201701-75",
+      "https://security.gentoo.org/glsa/201812-07",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-08/msg00002.html",
+      "http://perl5.git.perl.org/perl.git/commit/cee96d52c39b1e7b36e1c62d38bcd8d86e9a41ab",
+      "http://www.debian.org/security/2016/dsa-3628",
+      "http://www.nntp.perl.org/group/perl.perl5.porters/2016/07/msg238271.html",
+      "http://www.securityfocus.com/bid/92136",
+      "http://www.securitytracker.com/id/1036440",
+      "https://h20566.www2.hpe.com/portal/site/hpsc/public/kb/docDisplay?docId=emr_na-c05240731",
+      "https://lists.apache.org/thread.html/7f6a16bc0fd0fd5e67c7fd95bd655069a2ac7d1f88e42d3c853e601c%40%3Cannounce.apache.org%3E",
+      "https://lists.debian.org/debian-lts-announce/2018/11/msg00016.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/2FBQOCV3GBAN2EYZUM3CFDJ4ECA3GZOK/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/DOFRQWJRP2NQJEYEWOMECVW3HAMD5SYN/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/TZBNQH3DMI7HDELJAZ4TFJJANHXOEDWH/",
+      "https://rt.perl.org/Public/Bug/Display.html?id=127834",
+      "https://security.gentoo.org/glsa/201701-75",
+      "https://security.gentoo.org/glsa/201812-07"
+     ],
+     "reported": "2016-08-02",
+     "severity": "high"
+    }
+   ],
+   "main_module": "ExtUtils::ParseXS",
+   "versions": [
+    {
+     "date": "2015-08-31T08:44:00",
+     "version": "3.30"
+    },
+    {
+     "date": "2017-07-31T15:52:17",
+     "version": "3.35"
+    },
+    {
+     "date": "2017-12-18T12:31:00",
+     "version": "3.36_03"
+    },
+    {
+     "date": "2021-04-17T17:48:59",
+     "version": "3.43_02"
+    },
+    {
+     "date": "2022-01-06T23:02:34",
+     "version": "3.44"
+    },
+    {
+     "date": "2023-09-02T13:28:52",
+     "version": "3.51"
+    },
+    {
+     "date": "2025-05-02T15:03:49",
+     "version": "3.52"
+    },
+    {
+     "date": "2025-05-02T15:06:38",
+     "version": "3.53"
+    },
+    {
+     "date": "2025-05-02T15:17:11",
+     "version": "3.54"
+    },
+    {
+     "date": "2025-05-02T15:38:05",
+     "version": "3.55"
+    },
+    {
+     "date": "2025-05-02T15:40:54",
+     "version": "3.56"
+    },
+    {
+     "date": "2025-05-02T15:45:00",
+     "version": "3.57"
+    },
+    {
+     "date": "2025-07-20T19:24:38",
+     "version": "3.58"
+    },
+    {
+     "date": "2025-09-05T13:37:50",
+     "version": "3.59"
+    },
+    {
+     "date": "2025-09-26T22:20:43",
+     "version": "3.60"
+    },
+    {
+     "date": "2026-01-09T17:11:34",
+     "version": "3.61"
+    },
+    {
+     "date": "2026-04-05T19:01:32",
+     "version": "3.62"
+    },
+    {
+     "date": "2026-04-05T19:10:28",
+     "version": "3.63"
+    },
+    {
+     "date": "2016-01-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.023007",
+     "version": "3.31"
+    },
+    {
+     "date": "2016-06-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.025002",
+     "version": "3.32"
+    },
+    {
+     "date": "2016-07-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.025003",
+     "version": "3.33"
+    },
+    {
+     "date": "2017-03-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.025011",
+     "version": "3.34"
+    },
+    {
+     "date": "2017-11-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.027006",
+     "version": "3.36"
+    },
+    {
+     "date": "2018-02-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.027009",
+     "version": "3.38"
+    },
+    {
+     "date": "2018-03-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.027010",
+     "version": "3.39"
+    },
+    {
+     "date": "2018-12-18T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.029006",
+     "version": "3.40"
+    },
+    {
+     "date": "2020-08-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.033001",
+     "version": "3.41"
+    },
+    {
+     "date": "2020-12-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.033005",
+     "version": "3.42"
+    },
+    {
+     "date": "2021-04-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.033009",
+     "version": "3.43"
+    },
+    {
+     "date": "2022-03-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.03501",
+     "version": "3.45"
+    },
+    {
+     "date": "2022-09-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.037004",
+     "version": "3.46"
+    },
+    {
+     "date": "2022-11-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.037006",
+     "version": "3.48"
+    },
+    {
+     "date": "2022-12-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.037007",
+     "version": "3.49"
+    },
+    {
+     "date": "2023-04-20T00:00:00",
+     "dual_lived": 1,
+     "perl_release": "5.037011",
+     "version": "3.50"
+    }
+   ]
+  },
+  "Mojolicious": {
+   "advisories": [
+    {
+     "affected_versions": [
+      "<9.31"
+     ],
+     "cves": [],
+     "description": "Mojo::DOM did not correctly parse <script> tags.\n",
+     "distribution": "Mojolicious",
+     "fixed_versions": [
+      ">=9.31"
+     ],
+     "id": "CPANSA-Mojolicious-2022-03",
+     "references": [
+      "https://github.com/mojolicious/mojo/commit/6f195d85db6756022d3599f7d2634975688c9550",
+      "https://github.com/mojolicious/mojo/issues/2014",
+      "https://github.com/mojolicious/mojo/issues/2015"
+     ],
+     "reported": "2022-12-10",
+     "severity": null
+    },
+    {
+     "affected_versions": [
+      "<9.11"
+     ],
+     "cves": [
+      "CVE-2021-47208"
+     ],
+     "description": "A bug in format detection can potentially be exploited for a DoS attack.\n",
+     "distribution": "Mojolicious",
+     "fixed_versions": [
+      ">=9.11"
+     ],
+     "id": "CPANSA-Mojolicious-2021-01",
+     "references": [
+      "https://github.com/mojolicious/mojo/issues/1736",
+      "https://github.com/mojolicious/mojo/commit/a0c4576ffb11c235088550de9ba7ac4196e1953c"
+     ],
+     "reported": "2021-03-16",
+     "severity": null
+    }
+   ],
+   "main_module": "Mojolicious",
+   "versions": [
+    {
+     "date": "2021-02-14T18:44:04",
+     "version": "9.0"
+    },
+    {
+     "date": "2021-02-16T21:32:29",
+     "version": "9.01"
+    },
+    {
+     "date": "2021-03-01T19:16:02",
+     "version": "9.02"
+    },
+    {
+     "date": "2021-03-07T18:49:12",
+     "version": "9.03"
+    },
+    {
+     "date": "2021-03-11T21:04:03",
+     "version": "9.07"
+    },
+    {
+     "date": "2021-03-12T16:47:37",
+     "version": "9.08"
+    },
+    {
+     "date": "2021-03-14T18:32:57",
+     "version": "9.09"
+    },
+    {
+     "date": "2021-03-15T13:26:22",
+     "version": "9.10"
+    },
+    {
+     "date": "2021-03-20T16:41:03",
+     "version": "9.11"
+    },
+    {
+     "date": "2021-03-20T21:25:26",
+     "version": "9.12"
+    },
+    {
+     "date": "2021-03-22T11:33:00",
+     "version": "9.13"
+    },
+    {
+     "date": "2021-03-23T22:54:21",
+     "version": "9.14"
+    },
+    {
+     "date": "2021-04-06T09:10:10",
+     "version": "9.15"
+    },
+    {
+     "date": "2021-04-09T11:31:09",
+     "version": "9.16"
+    },
+    {
+     "date": "2021-04-13T10:11:02",
+     "version": "9.17"
+    },
+    {
+     "date": "2021-05-23T14:06:27",
+     "version": "9.18"
+    },
+    {
+     "date": "2021-06-02T09:14:48",
+     "version": "9.19"
+    },
+    {
+     "date": "2021-08-09T17:26:54",
+     "version": "9.20"
+    },
+    {
+     "date": "2021-08-13T19:14:43",
+     "version": "9.21"
+    },
+    {
+     "date": "2021-10-21T11:53:53",
+     "version": "9.22"
+    },
+    {
+     "date": "2022-03-25T11:37:40",
+     "version": "9.23"
+    },
+    {
+     "date": "2022-04-18T18:28:00",
+     "version": "9.24"
+    },
+    {
+     "date": "2022-04-28T15:21:32",
+     "version": "9.25"
+    },
+    {
+     "date": "2022-05-23T15:17:22",
+     "version": "9.26"
+    },
+    {
+     "date": "2022-09-12T11:10:27",
+     "version": "9.27"
+    },
+    {
+     "date": "2022-10-14T18:55:13",
+     "version": "9.28"
+    },
+    {
+     "date": "2022-11-11T10:15:54",
+     "version": "9.29"
+    },
+    {
+     "date": "2022-11-23T11:52:17",
+     "version": "9.30"
+    },
+    {
+     "date": "2022-12-21T00:36:31",
+     "version": "9.31"
+    },
+    {
+     "date": "2023-05-08T22:09:51",
+     "version": "9.32"
+    },
+    {
+     "date": "2023-06-14T19:25:48",
+     "version": "9.33"
+    },
+    {
+     "date": "2023-09-11T18:34:53",
+     "version": "9.34"
+    },
+    {
+     "date": "2023-10-27T17:11:42",
+     "version": "9.35"
+    },
+    {
+     "date": "2024-03-08T22:16:38",
+     "version": "9.36"
+    },
+    {
+     "date": "2024-05-13T17:48:56",
+     "version": "9.37"
+    },
+    {
+     "date": "2024-08-17T14:52:48",
+     "version": "9.38"
+    },
+    {
+     "date": "2024-11-23T14:16:18",
+     "version": "9.39"
+    },
+    {
+     "date": "2025-05-12T13:09:01",
+     "version": "9.40"
+    },
+    {
+     "date": "2025-07-03T12:27:43",
+     "version": "9.41"
+    },
+    {
+     "date": "2025-10-01T14:47:16",
+     "version": "9.42"
+    },
+    {
+     "date": "2026-05-04T17:44:08",
+     "version": "9.43"
+    },
+    {
+     "date": "2026-05-05T18:10:38",
+     "version": "9.44"
+    },
+    {
+     "date": "2026-05-05T18:34:01",
+     "version": "9.45"
+    },
+    {
+     "date": "2026-06-04T17:10:49",
+     "version": "9.46"
+    },
+    {
+     "date": "2026-07-05T14:02:49",
+     "version": "9.47"
+    },
+    {
+     "date": "2026-07-14T12:53:44",
+     "version": "9.48"
+    }
+   ]
+  },
+  "libwww-perl": {
+   "advisories": [
+    {
+     "affected_versions": [
+      "<6.28"
+     ],
+     "cves": [],
+     "description": "LWP::Protocol::file can open existent file from file:// scheme. However, current version of LWP uses open FILEHANDLE,EXPR and it has ability to execute arbitrary command\n",
+     "distribution": "libwww-perl",
+     "fixed_versions": [
+      ">=6.27"
+     ],
+     "id": "CPANSA-libwww-perl-2017-01",
+     "references": [
+      "https://github.com/libwww-perl/libwww-perl/pull/270"
+     ],
+     "reported": "2017-11-06",
+     "reviewed_by": [
+      {
+       "date": "2022-06-23",
+       "email": "rrwo@cpan.org",
+       "name": "Robert Rothenberg"
+      }
+     ]
+    },
+    {
+     "affected_versions": [
+      "<6.00"
+     ],
+     "cves": [
+      "CVE-2011-0633"
+     ],
+     "description": "The Net::HTTPS module in libwww-perl (LWP) before 6.00, as used in WWW::Mechanize, LWP::UserAgent, and other products, when running in environments that do not set the If-SSL-Cert-Subject header, does not enable full validation of SSL certificates by default, which allows remote attackers to spoof servers via man-in-the-middle (MITM) attacks involving hostnames that are not properly validated.\n",
+     "distribution": "libwww-perl",
+     "fixed_versions": [
+      ">=6.00"
+     ],
+     "id": "CPANSA-libwww-perl-2011-01",
+     "references": [
+      "http://vttynotes.blogspot.com/2010/12/man-in-middle-fun-with-perl-lwp.html",
+      "http://vttynotes.blogspot.com/2011/03/quick-note-on-lwp-and-perl-security-cve.html"
+     ],
+     "reported": "2011-01-20"
+    },
+    {
+     "affected_versions": [
+      "<5.835"
+     ],
+     "cves": [
+      "CVE-2010-2253"
+     ],
+     "description": "lwp-download in libwww-perl before 5.835 does not reject downloads to filenames that begin with a . (dot) character, which allows remote servers to create or overwrite files via (1) a 3xx redirect to a URL with a crafted filename or (2) a Content-Disposition header that suggests a crafted filename, and possibly execute arbitrary code as a consequence of writing to a dotfile in a home directory.\n",
+     "distribution": "libwww-perl",
+     "fixed_versions": [
+      ">=5.835"
+     ],
+     "id": "CPANSA-libwww-perl-2010-01",
+     "references": [
+      "http://vttynotes.blogspot.com/2010/12/man-in-middle-fun-with-perl-lwp.html",
+      "http://vttynotes.blogspot.com/2011/03/quick-note-on-lwp-and-perl-security-cve.html"
+     ],
+     "reported": "2010-07-06"
+    },
+    {
+     "affected_versions": [
+      "<5.51"
+     ],
+     "cves": [],
+     "description": "If LWP::UserAgent::env_proxy is called in a CGI environment, the case-insensitivity when looking for \"http_proxy\" permits \"HTTP_PROXY\" to be found, but this can be trivially set by the web client using the \"Proxy:\" header.\n",
+     "distribution": "libwww-perl",
+     "fixed_versions": [
+      ">=5.51"
+     ],
+     "id": "CPANSA-libwww-perl-2001-01",
+     "reported": "2001-03-14"
+    },
+    {
+     "affected_versions": [
+      "<0.04"
+     ],
+     "cves": [],
+     "description": "There is a security hole with the implementation of getBasicCredentials().\n",
+     "distribution": "libwww-perl",
+     "fixed_versions": [
+      ">=0.04"
+     ],
+     "id": "CPANSA-libwww-perl-1995-01",
+     "references": [
+      "https://metacpan.org/dist/libwww-perl/changes"
+     ],
+     "reported": "1995-09-06"
+    },
+    {
+     "affected_versions": [
+      "<6.83"
+     ],
+     "cves": [
+      "CVE-2026-8368"
+     ],
+     "description": "LWP::UserAgent versions before 6.83 for Perl leak Authorization and Proxy-Authorization headers on cross-origin redirects.  On a 3xx response, the redirect handler strips only Host and Cookie before issuing the follow-up request. Caller-supplied Authorization and Proxy-Authorization headers are sent unchanged to the redirect target, including across scheme, host, or port changes.  A redirect to an attacker controlled host therefore discloses the caller's credentials to that host.",
+     "distribution": "libwww-perl",
+     "fixed_versions": [
+      ">=6.83"
+     ],
+     "id": "CPANSA-libwww-perl-2026-8368",
+     "references": [
+      "https://github.com/libwww-perl/libwww-perl/commit/9c4aeb6f2dd32f2b7eaf2d7827cade31ea6cb2c6.patch",
+      "https://github.com/libwww-perl/libwww-perl/pull/284",
+      "https://github.com/libwww-perl/libwww-perl/pull/512",
+      "https://metacpan.org/release/OALDERS/libwww-perl-6.83/changes",
+      "http://www.openwall.com/lists/oss-security/2026/05/12/7"
+     ],
+     "reported": "2026-05-12",
+     "severity": null
+    }
+   ],
+   "main_module": "LWP",
+   "versions": [
+    {
+     "date": "1995-09-16T13:51:35",
+     "version": "5"
+    },
+    {
+     "date": "1995-11-06T14:29:13",
+     "version": "5"
+    },
+    {
+     "date": "1996-05-09T22:43:16",
+     "version": "5"
+    },
+    {
+     "date": "1996-05-26T14:01:51",
+     "version": "5.00"
+    },
+    {
+     "date": "1996-08-02T16:38:58",
+     "version": "5.01"
+    },
+    {
+     "date": "1996-09-11T16:19:57",
+     "version": "5.02"
+    },
+    {
+     "date": "1996-09-30T22:58:37",
+     "version": "5.03"
+    },
+    {
+     "date": "1996-10-22T10:39:33",
+     "version": "5.04"
+    },
+    {
+     "date": "1996-12-04T23:36:17",
+     "version": "5.05"
+    },
+    {
+     "date": "1997-01-27T23:53:38",
+     "version": "5.06"
+    },
+    {
+     "date": "1997-02-11T14:20:18",
+     "version": "5.07"
+    },
+    {
+     "date": "1997-04-05T13:10:16",
+     "version": "5.08"
+    },
+    {
+     "date": "1997-06-10T11:07:01",
+     "version": "5.09"
+    },
+    {
+     "date": "1997-06-20T10:51:10",
+     "version": "5.10"
+    },
+    {
+     "date": "1997-08-06T08:41:11",
+     "version": "5.11"
+    },
+    {
+     "date": "1997-09-05T09:38:58",
+     "version": "5.12"
+    },
+    {
+     "date": "1997-09-20T12:50:59",
+     "version": "5.13"
+    },
+    {
+     "date": "1997-10-12T20:55:32",
+     "version": "5.14"
+    },
+    {
+     "date": "1997-11-06T20:23:06",
+     "version": "5.15"
+    },
+    {
+     "date": "1997-12-12T17:44:29",
+     "version": "5.18"
+    },
+    {
+     "date": "1997-12-16T22:25:00",
+     "version": "5.18_03"
+    },
+    {
+     "date": "1997-12-17T10:08:54",
+     "version": "5.18_04"
+    },
+    {
+     "date": "1998-01-20T18:16:51",
+     "version": "5.18_05"
+    },
+    {
+     "date": "1998-01-26T23:55:39",
+     "version": "5.19"
+    },
+    {
+     "date": "1998-02-12T23:43:23",
+     "version": "5.20"
+    },
+    {
+     "date": "1998-03-12T18:39:08",
+     "version": "5.21"
+    },
+    {
+     "date": "1998-03-24T19:42:54",
+     "version": "5.22"
+    },
+    {
+     "date": "1998-03-31T22:25:14",
+     "version": "5.30"
+    },
+    {
+     "date": "1998-04-10T15:07:10",
+     "version": "5.31"
+    },
+    {
+     "date": "1998-04-17T05:23:45",
+     "version": "5.32"
+    },
+    {
+     "date": "1998-05-07T15:10:00",
+     "version": "5.33"
+    },
+    {
+     "date": "1998-07-07T16:06:51",
+     "version": "5.34"
+    },
+    {
+     "date": "1998-07-09T23:05:12",
+     "version": "5.35"
+    },
+    {
+     "date": "1998-08-04T15:15:44",
+     "version": "5.36"
+    },
+    {
+     "date": "1998-10-12T17:42:28",
+     "version": "5.40_01"
+    },
+    {
+     "date": "1998-11-19T22:17:29",
+     "version": "5.41"
+    },
+    {
+     "date": "1999-03-20T07:52:48",
+     "version": "5.42"
+    },
+    {
+     "date": "1999-05-09T19:26:17",
+     "version": "5.43"
+    },
+    {
+     "date": "1999-06-25T20:34:40",
+     "version": "5.44"
+    },
+    {
+     "date": "1999-09-20T13:36:22",
+     "version": "5.45"
+    },
+    {
+     "date": "1999-10-28T12:30:45",
+     "version": "5.46"
+    },
+    {
+     "date": "1999-11-16T14:59:58",
+     "version": "5.47"
+    },
+    {
+     "date": "2000-04-09T19:45:32",
+     "version": "5.48"
+    },
+    {
+     "date": "2001-01-01T06:35:20",
+     "version": "5.49"
+    },
+    {
+     "date": "2001-01-12T20:58:43",
+     "version": "5.50"
+    },
+    {
+     "date": "2001-03-14T21:33:03",
+     "version": "5.51"
+    },
+    {
+     "date": "2001-03-29T21:39:12",
+     "version": "5.52"
+    },
+    {
+     "date": "2001-04-10T23:15:00",
+     "version": "5.53"
+    },
+    {
+     "date": "2001-04-19T06:13:35",
+     "version": "5.53_90"
+    },
+    {
+     "date": "2001-04-21T05:02:13",
+     "version": "5.53_91"
+    },
+    {
+     "date": "2001-04-25T17:37:11",
+     "version": "5.53_92"
+    },
+    {
+     "date": "2001-04-29T06:28:31",
+     "version": "5.53_93"
+    },
+    {
+     "date": "2001-05-05T13:57:20",
+     "version": "5.53_94"
+    },
+    {
+     "date": "2001-08-07T00:46:18",
+     "version": "5.53_95"
+    },
+    {
+     "date": "2001-08-28T05:59:46",
+     "version": "5.53_96"
+    },
+    {
+     "date": "2001-09-20T00:33:20",
+     "version": "5.53_97"
+    },
+    {
+     "date": "2001-10-26T23:30:57",
+     "version": "5.60"
+    },
+    {
+     "date": "2001-11-17T02:56:46",
+     "version": "5.61"
+    },
+    {
+     "date": "2001-11-21T19:00:47",
+     "version": "5.62"
+    },
+    {
+     "date": "2001-12-14T21:01:09",
+     "version": "5.63"
+    },
+    {
+     "date": "2002-02-09T18:54:35",
+     "version": "5.64"
+    },
+    {
+     "date": "2002-05-31T20:59:15",
+     "version": "5.65"
+    },
+    {
+     "date": "2002-12-20T19:28:34",
+     "version": "5.66"
+    },
+    {
+     "date": "2003-01-01T16:53:11",
+     "version": "5.67"
+    },
+    {
+     "date": "2003-01-03T05:04:44",
+     "version": "5.68"
+    },
+    {
+     "date": "2003-01-24T16:55:35",
+     "version": "5.69"
+    },
+    {
+     "date": "2003-10-13T20:56:35",
+     "version": "5.70"
+    },
+    {
+     "date": "2003-10-14T19:12:56",
+     "version": "5.71"
+    },
+    {
+     "date": "2003-10-15T19:53:47",
+     "version": "5.72"
+    },
+    {
+     "date": "2003-10-19T20:04:40",
+     "version": "5.73"
+    },
+    {
+     "date": "2003-10-23T19:26:57",
+     "version": "5.74"
+    },
+    {
+     "date": "2003-10-26T22:10:48",
+     "version": "5.75"
+    },
+    {
+     "date": "2003-11-21T19:33:09",
+     "version": "5.76"
+    },
+    {
+     "date": "2004-04-06T13:41:45",
+     "version": "5.77"
+    },
+    {
+     "date": "2004-04-07T11:13:36",
+     "version": "5.78"
+    },
+    {
+     "date": "2004-04-13T08:09:08",
+     "version": "5.79"
+    },
+    {
+     "date": "2004-06-16T10:43:42",
+     "version": "5.800"
+    },
+    {
+     "date": "2004-11-12T18:32:17",
+     "version": "5.801"
+    },
+    {
+     "date": "2004-11-30T13:06:01",
+     "version": "5.802"
+    },
+    {
+     "date": "2004-12-11T15:48:30",
+     "version": "5.803"
+    },
+    {
+     "date": "2005-12-06T09:36:12",
+     "version": "5.804"
+    },
+    {
+     "date": "2005-12-08T12:29:02",
+     "version": "5.805"
+    },
+    {
+     "date": "2007-07-19T21:31:44",
+     "version": "5.806"
+    },
+    {
+     "date": "2007-07-31T13:14:54",
+     "version": "5.807"
+    },
+    {
+     "date": "2007-08-05T13:29:17",
+     "version": "5.808"
+    },
+    {
+     "date": "2008-04-08T11:47:19",
+     "version": "5.810"
+    },
+    {
+     "date": "2008-04-14T08:28:19",
+     "version": "5.811"
+    },
+    {
+     "date": "2008-04-16T10:32:51",
+     "version": "5.812"
+    },
+    {
+     "date": "2008-06-17T20:37:17",
+     "version": "5.813"
+    },
+    {
+     "date": "2008-07-25T09:09:53",
+     "version": "5.814"
+    },
+    {
+     "date": "2008-09-24T18:10:11",
+     "version": "5.815"
+    },
+    {
+     "date": "2008-09-29T09:27:09",
+     "version": "5.816"
+    },
+    {
+     "date": "2008-10-10T21:31:27",
+     "version": "5.817"
+    },
+    {
+     "date": "2008-10-16T10:32:24",
+     "version": "5.818"
+    },
+    {
+     "date": "2008-10-20T11:43:37",
+     "version": "5.819"
+    },
+    {
+     "date": "2008-11-05T18:07:29",
+     "version": "5.820"
+    },
+    {
+     "date": "2008-11-25T00:16:49",
+     "version": "5.821"
+    },
+    {
+     "date": "2008-12-05T19:18:40",
+     "version": "5.822"
+    },
+    {
+     "date": "2009-01-12T16:50:02",
+     "version": "5.823"
+    },
+    {
+     "date": "2009-02-13T14:12:29",
+     "version": "5.824"
+    },
+    {
+     "date": "2009-02-16T10:00:35",
+     "version": "5.825"
+    },
+    {
+     "date": "2009-04-24T20:42:45",
+     "version": "5.826"
+    },
+    {
+     "date": "2009-06-15T19:36:37",
+     "version": "5.827"
+    },
+    {
+     "date": "2009-06-25T19:44:55",
+     "version": "5.828"
+    },
+    {
+     "date": "2009-07-08T20:03:11",
+     "version": "5.829"
+    },
+    {
+     "date": "2009-07-26T19:39:49",
+     "version": "5.830"
+    },
+    {
+     "date": "2009-08-13T20:53:34",
+     "version": "5.831"
+    },
+    {
+     "date": "2009-09-21T18:24:41",
+     "version": "5.832"
+    },
+    {
+     "date": "2009-10-06T21:23:39",
+     "version": "5.833"
+    },
+    {
+     "date": "2009-11-21T13:09:14",
+     "version": "5.834"
+    },
+    {
+     "date": "2010-05-05T21:13:47",
+     "version": "5.835"
+    },
+    {
+     "date": "2010-05-13T07:34:58",
+     "version": "5.836"
+    },
+    {
+     "date": "2010-09-20T21:24:38",
+     "version": "5.837"
+    },
+    {
+     "date": "2010-11-04T15:16:35",
+     "version": "5.837"
+    },
+    {
+     "date": "2011-03-08T19:25:05",
+     "version": "6.00"
+    },
+    {
+     "date": "2011-03-09T23:30:57",
+     "version": "6.01"
+    },
+    {
+     "date": "2011-03-27T11:35:01",
+     "version": "6.02"
+    },
+    {
+     "date": "2011-10-15T13:38:28",
+     "version": "6.03"
+    },
+    {
+     "date": "2012-02-18T22:13:13",
+     "version": "6.04"
+    },
+    {
+     "date": "2013-03-11T21:47:56",
+     "version": "6.05"
+    },
+    {
+     "date": "2014-04-16T18:38:49",
+     "version": "6.06"
+    },
+    {
+     "date": "2014-07-02T05:10:47",
+     "version": "6.07"
+    },
+    {
+     "date": "2014-07-25T03:19:43",
+     "version": "6.08"
+    },
+    {
+     "date": "2015-02-10T02:58:40",
+     "version": "6.09"
+    },
+    {
+     "date": "2015-02-12T17:40:48",
+     "version": "6.10"
+    },
+    {
+     "date": "2015-02-13T21:38:49",
+     "version": "6.11"
+    },
+    {
+     "date": "2015-02-14T00:16:15",
+     "version": "6.12"
+    },
+    {
+     "date": "2015-02-14T18:45:12",
+     "version": "6.13"
+    },
+    {
+     "date": "2015-11-25T20:23:47",
+     "version": "6.14_001"
+    },
+    {
+     "date": "2015-12-05T06:01:09",
+     "version": "6.15"
+    },
+    {
+     "date": "2016-01-05T00:29:20",
+     "version": "6.15_001"
+    },
+    {
+     "date": "2016-01-14T01:52:18",
+     "version": "6.15_002"
+    },
+    {
+     "date": "2016-01-14T02:01:20",
+     "version": "6.15_003"
+    },
+    {
+     "date": "2016-02-13T06:18:45",
+     "version": "6.15_004"
+    },
+    {
+     "date": "2017-01-18T14:22:22",
+     "version": "6.16"
+    },
+    {
+     "date": "2017-01-31T19:39:10",
+     "version": "6.17"
+    },
+    {
+     "date": "2017-02-03T20:31:54",
+     "version": "6.18"
+    },
+    {
+     "date": "2017-02-14T19:56:20",
+     "version": "6.19"
+    },
+    {
+     "date": "2017-02-21T15:19:06",
+     "version": "6.20"
+    },
+    {
+     "date": "2017-02-21T20:38:03",
+     "version": "6.21"
+    },
+    {
+     "date": "2017-03-01T15:27:43",
+     "version": "6.22"
+    },
+    {
+     "date": "2017-03-07T03:49:52",
+     "version": "6.23"
+    },
+    {
+     "date": "2017-03-14T16:36:38",
+     "version": "6.24"
+    },
+    {
+     "date": "2017-04-03T17:20:06",
+     "version": "6.25"
+    },
+    {
+     "date": "2017-04-12T15:36:20",
+     "version": "6.26"
+    },
+    {
+     "date": "2017-09-21T22:32:37",
+     "version": "6.27"
+    },
+    {
+     "date": "2017-11-06T15:43:47",
+     "version": "6.28"
+    },
+    {
+     "date": "2017-11-06T20:34:56",
+     "version": "6.29"
+    },
+    {
+     "date": "2017-12-08T01:57:23",
+     "version": "6.30"
+    },
+    {
+     "date": "2017-12-11T01:57:47",
+     "version": "6.31"
+    },
+    {
+     "date": "2018-02-20T19:41:40",
+     "version": "6.32"
+    },
+    {
+     "date": "2018-02-27T04:04:55",
+     "version": "6.33"
+    },
+    {
+     "date": "2018-06-05T18:50:45",
+     "version": "6.34"
+    },
+    {
+     "date": "2018-07-16T04:51:16",
+     "version": "6.35"
+    },
+    {
+     "date": "2018-10-10T02:21:49",
+     "version": "6.36"
+    },
+    {
+     "date": "2019-03-06T20:51:05",
+     "version": "6.37"
+    },
+    {
+     "date": "2019-03-25T19:00:53",
+     "version": "6.38"
+    },
+    {
+     "date": "2019-05-06T14:19:25",
+     "version": "6.39"
+    },
+    {
+     "date": "2019-10-24T13:08:25",
+     "version": "6.40"
+    },
+    {
+     "date": "2019-10-28T14:45:05",
+     "version": "6.41"
+    },
+    {
+     "date": "2019-11-20T17:41:59",
+     "version": "6.42"
+    },
+    {
+     "date": "2019-11-26T13:56:02",
+     "version": "6.43"
+    },
+    {
+     "date": "2020-04-14T19:39:37",
+     "version": "6.44"
+    },
+    {
+     "date": "2020-06-08T14:52:52",
+     "version": "6.45"
+    },
+    {
+     "date": "2020-06-23T21:20:14",
+     "version": "6.46"
+    },
+    {
+     "date": "2020-08-18T15:28:34",
+     "version": "6.47"
+    },
+    {
+     "date": "2020-09-20T15:26:52",
+     "version": "6.48"
+    },
+    {
+     "date": "2020-09-24T00:29:49",
+     "version": "6.49"
+    },
+    {
+     "date": "2020-12-16T18:36:35",
+     "version": "6.50"
+    },
+    {
+     "date": "2020-12-29T22:09:46",
+     "version": "6.51"
+    },
+    {
+     "date": "2021-01-07T21:58:27",
+     "version": "6.52"
+    },
+    {
+     "date": "2021-03-07T16:55:35",
+     "version": "6.53"
+    },
+    {
+     "date": "2021-05-06T17:55:38",
+     "version": "6.54"
+    },
+    {
+     "date": "2021-06-17T13:58:40",
+     "version": "6.55"
+    },
+    {
+     "date": "2021-08-17T13:58:19",
+     "version": "6.56"
+    },
+    {
+     "date": "2021-09-20T20:29:02",
+     "version": "6.57"
+    },
+    {
+     "date": "2021-10-25T20:44:12",
+     "version": "6.58"
+    },
+    {
+     "date": "2021-12-02T21:20:00",
+     "version": "6.59"
+    },
+    {
+     "date": "2021-12-17T22:33:53",
+     "version": "6.60"
+    },
+    {
+     "date": "2022-01-21T21:44:31",
+     "version": "6.61"
+    },
+    {
+     "date": "2022-04-05T01:05:20",
+     "version": "6.62"
+    },
+    {
+     "date": "2022-04-25T15:25:43",
+     "version": "6.63"
+    },
+    {
+     "date": "2022-04-26T13:17:45",
+     "version": "6.64"
+    },
+    {
+     "date": "2022-05-09T18:42:27",
+     "version": "6.65"
+    },
+    {
+     "date": "2022-05-18T16:57:21",
+     "version": "6.66"
+    },
+    {
+     "date": "2022-06-14T20:24:12",
+     "version": "6.67"
+    },
+    {
+     "date": "2023-02-27T19:20:03",
+     "version": "6.68"
+    },
+    {
+     "date": "2023-04-29T13:15:34",
+     "version": "6.69"
+    },
+    {
+     "date": "2023-04-30T13:26:14",
+     "version": "6.70"
+    },
+    {
+     "date": "2023-06-20T19:46:00",
+     "version": "6.71"
+    },
+    {
+     "date": "2023-07-17T22:02:15",
+     "version": "6.72"
+    },
+    {
+     "date": "2024-01-13T20:26:02",
+     "version": "6.73"
+    },
+    {
+     "date": "2024-01-22T17:49:13",
+     "version": "6.74"
+    },
+    {
+     "date": "2024-01-24T14:30:24",
+     "version": "6.75"
+    },
+    {
+     "date": "2024-01-25T18:33:12",
+     "version": "6.76"
+    },
+    {
+     "date": "2024-03-11T00:58:25",
+     "version": "6.77"
+    },
+    {
+     "date": "2025-02-20T00:44:17",
+     "version": "6.78"
+    },
+    {
+     "date": "2025-06-27T22:44:59",
+     "version": "6.79"
+    },
+    {
+     "date": "2025-09-11T22:58:55",
+     "version": "6.80"
+    },
+    {
+     "date": "2025-10-22T17:05:45",
+     "version": "6.81"
+    },
+    {
+     "date": "2026-03-29T17:03:41",
+     "version": "6.82"
+    },
+    {
+     "date": "2026-05-12T11:43:11",
+     "version": "6.83"
+    }
+   ]
+  },
+  "perl": {
+   "advisories": [
+    {
+     "affected_versions": [
+      "<5.24.1"
+     ],
+     "cves": [
+      "CVE-2016-1238"
+     ],
+     "description": "(1) cpan/Archive-Tar/bin/ptar, (2) cpan/Archive-Tar/bin/ptardiff, (3) cpan/Archive-Tar/bin/ptargrep, (4) cpan/CPAN/scripts/cpan, (5) cpan/Digest-SHA/shasum, (6) cpan/Encode/bin/enc2xs, (7) cpan/Encode/bin/encguess, (8) cpan/Encode/bin/piconv, (9) cpan/Encode/bin/ucmlint, (10) cpan/Encode/bin/unidump, (11) cpan/ExtUtils-MakeMaker/bin/instmodsh, (12) cpan/IO-Compress/bin/zipdetails, (13) cpan/JSON-PP/bin/json_pp, (14) cpan/Test-Harness/bin/prove, (15) dist/ExtUtils-ParseXS/lib/ExtUtils/xsubpp, (16) dist/Module-CoreList/corelist, (17) ext/Pod-Html/bin/pod2html, (18) utils/c2ph.PL, (19) utils/h2ph.PL, (20) utils/h2xs.PL, (21) utils/libnetcfg.PL, (22) utils/perlbug.PL, (23) utils/perldoc.PL, (24) utils/perlivp.PL, and (25) utils/splain.PL in Perl 5.x before 5.22.3-RC2 and 5.24 before 5.24.1-RC2 do not properly remove . (period) characters from the end of the includes directory array, which might allow local users to gain privileges via a Trojan horse module under the current working directory.\n",
+     "distribution": "perl",
+     "fixed_versions": [
+      ">=5.24.1"
+     ],
+     "id": "CPANSA-ExtUtils-ParseXS-2016-1238",
+     "references": [
+      "https://perldoc.perl.org/5.24.1/perldelta",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-08/msg00002.html",
+      "http://perl5.git.perl.org/perl.git/commit/cee96d52c39b1e7b36e1c62d38bcd8d86e9a41ab",
+      "http://www.debian.org/security/2016/dsa-3628",
+      "http://www.nntp.perl.org/group/perl.perl5.porters/2016/07/msg238271.html",
+      "http://www.securityfocus.com/bid/92136",
+      "http://www.securitytracker.com/id/1036440",
+      "https://h20566.www2.hpe.com/portal/site/hpsc/public/kb/docDisplay?docId=emr_na-c05240731",
+      "https://lists.apache.org/thread.html/7f6a16bc0fd0fd5e67c7fd95bd655069a2ac7d1f88e42d3c853e601c%40%3Cannounce.apache.org%3E",
+      "https://lists.debian.org/debian-lts-announce/2018/11/msg00016.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/2FBQOCV3GBAN2EYZUM3CFDJ4ECA3GZOK/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/DOFRQWJRP2NQJEYEWOMECVW3HAMD5SYN/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/TZBNQH3DMI7HDELJAZ4TFJJANHXOEDWH/",
+      "https://rt.perl.org/Public/Bug/Display.html?id=127834",
+      "https://security.gentoo.org/glsa/201701-75",
+      "https://security.gentoo.org/glsa/201812-07",
+      "http://lists.opensuse.org/opensuse-security-announce/2019-08/msg00002.html",
+      "http://perl5.git.perl.org/perl.git/commit/cee96d52c39b1e7b36e1c62d38bcd8d86e9a41ab",
+      "http://www.debian.org/security/2016/dsa-3628",
+      "http://www.nntp.perl.org/group/perl.perl5.porters/2016/07/msg238271.html",
+      "http://www.securityfocus.com/bid/92136",
+      "http://www.securitytracker.com/id/1036440",
+      "https://h20566.www2.hpe.com/portal/site/hpsc/public/kb/docDisplay?docId=emr_na-c05240731",
+      "https://lists.apache.org/thread.html/7f6a16bc0fd0fd5e67c7fd95bd655069a2ac7d1f88e42d3c853e601c%40%3Cannounce.apache.org%3E",
+      "https://lists.debian.org/debian-lts-announce/2018/11/msg00016.html",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/2FBQOCV3GBAN2EYZUM3CFDJ4ECA3GZOK/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/DOFRQWJRP2NQJEYEWOMECVW3HAMD5SYN/",
+      "https://lists.fedoraproject.org/archives/list/package-announce%40lists.fedoraproject.org/message/TZBNQH3DMI7HDELJAZ4TFJJANHXOEDWH/",
+      "https://rt.perl.org/Public/Bug/Display.html?id=127834",
+      "https://security.gentoo.org/glsa/201701-75",
+      "https://security.gentoo.org/glsa/201812-07"
+     ],
+     "reported": "2016-08-02",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=5.22.0,<5.24.0"
+     ],
+     "cves": [
+      "CVE-2016-6185"
+     ],
+     "description": "The XSLoader::load method in XSLoader in Perl does not properly locate .so files when called in a string eval, which might allow local users to execute arbitrary code via a Trojan horse library under the current working directory.\n",
+     "distribution": "perl",
+     "fixed_versions": [
+      ">=5.24.0"
+     ],
+     "id": "CPANSA-perl-2016-6185",
+     "references": [
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/5RFDMASVZLFZYBB2GNTZXU6I76E4NA4V/",
+      "https://github.com/Perl/perl5/commit/08e3451d7b3b714ad63a27f1b9c2a23ee75d15ee",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/PRIPTDA6XINBVEJXI2NGLKVEINBREHTN/",
+      "http://www.openwall.com/lists/oss-security/2016/07/07/1",
+      "http://www.openwall.com/lists/oss-security/2016/07/08/5",
+      "https://rt.cpan.org/Public/Bug/Display.html?id=115808",
+      "http://www.debian.org/security/2016/dsa-3628",
+      "http://www.securitytracker.com/id/1036260",
+      "https://lists.fedoraproject.org/archives/list/package-announce@lists.fedoraproject.org/message/ITYZJXQH24X2F2LAOQEQAC5KXLYJTJ76/",
+      "http://www.oracle.com/technetwork/topics/security/bulletinjul2016-3090568.html",
+      "http://www.securityfocus.com/bid/91685",
+      "https://security.gentoo.org/glsa/201701-75",
+      "https://usn.ubuntu.com/3625-2/",
+      "https://usn.ubuntu.com/3625-1/",
+      "https://github.com/Perl/perl5/blob/blead/pod/perl5260delta.pod"
+     ],
+     "reported": "2016-08-02",
+     "severity": "high"
+    },
+    {
+     "affected_versions": [
+      ">=5.005,<5.22.2",
+      ">=5.23.0,<5.23.7"
+     ],
+     "cves": [
+      "CVE-2015-8608"
+     ],
+     "description": "The VDir::MapPathA and VDir::MapPathW functions in Perl 5.22 allow remote attackers to cause a denial of service (out-of-bounds read) and possibly execute arbitrary code via a crafted (1) drive letter or (2) pInName argument.\n",
+     "distribution": "perl",
+     "fixed_versions": [
+      ">=5.22.2"
+     ],
+     "id": "CPANSA-perl-2015-8608",
+     "references": [
+      "https://rt.perl.org/Public/Bug/Display.html?id=126755",
+      "https://github.com/Perl/perl5/issues/15067",
+      "https://packetstormsecurity.com/files/136649/Perl-5.22-VDir-MapPathA-W-Out-Of-Bounds-Reads-Buffer-Over-Reads.html",
+      "http://www.oracle.com/technetwork/security-advisory/cpujul2017-3236622.html",
+      "https://www.oracle.com/security-alerts/cpujul2020.html"
+     ],
+     "reported": "2017-02-07",
+     "severity": "critical"
+    }
+   ],
+   "main_module": "perl",
+   "versions": [
+    {
+     "date": "2013-05-11T12:30:16",
+     "version": "5.018000"
+    },
+    {
+     "date": "2013-05-12T23:16:29",
+     "version": "5.018000"
+    },
+    {
+     "date": "2013-05-14T01:36:35",
+     "version": "5.018000"
+    },
+    {
+     "date": "2013-05-16T02:53:24",
+     "version": "5.018000"
+    },
+    {
+     "date": "2013-05-18T13:33:29",
+     "version": "5.018000"
+    },
+    {
+     "date": "2013-05-20T13:13:04",
+     "version": "5.019000"
+    },
+    {
+     "date": "2013-06-21T01:22:49",
+     "version": "5.019001"
+    },
+    {
+     "date": "2013-07-22T05:59:18",
+     "version": "5.019002"
+    },
+    {
+     "date": "2013-08-02T03:08:43",
+     "version": "5.018001"
+    },
+    {
+     "date": "2013-08-04T12:34:58",
+     "version": "5.018001"
+    },
+    {
+     "date": "2013-08-09T02:28:27",
+     "version": "5.018001"
+    },
+    {
+     "date": "2013-08-12T14:31:34",
+     "version": "5.018001"
+    },
+    {
+     "date": "2013-08-20T16:10:09",
+     "version": "5.019003"
+    },
+    {
+     "date": "2013-09-20T15:58:44",
+     "version": "5.019004"
+    },
+    {
+     "date": "2013-10-20T13:26:21",
+     "version": "5.019005"
+    },
+    {
+     "date": "2013-11-20T20:36:50",
+     "version": "5.019006"
+    },
+    {
+     "date": "2013-12-02T23:38:47",
+     "version": "5.018002"
+    },
+    {
+     "date": "2013-12-07T13:55:26",
+     "version": "5.018002"
+    },
+    {
+     "date": "2013-12-19T21:28:13",
+     "version": "5.018002"
+    },
+    {
+     "date": "2013-12-20T20:52:42",
+     "version": "5.019007"
+    },
+    {
+     "date": "2013-12-22T03:30:25",
+     "version": "5.018002"
+    },
+    {
+     "date": "2014-01-07T01:52:17",
+     "version": "5.018002"
+    },
+    {
+     "date": "2014-01-20T21:57:24",
+     "version": "5.019008"
+    },
+    {
+     "date": "2014-02-20T04:22:56",
+     "version": "5.019009"
+    },
+    {
+     "date": "2014-03-20T19:37:23",
+     "version": "5.019010"
+    },
+    {
+     "date": "2014-04-20T15:47:35",
+     "version": "5.019011"
+    },
+    {
+     "date": "2014-05-17T00:17:13",
+     "version": "5.020000"
+    },
+    {
+     "date": "2014-05-27T01:35:40",
+     "version": "5.020000"
+    },
+    {
+     "date": "2014-05-27T14:32:41",
+     "version": "5.021000"
+    },
+    {
+     "date": "2014-06-20T16:34:10",
+     "version": "5.021001"
+    },
+    {
+     "date": "2014-07-20T13:50:12",
+     "version": "5.021002"
+    },
+    {
+     "date": "2014-08-21T02:28:08",
+     "version": "5.021003"
+    },
+    {
+     "date": "2014-08-25T18:10:54",
+     "version": "5.020001"
+    },
+    {
+     "date": "2014-09-07T17:01:35",
+     "version": "5.020001"
+    },
+    {
+     "date": "2014-09-14T13:11:35",
+     "version": "5.020001"
+    },
+    {
+     "date": "2014-09-17T20:31:38",
+     "version": "5.018003"
+    },
+    {
+     "date": "2014-09-20T13:33:40",
+     "version": "5.021004"
+    },
+    {
+     "date": "2014-09-27T12:54:36",
+     "version": "5.018003"
+    },
+    {
+     "date": "2014-10-01T13:23:19",
+     "version": "5.018003"
+    },
+    {
+     "date": "2014-10-02T00:48:58",
+     "version": "5.018004"
+    },
+    {
+     "date": "2014-10-20T16:52:50",
+     "version": "5.021005"
+    },
+    {
+     "date": "2014-11-20T23:39:29",
+     "version": "5.021006"
+    },
+    {
+     "date": "2014-12-20T17:35:34",
+     "version": "5.021007"
+    },
+    {
+     "date": "2015-01-20T20:18:06",
+     "version": "5.021008"
+    },
+    {
+     "date": "2015-02-01T03:08:17",
+     "version": "5.020002"
+    },
+    {
+     "date": "2015-02-14T18:27:06",
+     "version": "5.020002"
+    },
+    {
+     "date": "2015-02-21T05:27:29",
+     "version": "5.021009"
+    },
+    {
+     "date": "2015-03-20T18:30:42",
+     "version": "5.021010"
+    },
+    {
+     "date": "2015-04-20T21:26:45",
+     "version": "5.021011"
+    },
+    {
+     "date": "2015-05-19T14:12:48",
+     "version": "5.022000"
+    },
+    {
+     "date": "2015-05-21T23:03:47",
+     "version": "5.022000"
+    },
+    {
+     "date": "2015-06-01T17:53:44",
+     "version": "5.022000"
+    },
+    {
+     "date": "2015-06-20T20:22:57",
+     "version": "5.023000"
+    },
+    {
+     "date": "2015-07-20T19:28:27",
+     "version": "5.023001"
+    },
+    {
+     "date": "2015-08-20T15:37:22",
+     "version": "5.023002"
+    },
+    {
+     "date": "2015-08-22T22:13:00",
+     "version": "5.020003"
+    },
+    {
+     "date": "2015-08-29T22:03:07",
+     "version": "5.020003"
+    },
+    {
+     "date": "2015-09-12T19:09:36",
+     "version": "5.020003"
+    },
+    {
+     "date": "2015-09-21T02:51:32",
+     "version": "5.023003"
+    },
+    {
+     "date": "2015-10-20T22:18:18",
+     "version": "5.023004"
+    },
+    {
+     "date": "2015-10-31T18:44:01",
+     "version": "5.022001"
+    },
+    {
+     "date": "2015-11-15T15:15:25",
+     "version": "5.022001"
+    },
+    {
+     "date": "2015-11-20T17:07:40",
+     "version": "5.023005"
+    },
+    {
+     "date": "2015-12-02T22:13:00",
+     "version": "5.022001"
+    },
+    {
+     "date": "2015-12-08T21:34:27",
+     "version": "5.022001"
+    },
+    {
+     "date": "2015-12-13T19:48:31",
+     "version": "5.022001"
+    },
+    {
+     "date": "2015-12-21T22:40:45",
+     "version": "5.023006"
+    },
+    {
+     "date": "2016-01-20T21:53:05",
+     "version": "5.023007"
+    },
+    {
+     "date": "2016-02-20T21:53:31",
+     "version": "5.023008"
+    },
+    {
+     "date": "2016-03-20T16:44:02",
+     "version": "5.023009"
+    },
+    {
+     "date": "2016-04-10T17:29:33",
+     "version": "5.022002"
+    },
+    {
+     "date": "2016-04-14T03:28:08",
+     "version": "5.024000"
+    },
+    {
+     "date": "2016-04-23T20:56:34",
+     "version": "5.024000"
+    },
+    {
+     "date": "2016-04-27T11:13:03",
+     "version": "5.024000"
+    },
+    {
+     "date": "2016-04-29T21:40:06",
+     "version": "5.022002"
+    },
+    {
+     "date": "2016-05-02T14:41:26",
+     "version": "5.024000"
+    },
+    {
+     "date": "2016-05-04T22:28:17",
+     "version": "5.024000"
+    },
+    {
+     "date": "2016-05-09T11:35:50",
+     "version": "5.024000"
+    },
+    {
+     "date": "2016-05-09T12:03:15",
+     "version": "5.025000"
+    },
+    {
+     "date": "2016-07-17T22:28:02",
+     "version": "5.022003"
+    },
+    {
+     "date": "2016-07-17T22:29:41",
+     "version": "5.024001"
+    },
+    {
+     "date": "2016-07-25T12:59:19",
+     "version": "5.022003"
+    },
+    {
+     "date": "2016-07-25T13:01:56",
+     "version": "5.024001"
+    },
+    {
+     "date": "2016-08-11T23:48:16",
+     "version": "5.022003"
+    },
+    {
+     "date": "2016-08-11T23:51:09",
+     "version": "5.024001"
+    },
+    {
+     "date": "2016-10-12T21:40:33",
+     "version": "5.022003"
+    },
+    {
+     "date": "2016-10-12T21:41:37",
+     "version": "5.024001"
+    },
+    {
+     "date": "2017-01-02T18:57:08",
+     "version": "5.022003"
+    },
+    {
+     "date": "2017-01-02T18:58:19",
+     "version": "5.024001"
+    },
+    {
+     "date": "2017-01-14T20:04:05",
+     "version": "5.022003"
+    },
+    {
+     "date": "2017-01-14T20:05:16",
+     "version": "5.024001"
+    },
+    {
+     "date": "2017-07-01T21:50:24",
+     "version": "5.022004"
+    },
+    {
+     "date": "2017-07-01T21:51:25",
+     "version": "5.024002"
+    },
+    {
+     "date": "2017-07-15T17:27:25",
+     "version": "5.022004"
+    },
+    {
+     "date": "2017-07-15T17:29:00",
+     "version": "5.024002"
+    },
+    {
+     "date": "2017-09-10T15:37:51",
+     "version": "5.024003"
+    },
+    {
+     "date": "2017-09-22T21:29:50",
+     "version": "5.024003"
+    },
+    {
+     "date": "2018-03-24T19:33:50",
+     "version": "5.024004"
+    },
+    {
+     "date": "2018-04-14T11:25:22",
+     "version": "5.024004"
+    }
+   ]
+  },
+  "urxvt-bgdsl": {
+   "advisories": [
+    {
+     "affected_versions": [
+      ">=9.25,<=9.26"
+     ],
+     "cves": [
+      "CVE-2022-4170"
+     ],
+     "description": "The rxvt-unicode package is vulnerable to a remote code execution, in the Perl background extension, when an attacker can control the data written to the user's terminal and certain options are set.\n",
+     "distribution": "urxvt-bgdsl",
+     "fixed_versions": [
+      ">=9.29"
+     ],
+     "id": "CPANSA-urxvt-bgdsl-2022-4170",
+     "references": [
+      "https://bugzilla.redhat.com/show_bug.cgi?id=2151597",
+      "https://www.openwall.com/lists/oss-security/2022/12/05/1"
+     ],
+     "reported": "2022-12-09",
+     "severity": null
+    }
+   ],
+   "main_module": "",
+   "versions": []
+  }
+ },
+ "meta": {
+  "commit": "2089ff7201b44e5e462742a5baaa080ba003d257",
+  "date": "Sun Jul 26 06:23:50 2026",
+  "epoch": 1785047030,
+  "generator": "util/generate",
+  "repo": "https://github.com/briandfoy/cpan-security-advisory"
+ }
+}
