@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 # Only ingest advisories with affected entries in these ecosystems.
 # The Echo OSV feed also contains "Echo" ecosystem entries for OS-level
 # packages, which are already handled by the existing "echo" OS provider.
-_LANGUAGE_ECOSYSTEMS = frozenset({"Echo:PyPi", "Echo:npm", "Echo:Maven"})
+_LANGUAGE_ECOSYSTEMS = frozenset({"Echo:PyPi", "Echo:npm", "Echo:Maven", "Echo:Go"})
 
 
 class Parser:

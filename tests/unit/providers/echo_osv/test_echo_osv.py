@@ -35,7 +35,7 @@ class TestParser:
         )
 
         entries = list(p._load(osv_zip_bytes))
-        assert len(entries) == 4
+        assert len(entries) == 5
 
         results = []
         for entry in entries:
@@ -43,13 +43,14 @@ class TestParser:
             if result is not None:
                 results.append(result)
 
-        # 3 entries have language (Echo:*) affected packages
-        assert len(results) == 3
+        # 4 entries have language (Echo:*) affected packages
+        assert len(results) == 4
 
         ids = [r[0] for r in results]
         assert "ECHO-7db2-03aa-5591" in ids
         assert "ECHO-aa11-bb22-cc33" in ids
         assert "ECHO-dd44-ee55-ff66" in ids
+        assert "ECHO-go-0001" in ids
         # OS-only entry should be excluded
         assert "ECHO-003f-2632-599c" not in ids
 
@@ -72,6 +73,15 @@ class TestParser:
             "Echo:npm",
             "Echo:Maven",
         }
+
+        go_affected = by_id["ECHO-go-0001"]["affected"]
+        assert len(go_affected) == 1
+        assert go_affected[0]["package"] == {
+            "ecosystem": "Echo:Go",
+            "name": "golang.org/x/net",
+            "purl": "pkg:golang/golang.org/x/net",
+        }
+        assert go_affected[0]["ranges"][0]["events"][-1] == {"fixed": "v0.55.0+echo.1"}
 
     def test_echo_os_entries_stripped_from_mixed(self, tmpdir, auto_fake_fixdate_finder):
         """For entries with both Echo:PyPi and Echo ecosystems, only Echo:PyPi affected entries are kept."""
@@ -127,7 +137,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
 
     p.update(None)
 
-    assert ws.num_result_entries() == 3
+    assert ws.num_result_entries() == 4
     assert ws.result_schemas_valid(require_entries=True)
 
 
