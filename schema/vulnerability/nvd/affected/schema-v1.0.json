@@ -1,0 +1,252 @@
+{"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://csrc.nist.gov/schema/nvd/api/2.0/cve_affected_1.0.json",
+	"title": "Product information",
+	"description": "This schema represents the products vulnerable to the CVE",
+	"type": "object",
+	"properties": {
+		"vendor": {
+			"type": "string",
+			"description": "Name of the organization, project, community, individual, or user that created or maintains this product or hosted service. Can be 'N/A' if none of those apply. When collectionURL and packageName are used, this field may optionally represent the user or account within the package collection associated with the package.",
+			"minLength": 1,
+			"maxLength": 512
+		},
+		"product": {
+			"type": "string",
+			"description": "Name of the affected product.",
+			"minLength": 1,
+			"maxLength": 2048
+		},
+		"collectionURL": {
+			"description": "URL identifying a package collection (determines the meaning of packageName).",
+			"$ref": "#/definitions/uriType",
+			"examples": [
+				"https://access.redhat.com/downloads/content/package-browser",
+				"https://addons.mozilla.org",
+				"https://addons.thunderbird.net"
+			]
+		},
+		"packageName": {
+			"type": "string",
+			"description": "Name or identifier of the affected software package as used in the package collection.",
+			"minLength": 1,
+			"maxLength": 2048
+		},
+		"cpes": {
+			"type": "array",
+			"description": "Affected products defined by CPE. This is an array of CPE values (vulnerable and not), we use an array so that we can make multiple statements about the same version and they are separate (if we used a JSON object we'd essentially be keying on the CPE name and they would have to overlap). Also, this allows things like cveDataVersion or cveDescription to be applied directly to the product entry. This also allows more complex statements such as \"Product X between versions 10.2 and 10.8\" to be put in a machine-readable format. As well since multiple statements can be used multiple branches of the same product can be defined here. NOTE: Consider using the newer cpeApplicability block for defining CPE data using the CPE Applicability Language which includes more options for defining CPE Names.",
+			"uniqueItems": true,
+			"items": {
+				"title": "CPE Name",
+				"description": "Common Platform Enumeration (CPE) Name in either 2.2 or 2.3 format",
+				"$ref": "#/definitions/cpe22and23"
+			}
+		},
+		"modules": {
+			"type": "array",
+			"description": "A list of the affected components, features, modules, sub-components, sub-products, APIs, commands, utilities, programs, or functionalities (optional).",
+			"uniqueItems": true,
+			"items": {
+				"type": "string",
+				"description": "Name of the affected component, feature, module, sub-component, sub-product, API, command, utility, program, or functionality (optional).",
+				"minLength": 1,
+				"maxLength": 4096
+			}
+		},
+		"programFiles": {
+			"type": "array",
+			"description": "A list of the affected source code files (optional).",
+			"uniqueItems": true,
+			"items": {
+				"description": "Name or path or location of the affected source code file.",
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 1024
+			}
+		},
+		"programRoutines": {
+			"type": "array",
+			"description": "A list of the affected source code functions, methods, subroutines, or procedures (optional).",
+			"uniqueItems": true,
+			"items": {
+				"type": "object",
+				"description": "An object describing program routine.",
+				"required": [
+					"name"
+				],
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Name of the affected source code file, function, method, subroutine, or procedure.",
+						"minLength": 1,
+						"maxLength": 4096
+					}
+				},
+				"additionalProperties": false
+			}
+		},
+		"platforms": {
+			"title": "Platforms",
+			"description": "List of specific platforms if the vulnerability is only relevant in the context of these platforms (optional). Platforms may include execution environments, operating systems, virtualization technologies, hardware models, or computing architectures. The lack of this field or an empty array implies that the other fields are applicable to all relevant platforms.",
+			"type": "array",
+			"minItems": 1,
+			"uniqueItems": true,
+			"items": {
+				"type": "string",
+				"examples": [
+					"iOS",
+					"Android"
+				],
+				"maxLength": 1024
+			}
+		},
+		"repo": {
+			"description": "The URL of the source code repository, for informational purposes and/or to resolve git hash version ranges.",
+			"$ref": "#/definitions/uriType"
+		},
+		"defaultStatus": {
+			"description": "The default status for versions that are not otherwise listed in the versions list. If not specified, defaultStatus defaults to 'unknown'. Versions or defaultStatus may be omitted, but not both.",
+			"$ref": "#/definitions/status"
+		},
+		"versions": {
+			"type": "array",
+			"description": "Set of product versions or version ranges related to the vulnerability. The versions help satisfy the CNA Rules [5.1.3 requirement](https://www.cve.org/ResourcesSupport/AllResources/CNARules#section_5-1_Required_CVE_Record_Content). Versions or defaultStatus may be omitted, but not both.",
+			"minItems": 1,
+			"uniqueItems": true,
+			"items": {
+				"type": "object",
+				"description": "A single version or a range of versions, with vulnerability status.\n\nAn entry with only 'version' and 'status' indicates the status of a single version.\n\nOtherwise, an entry describes a range; it must include the 'versionType' property, to define the version numbering semantics in use, and 'limit', to indicate the non-inclusive upper limit of the range. The object describes the status for versions V such that 'version' <= V and V < 'limit', using the <= and < semantics defined for the specific kind of 'versionType'. Status changes within the range can be specified by an optional 'changes' list.\n\nThe algorithm to decide the status specified for a version V is:\n\n\tfor entry in product.versions {\n\t\tif entry.lessThan is not present and entry.lessThanOrEqual is not present and v == entry.version {\n\t\t\treturn entry.status\n\t\t}\n\t\tif (entry.lessThan is present and entry.version <= v and v < entry.lessThan) or\n\t\t   (entry.lessThanOrEqual is present and entry.version <= v and v <= entry.lessThanOrEqual) { // <= and < defined by entry.versionType\n\t\t\tstatus = entry.status\n\t\t\tfor change in entry.changes {\n\t\t\t\tif change.at <= v {\n\t\t\t\t\tstatus = change.status\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn status\n\t\t}\n\t}\n\treturn product.defaultStatus\n\n.",
+				"oneOf": [
+					{
+						"required": [
+							"version",
+							"status"
+						],
+						"maxProperties": 2
+					},
+					{
+						"required": [
+							"version",
+							"status",
+							"versionType"
+						],
+						"maxProperties": 3
+					},
+					{
+						"required": [
+							"version",
+							"status",
+							"versionType",
+							"lessThan"
+						]
+					},
+					{
+						"required": [
+							"version",
+							"status",
+							"versionType",
+							"lessThanOrEqual"
+						]
+					}
+				],
+				"properties": {
+					"version": {
+						"description": "The single version being described, or the version at the start of the range. By convention, typically 0 denotes the earliest possible version.",
+						"$ref": "#/definitions/version"
+					},
+					"status": {
+						"description": "The vulnerability status for the version or range of versions. For a range, the status may be refined by the 'changes' list.",
+						"$ref": "#/definitions/status"
+					},
+					"versionType": {
+						"type": "string",
+						"description": "The version numbering system used for specifying the range. This defines the exact semantics of the comparison (less-than) operation on versions, which is required to understand the range itself. 'Custom' indicates that the version type is unspecified and should be avoided whenever possible. It is included primarily for use in conversion of older data files.",
+						"minLength": 1,
+						"maxLength": 128,
+						"examples": [
+							"custom",
+							"git",
+							"maven",
+							"python",
+							"rpm",
+							"semver"
+						]
+					},
+					"lessThan": {
+						"description": "The non-inclusive upper limit of the range. This is the least version NOT in the range. The usual version syntax is expanded to allow a pattern to end in an asterisk `(*)`, indicating an arbitrarily large number in the version ordering. For example, `{version: 1.0 lessThan: 1.*}` would describe the entire 1.X branch for most range kinds, and `{version: 2.0, lessThan: *}` describes all versions starting at 2.0, including 3.0, 5.1, and so on. Only one of lessThan and lessThanOrEqual should be specified.",
+						"$ref": "#/definitions/version"
+					},
+					"lessThanOrEqual": {
+						"description": "The inclusive upper limit of the range. This is the greatest version contained in the range. Only one of lessThan and lessThanOrEqual should be specified. For example, `{version: 1.0, lessThanOrEqual: 1.3}` covers all versions from 1.0 up to and including 1.3.",
+						"$ref": "#/definitions/version"
+					},
+					"changes": {
+						"type": "array",
+						"description": "A list of status changes that take place during the range. The array should be sorted in increasing order by the 'at' field, according to the versionType, but clients must re-sort the list themselves rather than assume it is sorted.",
+						"minItems": 1,
+						"uniqueItems": true,
+						"items": {
+							"type": "object",
+							"description": "The start of a single status change during the range.",
+							"required": [
+								"at",
+								"status"
+							],
+							"additionalProperties": false,
+							"properties": {
+								"at": {
+									"description": "The version at which a status change occurs.",
+									"$ref": "#/definitions/version"
+								},
+								"status": {
+									"description": "The new status in the range starting at the given version.",
+									"$ref": "#/definitions/status"
+								}
+							}
+						}
+					}
+				},
+				"additionalProperties": false
+			}
+		},
+		"packageURL": {
+			"description": "A Package URL, a unified URL specification for identifying packages hosted by known package hosts. The Package URL MUST NOT include a version.",
+			"$ref": "#/definitions/uriType",
+			"examples": [
+				"pkg:bitbucket/birkenfeld/pygments-main",
+				"pkg:deb/debian/curl?arch=i386&distro=jessie",
+				"pkg:docker/cassandra"
+			]
+		}
+	},
+	"definitions": {
+		"uriType": {
+			"description": "A universal resource identifier (URI), according to [RFC 3986](https://tools.ietf.org/html/rfc3986).",
+			"type": "string",
+			"format": "uri",
+			"minLength": 1,
+			"maxLength": 2048
+		},
+		"cpe22and23": {
+			"type": "string",
+			"description": "Common Platform Enumeration (CPE) Name in either 2.2 or 2.3 format",
+			"pattern": "([c][pP][eE]:/[AHOaho]?(:[A-Za-z0-9._\\-~%]*){0,6})|(cpe:2\\.3:[aho*\\-](:(((\\?*|\\*?)([a-zA-Z0-9\\-._]|(\\\\[\\\\*?!\"#$%&'()+,/:;<=>@\\[\\]\\^`{|}~]))+(\\?*|\\*?))|[*\\-])){5}(:(([a-zA-Z]{2,3}(-([a-zA-Z]{2}|[0-9]{3}))?)|[*\\-]))(:(((\\?*|\\*?)([a-zA-Z0-9\\-._]|(\\\\[\\\\*?!\"#$%&'()+,/:;<=>@\\[\\]\\^`{|}~]))+(\\?*|\\*?))|[*\\-])){4})",
+			"minLength": 1,
+			"maxLength": 2048
+		},
+		"version": {
+			"description": "A single version of a product, as expressed in its own version numbering scheme.",
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 1024
+		},
+		"status": {
+			"description": "The vulnerability status of a given version or range of versions of a product. The statuses 'affected' and 'unaffected' indicate that the version is affected or unaffected by the vulnerability. The status 'unknown' indicates that it is unknown or unspecified whether the given version is affected. There can be many reasons for an 'unknown' status, including that an investigation has not been undertaken or that a vendor has not disclosed the status.",
+			"type": "string",
+			"enum": [
+				"affected",
+				"unaffected",
+				"unknown"
+			]
+		}
+	}
+}
