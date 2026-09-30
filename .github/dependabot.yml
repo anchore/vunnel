@@ -6,6 +6,12 @@ updates:
     directories:
       - "/"
       - "/.github/actions/*"
+    # replaces dependabot's default labels, so github_actions is restated.
+    # skip-quality-gate: action bumps don't change provider behavior, so don't pay for
+    # the full provider quality gate (see .github/workflows/pr-quality-gate.yaml).
+    labels:
+      - "github_actions"
+      - "skip-quality-gate"
     schedule:
       interval: "weekly"
     cooldown:
