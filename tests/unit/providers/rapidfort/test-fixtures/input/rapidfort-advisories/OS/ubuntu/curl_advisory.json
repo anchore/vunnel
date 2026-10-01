@@ -1,0 +1,37 @@
+{
+    "package_name": "curl",
+    "advisory": {
+        "20.04": {
+            "CVE-2022-22576": {
+                "cve_id": "CVE-2022-22576",
+                "title": "An improper authentication vulnerability exists in curl 7.33.0 to ...",
+                "description": "An improper authentication vulnerability exists in curl 7.33.0 to and including 7.82.0 which might allow reuse OAUTH2-authenticated connections without properly making sure that the connection was authenticated with the same credentials as set for this transfer.",
+                "severity": "HIGH",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "7.68.0",
+                        "fixed": "7.68.0-1ubuntu2.10"
+                    },
+                    {
+                        "introduced": "7.81.0",
+                        "fixed": "7.81.0-1ubuntu1.1"
+                    }
+                ]
+            },
+            "CVE-2020-8169": {
+                "cve_id": "CVE-2020-8169",
+                "title": "curl 7.62.0 through 7.70.0 is vulnerable to an information disclosure vulnerability",
+                "description": "curl 7.62.0 through 7.70.0 is vulnerable to an information disclosure vulnerability that can lead to a partial password being leaked over the network.",
+                "severity": "HIGH",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "7.68.0",
+                        "fixed": "7.68.0-1ubuntu2.1"
+                    }
+                ]
+            }
+        }
+    }
+}
