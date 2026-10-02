@@ -18,6 +18,7 @@ from vunnel.providers import (
     echo,
     eol,
     epss,
+    euvd,
     fedora,
     github,
     govulndb,
@@ -71,6 +72,7 @@ _providers: dict[str, type[provider.Provider]] = {
     kev.Provider.name(): kev.Provider,
     epss.Provider.name(): epss.Provider,
     eol.Provider.name(): eol.Provider,
+    euvd.Provider.name(): euvd.Provider,
 }
 
 
