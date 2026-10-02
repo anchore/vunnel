@@ -1,0 +1,87 @@
+{
+  "identifier": "echo-dd44-ee55-ff66",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "Echo:npm",
+          "name": "ejs",
+          "purl": "pkg:npm/ejs"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-01-01",
+                    "kind": "first-observed",
+                    "version": "3.1.10+echo.1"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "3.1.10+echo.1"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      },
+      {
+        "package": {
+          "ecosystem": "Echo:Maven",
+          "name": "org.springframework:spring-web",
+          "purl": "pkg:maven/org.springframework/spring-web"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-01-01",
+                    "kind": "first-observed",
+                    "version": "5.3.32+echo.1"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "5.3.32+echo.1"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2026-4242"
+    ],
+    "database_specific": {
+      "anchore": {
+        "record_type": "advisory"
+      }
+    },
+    "id": "ECHO-dd44-ee55-ff66",
+    "modified": "2026-02-20T10:00:00.000Z",
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://advisory.echohq.com/cve/CVE-2026-4242"
+      }
+    ],
+    "schema_version": "1.7.5"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.5.json"
+}
