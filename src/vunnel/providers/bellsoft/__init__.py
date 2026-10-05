@@ -24,9 +24,9 @@ class Config:
 
 
 class Provider(provider.Provider):
-    # pin to the newest released OSV schema (vendored in schema/vulnerability/osv/):
-    # 1.x schema releases are additive, so the newest schema validates records
-    # authored against any older 1.x revision, but not vice versa
+    # Upstream added the Alpaquita and BellSoft Hardened Containers ecosystems in
+    # OSV schema 1.7.4. vunnel does not vendor 1.7.4, so 1.7.5 is the oldest
+    # vendored schema that accepts these records.
     __schema__ = schema.OSVSchema(version=PINNED_OSV_SCHEMA_VERSION)
     __distribution_version__ = int(__schema__.major_version)
 
@@ -44,10 +44,6 @@ class Provider(provider.Provider):
             logger=self.logger,
         )
 
-        # the parser refreshes its own input (fresh archive download each run),
-        # so the framework must not delete input state out from under it
-        provider.disallow_existing_input_policy(config.runtime)
-
     @classmethod
     def name(cls) -> str:
         return "bellsoft"
@@ -58,18 +54,12 @@ class Provider(provider.Provider):
 
     @classmethod
     def compatible_schema(cls, schema_version: str) -> schema.Schema | None:
-        # a record's declared schema_version is metadata about when upstream
-        # authored it, not which schema we validate against: same-major records
-        # all validate under the provider's pinned schema (1.x revisions are
-        # additive), and the envelope URL must point at a schema file vunnel
-        # actually ships (e.g. upstream declares 1.6.7, which we don't vendor)
-        #
-        # defensive: callers derive this from untrusted upstream JSON, so a
-        # non-string (or empty) value must be reported as incompatible rather
-        # than raising on .split(). the parser already coerces these to a
-        # default at ingest, so in practice this only guards other callers.
+        # schema_version comes from upstream JSON, so it may not be a string.
         if not isinstance(schema_version, str) or not schema_version:
             return None
+        # The envelope URL must name a schema file vunnel vendors. No BellSoft
+        # record declares such a version, so this returns the pinned schema
+        # rather than the record's.
         if schema.OSVSchema(schema_version).major_version == cls.__schema__.major_version:
             return cls.__schema__
         return None

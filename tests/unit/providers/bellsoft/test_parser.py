@@ -1,9 +1,4 @@
-"""Parser-level tests for the bellsoft provider.
-
-Covers _load() (tarball streaming and the advisory filter), _download(),
-_normalize_severities(), _normalize(), and get(). End-to-end provider behavior
-lives in test_bellsoft.py.
-"""
+"""Parser-level tests. End-to-end behavior lives in test_bellsoft.py."""
 
 from __future__ import annotations
 
@@ -16,9 +11,9 @@ from unittest.mock import Mock, patch
 
 import jsonschema
 import pytest
+import requests
 
 from vunnel import workspace
-from vunnel.providers.bellsoft import Provider
 from vunnel.providers.bellsoft.parser import PINNED_OSV_SCHEMA_VERSION, Parser
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
@@ -67,7 +62,6 @@ def parser(ws, auto_fake_fixdate_finder):
 
 @pytest.fixture(scope="module")
 def osv_validator():
-    """Validates against the exact schema file the provider pins."""
     with open(PINNED_SCHEMA_PATH) as fh:
         return jsonschema.Draft7Validator(json.load(fh))
 
@@ -78,8 +72,6 @@ def osv_validator():
 
 
 def test_download_writes_archive(ws, auto_fake_fixdate_finder):
-    # serve a github-shaped tarball via a mocked http.get and verify the
-    # download lands where _load expects it
     payload = json.dumps({"id": "BELL-CVE-2020-0009", "schema_version": "1.7.4"}).encode()
     blob = _tar_bytes({"osv-database-master/BELL-CVE/BELL-CVE-2020-0009.json": payload})
 
@@ -91,21 +83,41 @@ def test_download_writes_archive(ws, auto_fake_fixdate_finder):
 
     assert mock_get.call_args.kwargs["timeout"] == 125
     assert os.path.exists(os.path.join(ws.input_path, Parser._archive_name_))
-    # and the downloaded archive is loadable end to end
     assert next(parser._load())["id"] == "BELL-CVE-2020-0009"
 
 
+def test_download_propagates_a_mid_stream_failure(ws, auto_fake_fixdate_finder):
+    def iter_content(chunk_size):
+        yield b"partial"
+        raise requests.exceptions.ChunkedEncodingError("connection broken")
+
+    response = Mock()
+    response.iter_content = iter_content
+    with patch("vunnel.providers.bellsoft.parser.http.get", return_value=response):
+        with pytest.raises(requests.exceptions.ChunkedEncodingError):
+            Parser(ws=ws)._download()
+
+
+def test_download_propagates_a_request_failure(ws, auto_fake_fixdate_finder):
+    with patch(
+        "vunnel.providers.bellsoft.parser.http.get",
+        side_effect=requests.exceptions.ConnectionError("unreachable"),
+    ):
+        with pytest.raises(requests.exceptions.ConnectionError):
+            Parser(ws=ws)._download()
+
+
 # ---------------------------------------------------------------------------
-# _load(): the advisory filter, decode failures, and tarball streaming
+# _load()
 # ---------------------------------------------------------------------------
 
 
 class TestLoad:
-    def test_no_archive_yields_nothing(self, parser):
-        assert list(parser._load()) == []
+    def test_no_archive_raises(self, parser):
+        with pytest.raises(FileNotFoundError):
+            list(parser._load())
 
     def test_handles_flat_archive_layout(self, parser, ws):
-        # tolerate an archive without the github "<repo>-<branch>/" nesting
         _advisories(str(ws.input_path), [{"id": "BELL-CVE-2020-0008", "schema_version": "1.7.4"}], top_dir="")
         assert [r["id"] for r in parser._load()] == ["BELL-CVE-2020-0008"]
 
@@ -132,8 +144,7 @@ class TestLoad:
         ],
     )
     def test_all_decode_failures_are_caught(self, parser, ws, payload):
-        """orjson.JSONDecodeError covers every malformed-input shape, so one bad
-        file is skipped rather than aborting the run."""
+        """orjson raises JSONDecodeError for every malformed-input shape, including invalid UTF-8."""
         _write_members(
             str(ws.input_path),
             {
@@ -146,8 +157,7 @@ class TestLoad:
         assert [r["id"] for r in parser._load()] == ["BELL-CVE-2020-0001"]
 
     def test_streams_many_members_without_corruption(self, parser, ws):
-        """`for member in tar` combined with tar.extractfile() on an "r:gz"
-        (seekable) archive: confirm it stays correct over many members."""
+        """extractfile() during iteration stays correct because "r:gz" opens a seekable archive."""
         count = 500
         members = {
             f"osv-database-master/BELL-CVE/BELL-CVE-2020-{i:05d}.json": json.dumps(
@@ -165,7 +175,6 @@ class TestLoad:
         assert all(len(r["summary"]) == int(r["id"].split("-")[-1]) % 97 for r in loaded)
 
     def test_truncated_archive_raises_rather_than_yielding_a_silent_subset(self, parser, ws):
-        """A half-written archive must not look like a successful smaller dataset."""
         members = {
             f"osv-database-master/BELL-CVE/BELL-CVE-2020-{i:05d}.json": json.dumps(
                 {"id": f"BELL-CVE-2020-{i:05d}", "schema_version": "1.7.4", "summary": "x" * 500},
@@ -181,7 +190,6 @@ class TestLoad:
             list(parser._load())
 
     def test_nested_bell_cve_path_component_is_matched(self, parser, ws):
-        """the filter is a path-component match, so any depth works..."""
         _advisories(
             str(ws.input_path),
             [{"id": "BELL-CVE-2020-0001", "schema_version": "1.7.4"}],
@@ -190,8 +198,7 @@ class TestLoad:
         assert [r["id"] for r in parser._load()] == ["BELL-CVE-2020-0001"]
 
     def test_unrelated_file_under_a_bell_cve_component_is_loaded(self, parser, ws):
-        """...but it is not anchored, so anything under a directory named
-        BELL-CVE anywhere in the repo is treated as an advisory."""
+        """The filter matches a path component at any depth. It is not anchored to the repo root."""
         _write_members(
             str(ws.input_path),
             {"osv-database-master/tools/BELL-CVE/testdata/fixture.json": json.dumps({"id": "NOT-AN-ADVISORY"}).encode()},
@@ -200,14 +207,12 @@ class TestLoad:
 
 
 # ---------------------------------------------------------------------------
-# _normalize_severities(): CVSS vector prefixing
+# _normalize_severities()
 # ---------------------------------------------------------------------------
 
 
 class TestNormalizeSeverities:
     def test_leaves_bare_cvss_v2_untouched(self, parser):
-        """CVSS v2 vectors must stay bare: the OSV schema's CVSS_V2 pattern
-        rejects a "CVSS:2.0/" prefix (unlike V3/V4, which require one)."""
         entry = {"id": "BELL-CVE-2000-0344", "severity": [{"score": "AV:N/AC:L/Au:N/C:N/I:N/A:P", "type": "CVSS_V2"}]}
 
         result = parser._normalize_severities(entry)
@@ -293,13 +298,23 @@ class TestNormalizeSeverities:
         ],
     )
     def test_structurally_odd_severity_is_left_as_found(self, parser, severity, expected):
-        """Upstream is ~18k third-party files; one odd advisory must not raise
-        out of the generator and take down the whole run."""
         assert parser._normalize_severities({"id": "X", "severity": severity})["severity"] == expected
+
+    @pytest.mark.parametrize(
+        "score",
+        [
+            pytest.param("cvss:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", id="lowercase-prefix"),
+            pytest.param(" CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", id="leading-space"),
+        ],
+    )
+    def test_odd_prefix_is_canonicalized_not_double_prefixed(self, parser, score):
+        entry = {"id": "X", "severity": [{"type": "CVSS_V3", "score": score}]}
+
+        assert parser._normalize_severities(entry)["severity"][0]["score"] == V3["score"]
 
 
 # ---------------------------------------------------------------------------
-# _normalize(): the declared schema_version
+# _normalize()
 # ---------------------------------------------------------------------------
 
 
@@ -308,9 +323,6 @@ class TestNormalizeSeverities:
     [
         pytest.param({"id": "X"}, PINNED_OSV_SCHEMA_VERSION, id="missing-key-uses-pinned-version"),
         pytest.param({"id": "X", "schema_version": "1.7.4"}, "1.7.4", id="present"),
-        # a present-but-malformed value is passed through unchanged so that
-        # compatible_schema rejects it and the record is skipped; only a
-        # *missing* key gets the default
         pytest.param({"id": "X", "schema_version": ""}, "", id="empty-string-passes-through"),
     ],
 )
@@ -320,7 +332,7 @@ def test_normalize_schema_version(parser, entry, expected_version):
 
 
 # ---------------------------------------------------------------------------
-# get(): filtering, fix-date patching, and schema conformance of what it yields
+# get()
 # ---------------------------------------------------------------------------
 
 
@@ -337,8 +349,6 @@ class TestGet:
         assert list(parser.get()) == []
 
     def test_withdrawn_entries_are_summarized_not_logged_per_record(self, parser, ws, caplog):
-        """Withdrawn advisories are ~26% of the real corpus (4,711 of 18,338), so
-        a line per record buries the log. One summary carries the useful signal."""
         _advisories(
             str(ws.input_path),
             [
@@ -386,10 +396,61 @@ class TestGet:
         )
         assert [r[0] for r in parser.get()] == ["BELL-CVE-2020-0001"]
 
+    @pytest.mark.parametrize(
+        "vuln_id",
+        [
+            pytest.param(123, id="number"),
+            pytest.param("", id="empty"),
+            pytest.param("CVE-2020-0001", id="not-a-bell-id"),
+            pytest.param("BELL-CVE-2020-0001/../../x", id="path-separator"),
+        ],
+    )
+    def test_record_with_an_invalid_id_is_skipped(self, parser, ws, vuln_id):
+        _write_members(
+            str(ws.input_path),
+            {
+                "osv-database-master/BELL-CVE/bad.json": json.dumps({"id": vuln_id, "schema_version": "1.7.4"}).encode(),
+                "osv-database-master/BELL-CVE/BELL-CVE-2020-0006.json": json.dumps(
+                    {"id": "BELL-CVE-2020-0006", "schema_version": "1.7.4"},
+                ).encode(),
+            },
+        )
+        assert [r[0] for r in parser.get()] == ["BELL-CVE-2020-0006"]
+
+    def test_ids_that_collide_when_lowercased_yield_only_the_first(self, parser, ws):
+        # update() lowercases ids into result identifiers.
+        _advisories(
+            str(ws.input_path),
+            [
+                {"id": "BELL-CVE-2020-0001", "schema_version": "1.7.4"},
+                {"id": "BELL-cve-2020-0001", "schema_version": "1.7.4"},
+            ],
+        )
+        assert [r[0] for r in parser.get()] == ["BELL-CVE-2020-0001"]
+
+    @pytest.mark.parametrize(
+        "affected",
+        [
+            pytest.param(None, id="affected-null"),
+            pytest.param([{"package": None}], id="package-null"),
+            pytest.param([{"package": {"name": "glibc", "ecosystem": "Alpaquita:23"}, "ranges": None}], id="ranges-null"),
+        ],
+    )
+    def test_odd_affected_shape_is_skipped_not_fatal(self, parser, ws, caplog, affected):
+        _advisories(
+            str(ws.input_path),
+            [
+                {"id": "BELL-CVE-2020-0002", "schema_version": "1.7.4", "affected": affected},
+                {"id": "BELL-CVE-2020-0003", "schema_version": "1.7.4"},
+            ],
+        )
+        with caplog.at_level(logging.WARNING):
+            assert [r[0] for r in parser.get()] == ["BELL-CVE-2020-0003"]
+
+        assert any("skipping malformed advisory BELL-CVE-2020-0002" in m for m in caplog.messages)
+
     def test_fix_dates_are_patched_onto_ranges(self, parser, ws):
-        # osv.patch_fix_date annotates database_specific.anchore.fixes with
-        # first-observed dates (faked to 2024-01-01 by auto_fake_fixdate_finder),
-        # which grype-db surfaces as fix availability
+        # auto_fake_fixdate_finder reports 2024-01-01 for every fix.
         _advisories(
             str(ws.input_path),
             [{
@@ -411,11 +472,6 @@ class TestGet:
 
 
 class TestYieldedRecordsAreSchemaValid:
-    """Nothing in the write path validates payloads (src/vunnel/result.py has no
-    jsonschema import), so a normalization that produces schema-invalid records
-    would fail silently in production. These pin severity handling in
-    particular, since that is the only field this provider rewrites."""
-
     def _only(self, parser, record):
         _advisories(str(parser.workspace.input_path), [record])
         return next(iter(parser.get()))[2]
@@ -425,9 +481,7 @@ class TestYieldedRecordsAreSchemaValid:
         assert list(osv_validator.iter_errors(record)) == []
 
     def test_alpaquita_ecosystem_requires_the_pinned_schema(self, parser, osv_validator):
-        """The pinned revision is the OSV release that adds Alpaquita to the
-        ecosystem enum; this is what justifies compatible_schema() returning the
-        pinned schema rather than the record's own declared (older) version."""
+        """The Alpaquita ecosystem value does not exist in the schema 1.7.0 enum."""
         record = self._only(parser, {
             "id": "BELL-CVE-2010-4478",
             "modified": "2024-01-01T00:00:00Z",
@@ -435,14 +489,12 @@ class TestYieldedRecordsAreSchemaValid:
         })
         assert list(osv_validator.iter_errors(record)) == []
 
-        # the same record is invalid under the older vendored schema
         older = os.path.join(REPO_ROOT, "schema", "vulnerability", "osv", "schema-1.7.0.json")
         with open(older) as fh:
             with pytest.raises(jsonschema.ValidationError):
                 jsonschema.Draft7Validator(json.load(fh)).validate(record)
 
     def test_cvss_v3_is_prefixed_and_stays_valid(self, parser, osv_validator):
-        """CVSS_V3 scores MUST carry the CVSS:3.x/ prefix -> normalization is required here."""
         record = self._only(parser, {
             "id": "BELL-CVE-2010-4478",
             "modified": "2024-01-01T00:00:00Z",
@@ -452,14 +504,7 @@ class TestYieldedRecordsAreSchemaValid:
         assert list(osv_validator.iter_errors(record)) == []
 
     def test_cvss_v2_is_left_bare_and_stays_valid(self, parser, osv_validator):
-        """REGRESSION: the OSV schema requires CVSS_V2 scores to be a BARE vector.
-
-        _CVSS_TYPE_PREFIXES used to prepend "CVSS:2.0/", which the schema's
-        CVSS_V2 pattern rejects. Measured against the real upstream archive
-        (18,338 advisories): 727 carry a bare CVSS_V2 score, of which 726 are
-        withdrawn and filtered out by get(), so exactly one live record
-        (BELL-CVE-2008-5135) was emitted schema-invalid.
-        """
+        """Upstream ships live records with bare V2 scores, such as BELL-CVE-2008-5135."""
         record = self._only(parser, {
             "id": "BELL-CVE-2008-5135",
             "modified": "2024-01-01T00:00:00Z",
@@ -469,8 +514,7 @@ class TestYieldedRecordsAreSchemaValid:
         assert list(osv_validator.iter_errors(record)) == []
 
     def test_v2_and_v3_together(self, parser, osv_validator):
-        """A handful of upstream records carry [CVSS_V2, CVSS_V3]; the V3 vector
-        is prefixed, the V2 vector is not, and both must validate."""
+        """Some upstream records carry both a CVSS_V2 and a CVSS_V3 score."""
         record = self._only(parser, {
             "id": "BELL-CVE-2010-4478",
             "modified": "2024-01-01T00:00:00Z",
