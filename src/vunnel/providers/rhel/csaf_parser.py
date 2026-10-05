@@ -97,6 +97,8 @@ class CSAFParser:
         module = None
         version = None
         name = None
+        if doc.product_tree is None:
+            return None, None, None, None
         plat = doc.product_tree.parent(fpi)
         if not plat:
             return None, None, None, None

@@ -88,11 +88,8 @@ class CSAFVEXClient:
 
     def _download_stream(self, url: str, path: str) -> datetime | None:
         """Download url to path, returning the response Last-Modified (if any)."""
-        with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
-            for chunk in response.iter_content(chunk_size=65536):
-                if chunk:
-                    fh.write(chunk)
-            lm = response.headers.get("Last-Modified")
+        response = http.download_to_file(url, path, self.logger)
+        lm = response.headers.get("Last-Modified")
         if lm:
             return email.utils.parsedate_to_datetime(lm)
         return None
@@ -130,6 +127,8 @@ class CSAFVEXClient:
         for name in LEGACY_STATE_FILES:
             with contextlib.suppress(FileNotFoundError):
                 os.remove(os.path.join(self.workspace.input_path, name))
+
+        http.remove_stale_partial_downloads(self.advisories_path, self.logger)
 
     def _advisories_tmp_path(self) -> str:
         return self.advisories_path + ".tmp"

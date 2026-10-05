@@ -141,11 +141,8 @@ class SecDBParser(Parser):
 
         try:
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
-            r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
             file_path = os.path.join(self.input_dir_path, self._db_filename)
-            with open(file_path, "wb") as fp:
-                for chunk in r.iter_content():
-                    fp.write(chunk)
+            http.download_to_file(self.url, file_path, self.logger, timeout=self.download_timeout)
         except Exception:
             self.logger.exception(f"ignoring error processing secdb for {self.url}")
             raise
@@ -285,10 +282,7 @@ class OSVParser(Parser):
             raise
 
     def _download_stream(self, url: str, path: str, timeout: int) -> None:
-        with http.get(url, logger=self.logger, stream=True, timeout=timeout) as response, open(path, "wb") as fh:
-            for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
-                if chunk:
-                    fh.write(chunk)
+        http.download_to_file(url, path, self.logger, timeout=timeout)
 
     def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         self.logger.info(f"load files for {self.namespace} osv feed")

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import contextlib
+import glob
+import os
 import random
 import threading
 import time
@@ -260,14 +263,17 @@ def get(  # noqa: PLR0913, C901
 
             # Step 1: Rate limit check (always enforced, caller cannot bypass)
             if _is_rate_limited(response):
+                # record the rate limit before checking whether we have retries left, so that a
+                # caller with retries=0 (e.g. download_to_file, which owns its own retry loop)
+                # still leaves the host marked as blocked for whoever asks next
+                retry_after = parse_retry_after(response.headers.get("Retry-After"))
+                registry.record_rate_limit(hostname, retry_after)
+
                 # Check if we've exhausted retries - if so, fail now instead of waiting
                 if attempt >= retries:
                     logger.warning(f"Rate limited by {hostname}, no retries remaining")
                     response.raise_for_status()
 
-                # Parse Retry-After and record rate limit
-                retry_after = parse_retry_after(response.headers.get("Retry-After"))
-                registry.record_rate_limit(hostname, retry_after)
                 wait_time = retry_after if retry_after is not None else DEFAULT_RATE_LIMIT_WAIT
                 wait_time = min(wait_time, MAX_RATE_LIMIT_WAIT)
                 logger.warning(f"Rate limited by {hostname}, will retry after {wait_time:.1f}s")
@@ -314,3 +320,128 @@ def backoff_sleep_interval(interval: int, attempt: int, max_value: None | int = 
         val += random.uniform(0, 1)  # noqa: S311
         # explanation of S311 disable: rng is not used cryptographically
     return val
+
+
+# ---------------------------------------------------------------------------
+# file downloads
+# ---------------------------------------------------------------------------
+
+DEFAULT_CHUNK_SIZE = 65536  # 64k
+
+# suffix of the staging file download_to_file writes into before publishing to dest;
+# exposed so callers that sweep their workspace for orphaned downloads (left behind by a
+# killed process, rather than cleaned up by download_to_file's own retry-exhaustion path)
+# don't have to re-derive this convention themselves
+PARTIAL_SUFFIX = ".part"
+
+
+def download_to_file(  # noqa: PLR0913
+    url: str,
+    dest: str | os.PathLike[str],
+    logger: logging.Logger,
+    *,
+    retries: int = 5,
+    backoff_in_seconds: int = 3,
+    timeout: int = DEFAULT_TIMEOUT,
+    max_interval: int = 600,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    **kwargs: Any,
+) -> requests.Response:
+    """Download `url` to `dest`, retrying the whole transfer.
+
+    `get(..., stream=True)` returns once the response headers arrive, so its retry loop
+    only ever covered connect, TLS and status: the body was drained by the caller,
+    outside the loop, and a connection dropped mid-body got no retries at all. Here the
+    body is drained *inside* the loop, which is the difference between `retries=5` being
+    a guarantee and being decoration.
+
+    Bytes land in a sibling `.part` file and are renamed onto `dest` only once the
+    transfer finishes, so a failed run cannot leave a partial file where the next run
+    expects a whole one. The rename is within one directory, and so never crosses a
+    filesystem. Not safe to call concurrently for the same `dest`: two callers would
+    stage into, and race to rename, the same `.part` file.
+
+    Args:
+        url: the url to download.
+        dest: the local path to publish the finished download to.
+        logger: a logging.Logger that info about the download should be logged to.
+        retries: how many times the whole transfer is re-attempted if it fails.
+        backoff_in_seconds: passed to time.sleep between retries.
+        timeout: passed to requests.get. defaults to 30 seconds.
+        max_interval: caps the exponential backoff between retries.
+        chunk_size: bytes read from the response per iteration while streaming to disk.
+        **kwargs: forwarded to `get()`, except `stream` (always True here) and
+            `status_handler`, which this function does not accept - see Raises.
+
+    Returns:
+        The response, whose body has already been drained to `dest`; it is useful only
+        for its headers and status.
+
+    Raises:
+        TypeError: if `status_handler` is passed. A permissive handler could accept a
+            non-2xx response and this function would then write and publish that
+            response's body to `dest` as if it were a valid download.
+        Re-raises the last attempt's exception once retries are exhausted.
+    """
+    if "status_handler" in kwargs:
+        raise TypeError(
+            "download_to_file does not support status_handler: a response it accepts would still be "
+            "written to dest and published, bypassing the validation atomic publish depends on",
+        )
+    dest = os.fspath(dest)
+    parent = os.path.dirname(dest)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    partial = dest + PARTIAL_SUFFIX
+
+    last_exception: Exception | None = None
+
+    for attempt in range(retries + 1):
+        if last_exception:
+            sleep_interval = backoff_sleep_interval(backoff_in_seconds, attempt - 1, max_value=max_interval)
+            logger.warning(f"will retry in {int(sleep_interval)} seconds...")
+            time.sleep(sleep_interval)
+
+        try:
+            # retries=0: this loop owns retrying, so that a failure while reading the
+            # body is retried just like a failure while connecting
+            with (
+                get(url, logger, retries=0, timeout=timeout, stream=True, **kwargs) as response,
+                open(partial, "wb") as fh,
+            ):
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        fh.write(chunk)
+                # the rename must not publish a file the OS still holds in a write buffer
+                fh.flush()
+                os.fsync(fh.fileno())
+
+            os.replace(partial, dest)
+            logger.info(f"downloaded {url} to {dest}")
+            return response
+
+        except Exception as e:
+            last_exception = e
+            logger.warning(f"attempt {attempt + 1} of {retries + 1} failed downloading {url}: {e}")
+
+    with contextlib.suppress(OSError):
+        os.remove(partial)
+
+    if last_exception:
+        logger.error(f"giving up on {url}: {last_exception}")
+        raise last_exception
+    raise Exception("unreachable")
+
+
+def remove_stale_partial_downloads(directory: str, logger: logging.Logger) -> None:
+    """Remove any `.part` staging files left under `directory` by an interrupted download.
+
+    download_to_file only cleans up its own staging file when its own retry loop
+    exhausts; a killed process (OOM, SIGKILL) skips that, so a caller whose downloads
+    aren't reliably retried on every run (e.g. one file per item, only re-fetched if
+    that item changes) should sweep for leftovers on startup.
+    """
+    for part_file in glob.glob(os.path.join(directory, "**", "*" + PARTIAL_SUFFIX), recursive=True):
+        logger.warning(f"removing stray partial download: {part_file}")
+        with contextlib.suppress(OSError):
+            os.remove(part_file)

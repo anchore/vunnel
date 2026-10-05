@@ -64,11 +64,8 @@ class Parser:
 
         try:
             self.logger.info(f"downloading {self.namespace} advisories {self.url}")
-            r = http.get(self.url, self.logger, stream=True, timeout=self.download_timeout)
             file_path = self.advisories_dir_path / self._advisories_filename
-            with open(file_path, "wb") as fp:
-                for chunk in r.iter_content():
-                    fp.write(chunk)
+            http.download_to_file(self.url, file_path, self.logger, timeout=self.download_timeout)
         except Exception:
             self.logger.exception(f"Error downloading Echo advisories from {self.url}")
             raise

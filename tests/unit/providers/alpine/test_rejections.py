@@ -141,8 +141,14 @@ nginx:
 
         # Mock the HTTP get to avoid actual network calls
         class MockResponse:
-            def iter_content(self):
+            def iter_content(self, chunk_size=None):
                 return [b"dnsmasq:\n  - CVE-2021-45951\n"]
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return None
 
         def mock_get(*args, **kwargs):
             return MockResponse()

@@ -428,7 +428,7 @@ class TestSLESParser:
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    c = Config(allow_versions=["15"])
+    c = Config(allow_versions=["15"], use_csaf=False)
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
 
@@ -446,10 +446,11 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
+def test_provider_via_snapshot_oval(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
-    c = Config()
+    # exercise the OVAL-based path explicitly; use_csaf defaults to True now.
+    c = Config(use_csaf=False)
     # keep all of the default values for the result store, but override the strategy
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(

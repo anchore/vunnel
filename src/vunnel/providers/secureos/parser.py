@@ -112,14 +112,16 @@ class Parser:
             self.urls.append(latest_url)
 
             # Download the gzipped secdb file
-            r = http.get(latest_url, self.logger, stream=True, timeout=self.download_timeout, user_agent=self.user_agent)
-
             gz_filename = self._extract_filename_from_url(latest_url)
             gz_file_path = os.path.join(self.secdb_dir_path, gz_filename)
 
-            with open(gz_file_path, "wb") as fp:
-                for chunk in r.iter_content():
-                    fp.write(chunk)
+            http.download_to_file(
+                latest_url,
+                gz_file_path,
+                self.logger,
+                timeout=self.download_timeout,
+                user_agent=self.user_agent,
+            )
 
             # Verify SHA256
             self.logger.info(f"verifying SHA256 hash of {gz_filename}")
