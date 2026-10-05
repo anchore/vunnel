@@ -96,10 +96,7 @@ class CSAFClient:
         return os.path.join(self.workspace.input_path, "deletions.csv")
 
     def _download_stream(self, url: str, path: str) -> None:
-        with http.get(url, logger=self.logger, stream=True) as response, open(path, "wb") as fh:
-            for chunk in response.iter_content(chunk_size=65536):  # 64k chunks
-                if chunk:
-                    fh.write(chunk)
+        http.download_to_file(url, path, self.logger)
 
     def process_changes_and_deletions(self) -> None:
         """process the changes and deletions. deletions.csv is the list of CSAF JSON
@@ -156,6 +153,9 @@ class CSAFClient:
         archive_path = self._local_archive_path()
         if not os.path.exists(self.advisories_path):
             os.makedirs(self.advisories_path, exist_ok=True)
+
+        http.remove_stale_partial_downloads(self.advisories_path, self.logger)
+
         # if there's a new one, the paths won't match and we need to download it
         if not os.path.exists(archive_path):
             # we're going to download a new tarball, however, there could be existing archives already here (with different dates in the name).

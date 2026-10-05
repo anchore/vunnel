@@ -46,12 +46,14 @@ class NVDOverrides:
             self.logger.debug("overrides are not enabled, skipping download...")
             return
 
-        req = http.get(self.__url__, self.logger, stream=True, timeout=self.download_timeout, retries=self.retries)
-
         file_path = os.path.join(self.workspace.input_path, self.__file_name__)
-        with open(file_path, "wb") as fp:
-            for chunk in req.iter_content():
-                fp.write(chunk)
+        http.download_to_file(
+            self.__url__,
+            file_path,
+            self.logger,
+            timeout=self.download_timeout,
+            retries=self.retries,
+        )
 
         archive.extract(file_path, self._extract_path)
 

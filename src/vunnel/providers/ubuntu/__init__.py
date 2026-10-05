@@ -22,17 +22,16 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    # Compatibility switch: when True, OSV fragment envelopes are rewritten into the
-    # v3 OS-schema `{"Vulnerability": {...}}` shape as they are yielded. Leave this off
-    # unless you're feeding a grype-db build that pre-dates the OSV transformer — there
-    # is no provenance for the inference and won't-fix annotations in the OS shape, so
-    # downstream consumers lose that signal.
+    # Accepted at its default (true) so an existing config still loads, and read
+    # nowhere else: every record is emitted in the v3 OS schema. The emit path
+    # assembles a release's disposition from three sources, two of which can speak
+    # about a package the OSV record does not carry, so there is no per-release OSV
+    # envelope left to hand out instead. Setting it false raises.
     downconvert_osv_to_os: bool = True
-    # Only meaningful when `downconvert_osv_to_os` is on: also emit `ubuntu:X.YY+esm`
-    # distro-channel records for plain Ubuntu Pro (ESM), carrying the real Pro fix
-    # version (mirrors RHEL EUS's `rhel:X.Y+eus`). Default on. Set False for the
-    # frozen-v5 lane: it needs the OS-shape down-convert but its build isn't validated
-    # against `+esm` channels, so it takes base records only.
+    # Also emit `ubuntu:X.YY+esm` distro-channel records for plain Ubuntu Pro (ESM),
+    # carrying the real Pro fix version (mirrors RHEL EUS's `rhel:X.Y+eus`). Default
+    # on. Set False for the frozen-v5 lane: its build isn't validated against `+esm`
+    # channels, so it takes base records only.
     downconvert_emit_esm: bool = True
 
 
@@ -42,12 +41,13 @@ class Provider(provider.Provider):
     # would only churn caches.
     __version__ = 3
 
-    __schema__ = schema.OSVSchema()
+    __schema__ = schema.OSSchema()
     # Distribution version stays at 1 (derived from major_version, which is "1" for
-    # both OSSchema and OSVSchema). Bumping this trips provider.py's "version changed
-    # -> workspace.clear()" logic, which would erase input/fragments/ (frozen OSV
-    # state for releases that have dropped out of the feed) and input/normalized-cve-data/
-    # (at-cutover EOL source). Per-envelope schema URLs are the dispatch signal.
+    # both OSSchema and OSVSchema, so this is unaffected by the schema type above).
+    # Bumping this trips provider.py's "version changed -> workspace.clear()" logic,
+    # which would erase input/normalized-cve-data/ — the frozen security-tracker
+    # snapshot, which nothing can rebuild and which is the only source for every
+    # release the feeds do not carry.
     __distribution_version__ = int(__schema__.major_version)
 
     def __init__(self, root: str, config: Config | None = None):
@@ -56,11 +56,11 @@ class Provider(provider.Provider):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
-        # input/ is operationally load-bearing. Two things must survive between runs:
-        #   - fragments/        : frozen per-ecosystem OSV state for releases no longer
-        #                         in today's tarball. The only source for those releases.
-        #   - normalized-cve-data/ : at-cutover EOL data (pre-OSV releases). Phase 1.
-        # Guard both the steady-state and on-error policies against wiping input/.
+        # input/ is operationally load-bearing: `normalized-cve-data/` is the frozen
+        # security-tracker snapshot, the only source for every release the feeds do not
+        # carry and for the fix versions they have stopped carrying, and nothing
+        # regenerates it. Guard both the steady-state and on-error policies against
+        # wiping input/.
         provider.disallow_existing_input_policy(config.runtime)
         if config.runtime.on_error.input != provider.InputStatePolicy.KEEP:
             raise ValueError(

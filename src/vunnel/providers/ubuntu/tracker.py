@@ -1,0 +1,142 @@
+"""Read the frozen security-tracker snapshot as the emit path's third source.
+
+Why the snapshot is a source at all
+-----------------------------------
+`input/normalized-cve-data/` is what the pre-OSV provider emitted from: one
+JSON file per CVE, holding the security team's own status for every package on
+every release. It stopped being updated when this provider switched to the OSV
+feed, so it is a photograph rather than a feed.
+
+It still holds things neither current feed states: fix versions OSV has since
+stopped carrying, byte for byte, and won't-fix rows for CVEs the OSV feed never
+carried. See the README for the measured figures.
+
+Fix versions are historical facts — the version that fixed a CVE in focal in
+2019 is still that version — so a June snapshot does not go stale for them. The
+non-fix dispositions are staler, which is why they are read only where neither
+current feed mentions the combination at all.
+
+Why there is no index
+---------------------
+The snapshot is already one file per CVE, which is the key the emit pass walks,
+so the file is opened when that CVE comes round and closed again. Transposing
+it into per-release fragments only makes sense for a release-major walk.
+
+`DNE` rows say the release never shipped the package and mean nothing to emit,
+so the large majority of rows are dropped on the way in rather than carried
+and skipped later.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+from typing import TYPE_CHECKING, Any
+
+import orjson
+
+from . import parser_legacy
+from .vex_overlay import BASE_POCKET, NO_FIX, NOT_AFFECTED, WONT_FIX, codename_of_token, pocket_of_token, token_asserts
+
+if TYPE_CHECKING:
+    import logging
+
+# The tracker statuses this reads, spelled as the snapshot spells them. The
+# remaining ones (`needs-triage`, `needed`, `pending`, `deferred`, `active`) all
+# mean the same thing to the output and are not named individually.
+STATUS_DNE = "DNE"
+STATUS_RELEASED = "released"
+_STATUS_IGNORED = "ignored"
+_STATUS_NOT_AFFECTED = "not-affected"
+
+# Only files named for a CVE are read; the snapshot directory holds nothing else
+# today, and a stray file should not become a row.
+CVE_FILENAME_RE = re.compile(r"^CVE-[0-9]{4}-[0-9]+$")
+
+
+def disposition_of_status(status: str) -> str | None:
+    """What a tracker status means to the emit path, or None if it means nothing.
+
+    This is `map_parsed`'s own mapping, tied to it by construction rather than
+    by a comment promising they are kept in step: the legacy passthrough still
+    emits from these same files for releases the OSV feed does not cover, both
+    paths run on the releases they overlap on, and the two disagreeing means the
+    same row produces a finding down one path and nothing down the other.
+
+    `not-affected` is the `"0"` row, `ignored` is won't-fix, `DNE` is nothing at
+    all, and a status in `patch_states` beyond those is the security team saying
+    the package is vulnerable with no fix yet. A status in neither mapping —
+    `in-progress` is the live example — means nothing here because it means
+    nothing to `map_parsed`, which drops the row through `check_state`. That is a
+    pre-existing gap in `patch_states` and fixing it belongs there, where it
+    changes both paths deliberately instead of one of them by accident.
+
+    `released` is not here: it is a fix at a version, and a version is not a
+    disposition.
+    """
+    if status == STATUS_DNE:
+        return None
+    if status == _STATUS_NOT_AFFECTED:
+        return NOT_AFFECTED
+    if status == _STATUS_IGNORED:
+        return WONT_FIX
+    if status not in parser_legacy.patch_states:
+        return None
+    return NO_FIX
+
+
+def snapshot_keys(snapshot_dir: str) -> set[str]:
+    """Every CVE the snapshot holds a file for."""
+    if not os.path.isdir(snapshot_dir):
+        return set()
+    return {name for name in os.listdir(snapshot_dir) if CVE_FILENAME_RE.match(name)}
+
+
+def load(snapshot_dir: str, cve: str, logger: logging.Logger) -> parser_legacy.CVEFile | None:
+    """One CVE's snapshot file, parsed, or None when there is none or it is unreadable."""
+    path = os.path.join(snapshot_dir, cve)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "rb") as handle:
+            record: dict[str, Any] = orjson.loads(handle.read())
+    except Exception:
+        logger.exception(f"failed to load normalized cve {path}")
+        return None
+    return parser_legacy.CVEFile.from_dict(record)
+
+
+def esm_clearances(cve_file: parser_legacy.CVEFile) -> set[tuple[str, str]]:
+    """The `(codename, source package)` pairs an extended-support pocket has cleared.
+
+    The rule the pre-OSV provider implemented: a base release row that is an
+    absence of research — `needs-triage` — standing next to an ESM pocket that
+    researched the same source package and concluded the vulnerable code is not
+    there is not a contradiction, and the research wins. It is the same claim
+    about the same rebuild that a `not_affected` VEX statement at that pocket
+    makes, read out of Canonical's other file for the combinations where there
+    is no statement to read it out of at all. The emit path does not give the
+    two the same weight: the statement is current and measured and overwrites a
+    fix version, this one is neither and stops where a version is already on
+    record. See `Parser._apply_tracker_clearances`.
+
+    Which pockets count is `vex_overlay`'s answer and not a second list kept here,
+    since it is the same claim. That is wider than the three prefixes
+    `parser_legacy` hardcodes — it also reaches the `-legacy` spellings and
+    `<codename>/esm` — and narrower in the way that matters, because `upstream`
+    and `devel` sit in `ignored_patches` too and name no release.
+
+    A row whose `version` looks like a version is a fix and not a clearance,
+    which is `parser_legacy`'s own test and is kept identical to it.
+    """
+    out: set[tuple[str, str]] = set()
+    for ignored in cve_file.ignored_patches:
+        if not ignored.package or not ignored.distro or ignored.status != _STATUS_NOT_AFFECTED:
+            continue
+        if ignored.version and ignored.version[:1].isdigit():
+            continue
+        pocket = pocket_of_token(ignored.distro)
+        if pocket == BASE_POCKET or not token_asserts(ignored.distro):
+            continue
+        out.add((codename_of_token(ignored.distro), ignored.package))
+    return out

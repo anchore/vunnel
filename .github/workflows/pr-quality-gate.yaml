@@ -8,6 +8,9 @@ on:
       - reopened
       # custom types...
       - labeled
+      # so removing skip-quality-gate (or run-pr-quality-gate) re-evaluates the gate
+      # instead of leaving a stale result in place
+      - unlabeled
 
 permissions: {}
 
@@ -17,6 +20,9 @@ concurrency:
 
 jobs:
   select-providers:
+    # skip-quality-gate: nothing downstream runs; evaluate-quality-gate reports success.
+    # dependabot applies it to github-actions bumps (see .github/dependabot.yml).
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-quality-gate') }}
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     permissions:
       contents: read
@@ -25,12 +31,12 @@ jobs:
       multicore-providers: ${{ steps.split-providers.outputs.multicore-providers }}
       other-providers: ${{ steps.split-providers.outputs.other-providers }}
     steps:
-      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
+      - uses: runs-on/action@efac073ea2507ec18797de3a81704201ade11d9d #v2.3.1
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -79,12 +85,12 @@ jobs:
       packages: read
 
     steps:
-      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
+      - uses: runs-on/action@efac073ea2507ec18797de3a81704201ade11d9d #v2.3.1
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -119,12 +125,12 @@ jobs:
       packages: read
 
     steps:
-      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
+      - uses: runs-on/action@efac073ea2507ec18797de3a81704201ade11d9d #v2.3.1
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           # in order to properly resolve the version from git
           fetch-depth: 0
@@ -151,18 +157,23 @@ jobs:
       - select-providers
     if: ${{ always() }}
     steps:
-      - uses: runs-on/action@d141ef83eb66d096ce8afc767e09115a65c63b60 #v2.1.2
+      - uses: runs-on/action@efac073ea2507ec18797de3a81704201ade11d9d #v2.3.1
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
       - env:
+          SKIP_QUALITY_GATE: ${{ contains(github.event.pull_request.labels.*.name, 'skip-quality-gate') }}
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
           VALIDATION_MULTICORE_STATUS: ${{ needs.validate-provider-multicore.result }}
           PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.providers }}
           MULTICORE_PROVIDERS: ${{ needs.select-providers.outputs.multicore-providers }}
           OTHER_PROVIDERS: ${{ needs.select-providers.outputs.other-providers }}
         run: |
+          if [ "$SKIP_QUALITY_GATE" == 'true' ]; then
+            echo "🟢 Quality gate skipped! (the 'skip-quality-gate' label is applied)"
+            exit 0
+          fi
           echo "Validations Status: $VALIDATION_STATUS"
           echo "Validations Multicore Status: $VALIDATION_MULTICORE_STATUS"
           echo "Providers that require testing: $PROVIDERS_TO_TEST"
