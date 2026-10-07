@@ -6,8 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 import orjson
 
+from vunnel.tool import fixdate
+from vunnel.utils import osv
+
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from types import TracebackType
 
     from vunnel.workspace import Workspace
 
@@ -34,11 +38,20 @@ class Parser:
     # TODO: Remove once AlmaLinux fixes these gaps upstream
     # Last audit: 2025-10-14
 
-    def __init__(self, ws: Workspace, logger: logging.Logger | None = None, alma_linux_versions: list[str] | None = None):
+    def __init__(
+        self,
+        ws: Workspace,
+        logger: logging.Logger | None = None,
+        alma_linux_versions: list[str] | None = None,
+        fixdater: fixdate.Finder | None = None,
+    ):
         if alma_linux_versions is None:
             alma_linux_versions = ["8", "9", "10"]
         self.alma_linux_versions = alma_linux_versions
         self.workspace = ws
+        if not fixdater:
+            fixdater = fixdate.default_finder(ws)
+        self.fixdater = fixdater
         self.git_url = self._git_src_url_
         self.git_branch = self._git_src_branch_
         self.urls = [self.git_url]
@@ -52,6 +65,13 @@ class Parser:
             checkout_dest=_checkout_dst_,
             logger=self.logger,
         )
+
+    def __enter__(self) -> Parser:
+        self.fixdater.__enter__()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None) -> None:
+        self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
     def _load(self, version: str) -> Generator[dict[str, Any]]:
         self.logger.info("loading data from git repository")
@@ -169,7 +189,11 @@ class Parser:
         # Initialize the git repository
         self.git_wrapper.delete_repo()
         self.git_wrapper.clone_repo()
+        self.fixdater.download()
         for version in self.alma_linux_versions:
             for vuln_entry in self._load(version):
                 # Normalize the loaded data
-                yield self._normalize(vuln_entry, version)
+                vuln_path, vuln_schema, record = self._normalize(vuln_entry, version)
+                # patch after normalize so library package clones get dates too
+                osv.patch_fix_date(record, self.fixdater)
+                yield vuln_path, vuln_schema, record
