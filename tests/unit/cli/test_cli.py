@@ -316,6 +316,25 @@ providers:
       path: providers/{provider_name}/listing.json
       skip_newer_archive_check: false
     user_agent: null
+  cve5:
+    request_timeout: 125
+    runtime:
+      existing_input: delete
+      existing_results: delete-before-write
+      import_results_enabled: false
+      import_results_host: ''
+      import_results_path: providers/{provider_name}/listing.json
+      on_error:
+        action: fail
+        input: keep
+        results: keep
+        retry_count: 3
+        retry_delay: 5
+      result_store: sqlite
+      skip_download: false
+      skip_newer_archive_check: false
+      user_agent: anchore/vunnel-$VUNNEL_VERSION
+    url: https://github.com/CVEProject/cvelistV5/archive/refs/heads/main.tar.gz
   debian:
     releases:
       bookworm: '12'
