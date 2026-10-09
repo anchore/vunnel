@@ -25,7 +25,7 @@ yardstick:
       # Note:
       #  - ALWAYS leave the "import-db" annotation as-is
       #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/vulnerability.db
+      version: cleanstart-community-admin/grype@feat/cleanstart-distro+import-db=build/vulnerability.db
       takes: SBOM
 
     - name: grype
@@ -484,3 +484,14 @@ tests:
   #     - nvd:cpe
   #   validations:
   #     - *default-validations
+
+  - provider: cleanstart
+    use_cache: true
+    images:
+      - docker.io/cleanstart/go:latest@sha256:5a4dad0010b28c182fadccac8621ad338b8666eafe8372c9564ba544c1df7c52
+    expected_namespaces:
+      - cleanstart:distro:cleanstart:rolling
+    validations:
+      - <<: *default-validations
+        max_year: 2026
+        fail_on_empty_match_set: false
