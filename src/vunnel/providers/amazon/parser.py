@@ -83,6 +83,18 @@ class Parser:
             self.logger.exception("error downloading amazon linux vulnerability feeds")
             raise
 
+    def _parse_title(self, text: str | None) -> tuple[str | None, str | None]:
+        """Return the (ALAS id, severity) pair from an RSS item title, or (None, None)
+        when the title does not have the expected shape. A single malformed item should
+        be dropped rather than aborting the whole feed."""
+        title = text.strip() if text else ""
+        found = re.search(self._title_pattern_, title)
+        if not found:
+            self.logger.warning(f"skipping RSS item with unexpected title: {title!r}")
+            return None, None
+
+        return found.group(1), found.group(2)
+
     def _parse_rss(self, file_path):
         self.logger.debug(f"parsing RSS data from {file_path}")
         alas_summaries = []
@@ -93,9 +105,7 @@ class Parser:
                 processing = True
             elif processing and event == "end":
                 if element.tag == "title":
-                    found = re.search(self._title_pattern_, element.text.strip())
-                    alas_id = found.group(1)
-                    sev = found.group(2)
+                    alas_id, sev = self._parse_title(element.text)
                 elif element.tag == "description":
                     desc_str = element.text.strip()
                     cves = re.sub(self._whitespace_pattern_, "", desc_str).split(",") if desc_str else []
@@ -111,7 +121,8 @@ class Parser:
             if not processing and event == "end":
                 element.clear()
 
-        return sorted(alas_summaries)
+        # items whose title did not parse carry a None id and are dropped here
+        return sorted(summary for summary in alas_summaries if summary.id)
 
     def _alas_response_handler(self, response):
         if response.status_code == 403:
