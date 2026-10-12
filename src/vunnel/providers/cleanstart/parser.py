@@ -63,7 +63,7 @@ def _branch_of(version: str) -> tuple[int, int] | None:
     return int(m.group(1)), int(m.group(2))
 
 
-def _apk_sort_key(version: str) -> tuple:
+def _apk_sort_key(version: str) -> tuple[tuple[tuple[int, int, str], ...], int]:
     """Ordering for apk versions, used only to pick the earliest fix within a branch.
 
     Every component is wrapped so numeric and non-numeric parts stay mutually
@@ -121,6 +121,8 @@ def collect_branches(records: Iterable[dict[str, Any]]) -> dict[str, set[tuple[i
     for record in records:
         for affected in _affected_entries(record):
             name = (affected.get("package") or {}).get("name")
+            if not name:
+                continue
             for rng in affected.get("ranges") or []:
                 fixed = _fixed_version(rng)
                 b = _branch_of(fixed) if fixed else None
@@ -161,6 +163,8 @@ def _windows_by_package(
     fixes: dict[str, set[str]] = {}
     for affected in _affected_entries(record):
         name = (affected.get("package") or {}).get("name")
+        if not name:
+            continue
         for rng in affected.get("ranges") or []:
             fixed = _fixed_version(rng)
             if fixed:
@@ -205,7 +209,9 @@ def _bound_affected_ranges(
     for affected in record.get("affected") or []:
         windows = None
         if isinstance(affected, dict):
-            windows = windows_by_package.get((affected.get("package") or {}).get("name"))
+            name = (affected.get("package") or {}).get("name")
+            if name:
+                windows = windows_by_package.get(name)
         if windows is None or _rebind(affected, windows):
             kept.append(affected)
     record["affected"] = kept
