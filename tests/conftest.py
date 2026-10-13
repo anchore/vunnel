@@ -223,7 +223,9 @@ class WorkspaceHelper:
             assert result_file.endswith(".json")
 
             with open(result_file) as f:
-                snapshot_path = result_file.split("results/")[-1]
+                # result paths are derived from namespaces like "rhel:8"; colons are not portable
+                # in file names (and uv refuses to unpack them from an sdist), so swap them out
+                snapshot_path = result_file.split("results/")[-1].replace(":", "_")
 
                 snapshot_abs_path = os.path.join(self.snapshot.snapshot_dir, snapshot_path)
 
