@@ -4,7 +4,7 @@
   "store": "flat-file",
   "timestamp": "2023-01-17T14:58:13+00:00",
   "listing": {
-    "digest": "a20561cda2e03e1c",
+    "digest": "0d2167f01648cf0a",
     "path": "checksums",
     "algorithm": "xxh64"
   },
