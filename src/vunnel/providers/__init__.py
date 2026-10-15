@@ -14,6 +14,7 @@ from vunnel.providers import (
     bitnami,
     chainguard,
     chainguard_libraries,
+    cleanstart,
     debian,
     echo,
     eol,
@@ -66,6 +67,7 @@ _providers: dict[str, type[provider.Provider]] = {
     wolfi.Provider.name(): wolfi.Provider,
     chainguard.Provider.name(): chainguard.Provider,
     chainguard_libraries.Provider.name(): chainguard_libraries.Provider,
+    cleanstart.Provider.name(): cleanstart.Provider,
     minimos.Provider.name(): minimos.Provider,
     # auxiliary vulnerability data (decorates vulnerability entries from providers)
     kev.Provider.name(): kev.Provider,
