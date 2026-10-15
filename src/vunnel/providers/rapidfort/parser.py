@@ -22,14 +22,13 @@ from __future__ import annotations
 import copy
 import logging
 import os
+import zipfile
 from typing import TYPE_CHECKING, Any
 
 import orjson
 
 from vunnel.tool import fixdate
-from vunnel.utils import vulnerability
-
-from .git import GitWrapper
+from vunnel.utils import http_wrapper, vulnerability
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -94,7 +93,8 @@ def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]
 
 
 def _advisory_url(os_name: str, pkg_name: str) -> str:
-    return f"https://github.com/rapidfort/security-advisories/tree/main/OS/{os_name}/{pkg_name}.json"
+    # upstream names every advisory file {package_name}_advisory.json
+    return f"https://github.com/rapidfort/security-advisories/blob/{repo_branch}/OS/{os_name}/{pkg_name}_advisory.json"
 
 
 def _vendor_advisory(os_name: str, pkg_name: str) -> dict[str, Any]:
@@ -169,15 +169,9 @@ class Parser:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-        self._checkout_dest = os.path.join(self.workspace.input_path, "rapidfort-advisories")
-
-        self.git_wrapper = GitWrapper(
-            source=self.repo_url,
-            branch=repo_branch,
-            checkout_dest=self._checkout_dest,
-            logger=self.logger,
-            timeout=timeout,
-        )
+        self.timeout = timeout
+        self._archive_url = f"{self.repo_url.removesuffix('.git')}/archive/refs/heads/{repo_branch}.zip"
+        self._archive_path = os.path.join(self.workspace.input_path, "rapidfort-advisories.zip")
 
         self.security_reference_url = "https://github.com/rapidfort/security-advisories/tree/main/OS"
 
@@ -193,9 +187,19 @@ class Parser:
     ) -> None:
         self.fixdater.__exit__(exc_type, exc_val, exc_tb)
 
-    def _load_package_file(self, file_path: str, os_name: str) -> Generator[tuple[str, str, str, dict[str, Any]]]:
+    def _download(self) -> None:
+        """Download the repo's branch archive (much faster and smaller than cloning ~35k files)."""
+        kwargs: dict[str, Any] = {"timeout": self.timeout} if self.timeout else {}
+        http_wrapper.download_to_file(self._archive_url, self._archive_path, self.logger, **kwargs)
+
+    def _load_package_file(
+        self,
+        archive: zipfile.ZipFile,
+        file_path: str,
+        os_name: str,
+    ) -> Generator[tuple[str, str, str, dict[str, Any]]]:
         try:
-            with open(file_path, "rb") as f:
+            with archive.open(file_path) as f:
                 data = orjson.loads(f.read())
         except Exception:
             self.logger.warning("Failed to parse %s", file_path, exc_info=True)
@@ -214,31 +218,41 @@ class Parser:
             if isinstance(cve_map, dict) and cve_map:
                 yield os_name, os_version, pkg_name, cve_map
 
-    def _load_os(self, base_dir: str, os_name: str) -> Generator[tuple[str, str, str, dict[str, Any]]]:
-        src_dir = os.path.join(base_dir, os_name)
+    def _load_os(
+        self,
+        archive: zipfile.ZipFile,
+        files: dict[str, dict[str, str]],
+        os_name: str,
+    ) -> Generator[tuple[str, str, str, dict[str, Any]]]:
+        entries = files.get(os_name)
 
-        if not os.path.isdir(src_dir):
-            self.logger.debug("RapidFort OS dir not found, skipping: %s", src_dir)
+        if not entries:
+            self.logger.debug("RapidFort OS dir not found, skipping: %s/%s", repo_os_path, os_name)
             return
 
-        for entry in sorted(os.listdir(src_dir)):
+        for entry in sorted(entries):
             if not entry.endswith(".json"):
                 continue
 
-            file_path = os.path.join(src_dir, entry)
-            if os.path.isfile(file_path):
-                yield from self._load_package_file(file_path, os_name)
+            yield from self._load_package_file(archive, entries[entry], os_name)
 
     def _load(self) -> Generator[tuple[str, str, str, dict[str, Any]]]:
-        """Yield (os_name, os_version, package_name, cve_map) from OS/{os}/{package}.json."""
-        base_dir = os.path.join(self._checkout_dest, repo_os_path)
+        """Yield (os_name, os_version, package_name, cve_map) from OS/{os}/{package}.json in the archive."""
+        with zipfile.ZipFile(self._archive_path) as archive:
+            # members look like {repo}-{branch}/OS/{os}/{package}.json; index files by os and basename
+            files: dict[str, dict[str, str]] = {}
+            for info in archive.infolist():
+                parts = info.filename.split("/")
+                if info.is_dir() or len(parts) != 4 or parts[1] != repo_os_path:
+                    continue
+                files.setdefault(parts[2], {})[parts[3]] = info.filename
 
-        if not os.path.isdir(base_dir):
-            self.logger.warning("RapidFort OS root not found: %s", base_dir)
-            return
+            if not files:
+                self.logger.warning("RapidFort OS root not found in archive: %s", self._archive_path)
+                return
 
-        for os_name in self.supported_oses:
-            yield from self._load_os(base_dir, os_name)
+            for os_name in self.supported_oses:
+                yield from self._load_os(archive, files, os_name)
 
     def _get_valid_cve_entry(
         self,
@@ -386,8 +400,7 @@ class Parser:
         has_unidentified = any(not ident(ev) for ev in events if isinstance(ev, dict))
         if has_native and has_unidentified:
             self.logger.warning(
-                "%s/%s carries both %s-identified and unidentified events; "
-                "keeping only the %s-identified events to avoid merging release streams",
+                "%s/%s carries both %s-identified and unidentified events; keeping only the %s-identified events to avoid merging release streams",
                 vid,
                 pkg_name,
                 os_name,
@@ -520,9 +533,8 @@ class Parser:
                 namespace_vulns[ns][vid] = record
 
     def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]]]:
-        """Clone repo, load advisories, normalize and yield (namespace, vuln_dict)."""
-        self.git_wrapper.delete_repo()
-        self.git_wrapper.clone_repo()
+        """Download repo archive, load advisories, normalize and yield (namespace, vuln_dict)."""
+        self._download()
 
         self.fixdater.download()
 

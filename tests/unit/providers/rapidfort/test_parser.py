@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import zipfile
+
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.rapidfort.parser import Parser, _channel_for, _events_to_range_pairs
@@ -131,7 +134,7 @@ class TestNormalize:
         assert fixed_in_sorted[0]["VendorAdvisory"]["AdvisorySummary"] == [
             {
                 "ID": "curl",
-                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/ubuntu/curl.json",
+                "Link": "https://github.com/rapidfort/security-advisories/blob/main/OS/ubuntu/curl_advisory.json",
             },
         ]
         assert fixed_in_sorted[1]["Version"] == "7.81.0-1ubuntu1.1"
@@ -209,7 +212,7 @@ class TestNormalize:
         assert native_fixed_in[0]["VendorAdvisory"]["AdvisorySummary"] == [
             {
                 "ID": "curl",
-                "Link": "https://github.com/rapidfort/security-advisories/tree/main/OS/redhat/curl.json",
+                "Link": "https://github.com/rapidfort/security-advisories/blob/main/OS/redhat/curl_advisory.json",
             },
         ]
 
@@ -329,6 +332,17 @@ class TestNormalizeOSVersion:
         assert parser._normalize_os_version("ubuntu", "unknown") is None
 
 
+def _use_fixture_archive(parser, monkeypatch):
+    """Zip the fixture checkout the way GitHub's branch archive is laid out, instead of downloading."""
+    src = os.path.join(parser.workspace.input_path, "rapidfort-advisories")
+    with zipfile.ZipFile(parser._archive_path, "w") as zf:
+        for dirpath, _, filenames in os.walk(src):
+            for filename in filenames:
+                path = os.path.join(dirpath, filename)
+                zf.write(path, os.path.join("security-advisories-main", os.path.relpath(path, src)))
+    monkeypatch.setattr(parser, "_download", lambda: None)
+
+
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
     """Provider output must validate against schema-1.1.0.json."""
     ws = helpers.provider_workspace_helper(
@@ -338,15 +352,10 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
 
     from vunnel.providers.rapidfort import Config, Provider
 
-    # Patch git operations so we use pre-populated fixtures instead of cloning
-    def noop(*args, **kwargs):
-        pass
-
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=str(ws.root), config=c)
-    monkeypatch.setattr(p.parser.git_wrapper, "delete_repo", noop)
-    monkeypatch.setattr(p.parser.git_wrapper, "clone_repo", noop)
+    _use_fixture_archive(p.parser, monkeypatch)
 
     p.update(None)
 
@@ -363,14 +372,10 @@ def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_
 
     from vunnel.providers.rapidfort import Config, Provider
 
-    def noop(*args, **kwargs):
-        pass
-
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=str(ws.root), config=c)
-    monkeypatch.setattr(p.parser.git_wrapper, "delete_repo", noop)
-    monkeypatch.setattr(p.parser.git_wrapper, "clone_repo", noop)
+    _use_fixture_archive(p.parser, monkeypatch)
 
     p.update(None)
 
