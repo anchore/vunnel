@@ -78,6 +78,19 @@ class TestStore:
         # verify grype_db_store download was called
         store.grype_db_store.download.assert_called_once()
 
+    def test_skip_download_delegates_to_grype_db_store(self, tmpdir):
+        """test that skip_download() only delegates to grype_db_store"""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        store = Store(ws)
+
+        store.grype_db_store.skip_download = Mock()
+        store.grype_db_store.download = Mock()
+
+        store.skip_download()
+
+        store.grype_db_store.skip_download.assert_called_once()
+        store.grype_db_store.download.assert_not_called()
+
     def test_get_changed_vuln_ids_since_delegates_to_grype_db(self, tmpdir):
         """test that get_changed_vuln_ids_since() delegates to grype_db_store"""
         ws = workspace.Workspace(tmpdir, "test", create=True)

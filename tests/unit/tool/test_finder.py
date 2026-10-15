@@ -183,6 +183,30 @@ class TestFinder:
 
         assert result == first_observed_result
 
+    def test_download_with_skip_download_flag(self):
+        """Test that download() with skip_download=True calls skip_download() on every strategy and never downloads."""
+        first_observed = self.create_mock_strategy([])
+        strategies = [self.create_mock_strategy([]), self.create_mock_strategy([])]
+        finder = Finder(strategies, first_observed, skip_download=True)
+
+        finder.download()
+
+        for s in [first_observed, *strategies]:
+            s.skip_download.assert_called_once_with()
+            s.download.assert_not_called()
+
+    def test_download_without_skip_download_flag(self):
+        """Test that download() by default downloads every strategy and never skips."""
+        first_observed = self.create_mock_strategy([])
+        strategies = [self.create_mock_strategy([]), self.create_mock_strategy([])]
+        finder = Finder(strategies, first_observed)
+
+        finder.download()
+
+        for s in [first_observed, *strategies]:
+            s.download.assert_called_once_with()
+            s.skip_download.assert_not_called()
+
     def test_best_with_none_dates_in_results(self):
         """Test handling of Result objects with None dates."""
         strategy_result_no_date = Result(date=None, kind="strategy")

@@ -229,6 +229,19 @@ class Store(Strategy):
         elif not download_db_path.exists():
             raise FileNotFoundError(f"expected {download_db_path} or {download_zst_path} after pull")
 
+    def skip_download(self) -> None:
+        """Use the fix date database already in the workspace, without contacting the registry."""
+        self._downloaded = True
+        if self.db_path.exists():
+            self.logger.info(f"skipping fix date database download, using local copy at {self.db_path}")
+            return
+        # same treatment as a provider with no published fix date database (e.g. a new provider in development)
+        self.logger.warning(
+            f"skipping fix date database download and there is no local copy at {self.db_path}, treating it as empty: "
+            "unseen fixes will be dated today and recorded in observed-fix-dates.db",
+        )
+        self._not_found = True
+
     def download(self) -> None:
         """fetch the fix date database from the OCI registry using ORAS"""
 

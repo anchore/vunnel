@@ -5,12 +5,15 @@ import json
 import os
 import shutil
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import jsonschema
 import pytest
 from vunnel import result, workspace
 from vunnel.providers.wolfi import Config, Provider, parser
 from vunnel.providers.wolfi.parser import OSVParser, SecDBParser
+from vunnel.tool import fixdate
+from tests.conftest import FakeLocalStrategy
 
 OSV_SCHEMA_PATH = (
     Path(__file__).resolve().parents[4]
@@ -245,6 +248,87 @@ class TestParser:
             "https://www.cve.org/CVERecord?id=CVE-2016-2781",
             "https://nvd.nist.gov/vuln/detail/CVE-2016-2781",
         ]
+
+
+class TestSkipDownload:
+    @pytest.fixture()
+    def fixdater(self):
+        return MagicMock(spec=fixdate.Finder)
+
+    @pytest.fixture()
+    def http_get(self, monkeypatch):
+        mock = MagicMock()
+        monkeypatch.setattr(parser.http, "download_to_file", mock)
+        return mock
+
+    def _osv_parser(self, tmpdir, fixdater, skip_download):
+        p = OSVParser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.cgr.dev/chainguard/v2/osv/all.json",
+            namespace="wolfi",
+            fixdater=fixdater,
+            skip_download=skip_download,
+        )
+        p._download_stream = MagicMock()
+        return p
+
+    def _secdb_parser(self, tmpdir, fixdater, skip_download):
+        return SecDBParser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://packages.wolfi.dev/os/security.json",
+            namespace="wolfi",
+            fixdater=fixdater,
+            skip_download=skip_download,
+        )
+
+    def test_osv_skip_download(self, tmpdir, fixdater, http_get):
+        p = self._osv_parser(tmpdir, fixdater, skip_download=True)
+
+        p._download()
+
+        p._download_stream.assert_not_called()
+        http_get.assert_not_called()
+        fixdater.download.assert_called_once_with()
+
+    def test_osv_download(self, tmpdir, fixdater):
+        p = self._osv_parser(tmpdir, fixdater, skip_download=False)
+
+        p._download()
+
+        p._download_stream.assert_called_once()
+        fixdater.download.assert_called_once_with()
+
+    def test_secdb_skip_download(self, tmpdir, fixdater, http_get):
+        p = self._secdb_parser(tmpdir, fixdater, skip_download=True)
+
+        p._download()
+
+        http_get.assert_not_called()
+        fixdater.download.assert_called_once_with()
+
+    def test_secdb_download(self, tmpdir, fixdater, http_get):
+        p = self._secdb_parser(tmpdir, fixdater, skip_download=False)
+
+        p._download()
+
+        http_get.assert_called_once()
+        fixdater.download.assert_called_once_with()
+
+    def test_secdb_skip_download_still_yields_fix_dates(self, tmpdir):
+        # a real Finder, whose skip_download flag is what keeps it offline, in front of a strategy
+        # that refuses lookups until told about the download
+        strategy = FakeLocalStrategy()
+        finder = fixdate.Finder(strategies=[], first_observed=strategy, skip_download=True)
+        p = self._secdb_parser(tmpdir, finder, skip_download=True)
+        os.makedirs(p.input_dir_path, exist_ok=True)
+        with open(os.path.join(p.input_dir_path, "security.json"), "w") as fp:
+            json.dump({"packages": [{"pkg": {"name": "coreutils", "secfixes": {"9.1-r0": ["CVE-2016-2781"]}}}]}, fp)
+
+        results = dict(p.get())["rolling"]
+
+        assert strategy.ready
+        fixed_in = results["CVE-2016-2781"]["Vulnerability"]["FixedIn"]
+        assert fixed_in[0]["Available"] == {"Date": "2024-01-01", "Kind": "first-observed"}
 
 
 def test_provider_schema(helpers, disable_get_requests, auto_fake_fixdate_finder):

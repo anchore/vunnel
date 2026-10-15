@@ -68,7 +68,7 @@ class Provider(provider.Provider):
             )
             # the OVAL path dates its fixes through the same finder; the CSAF path must
             # too, or switching feeds silently drops FixedIn.Available entirely.
-            self.fixdater = fixdate.default_finder(self.workspace)
+            self.fixdater = fixdate.default_finder(self.workspace, skip_download=self.config.runtime.skip_download)
             # the VEX feed carries no fix date of its own; the advisory feed is the only
             # place a real one exists.
             self.csaf_advisory_client = SLESCSAFAdvisoryClient(

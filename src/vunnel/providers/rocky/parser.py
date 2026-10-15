@@ -27,7 +27,7 @@ class Parser:
         skip_download: bool = False,
     ):
         if not fixdater:
-            fixdater = fixdate.default_finder(ws)
+            fixdater = fixdate.default_finder(ws, skip_download=skip_download)
         self.fixdater = fixdater
         self.workspace = ws
         if not logger:

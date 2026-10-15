@@ -39,7 +39,7 @@ class Parser(abc.ABC):
         skip_download: bool = False,
     ):
         if not fixdater:
-            fixdater = fixdate.default_finder(workspace)
+            fixdater = fixdate.default_finder(workspace, skip_download=skip_download)
         self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.input_dir_path = os.path.join(workspace.input_path, self._input_dir_)
@@ -130,14 +130,14 @@ class SecDBParser(Parser):
         )
 
     def _download(self) -> None:
+        self.fixdater.download()
+
         if self.skip_download:
             self.logger.info(f"skip_download is enabled for {self.namespace} secdb feed")
             return
 
         if not os.path.exists(self.input_dir_path):
             os.makedirs(self.input_dir_path, exist_ok=True)
-
-        self.fixdater.download()
 
         try:
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
