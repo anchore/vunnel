@@ -1,0 +1,62 @@
+{
+  "total": 3,
+  "items": [
+    {
+      "id": "EUVD-2026-26868",
+      "enisaUuid": "98fbb849-7215-3e29-8a2a-f3d444f9caf3",
+      "description": "Totolink WA300 buffer overflow.",
+      "datePublished": "May 4, 2026, 1:00:23 AM",
+      "dateUpdated": "May 4, 2026, 1:00:23 AM",
+      "baseScore": 8.7,
+      "baseScoreVersion": "4.0",
+      "baseScoreVector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P",
+      "references": "https://vuldb.com/vuln/360893\nhttps://www.totolink.net/\n",
+      "aliases": "CVE-2026-7717\n",
+      "assigner": "VulDB",
+      "epss": 0.0,
+      "enisaIdProduct": [
+        {"id": "e189a071-a946-3936-9b23-0262a234ab7f", "product": {"name": "WA300"}, "product_version": "5.2cu.7112_B20190227"}
+      ],
+      "enisaIdVendor": [
+        {"id": "a652aa57-7e17-325b-8c9a-147e17f47f96", "vendor": {"name": "Totolink"}}
+      ]
+    },
+    {
+      "id": "EUVD-2026-26861",
+      "enisaUuid": "3574a343-b321-37ec-a117-0b9b52369dc9",
+      "description": "GeoVision GV-VMS V20 stack overflow.",
+      "datePublished": "May 4, 2026, 12:48:05 AM",
+      "dateUpdated": "May 4, 2026, 12:48:05 AM",
+      "baseScore": 9.0,
+      "baseScoreVersion": "3.1",
+      "baseScoreVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "references": "https://www.geovision.com.tw/cyber_security.php\n",
+      "aliases": "CVE-2026-42370\n",
+      "assigner": "GV",
+      "epss": 0.0,
+      "enisaIdProduct": [
+        {"id": "2eaf1ce0-6721-3aa7-849f-16bf3eb6f349", "product": {"name": "GV-VMS V20.0.2"}, "product_version": ""},
+        {"id": "3cd9c351-66ae-3534-856c-dbfe02e0f425", "product": {"name": "GV-VMS V20.0.2"}, "product_version": "20.0.2"}
+      ],
+      "enisaIdVendor": [
+        {"id": "a54e0d34-a2ea-3706-b383-429a52e67568", "vendor": {"name": "GeoVision Inc."}}
+      ]
+    },
+    {
+      "id": "EUVD-2026-26800",
+      "enisaUuid": "deadbeef-feed-face-dead-beefcafef00d",
+      "description": "Sample entry with missing dates and product list.",
+      "datePublished": null,
+      "dateUpdated": null,
+      "baseScore": null,
+      "baseScoreVersion": null,
+      "baseScoreVector": null,
+      "references": null,
+      "aliases": null,
+      "assigner": null,
+      "epss": null,
+      "enisaIdProduct": [],
+      "enisaIdVendor": []
+    }
+  ]
+}
