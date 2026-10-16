@@ -314,6 +314,20 @@ tests:
         max_year: 2021
         fail_on_empty_match_set: false
 
+  # TODO: enable once a RapidFort-curated test image is pinned and labeled. The gate needs:
+  # - a real rapidfort image digest (identified by its maintainer label) under images
+  # - a grype release with rapidfort distro-source-override + OS package routing support
+  # expected namespaces would be of the form rapidfort:distro:rapidfort-ubuntu:20.04 (and
+  # +channel variants for release streams, e.g. rapidfort:distro:rapidfort-redhat:9+fc43)
+  # - provider: rapidfort
+  #   use_cache: true
+  #   images:
+  #     - <rapidfort-curated image digest>
+  #   expected_namespaces:
+  #     - rapidfort:distro:rapidfort-ubuntu:20.04
+  #   validations:
+  #     - *default-validations
+
   - provider: rhel
     use_cache: true
     # ideally we would not use cache, however, the ubuntu provider is currently very expensive to run.
