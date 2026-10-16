@@ -7,19 +7,12 @@ from pathlib import Path
 
 import sqlalchemy as db
 from sqlalchemy import Index, event, exc
+from sqlalchemy.dialects import sqlite
 
 from vunnel import workspace
 
 from .ecosystem import normalize_package_name
 from .finder import Result
-
-
-class _StoreThreadLocal(threading.local):
-    """thread-local storage for per-thread SQLAlchemy connections and table references."""
-
-    conn: db.engine.Connection | None = None
-    table: db.Table | None = None
-    pending_operations: int = 0
 
 
 @dataclass
@@ -45,18 +38,16 @@ class Store:
         self.db_path = Path(ws.results_path) / "observed-fix-dates.db"
         self.logger = logging.getLogger("fixes-" + self.provider)
         self.engine: db.engine.Engine | None = None
-        self._thread_local = _StoreThreadLocal()
         self.batch_size = batch_size
-
-    @property
-    def _pending_operations(self) -> int:
-        """Get pending operation count for the current thread."""
-        return self._thread_local.pending_operations
-
-    @_pending_operations.setter
-    def _pending_operations(self, value: int) -> None:
-        """Set pending operation count for the current thread."""
-        self._thread_local.pending_operations = value
+        # every thread shares one connection, guarded by _lock. Rows are inserted as they are
+        # added and committed every batch_size rows; until then they sit in the connection's
+        # open transaction, where get() sees them because it reads through the same connection.
+        # So there is one place a row can be, and no second connection whose write lock could
+        # block it ("database is locked", #970).
+        self._conn: db.engine.Connection | None = None
+        self._table: db.Table | None = None
+        self._uncommitted_rows = 0
+        self._lock = threading.Lock()
 
     def add(
         self,
@@ -71,8 +62,6 @@ class Store:
             f"adding first observed fix date: {first_observed_date} for {vuln_id} {cpe_or_package}@{fix_version} (ecosystem={ecosystem!r})",
         )
 
-        conn, table = self._get_connection()
-
         if cpe_or_package.lower().startswith("cpe:"):
             full_cpe = cpe_or_package
             package_name = ""
@@ -80,31 +69,51 @@ class Store:
             full_cpe = ""
             package_name = normalize_package_name(cpe_or_package, ecosystem)
 
-        insert_stmt = table.insert().values(
-            vuln_id=vuln_id,
-            provider=self.provider,
-            package_name=package_name,
-            full_cpe=full_cpe,
-            ecosystem=ecosystem or "",
-            fix_version=fix_version,
-            first_observed_date=first_observed_date.isoformat(),
-            updated_at=datetime.now(UTC),
-        )
+        row = {
+            "vuln_id": vuln_id,
+            "provider": self.provider,
+            "package_name": package_name,
+            "full_cpe": full_cpe,
+            "ecosystem": ecosystem or "",
+            "fix_version": fix_version,
+            "first_observed_date": first_observed_date.isoformat(),
+            # the text older versions stored (sqlite3's default datetime adapter: isoformat(" "))
+            "updated_at": datetime.now(UTC).isoformat(" "),
+        }
 
-        conn.execute(insert_stmt)
-        self._pending_operations += 1
+        with self._lock:
+            conn, table = self._get_connection()
+            # ignore primary-key conflicts so the first observation of a fix wins. Unlike "OR IGNORE",
+            # ON CONFLICT DO NOTHING applies only to uniqueness constraints, so a NOT NULL violation
+            # still raises, here, from the add() that offered the row. sqlite rolls back only the
+            # failing statement, so the rows added before it stay in the open transaction.
+            inserted = conn.execute(sqlite.insert(table).on_conflict_do_nothing(), row).rowcount
+            self._uncommitted_rows += inserted
 
-        # auto-flush every batch_size operations to limit memory usage
-        if self._pending_operations >= self.batch_size:
-            self.flush()
+            # commit every batch_size rows to bound the open transaction
+            if self._uncommitted_rows >= self.batch_size:
+                self._commit_unlocked()
 
     def flush(self) -> None:
-        """Commit any pending database operations for the current thread."""
-        if self._pending_operations > 0:
-            conn, _ = self._get_connection()
-            conn.commit()
-            self.logger.debug(f"flushed {self._pending_operations} operations to database")
-            self._pending_operations = 0
+        """Commit any rows added since the last commit, from whichever thread added them."""
+        with self._lock:
+            self._commit_unlocked()
+
+    def _commit_unlocked(self) -> None:
+        """Internal commit helper - caller must hold _lock."""
+        if not self._uncommitted_rows or self._conn is None:
+            return
+
+        try:
+            self._conn.commit()
+        except Exception:
+            # don't leave the batch's write transaction open behind a failed commit
+            self._conn.rollback()
+            self._uncommitted_rows = 0
+            raise
+
+        self.logger.debug(f"committed {self._uncommitted_rows} rows to database")
+        self._uncommitted_rows = 0
 
     def get(
         self,
@@ -114,36 +123,32 @@ class Store:
         ecosystem: str | None = None,
     ) -> list[FixDate]:
         """synchronous get existing vulnerability operation"""
-        conn, table = self._get_connection()
+        with self._lock:
+            conn, table = self._get_connection()
 
-        # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
-        query = table.select().where(
-            (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
-        )
-
-        if cpe_or_package.lower().startswith("cpe:"):
-            query = query.where(table.c.full_cpe == cpe_or_package)
-        else:
-            query = query.where(
-                (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+            # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
+            query = table.select().where(
+                (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
             )
-            if ecosystem:
-                query = query.where(table.c.ecosystem == ecosystem)
 
-        if fix_version:
-            query = query.where(table.c.fix_version == fix_version)
+            if cpe_or_package.lower().startswith("cpe:"):
+                query = query.where(table.c.full_cpe == cpe_or_package)
+            else:
+                query = query.where(
+                    (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
+                )
+                if ecosystem:
+                    query = query.where(table.c.ecosystem == ecosystem)
 
-        results = conn.execute(query).fetchall()
+            if fix_version:
+                query = query.where(table.c.fix_version == fix_version)
 
-        # Commit to release any locks from the implicit transaction.
-        # This prevents "database is locked" errors when multiple threads
-        # read concurrently (e.g., RHEL provider's ThreadPoolExecutor).
-        # Note: this also commits any pending writes, which is safe since
-        # writes happen during download() before concurrent reads begin.
-        conn.commit()
+            # callers take the first match, so give the rows a defined order (the primary key's)
+            query = query.order_by(*table.primary_key.columns)
 
-        if not results:
-            return []
+            # reads go through the same connection as the inserts, so this sees rows added since
+            # the last commit. No commit here: that would end the write batch on every lookup.
+            rows = conn.execute(query).fetchall()
 
         return [
             FixDate(
@@ -154,9 +159,9 @@ class Store:
                 ecosystem=row.ecosystem,
                 fix_version=row.fix_version,
                 first_observed_date=date.fromisoformat(row.first_observed_date),
-                updated_at=row.updated_at,
+                updated_at=datetime.fromisoformat(row.updated_at) if row.updated_at else None,
             )
-            for row in results
+            for row in rows
             if row and row.first_observed_date
         ]
 
@@ -231,12 +236,14 @@ class Store:
         return fixdates_table
 
     def _get_connection(self) -> tuple[db.engine.Connection, db.Table]:
-        """get or create thread-local SQLAlchemy connection and table"""
+        """get or create the shared SQLAlchemy connection and table - caller must hold _lock"""
 
-        if self._thread_local.conn is None or self._thread_local.table is None:
+        if self._conn is None or self._table is None:
             # create engine once if it doesn't exist
             if not self.engine:
-                self.engine = db.create_engine(f"sqlite:///{self.db_path}")
+                # the one connection is used from every thread (serialized by _lock), so turn off
+                # pysqlite's check that a connection is only used by the thread that opened it
+                self.engine = db.create_engine(f"sqlite:///{self.db_path}", connect_args={"check_same_thread": False})
 
                 @event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
@@ -249,44 +256,57 @@ class Store:
                     cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
                     cursor.close()
 
-            # create thread-local connection
-            self._thread_local.conn = self.engine.connect()
-
             # try to reflect the existing table structure, create if it doesn't exist
             try:
                 metadata = db.MetaData()
-                self._thread_local.table = db.Table("fixdates", metadata, autoload_with=self.engine)
+                self._table = db.Table("fixdates", metadata, autoload_with=self.engine)
             except exc.NoSuchTableError:
                 # table doesn't exist, create it
                 self.logger.debug("fixdates table does not exist, creating it")
-                self._thread_local.table = self._create_tables()
+                self._table = self._create_tables()
 
-        return self._thread_local.conn, self._thread_local.table
+            self._conn = self.engine.connect()
 
-    def cleanup_thread_connections(self) -> None:
-        """clean up thread-local connections for the current thread, then dispose the engine."""
-        if self._thread_local.conn is not None:
-            try:
-                self.logger.debug("closing vunnel fixdates database")
-                self._thread_local.conn.execute(db.text("VACUUM"))
-                self._thread_local.conn.close()
-            except Exception:
-                # ignore errors during cleanup
-                self.logger.exception("error closing vunnel fixdates database connection")
-            finally:
-                # clear the thread-local storage
-                self._thread_local.conn = None
-                self._thread_local.table = None
+        return self._conn, self._table
 
-        # dispose the engine to close all pooled connections from any thread
-        if self.engine:
-            self.engine.dispose()
-            self.engine = None
+    def close(self) -> None:
+        """commit, vacuum and close the shared connection, then dispose the engine."""
+        with self._lock:
+            if self._conn is not None:
+                try:
+                    self.logger.debug("closing vunnel fixdates database")
+                    # end the transaction SQLAlchemy autobegan (VACUUM cannot run inside one); any
+                    # uncommitted rows were already committed or rolled back by __exit__'s flush
+                    self._conn.commit()
+                    self._conn.execute(db.text("VACUUM"))
+                except Exception:
+                    # ignore errors during cleanup
+                    self.logger.exception("error closing vunnel fixdates database connection")
+                finally:
+                    # always close: engine.dispose() does not close a checked-out connection
+                    try:
+                        self._conn.close()
+                    except Exception:
+                        self.logger.exception("error closing vunnel fixdates database connection")
+                    self._conn = None
+                    self._table = None
+                    self._uncommitted_rows = 0
+
+            if self.engine:
+                self.engine.dispose()
+                self.engine = None
 
     def __enter__(self) -> "Store":
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
-        # Flush any remaining operations before cleanup
-        self.flush()
-        self.cleanup_thread_connections()
+        # commit any remaining rows (from every thread) before cleanup
+        try:
+            self.flush()
+        except Exception:
+            if exc_type is None:
+                raise
+            # the provider is already failing; keep its exception rather than replacing it
+            self.logger.exception("failed to flush first observed fix dates while handling another error")
+        finally:
+            self.close()

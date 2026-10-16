@@ -1,6 +1,5 @@
 import abc
 import datetime
-import functools
 import logging
 from dataclasses import dataclass
 
@@ -90,12 +89,15 @@ class Strategy(abc.ABC):
 
 
 class Finder:
-    def __init__(self, strategies: list[Strategy], first_observed: Strategy, cache_size: int = 10000, skip_download: bool = False):
+    def __init__(self, strategies: list[Strategy], first_observed: Strategy, skip_download: bool = False):
         self.strategies = strategies
         self._skip_download = skip_download
         self.first_observed = first_observed
-        # Create cached version of database lookups
-        self._cached_find_from_strategies = functools.lru_cache(maxsize=cache_size)(self._find_from_strategies_uncached)
+        # note: lookups are deliberately not memoized. A key looked up a second time in the
+        # same run goes back to the strategies and sees the first-observed row the first call
+        # recorded, which is what every later run sees. That can change the answer: a candidate
+        # dated after that first-observed date is returned by the first call but filtered out
+        # by the second (see test_repeated_lookup_with_future_dated_candidate).
 
     def __enter__(self) -> "Finder":
         for s in self.strategies:
@@ -107,8 +109,6 @@ class Finder:
         for s in self.strategies:
             s.__exit__(exc_type, exc_val, exc_tb)
         self.first_observed.__exit__(exc_type, exc_val, exc_tb)
-        # Clear cache on exit
-        self._cached_find_from_strategies.cache_clear()
 
     def download(self) -> None:
         if self._skip_download:
@@ -128,14 +128,14 @@ class Finder:
 
         return ecosystem_mapping.get(ecosystem, ecosystem)
 
-    def _find_from_strategies_uncached(
+    def _find_from_strategies(
         self,
         vuln_id: str,
         cpe_or_package: str,
         fix_version: str,
         ecosystem: str | None,
     ) -> tuple[list[Result], list[Result]]:
-        """Perform database lookups - uncached version for LRU wrapper.
+        """Perform database lookups.
 
         Returns:
             Tuple of (strategy_results, first_observed_results)
@@ -168,8 +168,7 @@ class Finder:
         if candidates:
             results.extend([c for c in candidates if c.accurate and c.date])
 
-        # Use cached database lookups
-        strategy_results, first_observed_results = self._cached_find_from_strategies(
+        strategy_results, first_observed_results = self._find_from_strategies(
             vuln_id,
             cpe_or_package,
             fix_version,

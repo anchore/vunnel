@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import ast
+import dataclasses
 import datetime
+import importlib
+import inspect
 import os
+import pkgutil
 import shutil
+import textwrap
 
+import orjson
 import pytest
 
 from vunnel import result, schema, workspace
@@ -420,3 +427,156 @@ class TestSQLiteStoreBatchFlush:
 
         with pytest.raises(RuntimeError, match="store\\(\\) called after close\\(\\)"):
             store.store("rec-1", result.Envelope(identifier="rec-1", schema="test", item={"n": 1}))
+
+
+# modules that are scripts rather than importable library code
+_NOT_IMPORTABLE = {"vunnel.__main__", "vunnel.providers.mariner.generate_models"}
+
+
+def _vunnel_dataclasses() -> list[type]:
+    """every dataclass defined in an importable vunnel module"""
+    classes = []
+    for module_info in pkgutil.walk_packages(importlib.import_module("vunnel").__path__, "vunnel."):
+        if module_info.name in _NOT_IMPORTABLE:
+            continue
+        module = importlib.import_module(module_info.name)
+        for _, cls in inspect.getmembers(module, lambda o: inspect.isclass(o) and dataclasses.is_dataclass(o)):
+            if cls.__module__ == module.__name__:
+                classes.append(cls)
+    return classes
+
+
+def test_no_vunnel_dataclass_has_an_underscore_field():
+    """the result stores serialize envelopes with orjson, which silently drops dataclass fields
+    whose names start with "_" (dataclasses.asdict() kept them), so no payload may have one."""
+    classes = _vunnel_dataclasses()
+    offenders = [
+        f"{cls.__module__}.{cls.__qualname__}.{f.name}" for cls in classes for f in dataclasses.fields(cls) if f.name.startswith("_")
+    ]
+
+    assert classes
+    assert not offenders, f"orjson would drop these fields from results: {offenders}"
+
+
+def _self_attributes_assigned(cls: type) -> set[str]:
+    """names a class's own methods assign on self, via self.x = ... or (object.)__setattr__/setattr(self, "x", ...)"""
+    names = set()
+    for node in ast.walk(ast.parse(textwrap.dedent(inspect.getsource(cls)))):
+        targets = []
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets = [node.target]
+        for target in targets:
+            if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == "self":
+                names.add(target.attr)
+
+        if isinstance(node, ast.Call) and len(node.args) >= 2:
+            func = node.func
+            is_setattr = (isinstance(func, ast.Name) and func.id == "setattr") or (isinstance(func, ast.Attribute) and func.attr == "__setattr__")
+            obj, name = node.args[0], node.args[1]
+            if is_setattr and isinstance(obj, ast.Name) and obj.id == "self" and isinstance(name, ast.Constant):
+                names.add(name.value)
+    return names
+
+
+def test_no_vunnel_dataclass_sets_a_non_field_attribute():
+    """the result stores serialize envelopes with orjson, which also emits instance attributes
+    that are not dataclass fields (dataclasses.asdict() dropped them), so no payload's own methods
+    (e.g. __post_init__) may set one."""
+    classes = _vunnel_dataclasses()
+    offenders = []
+    for cls in classes:
+        field_names = {f.name for f in dataclasses.fields(cls)}
+        offenders += [f"{cls.__module__}.{cls.__qualname__}.{name}" for name in sorted(_self_attributes_assigned(cls) - field_names)]
+
+    assert classes
+    assert not offenders, f"orjson would add these attributes to results: {offenders}"
+
+
+def test_self_attributes_assigned_finds_non_field_attributes():
+    """the scan behind test_no_vunnel_dataclass_sets_a_non_field_attribute catches each way of setting one"""
+
+    @dataclasses.dataclass(frozen=True)
+    class Payload:
+        name: str
+
+        def __post_init__(self):
+            object.__setattr__(self, "frozen_extra", 1)
+            setattr(self, "setattr_extra", 2)  # noqa: B010
+
+        def other(self):
+            self.assigned_extra = 3  # type: ignore[misc]
+            self.annotated_extra: int = 4  # type: ignore[misc]
+            self.augmented_extra += 5  # type: ignore[attr-defined]
+
+    assert _self_attributes_assigned(Payload) == {"frozen_extra", "setattr_extra", "assigned_extra", "annotated_extra", "augmented_extra"}
+
+
+def test_envelope_serializes_like_asdict():
+    """orjson.dumps(envelope) must match the dataclasses.asdict() output it replaced."""
+
+    @dataclasses.dataclass
+    class Inner:
+        name: str
+        versions: list[str]
+
+    @dataclasses.dataclass
+    class Payload:
+        id: str
+        inner: Inner
+        extra: dict[str, object]
+
+    env = result.Envelope(
+        schema="https://example.com/schema.json",
+        identifier="ns/CVE-2024-0001",
+        item=Payload(id="CVE-2024-0001", inner=Inner(name="pkg", versions=["1.0", "2.0"]), extra={"k": [1, None]}),
+    )
+
+    assert orjson.dumps(env) == orjson.dumps(dataclasses.asdict(env))
+
+
+def test_envelope_with_vunnel_payload_serializes_like_asdict():
+    """orjson also emits instance attributes that are not dataclass fields (asdict() dropped
+    them), so a real payload dataclass gaining one, e.g. in __post_init__, must fail here."""
+    from vunnel.utils import vulnerability
+
+    vuln = vulnerability.Vulnerability(
+        Name="CVE-2024-0001",
+        NamespaceName="alpine:3.20",
+        Description="a description",
+        Severity="High",
+        Link="https://example.com/CVE-2024-0001",
+        CVSS=[
+            vulnerability.CVSS(
+                version="3.1",
+                vector_string="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                base_metrics=vulnerability.CVSSBaseMetrics(
+                    base_score=9.8,
+                    exploitability_score=3.9,
+                    impact_score=5.9,
+                    base_severity="Critical",
+                ),
+                status="N/A",
+            ),
+        ],
+        FixedIn=[
+            # Module and VendorAdvisory are filled in by __post_init__
+            vulnerability.FixedIn(
+                Name="openssl",
+                NamespaceName="alpine:3.20",
+                VersionFormat="apk",
+                Version="3.0.1-r0",
+                Module=None,
+                VendorAdvisory=None,
+                Available=vulnerability.FixAvailability(Date="2024-01-02", Kind="advisory"),
+            ),
+        ],
+    )
+    env = result.Envelope(schema="https://example.com/schema.json", identifier="alpine:3.20/CVE-2024-0001", item=vuln)
+
+    assert orjson.loads(orjson.dumps(env)) == dataclasses.asdict(env)
+
+    # the guard works: a non-field attribute makes the outputs differ
+    vuln.extra = "not a field"  # type: ignore[attr-defined]
+    assert orjson.loads(orjson.dumps(env)) != dataclasses.asdict(env)

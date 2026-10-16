@@ -1,6 +1,8 @@
 import datetime
 from unittest.mock import Mock, MagicMock
 import pytest
+from vunnel import workspace
+from vunnel.tool.fixdate import first_observed
 from vunnel.tool.fixdate.finder import Finder, Result, Strategy
 
 
@@ -389,8 +391,8 @@ class TestFinder:
         strategy2.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
         first_observed.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
 
-    def test_caching_reduces_database_calls(self):
-        """test that repeated queries use cache instead of hitting database"""
+    def test_repeated_queries_are_not_memoized(self):
+        """repeated queries go back to the strategies every time (lookups are not memoized)."""
         # Create mock strategy that counts calls
         call_count = {"count": 0}
         test_result = self.create_result("2023-01-01", "test")
@@ -412,6 +414,32 @@ class TestFinder:
         result2 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
         result3 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
         
-        # Should only call find once - subsequent calls use cache
-        assert call_count["count"] == 1, f"Expected 1 database call, got {call_count['count']}"
-        assert result1 == result2 == result3, "Cached results should match original"
+        assert call_count["count"] == 3, f"Expected 3 database calls, got {call_count['count']}"
+        assert result1 == result2 == result3, "Repeated lookups should agree"
+
+
+def test_repeated_lookup_with_future_dated_candidate(tmpdir):
+    """a key looked up twice in one run sees the first call's first-observed row on the second.
+
+    Lookups are not memoized, so the second call finds the row the first call recorded (dated
+    today, accurate) and discards a candidate dated after it. The second answer is the one
+    every later run gives for this key; this pins that behaviour deliberately."""
+    ws = workspace.Workspace(tmpdir, "test-db", create=True)
+    fo = first_observed.Store(ws)
+    # behave as a provider with no published grype-db fix date database
+    fo.grype_db_store._downloaded = True
+    fo.grype_db_store._not_found = True
+    finder = Finder(strategies=[], first_observed=fo)
+
+    today = datetime.datetime.now(datetime.UTC).date()
+    tomorrow = today + datetime.timedelta(days=1)
+    candidate = Result(date=tomorrow, kind="advisory", accurate=True)
+
+    with finder:
+        first = finder.best("CVE-2024-0001", "pkg", "1.0.0", "alpine", candidates=[candidate])
+        second = finder.best("CVE-2024-0001", "pkg", "1.0.0", "alpine", candidates=[candidate])
+
+    # nothing recorded yet: the candidate wins
+    assert (first.date, first.kind) == (tomorrow, "advisory")
+    # the first call's row is now an accurate first-observed date, and the candidate postdates it
+    assert (second.date, second.kind) == (today, "first-observed")
