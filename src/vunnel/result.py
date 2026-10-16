@@ -7,7 +7,7 @@ import os
 import shutil
 import threading
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import orjson
@@ -32,6 +32,13 @@ class ResultStatePolicy(str, enum.Enum):
 
 @dataclass
 class Envelope:
+    """A result record. Stores serialize it (and any dataclass payload inside it) with
+    orjson.dumps(envelope) rather than through dataclasses.asdict(), which skips asdict()'s
+    recursive deep copy. orjson drops dataclass fields starting with "_" (asdict() kept them)
+    and emits non-field instance attributes (asdict() dropped them), so payload dataclasses
+    must have neither. test_no_vunnel_dataclass_has_an_underscore_field and
+    test_no_vunnel_dataclass_sets_a_non_field_attribute guard against them."""
+
     schema: str
     identifier: str
     item: Any
@@ -100,7 +107,8 @@ class FlatFileStore(Store):
 
         with open(filepath, "wb") as f:
             self.logger.trace(f"writing record to {filepath!r}")  # type: ignore[attr-defined]
-            f.write(orjson.dumps(asdict(record), f))  # type: ignore[arg-type]
+            # orjson serializes dataclasses natively (see Envelope for how that differs from asdict())
+            f.write(orjson.dumps(record))
 
     def prepare(self) -> None:
         if self.result_state_policy == ResultStatePolicy.DELETE_BEFORE_WRITE:
@@ -195,7 +203,8 @@ class SQLiteStore(Store):
         return table
 
     def store(self, identifier: str, record: Envelope) -> None:
-        record_bytes = orjson.dumps(asdict(record))
+        # orjson serializes dataclasses natively (see Envelope for how that differs from asdict())
+        record_bytes = orjson.dumps(record)
 
         with self._lock:
             if self._closed:

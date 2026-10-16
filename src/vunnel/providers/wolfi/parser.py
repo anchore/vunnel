@@ -287,8 +287,16 @@ class OSVParser(Parser):
     def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         self.logger.info(f"load files for {self.namespace} osv feed")
         try:
-            with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz") as tf:
+            # stream=True stops TarFile from keeping every TarInfo it reads in tf.members, none
+            # of which we look back at
+            with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz", stream=True) as tf:
                 for member in tf:
+                    # extractfile() on a symlink or hardlink resolves the target through the
+                    # member list, which stream mode does not keep (the lookup raises). The feed
+                    # only ships regular files, so skip anything else rather than follow it.
+                    if not member.isfile():
+                        continue
+
                     n = member.name
                     if not n.endswith(".json"):
                         continue
