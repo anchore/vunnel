@@ -1,0 +1,36 @@
+{
+  "identifier": "chainguard-libraries:golang/CGA-xq4f-c6cg-hqcf",
+  "item": {
+    "document": {
+      "last_updated": "2026-10-06T19:38:58.406Z",
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:golang/golang.org/x/crypto@v0.25.1-cgr.1"
+          }
+        }
+      ],
+      "status": "fixed",
+      "timestamp": "2026-10-06T19:38:58.406Z",
+      "vulnerability": {
+        "aliases": [
+          "CGA-4v8q-2mqp-2558",
+          "CVE-2024-45337",
+          "GHSA-v778-237x-gjrc",
+          "GO-2024-3321"
+        ],
+        "name": "CGA-xq4f-c6cg-hqcf"
+      }
+    },
+    "fixes": [
+      {
+        "available": {
+          "date": "2026-10-06",
+          "kind": "advisory"
+        },
+        "product": "pkg:golang/golang.org/x/crypto@v0.25.1-cgr.1"
+      }
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/annotated-openvex/schema-1.0.0.json"
+}
