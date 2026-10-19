@@ -65,7 +65,7 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
-            with self.results_writer() as writer:
+            with self.results_writer() as writer, self.parser:
                 for vuln_id, schema_version, record in self.parser.get():
                     vuln_schema = self.compatible_schema(schema_version)
                     if vuln_schema is None:
