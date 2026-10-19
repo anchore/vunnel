@@ -304,6 +304,11 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
       user_agent: anchore/vunnel-$VUNNEL_VERSION
+    version_markers:
+      golang: -cgr.
+      maven: .cgr.
+      npm: -cgr.
+      pypi: +cgr.
   common:
     import_results:
       enabled: false

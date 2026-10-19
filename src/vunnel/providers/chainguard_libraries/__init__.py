@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
-from .openvex_parser import OpenVEXParser
+from .openvex_parser import DEFAULT_VERSION_MARKERS, OpenVEXParser
 
 if TYPE_CHECKING:
     import datetime
@@ -33,6 +33,9 @@ class Config:
     )
     request_timeout: int = 125
     openvex_url: str = "https://libraries.cgr.dev/openvex/v1/all.json"
+    # purl type -> version fragment that marks a chainguard build of that type. Products of any other type are
+    # dropped. Config files merge into this map key by key, so disable a default ecosystem with a null marker.
+    version_markers: dict[str, str | None] = field(default_factory=lambda: dict(DEFAULT_VERSION_MARKERS))
 
 
 class Provider(provider.Provider):
@@ -45,6 +48,10 @@ class Provider(provider.Provider):
         super().__init__(root, runtime_cfg=config.runtime)
         self.config = config
 
+        # env var overrides assign raw strings, which can't express a map
+        if not isinstance(self.config.version_markers, dict):
+            raise ValueError("version_markers must be a map of purl type to version marker, set it in the config file")
+
         self.logger.debug(f"config: {config}")
 
         self.parser = OpenVEXParser(
@@ -54,6 +61,7 @@ class Provider(provider.Provider):
             download_timeout=self.config.request_timeout,
             logger=self.logger,
             user_agent=self.runtime_cfg.user_agent,
+            version_markers=self.config.version_markers,
         )
 
         # this provider requires the previous state from former runs

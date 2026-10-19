@@ -110,13 +110,16 @@ class TestOpenVEXParser:
     def test_load_skips_index_file(self, openvex_parser, helpers):
         openvex_parser.output_path = helpers.local_dir("test-fixtures/input/openvex")
         files = [f for f in openvex_parser._load()]
-        # pypi/joblib.openvex.json, pypi/urllib3.openvex.json, maven/spring-security-web.openvex.json
-        assert len(files) == 3
+        # pypi/joblib.openvex.json, pypi/urllib3.openvex.json, maven/spring-security-web.openvex.json,
+        # npm/babel-traverse.openvex.json, golang/crypto.openvex.json
+        assert len(files) == 5
 
         # Verify all are loaded under their ecosystem dir name and index file (all.json) is skipped
         file_names = [f[0] for f in files]
         assert "pypi" in file_names
         assert "maven" in file_names
+        assert "npm" in file_names
+        assert "golang" in file_names
 
     @pytest.mark.parametrize(
         "test_data,expected",
@@ -156,10 +159,78 @@ class TestOpenVEXParser:
                 {'bar': {'document': {'vulnerability': {'name': 'bar'}, "products": []}, 'fixes': []}},
                 id="ignore-non-chainguard-maven-purls",
             ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'CGA-w7fj-pwh8-gfwh'}, "products": [{'identifiers': {'purl': 'pkg:npm/%40babel/traverse@7.23.0-cgr.1'}}]}
+                ]},
+                {'CGA-w7fj-pwh8-gfwh': {'document': {'vulnerability': {'name': 'CGA-w7fj-pwh8-gfwh'}, "products": [{'identifiers': {'purl': 'pkg:npm/%40babel/traverse@7.23.0-cgr.1'}}]}, 'fixes': [{'product': 'pkg:npm/%40babel/traverse@7.23.0-cgr.1', 'available': {'date': datetime.date(2024, 1, 1), 'kind': 'first-observed'}}]}},
+                id="npm-purl-with-cgr",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'bar'}, "products": [{'identifiers': {'purl': 'pkg:npm/%40babel/traverse@7.23.0'}}]}
+                ]},
+                {'bar': {'document': {'vulnerability': {'name': 'bar'}, "products": []}, 'fixes': []}},
+                id="ignore-non-chainguard-npm-purls",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'CGA-xq4f-c6cg-hqcf'}, "products": [{'identifiers': {'purl': 'pkg:golang/golang.org/x/crypto@v0.25.1-cgr.1'}}]}
+                ]},
+                {'CGA-xq4f-c6cg-hqcf': {'document': {'vulnerability': {'name': 'CGA-xq4f-c6cg-hqcf'}, "products": [{'identifiers': {'purl': 'pkg:golang/golang.org/x/crypto@v0.25.1-cgr.1'}}]}, 'fixes': [{'product': 'pkg:golang/golang.org/x/crypto@v0.25.1-cgr.1', 'available': {'date': datetime.date(2024, 1, 1), 'kind': 'first-observed'}}]}},
+                id="golang-purl-with-cgr",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'bar'}, "products": [{'identifiers': {'purl': 'pkg:golang/golang.org/x/crypto@v0.25.1'}}]}
+                ]},
+                {'bar': {'document': {'vulnerability': {'name': 'bar'}, "products": []}, 'fixes': []}},
+                id="ignore-non-chainguard-golang-purls",
+            ),
+            pytest.param(
+                {"test": "data", "statements": [
+                    {'vulnerability': {'name': 'bar'}, "products": [{'identifiers': {'purl': 'pkg:gem/rails@7.0.0-cgr.1'}}]}
+                ]},
+                {'bar': {'document': {'vulnerability': {'name': 'bar'}, "products": []}, 'fixes': []}},
+                id="ignore-unsupported-ecosystem",
+            ),
         ],
     )
     def test_normalize(self, openvex_parser, test_data, expected, auto_fake_fixdate_finder):
         assert expected == openvex_parser._finalize(test_data)
+
+    def _parser(self, tmpdir, mock_logger, version_markers):
+        return OpenVEXParser(
+            workspace=workspace.Workspace(tmpdir, "test", create=True),
+            url="https://libraries.cgr.dev/openvex/v1/all.json",
+            namespace="chainguard",
+            logger=mock_logger,
+            version_markers=version_markers,
+        )
+
+    def test_version_markers_default(self, openvex_parser):
+        assert openvex_parser.version_markers == {"pypi": "+cgr.", "maven": ".cgr.", "npm": "-cgr.", "golang": "-cgr."}
+
+    def test_null_marker_disables_ecosystem(self, tmpdir, mock_logger, auto_fake_fixdate_finder):
+        parser = self._parser(tmpdir, mock_logger, {"pypi": "+cgr.", "maven": None})
+        pypi = {'identifiers': {'purl': 'pkg:pypi/joblib@1.0.0%2Bcgr.1'}}
+        maven = {'identifiers': {'purl': 'pkg:maven/org.springframework.security/spring-security-web@5.8.16-0.cgr.1'}}
+        statement = {'vulnerability': {'name': 'foo'}, "products": [pypi, maven]}
+
+        assert parser.version_markers == {"pypi": "+cgr."}
+        assert parser._filter_statements(statement)["products"] == [pypi]
+
+    def test_custom_marker_enables_ecosystem(self, tmpdir, mock_logger, auto_fake_fixdate_finder):
+        parser = self._parser(tmpdir, mock_logger, {"gem": "-cgr."})
+        cgr = {'identifiers': {'purl': 'pkg:gem/rails@7.0.0-cgr.1'}}
+        upstream = {'identifiers': {'purl': 'pkg:gem/rails@7.0.0'}}
+        statement = {'vulnerability': {'name': 'foo'}, "products": [cgr, upstream]}
+
+        assert parser._filter_statements(statement)["products"] == [cgr]
+
+    def test_empty_marker_rejected(self, tmpdir, mock_logger, auto_fake_fixdate_finder):
+        with pytest.raises(ValueError, match="empty version marker for \\['gem'\\]"):
+            self._parser(tmpdir, mock_logger, {"pypi": "+cgr.", "gem": ""})
 
     @patch.object(OpenVEXParser, '_download')
     @patch.object(OpenVEXParser, '_load')
