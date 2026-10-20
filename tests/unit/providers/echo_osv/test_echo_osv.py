@@ -35,7 +35,7 @@ class TestParser:
         )
 
         entries = list(p._load(osv_zip_bytes))
-        assert len(entries) == 5
+        assert len(entries) == 6
 
         results = []
         for entry in entries:
@@ -43,8 +43,8 @@ class TestParser:
             if result is not None:
                 results.append(result)
 
-        # 4 entries have language (Echo:*) affected packages
-        assert len(results) == 4
+        # 5 entries have language (Echo:*) affected packages
+        assert len(results) == 5
 
         ids = [r[0] for r in results]
         assert "ECHO-7db2-03aa-5591" in ids
@@ -82,6 +82,17 @@ class TestParser:
             "purl": "pkg:golang/golang.org/x/net",
         }
         assert go_affected[0]["ranges"][0]["events"][-1] == {"fixed": "v0.55.0+echo.1"}
+
+        # Echo publishes NuGet ids lowercase.
+        assert "ECHO-08ee-db76-1049" in ids
+        nuget_affected = by_id["ECHO-08ee-db76-1049"]["affected"]
+        assert len(nuget_affected) == 1
+        assert nuget_affected[0]["package"] == {
+            "ecosystem": "Echo:NuGet",
+            "name": "system.security.cryptography.xml",
+            "purl": "pkg:nuget/system.security.cryptography.xml",
+        }
+        assert nuget_affected[0]["ranges"][0]["events"][-1] == {"fixed": "8.0.0+echo.1"}
 
     def test_echo_os_entries_stripped_from_mixed(self, tmpdir, auto_fake_fixdate_finder):
         """For entries with both Echo:PyPi and Echo ecosystems, only Echo:PyPi affected entries are kept."""
@@ -137,7 +148,7 @@ def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_f
 
     p.update(None)
 
-    assert ws.num_result_entries() == 4
+    assert ws.num_result_entries() == 5
     assert ws.result_schemas_valid(require_entries=True)
 
 

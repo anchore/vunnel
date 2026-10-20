@@ -1,0 +1,65 @@
+{
+  "identifier": "echo-08ee-db76-1049",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "Echo:NuGet",
+          "name": "system.security.cryptography.xml",
+          "purl": "pkg:nuget/system.security.cryptography.xml"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-01-01",
+                    "kind": "first-observed",
+                    "version": "8.0.0+echo.1"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "8.0.0+echo.1"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2026-26171",
+      "GHSA-w3x6-4m5h-cxqf"
+    ],
+    "database_specific": {
+      "anchore": {
+        "record_type": "advisory"
+      }
+    },
+    "id": "ECHO-08ee-db76-1049",
+    "modified": "2026-09-17T08:05:27.486Z",
+    "references": [
+      {
+        "type": "WEB",
+        "url": "https://advisory.echohq.com/cve/CVE-2026-26171"
+      },
+      {
+        "type": "WEB",
+        "url": "https://github.com/advisories/GHSA-w3x6-4m5h-cxqf"
+      }
+    ],
+    "severity": [],
+    "upstream": [
+      "CVE-2026-26171",
+      "GHSA-w3x6-4m5h-cxqf"
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.5.json"
+}
