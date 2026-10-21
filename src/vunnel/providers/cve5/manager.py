@@ -4,11 +4,13 @@ import fnmatch
 import logging
 import os
 import tarfile
-import zlib
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
 import orjson
+import zstandard
 
+from vunnel.utils import hasher
 from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class Manager:
-    __file_name__ = "cvelistV5.tar.gz"
+    __file_name__ = "cve5.tar.zst"
 
     def __init__(
         self,
@@ -31,6 +33,7 @@ class Manager:
     ):
         self.url = url
         self.urls = [url]
+        self.archive_url = url
         self.workspace = workspace
         self.download_timeout = download_timeout
         self.user_agent = user_agent
@@ -38,21 +41,42 @@ class Manager:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
+    def _kwargs(self) -> dict[str, Any]:
+        return {"user_agent": self.user_agent} if self.user_agent else {}
+
+    def _manifest(self) -> tuple[str, str]:
+        """fetch the manifest at self.url and return (archive url, expected sha256 hex digest)."""
+        response = http.get(self.url, self.logger, timeout=self.download_timeout, **self._kwargs())
+        try:
+            manifest = response.json()
+        except ValueError as e:
+            raise ValueError(f"manifest at {self.url} is not valid JSON") from e
+        if not isinstance(manifest, dict) or not all(isinstance(manifest.get(k), str) for k in ("path", "checksum")):
+            raise ValueError(f"manifest at {self.url} is not a JSON object with string 'path' and 'checksum'")
+        return urljoin(self.url, manifest["path"]), manifest["checksum"].removeprefix("sha256:")
+
     def _download(self) -> str:
+        archive_url, checksum = self._manifest()
         path = os.path.join(self.workspace.input_path, self.__file_name__)
-        kwargs: dict[str, Any] = {}
-        if self.user_agent:
-            kwargs["user_agent"] = self.user_agent
-        http.download_to_file(self.url, path, self.logger, timeout=self.download_timeout, **kwargs)
+        http.download_to_file(archive_url, path, self.logger, timeout=self.download_timeout, **self._kwargs())
+        actual = hasher.Method.SHA256.digest(path, label=False)
+        if actual != checksum:
+            raise ValueError(f"checksum mismatch for archive {archive_url}: manifest has {checksum}, downloaded file has {actual}")
+        self.urls = [self.url, archive_url]
+        self.archive_url = archive_url
         return path
 
     def get(self) -> Generator[tuple[str, dict[str, Any]]]:
-        """download the archive and yield (identifier, record) for each CVE-*.json member, unchanged."""
+        """download the archive named by the manifest and yield (identifier, record) for each CVE-*.json member, unchanged."""
         path = self._download()
         count = 0
         try:
             # stream mode reads the archive once without extracting it to disk
-            with tarfile.open(path, mode="r|gz") as tar:
+            with (
+                open(path, "rb") as ifh,
+                zstandard.ZstdDecompressor(max_window_size=2147483648).stream_reader(ifh, read_across_frames=True) as reader,
+                tarfile.open(fileobj=reader, mode="r|") as tar,
+            ):
                 for member in tar:
                     if not member.isfile() or not fnmatch.fnmatch(os.path.basename(member.name), "CVE-*.json"):
                         continue
@@ -62,14 +86,14 @@ class Manager:
                     try:
                         record = orjson.loads(fh.read())
                     except orjson.JSONDecodeError as e:
-                        raise ValueError(f"{member.name} in {self.url} is not valid JSON") from e
+                        raise ValueError(f"{member.name} in {self.archive_url} is not valid JSON") from e
                     count += 1
                     yield cve_to_id(record["cveMetadata"]["cveId"]), record
-        except (tarfile.TarError, EOFError, zlib.error) as e:
-            raise ValueError(f"unable to read archive from {self.url}: {e}") from e
+        except (tarfile.TarError, EOFError, zstandard.ZstdError) as e:
+            raise ValueError(f"unable to read archive from {self.archive_url}: {e}") from e
 
         if count == 0:
-            raise ValueError(f"no CVE-*.json records found in archive from {self.url}")
+            raise ValueError(f"no CVE-*.json records found in archive from {self.archive_url}")
 
 
 def cve_to_id(cve: str) -> str:

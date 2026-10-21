@@ -334,7 +334,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
       user_agent: anchore/vunnel-$VUNNEL_VERSION
-    url: https://github.com/CVEProject/cvelistV5/archive/refs/heads/main.tar.gz
+    url: https://data.anchore.ninja/security/cve/enriched/json/v5/latest.json
   debian:
     releases:
       bookworm: '12'
