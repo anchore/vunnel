@@ -25,7 +25,7 @@ Each provider's validation in `config.yaml` maps to the gate's checks, evaluated
  - `max_f1_regression` -> `f1NotWorse`: the candidate's F1 may not drop below the reference's by more than this
  - `max_new_false_negatives` -> `noNewFalseNegatives`: true positives the reference found and the candidate misses
  - `max_unlabeled_percent` -> `unlabeledPercentAtMost`: how much of the candidate's result may be unlabeled
- - `fail_on_empty_match_set` (default true) -> `matchesAtLeast {min: 1}`: the candidate must match something
+ - `fail_on_empty_match_set` (default true) -> `matchesAtLeast {min: 1}`: the candidate and the reference together must match something on each image
  - `max_year` and `expected_namespaces` filter which matches and labels count at all
 
 A check that unlabeled matches leave undecided does not fail the gate (`undecided: pass`), since unlabeled matches are already bounded by `max_unlabeled_percent`.
@@ -128,6 +128,13 @@ To label, use the yardstick label UI (it needs yardstick from the [installer](ht
 mkdir -p claims
 yardstick claims serve <provider> --claims ./claims --open
 yardstick score gates/<provider>.yaml --claims ./claims   # re-score with the new labels, no new scans
+```
+
+A failed CI run uploads a `qg-capture-state-<provider>` artifact holding the gate file, its scans and `.yardstick.yaml`, and the job summary says how to use it. Extracted into `tests/quality`, it re-scores and labels as above with no DB, no grype and no new scans:
+
+```
+unzip qg-capture-state-<provider>.zip && tar -xzf qg-capture-state-<provider>.tar.gz
+yardstick score gates/<provider>.yaml -o table
 ```
 
 New labels are written to `./claims`. To keep them, open a pull request adding them to [anchore/match-claims](https://github.com/anchore/match-claims); the gate reads its `main` branch.
