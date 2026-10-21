@@ -10,7 +10,7 @@ inputs:
   uv-version:
     description: "UV version to install"
     required: true
-    default: "0.5.16"
+    default: "0.13.4" # bump past https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62 fix
   cache-key-prefix:
     description: "Prefix all cache keys with this value"
     required: true
@@ -33,6 +33,7 @@ runs:
       with:
         # built-in cache is disabled to prevent PRs from poisoning the cache; uv's resolver is
         # fast enough without it. See cache-poisoning audit for details.
+        version: ${{ inputs.uv-version }}
         enable-cache: false
 
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
