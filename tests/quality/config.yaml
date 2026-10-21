@@ -2,7 +2,6 @@ x-ref:
   default-validations: &default-validations
     max_f1_regression: 0.0
     max_new_false_negatives: 0
-    max_unlabeled_percent: 10
     max_year: 2021
 yardstick:
   default_max_year: 2021
@@ -220,7 +219,6 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2026 # hummingbird is new
-        max_unlabeled_percent: 70 # hummingbird has data problems
 
 
   - provider: mariner

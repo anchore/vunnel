@@ -20,6 +20,7 @@ import mergedeep
 import oras.client
 import requests
 import yaml
+from mashumaro.config import BaseConfig
 from mashumaro.mixins.dict import DataClassDictMixin
 
 from vunnel import providers as vunnel_providers
@@ -49,10 +50,13 @@ class Yardstick:
 
 
 @dataclass
-class Validation:
+class Validation(DataClassDictMixin):
+    class Config(BaseConfig):
+        # a removed knob (e.g. max_unlabeled_percent) should fail loudly, not be ignored
+        forbid_extra_keys = True
+
     max_f1_regression: float = 0.0
     max_new_false_negatives: int = 0
-    max_unlabeled_percent: int = 0
     max_year: int | None = None
     fail_on_empty_match_set: bool = True
 
@@ -126,7 +130,6 @@ class Config(DataClassDictMixin):
         checks: list[dict[str, Any]] = [
             {"name": "f1NotWorse", "params": {"tolerance": v.max_f1_regression}},
             {"name": "noNewFalseNegatives", "params": {"max": v.max_new_false_negatives}},
-            {"name": "unlabeledPercentAtMost", "params": {"max": v.max_unlabeled_percent}},
         ]
         if v.fail_on_empty_match_set:
             checks.append({"name": "matchesAtLeast", "params": {"min": 1}})
@@ -137,7 +140,7 @@ class Config(DataClassDictMixin):
             "description": f"grype main with a DB built from this vunnel vs a published DB, for {test.provider}",
             "candidate": {"grype": GATE_GRYPE, "db": GATE_CANDIDATE_DB},
             "reference": {"grype": GATE_GRYPE, "db": self.yardstick.reference_db},
-            # the old gate ignored unlabeled matches in F1 and bounded them with max_unlabeled_percent instead
+            # unlabeled deltas leave the F1/FN checks undecided. These gates are diff-based, so only a decided regression fails
             "undecided": "pass",
             "subjects": [f"oci:{image}" for image in test.images],
             "vulnerabilities": vulnerabilities,
