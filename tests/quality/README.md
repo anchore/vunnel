@@ -24,11 +24,10 @@ Each provider's validation in `config.yaml` maps to the gate's checks, evaluated
 
  - `max_f1_regression` -> `f1NotWorse`: the candidate's F1 may not drop below the reference's by more than this
  - `max_new_false_negatives` -> `noNewFalseNegatives`: true positives the reference found and the candidate misses
- - `max_unlabeled_percent` -> `unlabeledPercentAtMost`: how much of the candidate's result may be unlabeled
  - `fail_on_empty_match_set` (default true) -> `matchesAtLeast {min: 1}`: the candidate and the reference together must match something on each image
  - `max_year` and `expected_namespaces` filter which matches and labels count at all
 
-A check that unlabeled matches leave undecided does not fail the gate (`undecided: pass`), since unlabeled matches are already bounded by `max_unlabeled_percent`.
+A check that unlabeled matches leave undecided does not fail the gate (`undecided: pass`), since these gates are diff-based and only a decided regression should fail them.
 
 F1 score is the primary way that tool matching performance is characterized. F1 score combines the TP, FP, and FN counts into a single metric between 0 and 1. It summarizes the matching performance but does not explain why it is what it is.
 

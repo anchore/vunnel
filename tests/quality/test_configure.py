@@ -283,7 +283,7 @@ class TestGate:
             provider="alpine",
             images=["docker.io/alpine:3.2@sha256:abc"],
             expected_namespaces=["alpine:distro:alpine:3.2", "nvd:cpe"],
-            validations=[Validation(max_f1_regression=0.1, max_new_false_negatives=2, max_unlabeled_percent=10, max_year=2023)],
+            validations=[Validation(max_f1_regression=0.1, max_new_false_negatives=2, max_year=2023)],
         )
 
         gate = cfg.gate(test)
@@ -297,7 +297,6 @@ class TestGate:
         assert gate["checks"] == [
             {"name": "f1NotWorse", "params": {"tolerance": 0.1}},
             {"name": "noNewFalseNegatives", "params": {"max": 2}},
-            {"name": "unlabeledPercentAtMost", "params": {"max": 10}},
             {"name": "matchesAtLeast", "params": {"min": 1}},
         ]
 
