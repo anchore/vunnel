@@ -439,104 +439,52 @@ Always use both the image tag and digest for all container image entries.
 Pick an image that has a good representation of the package types that your new provider is adding vulnerability data for.
 
 
-#### **4. In Vunnel: swap the tools to your Grype branch in `tests/quality/config.yaml`.**
+#### **4. In Vunnel: run the quality gate with your Grype branch.**
 
-If you wanted to see PR quality gate checks pass with your specific Grype changes (if you have any) then you can update the
-`yardstick.tools[*]` entries for grype to use the a version that points to your fork (w.g. `your-fork-username/grype@main`).
-If you don't have any grype changes needed then you can skip this step.
+The gate scans with the grype in `.tool/grype` (grype `main`, installed by `make tools`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
 
 
-#### **5. In Vunnel: add new "vulnerability match labels" to annotate True and False positive findings with Grype.**
-
-In order to evaluate the quality of the new provider, we need to know what the expected results are. This is done by
-annotating Grype results with "True Positive" labels (good results) and "False Positive" labels (bad results). We'll use
-[Yardstick](github.com/anchore/yardstick) to do this:
-
-```bash
-$ cd tests/quality
-
-# capture results with the development version of grype (from your fork)
-$ make capture provider=<your-provider-name>
-
-# list your results
-$ uv run yardstick result list | grep grype
-
-d415064e-2bf3-4a1d-bda6-9c3957f2f71a  docker.io/anc...  grype@v0.58.0             2023-03...
-75d1fe75-0890-4d89-a497-b1050826d9f6  docker.io/anc...  grype[custom-db]@bdcefd2  2023-03...
-
-# use the "grype[custom-db]" result UUID and explore the results and add labels to each entry
-$ uv run yardstick label explore 75d1fe75-0890-4d89-a497-b1050826d9f6
-
-# You can use the yardstick TUI to label results:
-# - use "T" to label a row as a True Positive
-# - use "F" to label a row as a False Positive
-# - Ctrl-Z to undo a label
-# - Ctrl-S to save your labels
-# - Ctrl-C to quit when you are done
-
-```
-
-Later we'll open a PR in the [vulnerability-match-labels repo](github.com/anchore/vulnerability-match-labels) to persist these labels.
-For the meantime we can iterate locally with the labels we've added.
-
-
-#### **6. In Vunnel: run the quality gate.**
+#### **5. In Vunnel: run the quality gate.**
 
 ```bash
 cd tests/quality
 
-# runs your specific provider to gather vulnerability data, builds a DB, and runs grype with the new DB
+# runs your specific provider to gather vulnerability data, builds a DB, and scans the provider's images with it and with a published DB
 make capture provider=<your-provider-name>
 
-# evaluate the quality gate
-make validate
+# score both scans against the labels
+make validate provider=<your-provider-name>
 ```
-
-This uses the latest Grype-DB release to build a DB and the specified Grype version with a DB containing only data from the new provider.
 
 You are looking for a passing run before continuing further.
 
 
-#### **7. Open a [vulnerability-match-labels repo](github.com/anchore/vulnerability-match-labels) PR to persist the new labels.**
+#### **6. Label what the gate could not judge.**
 
-Vunnel uses the labels in the vulnerability-Match-Labels repo via a git submodule. We've already added labels locally
-within this submodule in an earlier step. To persist these labels we need to push them to a fork and open a PR:
-
-```
-# fork the github.com/anchore/vulnerability-match-labels repo, but you do not need to clone it...
-
-# from the Vunnel repo...
-$ cd tests/quality/vulnerability-match-labels
-
-$ git remote add fork git@github.com:your-fork-name/vulnerability-match-labels.git
-$ git checkout -b 'add-labels-for-<your-provider-name>'
-$ git status
-
-# you should see changes from the labels/ directory for your provider that you added
-
-$ git add .
-$ git commit -m 'add labels for <your-provider-name>'
-$ git push fork add-labels-for-<your-provider-name>
-```
-
-At this point you can open a PR against in the [vulnerability-match-labels repo](github.com/anchore/vulnerability-match-labels).
-
-_Note: you will not be able to open a Vunnel PR that passes PR checks until the labels are merged into the vulnerability-match-labels repo._
-
-Once the PR is merged in the vulnerability-match-labels repo you can update the submodule in Vunnel to point to the latest commit in the vulnerability-match-labels repo.
+A new provider's matches are mostly unlabeled at first. Label them in the [yardstick](https://github.com/anchore/yardstick) label UI, which writes labels into a local directory:
 
 ```bash
-$ cd tests/quality
+cd tests/quality
+mkdir -p claims
+yardstick claims serve <your-provider-name> --claims ./claims --open
 
-$ git submodule update --remote vulnerability-match-labels
+# re-score with the new labels without scanning again
+yardstick score gates/<your-provider-name>.yaml --claims ./claims
 ```
+
+See [tests/quality/README.md](tests/quality/README.md) for more on the gate.
+
+
+#### **7. Open a [match-claims](https://github.com/anchore/match-claims) PR to persist the new labels.**
+
+The gate reads labels from the `main` branch of anchore/match-claims, so add the files under `./claims` there in a pull request. You will not be able to open a Vunnel PR that passes PR checks until those labels are merged.
 
 
 #### **8. In Vunnel: open a PR with your new provider.**
 
 The PR will also run all of the same quality gate checks that you ran locally.
 
-If you have Grype changes, you should also create a PR for that as well. The Vunnel PR will not pass PR checks until the Grype PR is merged and the `test/quality/config.yaml` file is updated to point back to the `latest` Grype version.
+If you have Grype changes, you should also create a PR for that as well. The Vunnel PR's quality gate uses grype `main`, so it will not pass until the Grype PR is merged.
 
 
 ### ...for a new schema
