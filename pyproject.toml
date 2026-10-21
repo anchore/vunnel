@@ -59,6 +59,8 @@ exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
 # Floor: versions below this trust compromised eMudhra intermediates.
 # https://github.com/advisories/GHSA-6q48-6c7w-9gw2
 constraint-dependencies = ["certifi>=2026.10.19"]
+# require uv post GHSA-hq85-5cpj-mr62 fix
+required-version = ">=0.13.4"
 
 [tool.pytest.ini_options]
 addopts = "-vv --color=yes"
