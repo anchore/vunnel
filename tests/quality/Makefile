@@ -1,13 +1,11 @@
 GRYPE_DB_DATA_DIR = data
 GRYPE_DB_BUILD_DIR = build
 BIN_DIR = bin
-YARDSTICK_RESULT_DIR = .yardstick/result
-YARDSTICK_LABELS_DIR = .yardstick/labels
 TEST_DB_ARCHIVE = $(GRYPE_DB_BUILD_DIR)/grype-db.tar.zst
 
-SBOM_STORE_TAG = md5-$(shell md5sum .yardstick.yaml | cut -d' ' -f1)
-SBOM_STORE_IMAGE = ghcr.io/anchore/grype/quality-test-sbom-store:$(SBOM_STORE_TAG)
-RESULT_SET = pr_vs_latest_via_sbom
+# override to use a locally built yardstick, e.g. make validate YARDSTICK=~/code/yardstick/bin/yardstick
+YARDSTICK ?= ../../.tool/yardstick
+GATE = gates/$(provider).yaml
 
 
 # formatting variables
@@ -25,14 +23,14 @@ SUCCESS := $(BOLD)$(GREEN)
 all: capture validate ## Fetch or capture all data and run all quality checks
 
 .PHONY: validate
-validate:  ## Run all quality checks against already collected data
-	uv run yardstick validate --result-set $(RESULT_SET)_$(provider)
+validate:  ## Score the collected scans for the given provider against the labels (exit 1 when the gate fails)
+	$(YARDSTICK) score $(GATE)
 
 
 ## Data management targets #################################
 
 .PHONY: capture
-capture: clear-data clear-results configure sboms build-db vulns ## Collect and store all syft and grype results relative to the given provider
+capture: clear-data clear-results configure build-db scans ## Build a DB for the given provider and scan its images with it and the reference DB
 
 .PHONY: show-changes
 show-changes: ## Show the current file changeset
@@ -59,25 +57,9 @@ configure: ## write yardstick and grype configuration files relative to the give
 build-db:  ## Build a grype database for the given provider
 	uv run python ./configure.py build-db
 
-.PHONY: vulns
-vulns: ## Collect and store all grype results
-	uv run yardstick -v result capture -r $(RESULT_SET)_$(provider)
-
-.PHONY: sboms
-sboms: $(YARDSTICK_RESULT_DIR) clear-results ## Collect and store all syft results (deletes all existing results)
-	bash -c "make download-sboms || (uv run yardstick -v result capture -r $(RESULT_SET)_$(provider) --only-producers)"
-
-.PHONY: download-sboms
-download-sboms:
-	cd vulnerability-match-labels && make venv
-	bash -c "export ORAS_CACHE=$(shell pwd)/.oras-cache && . vulnerability-match-labels/venv/bin/activate && ./vulnerability-match-labels/sboms.py download -r $(RESULT_SET)_$(provider)"
-
-$(YARDSTICK_RESULT_DIR):
-	mkdir -p $(YARDSTICK_RESULT_DIR)
-
-.PHONY: update-labels
-update-labels:  ## Update vulnerability-match-labels submodule to grab the latest labels on the main branch
-	git submodule update --remote vulnerability-match-labels
+.PHONY: scans
+scans: ## Get SBOMs for the given provider's images and scan them with both setups
+	$(YARDSTICK) collect scans $(GATE)
 
 
 ## Cleanup targets #################################
@@ -87,8 +69,8 @@ clean: clear-bin clear-results clear-db clear-data ## Clear all local data
 	find -iname "*.pyc" -delete
 
 .PHONY: clear-results
-clear-results: ## Clear all existing yardstick results
-	uv run yardstick result clear
+clear-results: ## Clear all yardstick scans and generated gates
+	rm -rf .yardstick gates
 
 .PHONY: clear-data
 clear-data: ## Delete existing vunnel data cache

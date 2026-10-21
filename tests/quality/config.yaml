@@ -4,41 +4,12 @@ x-ref:
     max_new_false_negatives: 0
     max_unlabeled_percent: 10
     max_year: 2021
-    candidate_tool_label: custom-db
 yardstick:
   default_max_year: 2021
 
-  tools:
-    - name: syft
-      # note: if there is ever a problem with the syft version, it can be pinned explicitly here (instead of "latest")
-      version: latest
-      produces: SBOM
-      refresh: false
-
-    - name: grype
-      label: custom-db
-      # allowed values:
-      #  - "latest" to use the latest released grype
-      #  - a released version name (e.g. "v0.52.1")
-      #  - a branch name (e.g. "dev-fix-foo")
-      #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
-      # Note:
-      #  - ALWAYS leave the "import-db" annotation as-is
-      #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/vulnerability.db
-      takes: SBOM
-
-    - name: grype
-      # allowed values:
-      #  - "latest" to use the latest released grype
-      #  - a released version name (e.g. "v0.52.1")
-      #  - a branch name (e.g. "dev-fix-foo")
-      #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
-      # Note:
-      #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.4_2026-05-13T00:47:21Z_1778657102.tar.zst
-      takes: SBOM
-      label: reference
+  # the published DB that the DB built from this vunnel is compared against. Both sides scan with
+  # grype main as installed by binny (see .binny.yaml).
+  reference_db: https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.4_2026-05-13T00:47:21Z_1778657102.tar.zst
 
 grype_db:
   # values:
@@ -167,6 +138,8 @@ tests:
       - debian:distro:debian:13
       - debian:distro:debian:14
       - debian:distro:debian:unstable
+    validations:
+      - *default-validations
 
   - provider: fedora
     use_cache: true
@@ -262,7 +235,6 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2022 # important - Azure Linux 3 doesn't have much to match on going back to 2021
-        candidate_tool_label: custom-db
 
   - provider: minimos
     use_cache: true
@@ -280,7 +252,6 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2024 # important - minimOS is a new distro and older years don't find enough
-        candidate_tool_label: custom-db
 
   - provider: nvd
     # building nvd without cache takes ~3 hours
@@ -458,7 +429,6 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2022
-        candidate_tool_label: custom-db
 
   - provider: photon
     use_cache: true
