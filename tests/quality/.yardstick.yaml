@@ -1,0 +1,2 @@
+# the Go yardstick's app config: every gate in gates/ reads its labels and SBOMs from here.
+claims: [github.com/anchore/match-claims@main]
