@@ -53,6 +53,12 @@ style = "semver"
 [tool.uv]
 trusted-publishing = "always"
 exclude-newer = "1 week"
+# Temporary: bypass the cooldown so certifi can resolve to 2026.10.19
+# (emSign/eMudhra CA key compromise). Remove after 2026-10-27.
+exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
+# Floor: versions below this trust compromised eMudhra intermediates.
+# https://github.com/advisories/GHSA-6q48-6c7w-9gw2
+constraint-dependencies = ["certifi>=2026.10.19"]
 
 [tool.pytest.ini_options]
 addopts = "-vv --color=yes"
