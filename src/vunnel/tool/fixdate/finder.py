@@ -1,11 +1,19 @@
 import abc
+import contextlib
 import datetime
 import logging
+import re
 from dataclasses import dataclass
 
 from vunnel.utils import date
 
 logger = logging.getLogger(__name__)
+
+# the "timestamp" pattern from schema/vulnerability/osv/schema-1.7.0.json, anchored at the end, as the standard library
+# has none. For speed, Result.__post_init__ parses each OSV record's published date with datetime.fromisoformat (about
+# 1 microsecond) instead of dateutil (about 34). It checks this pattern first because fromisoformat also accepts forms
+# that dateutil rejects, such as the week date 2024-W18-5.
+_RFC3339_UTC = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z\Z")
 
 # mapping from GHSA ecosystems (or similar candidates) to syft package types
 ecosystem_mapping = {
@@ -40,6 +48,13 @@ class Result:
         if isinstance(self.date, datetime.datetime):
             self.date = self.date.date()
         elif isinstance(self.date, str):
+            if _RFC3339_UTC.match(self.date):
+                # parse OSV timestamps with fromisoformat, for speed (see the comment on _RFC3339_UTC). A
+                # string that matches the pattern but is not a real date, such as one with month 13, makes
+                # fromisoformat raise, and dateutil then handles it as before.
+                with contextlib.suppress(ValueError):
+                    self.date = datetime.datetime.fromisoformat(self.date).date()
+                    return
             try:
                 self.date = datetime.date.fromisoformat(date.normalize_date(self.date))
             except Exception:
