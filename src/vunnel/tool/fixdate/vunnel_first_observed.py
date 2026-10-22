@@ -4,6 +4,7 @@ import threading
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
 import sqlalchemy as db
 from sqlalchemy import Index, event, exc
@@ -13,6 +14,24 @@ from vunnel import workspace
 
 from .ecosystem import normalize_package_name
 from .finder import Result
+
+
+# Store.get() used to build a new select on every call, and SQLAlchemy then worked out its cache key before
+# running it, which took longer than the query itself. For speed, get() now builds each of its six queries, one
+# for each combination of filters it can use, once per table, with bindparam placeholders for the values.
+def _lookup_query(table: db.Table, by_cpe: bool, with_ecosystem: bool, with_fix_version: bool) -> db.Select[Any]:
+    c = table.c
+    query = table.select().where(c.vuln_id == db.bindparam("vuln_id"), c.provider == db.bindparam("provider"))
+    if by_cpe:
+        query = query.where(c.full_cpe == db.bindparam("full_cpe"))
+    else:
+        query = query.where(c.package_name == db.bindparam("package_name"), c.full_cpe == "")
+        if with_ecosystem:
+            query = query.where(c.ecosystem == db.bindparam("ecosystem"))
+    if with_fix_version:
+        query = query.where(c.fix_version == db.bindparam("fix_version"))
+    # callers take the first match, so give the rows a defined order (the primary key's)
+    return query.order_by(*table.primary_key.columns)
 
 
 @dataclass
@@ -46,6 +65,8 @@ class Store:
         # block it ("database is locked", #970).
         self._conn: db.engine.Connection | None = None
         self._table: db.Table | None = None
+        # get()'s prebuilt queries for self._table, keyed by the filters they use
+        self._queries: dict[tuple[bool, bool, bool], db.Select[Any]] = {}
         self._uncommitted_rows = 0
         self._lock = threading.Lock()
 
@@ -123,32 +144,28 @@ class Store:
         ecosystem: str | None = None,
     ) -> list[FixDate]:
         """synchronous get existing vulnerability operation"""
+        # if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
+        by_cpe = cpe_or_package.lower().startswith("cpe:")
+        params = {"vuln_id": vuln_id, "provider": self.provider}
+        if by_cpe:
+            params["full_cpe"] = cpe_or_package
+        else:
+            params["package_name"] = normalize_package_name(cpe_or_package, ecosystem)
+            if ecosystem:
+                params["ecosystem"] = ecosystem
+        if fix_version:
+            params["fix_version"] = fix_version
+
         with self._lock:
             conn, table = self._get_connection()
-
-            # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
-            query = table.select().where(
-                (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
-            )
-
-            if cpe_or_package.lower().startswith("cpe:"):
-                query = query.where(table.c.full_cpe == cpe_or_package)
-            else:
-                query = query.where(
-                    (table.c.package_name == normalize_package_name(cpe_or_package, ecosystem)) & (table.c.full_cpe == ""),
-                )
-                if ecosystem:
-                    query = query.where(table.c.ecosystem == ecosystem)
-
-            if fix_version:
-                query = query.where(table.c.fix_version == fix_version)
-
-            # callers take the first match, so give the rows a defined order (the primary key's)
-            query = query.order_by(*table.primary_key.columns)
+            key = (by_cpe, bool(ecosystem) and not by_cpe, bool(fix_version))
+            query = self._queries.get(key)
+            if query is None:
+                query = self._queries[key] = _lookup_query(table, *key)
 
             # reads go through the same connection as the inserts, so this sees rows added since
             # the last commit. No commit here: that would end the write batch on every lookup.
-            rows = conn.execute(query).fetchall()
+            rows = conn.execute(query, params).fetchall()
 
         return [
             FixDate(
@@ -264,6 +281,7 @@ class Store:
                 # table doesn't exist, create it
                 self.logger.debug("fixdates table does not exist, creating it")
                 self._table = self._create_tables()
+            self._queries = {}
 
             self._conn = self.engine.connect()
 
