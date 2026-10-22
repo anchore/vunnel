@@ -25,7 +25,7 @@ runs:
     # non-default branches (and the upstream repo's default branch only writes). This prevents
     # cache poisoning from PRs and forks.
     - name: Setup go and tool cache
-      uses: anchore/go-make/.github/actions/setup@27a9f35f41b5fe86d68815844efd2ba816e9ba6b # v0.9.1
+      uses: anchore/go-make/.github/actions/setup@abf41688f36f2cbec13105747abbe8e60f5c56ca # v0.9.3
       with:
         cache-key-prefix: ${{ inputs.cache-key-prefix }}
 
