@@ -23,11 +23,15 @@ SUCCESS := $(BOLD)$(GREEN)
 all: capture validate ## Fetch or capture all data and run all quality checks
 
 .PHONY: validate
-validate:  ## Score the collected scans for the given provider against the labels (exit 1 when the gate fails)
+validate: tools  ## Score the collected scans for the given provider against the labels (exit 1 when the gate fails)
 	$(YARDSTICK) score $(GATE)
 
 
 ## Data management targets #################################
+
+.PHONY: tools
+tools: ## Install yardstick, grype main and the repo's other pinned tools (a no-op when they're current)
+	$(MAKE) -C ../.. tools
 
 .PHONY: capture
 capture: clear-data clear-results configure build-db scans ## Build a DB for the given provider and scan its images with it and the reference DB
@@ -50,7 +54,7 @@ validate-test-tool-versions: ## Pass/Fail to determine if we're using the produc
 	@uv run python ./configure.py validate-test-tool-versions
 
 .PHONY: configure
-configure: ## write yardstick and grype configuration files relative to the given provider
+configure: tools ## write yardstick and grype configuration files relative to the given provider
 	uv run python ./configure.py configure $(provider)
 
 .PHONY: build-db
@@ -58,7 +62,7 @@ build-db:  ## Build a grype database for the given provider
 	uv run python ./configure.py build-db
 
 .PHONY: scans
-scans: ## Get SBOMs for the given provider's images and scan them with both setups
+scans: tools ## Get SBOMs for the given provider's images and scan them with both setups
 	$(YARDSTICK) collect scans $(GATE)
 
 
