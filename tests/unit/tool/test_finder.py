@@ -397,24 +397,24 @@ class TestFinder:
         # Create mock strategy that counts calls
         call_count = {"count": 0}
         test_result = self.create_result("2023-01-01", "test")
-        
+
         def counted_find(*args, **kwargs):
             call_count["count"] += 1
             return [test_result]
-        
+
         mock_strategy = Mock(spec=Strategy)
         mock_strategy.find = counted_find
-        
+
         mock_first_observed = Mock(spec=Strategy)
         mock_first_observed.find = Mock(return_value=[])
-        
+
         finder = Finder(strategies=[mock_strategy], first_observed=mock_first_observed)
-        
+
         # Make the same query three times
         result1 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
         result2 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
         result3 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
-        
+
         assert call_count["count"] == 3, f"Expected 3 database calls, got {call_count['count']}"
         assert result1 == result2 == result3, "Repeated lookups should agree"
 

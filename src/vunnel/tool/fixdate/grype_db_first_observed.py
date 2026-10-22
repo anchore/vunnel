@@ -4,7 +4,7 @@ import threading
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import oras.client
 import oras.defaults
@@ -62,6 +62,8 @@ class _StoreThreadLocal(threading.local):
 
     conn: db.engine.Connection | None = None
     table: db.Table | None = None
+    # get()'s prebuilt queries for this thread's table, keyed by the filters they use
+    queries: dict[tuple[bool, bool, bool, bool], db.Select[Any]] | None = None
 
 
 class _ProgressLoggingOrasClient(oras.client.OrasClient):
@@ -115,6 +117,28 @@ class _ProgressLoggingOrasClient(oras.client.OrasClient):
                 return os.devnull
             raise e
         return outfile
+
+
+# Store.get() used to build a new select on every call, and SQLAlchemy then worked out its cache key before
+# running it, which took longer than the query itself. For speed, get() now builds each of its eight queries, one
+# for each combination of filters it can use, once per thread, with bindparam placeholders for the values.
+def _lookup_query(table: db.Table, by_cpe: bool, with_v6_cpe: bool, with_ecosystem: bool, with_fix_version: bool) -> db.Select[Any]:
+    # this query has no ORDER BY and callers take the first row, so SQLite's query plan decides which row
+    # that is. These are the same clauses get() built on every call before, so the plan stays the same.
+    c = table.c
+    query = table.select().where((c.vuln_id == db.bindparam("vuln_id")) & (c.provider == db.bindparam("provider")))
+    if by_cpe:
+        if with_v6_cpe:
+            query = query.where((c.full_cpe == db.bindparam("full_cpe")) | (c.full_cpe == db.bindparam("v6_cpe")))
+        else:
+            query = query.where(c.full_cpe == db.bindparam("full_cpe"))
+    else:
+        query = query.where((c.package_name == db.bindparam("package_name")) & (c.full_cpe == ""))
+        if with_ecosystem:
+            query = query.where(c.ecosystem == db.bindparam("ecosystem"))
+    if with_fix_version:
+        query = query.where(c.fix_version == db.bindparam("fix_version"))
+    return query
 
 
 @dataclass
@@ -332,35 +356,32 @@ class Store(Strategy):
             # if the database is empty and return no results.
             return []
 
-        conn, table = self._get_connection()
-
-        # build query - if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
-        query = table.select().where(
-            (table.c.vuln_id == vuln_id) & (table.c.provider == self.provider),
-        )
-
-        is_cpe = cpe_or_package.lower().startswith("cpe:")
-        if is_cpe:
+        # if cpe_or_package looks like a CPE, search by full_cpe, otherwise by package_name
+        by_cpe = cpe_or_package.lower().startswith("cpe:")
+        params = {"vuln_id": vuln_id, "provider": self.provider}
+        v6_cpe = None
+        if by_cpe:
+            params["full_cpe"] = cpe_or_package
             # try v6 simplified CPE format (e.g., "a:vendor:product:...") since grype-db stores CPEs this way
             v6_cpe = cpe_to_v6_format(cpe_or_package)
             if v6_cpe:
-                query = query.where(
-                    (table.c.full_cpe == cpe_or_package) | (table.c.full_cpe == v6_cpe),
-                )
-            else:
-                query = query.where(table.c.full_cpe == cpe_or_package)
+                params["v6_cpe"] = v6_cpe
         else:
-            normalized_pkg = normalize_package_name(cpe_or_package, ecosystem)
-            query = query.where(
-                (table.c.package_name == normalized_pkg) & (table.c.full_cpe == ""),
-            )
+            params["package_name"] = normalize_package_name(cpe_or_package, ecosystem)
             if ecosystem:
-                query = query.where(table.c.ecosystem == ecosystem)
-
+                params["ecosystem"] = ecosystem
         if fix_version:
-            query = query.where(table.c.fix_version == fix_version)
+            params["fix_version"] = fix_version
 
-        results = conn.execute(query).fetchall()
+        conn, table = self._get_connection()
+        queries = self._thread_local.queries
+        if queries is None:
+            queries = self._thread_local.queries = {}
+        key = (by_cpe, bool(v6_cpe), bool(ecosystem) and not by_cpe, bool(fix_version))
+        query = queries.get(key)
+        if query is None:
+            query = queries[key] = _lookup_query(table, *key)
+        results = conn.execute(query, params).fetchall()
 
         if not results:
             return []
@@ -480,6 +501,7 @@ class Store(Strategy):
             # reflect the existing table structure for this thread
             metadata = db.MetaData()
             self._thread_local.table = db.Table("fixdates", metadata, autoload_with=self.engine)
+            self._thread_local.queries = {}
 
         return self._thread_local.conn, self._thread_local.table
 
@@ -496,6 +518,7 @@ class Store(Strategy):
                 # clear the thread-local storage
                 self._thread_local.conn = None
                 self._thread_local.table = None
+                self._thread_local.queries = None
 
         # dispose the engine to close all pooled connections from any thread
         if self.engine:
