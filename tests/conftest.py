@@ -419,6 +419,13 @@ def _schema_validator(schema_url: str) -> jsonschema.Draft7Validator:
         "schema/vulnerability/nvd/cvss/schema-v3.0.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.0.json",
         "schema/vulnerability/nvd/cvss/schema-v3.1.json": "https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.1.json",
         "schema/vulnerability/nvd/affected/schema-v1.0.json": "https://csrc.nist.gov/schema/nvd/api/2.0/cve_affected_1.0.json",
+        "schema/vulnerability/cve5/imports/cvss/cvss-v2.0.json": "file:imports/cvss/cvss-v2.0.json",
+        "schema/vulnerability/cve5/imports/cvss/cvss-v3.0.json": "file:imports/cvss/cvss-v3.0.json",
+        "schema/vulnerability/cve5/imports/cvss/cvss-v3.1.json": "file:imports/cvss/cvss-v3.1.json",
+        "schema/vulnerability/cve5/imports/cvss/cvss-v4.0.json": "file:imports/cvss/cvss-v4.0.json",
+        "schema/vulnerability/cve5/tags/adp-tags.json": "file:tags/adp-tags.json",
+        "schema/vulnerability/cve5/tags/cna-tags.json": "file:tags/cna-tags.json",
+        "schema/vulnerability/cve5/tags/reference-tags.json": "file:tags/reference-tags.json",
     }
 
     registry = Registry()
