@@ -138,6 +138,9 @@ class SQLiteStore(Store):
         self._pending_records: list[dict[str, Any]] = []
         self._total_submitted = 0
         self._closed = False
+        # set once this store prepares or writes the temporary database, so that close() deletes, rather than
+        # moves into place, a temporary database that a killed run left behind
+        self._used_temp_db = False
         self._lock = threading.Lock()
         self._engine_lock = threading.Lock()
         # not thread-local: Table objects are immutable metadata descriptors safe to share across threads,
@@ -156,11 +159,13 @@ class SQLiteStore(Store):
                 @db.event.listens_for(self.engine, "connect")
                 def set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-untyped-def]
                     cursor = dbapi_connection.cursor()
-                    cursor.execute("PRAGMA journal_mode=WAL")
-                    cursor.execute("PRAGMA synchronous=NORMAL")
+                    # no journal and no syncing, for speed. This is the temporary copy: close() moves it into
+                    # place only after a successful run and deletes it otherwise. A copy left by a killed run is
+                    # deleted by prepare() or close(), so it never becomes results.db.
+                    cursor.execute("PRAGMA journal_mode=OFF")
+                    cursor.execute("PRAGMA synchronous=OFF")
                     cursor.execute("PRAGMA cache_size=10000")
                     cursor.execute("PRAGMA temp_store=MEMORY")
-                    cursor.execute("PRAGMA wal_autocheckpoint=10000")
                     cursor.close()
 
             if self._table is None:
@@ -232,6 +237,7 @@ class SQLiteStore(Store):
 
         conn, table = self.connection()
         count = len(self._pending_records)
+        self._used_temp_db = True
 
         prefix = "OR IGNORE" if self.skip_duplicates else "OR REPLACE"
         stmt = table.insert().prefix_with(prefix)
@@ -266,6 +272,7 @@ class SQLiteStore(Store):
                 os.remove(sidecar)
 
     def prepare(self) -> None:
+        self._used_temp_db = True
         if os.path.exists(self.temp_db_file_path):
             self.logger.warning("removing unexpected partial result state")
             os.remove(self.temp_db_file_path)
@@ -305,7 +312,11 @@ class SQLiteStore(Store):
         # remove any lingering WAL sidecar files after engine disposal
         self._remove_wal_sidecar_files(self.temp_db_file_path)
 
-        if successful and os.path.exists(self.temp_db_file_path):
+        if successful and self._used_temp_db and os.path.exists(self.temp_db_file_path):
+            # the temporary database is written with synchronous=OFF, so sync it once here,
+            # otherwise a power loss soon after the move could leave a broken results.db
+            with open(self.temp_db_file_path, "r+b") as fh:
+                os.fsync(fh.fileno())
             shutil.move(self.temp_db_file_path, self.db_file_path)
         elif os.path.exists(self.temp_db_file_path):
             os.remove(self.temp_db_file_path)
