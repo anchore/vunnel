@@ -52,6 +52,7 @@ class Providers:
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     chainguard_libraries: providers.chainguard_libraries.Config = field(default_factory=providers.chainguard_libraries.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
+    dhi: providers.dhi.Config = field(default_factory=providers.dhi.Config)
     echo: providers.echo.Config = field(default_factory=providers.echo.Config)
     eol: providers.eol.Config = field(default_factory=providers.eol.Config)
     epss: providers.epss.Config = field(default_factory=providers.epss.Config)

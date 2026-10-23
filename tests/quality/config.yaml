@@ -484,3 +484,16 @@ tests:
   #     - nvd:cpe
   #   validations:
   #     - *default-validations
+
+  # TODO: enable once Docker publishes DHI records under osv/dhi and an ID=dhi image is added to anchore/test_images.
+  # See https://github.com/docker-hardened-images/advisories/tree/main/integration/upcoming-id-dhi
+  # - provider: dhi
+  #   use_cache: true
+  #   images:
+  #     - docker.io/anchore/test_images:dhi-alpine-<tag>@sha256:<digest>
+  #     - docker.io/anchore/test_images:dhi-debian-<tag>@sha256:<digest>
+  #   expected_namespaces:
+  #     - dhi:distro:dhi:3.24
+  #     - dhi:distro:dhi:13
+  #   validations:
+  #     - *default-validations
