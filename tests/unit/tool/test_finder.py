@@ -1,6 +1,7 @@
 import datetime
 from unittest.mock import Mock, MagicMock
 import pytest
+from dateutil.parser import parse as dateutil_parse
 from vunnel import workspace
 from vunnel.tool.fixdate import first_observed
 from vunnel.tool.fixdate.finder import Finder, Result, Strategy
@@ -443,3 +444,32 @@ def test_repeated_lookup_with_future_dated_candidate(tmpdir):
     assert (first.date, first.kind) == (tomorrow, "advisory")
     # the first call's row is now an accurate first-observed date, and the candidate postdates it
     assert (second.date, second.kind) == (today, "first-observed")
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2024-05-03T12:34:56Z",
+        "2024-05-03T23:59:59.123456Z",
+        "2024-02-29T00:00:00Z",
+        "2024-05-03",
+        "2024-05-03T12:34:56+05:00",
+        "May 3, 2024",
+    ],
+)
+def test_result_string_date_matches_dateutil(value):
+    """every string must give the same date as dateutil, whichever way it is parsed."""
+    expected = datetime.date.fromisoformat(dateutil_parse(value).strftime("%Y-%m-%d"))
+    assert Result(date=value, kind="advisory").date == expected
+
+
+@pytest.mark.parametrize("value", ["2024-05-03T12:34:56Z", "2024-05-03T23:59:59.123456Z"])
+def test_result_osv_timestamp_skips_dateutil(value, mocker):
+    normalize_date = mocker.patch("vunnel.tool.fixdate.finder.date.normalize_date")
+    assert Result(date=value, kind="advisory").date == datetime.date(2024, 5, 3)
+    normalize_date.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ["2024-13-01T00:00:00Z", "2023-02-29T00:00:00Z", "2024-W18-5", "not a date"])
+def test_result_string_date_invalid_is_dropped(value):
+    assert Result(date=value, kind="advisory").date is None
