@@ -47,27 +47,3 @@ tools:
     method: github-release
     with:
       repo: oras-project/oras
-
-  # used in quality gate to compare matching between the PR's DB and a published DB
-  - name: yardstick
-    version:
-      # a go-rewrite commit until the Go yardstick is released
-      want: ebf2565f57f9e37f6554d8560e931dc05c1f8050
-    method: go-install
-    with:
-      module: github.com/anchore/yardstick
-      entrypoint: cmd/yardstick
-      env:
-        # the python-era tags (latest v0.16.2) cannot be zipped by the go proxy, so the sumdb has no
-        # entry for them and go install fails its deprecation lookup. GOPRIVATE skips the sumdb and
-        # fetches straight from github at the pinned SHA instead. Drop this once v0.17.0 is tagged.
-        - GOPRIVATE=github.com/anchore/yardstick
-
-  # used in quality gate (both setups scan with this one binary)
-  - name: grype
-    version:
-      want: main
-    method: go-install
-    with:
-      module: github.com/anchore/grype
-      entrypoint: cmd/grype

@@ -5,7 +5,7 @@ The quality gate checks that a vunnel change does not make grype's matching wors
 - `config.yaml` is the source of truth: the images, validations and expected namespaces per provider, the reference DB, and the grype-db version.
 - `configure.py configure <provider>` turns it into a yardstick gate at `gates/<provider>.yaml` (generated, not committed).
 - Labels and SBOMs come from [anchore/claims](https://github.com/anchore/claims), named in `.yardstick.yaml`.
-- yardstick and grype are pinned in the repo's `.binny.yaml` and installed into `.tool/` by `make tools` at the repo root.
+- yardstick and grype are pinned in `tests/quality/.binny.yaml` and installed into `tests/quality/.tool/` by `make tools` in this directory. They stay out of the repo root's `.binny.yaml`, so formatting and linting never build them.
 
 ## Getting started
 
@@ -91,7 +91,7 @@ targets into fixed targets as possible:
   analysis.
 
 - Both sides scan with the same grype binary (grype `main`, installed by binny
-  from `.binny.yaml`), so the only input that differs is the DB.
+  from `tests/quality/.binny.yaml`), so the only input that differs is the DB.
 
 
 To reduce maintenance effort of this comparison over time there are a few things
@@ -138,4 +138,4 @@ yardstick score gates/<provider>.yaml -o table
 
 New labels are written to `./claims`. To keep them, open a pull request adding them to [anchore/claims](https://github.com/anchore/claims); the gate reads its `main` branch.
 
-To try a grype branch, build it over `.tool/grype` (`go build -o <vunnel>/.tool/grype ./cmd/grype` in the grype checkout). CI always uses grype `main`, and `make validate-test-tool-versions` fails if `.binny.yaml` says otherwise.
+To try a grype branch, build it over `tests/quality/.tool/grype` (`go build -o <vunnel>/tests/quality/.tool/grype ./cmd/grype` in the grype checkout). CI always uses grype `main`, and `make validate-test-tool-versions` fails if `tests/quality/.binny.yaml` says otherwise.

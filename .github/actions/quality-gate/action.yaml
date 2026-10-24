@@ -62,7 +62,7 @@ runs:
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
-        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`../../.tool/yardstick\` after \`make tools\` at the repo root):
+        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`.tool/yardstick\` after \`make tools\` in \`tests/quality\`):
         \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality

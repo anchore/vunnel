@@ -441,7 +441,7 @@ Pick an image that has a good representation of the package types that your new 
 
 #### **4. In Vunnel: run the quality gate with your Grype branch.**
 
-The gate scans with the grype in `.tool/grype` (grype `main`, installed by `make tools`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
+The gate scans with the grype in `tests/quality/.tool/grype` (grype `main`, installed by `make tools` in `tests/quality`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/tests/quality/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
 
 
 #### **5. In Vunnel: run the quality gate.**
