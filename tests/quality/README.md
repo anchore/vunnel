@@ -4,7 +4,7 @@ The quality gate checks that a vunnel change does not make grype's matching wors
 
 - `config.yaml` is the source of truth: the images, validations and expected namespaces per provider, the reference DB, and the grype-db version.
 - `configure.py configure <provider>` turns it into a yardstick gate at `gates/<provider>.yaml` (generated, not committed).
-- Labels and SBOMs come from [anchore/match-claims](https://github.com/anchore/match-claims), named in `.yardstick.yaml`.
+- Labels and SBOMs come from [anchore/claims](https://github.com/anchore/claims), named in `.yardstick.yaml`.
 - yardstick and grype are pinned in the repo's `.binny.yaml` and installed into `.tool/` by `make tools` at the repo root.
 
 ## Getting started
@@ -136,6 +136,6 @@ unzip qg-capture-state-<provider>.zip && tar -xzf qg-capture-state-<provider>.ta
 yardstick score gates/<provider>.yaml -o table
 ```
 
-New labels are written to `./claims`. To keep them, open a pull request adding them to [anchore/match-claims](https://github.com/anchore/match-claims); the gate reads its `main` branch.
+New labels are written to `./claims`. To keep them, open a pull request adding them to [anchore/claims](https://github.com/anchore/claims); the gate reads its `main` branch.
 
 To try a grype branch, build it over `.tool/grype` (`go build -o <vunnel>/.tool/grype ./cmd/grype` in the grype checkout). CI always uses grype `main`, and `make validate-test-tool-versions` fails if `.binny.yaml` says otherwise.

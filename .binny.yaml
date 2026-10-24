@@ -52,7 +52,7 @@ tools:
   - name: yardstick
     version:
       # a go-rewrite commit until the Go yardstick is released
-      want: 417905b611ce757c220bb68186da9e37df4d23d2
+      want: ebf2565f57f9e37f6554d8560e931dc05c1f8050
     method: go-install
     with:
       module: github.com/anchore/yardstick

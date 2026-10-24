@@ -475,9 +475,9 @@ yardstick score gates/<your-provider-name>.yaml --claims ./claims
 See [tests/quality/README.md](tests/quality/README.md) for more on the gate.
 
 
-#### **7. Open a [match-claims](https://github.com/anchore/match-claims) PR to persist the new labels.**
+#### **7. Open a [claims](https://github.com/anchore/claims) PR to persist the new labels.**
 
-The gate reads labels from the `main` branch of anchore/match-claims, so add the files under `./claims` there in a pull request. You will not be able to open a Vunnel PR that passes PR checks until those labels are merged.
+The gate reads labels from the `main` branch of anchore/claims, so add the files under `./claims` there in a pull request. You will not be able to open a Vunnel PR that passes PR checks until those labels are merged.
 
 
 #### **8. In Vunnel: open a PR with your new provider.**
