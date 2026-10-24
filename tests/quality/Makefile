@@ -4,7 +4,7 @@ BIN_DIR = bin
 TEST_DB_ARCHIVE = $(GRYPE_DB_BUILD_DIR)/grype-db.tar.zst
 
 # override to use a locally built yardstick, e.g. make validate YARDSTICK=~/code/yardstick/bin/yardstick
-YARDSTICK ?= ../../.tool/yardstick
+YARDSTICK ?= .tool/yardstick
 GATE = gates/$(provider).yaml
 
 
@@ -30,8 +30,9 @@ validate: tools  ## Score the collected scans for the given provider against the
 ## Data management targets #################################
 
 .PHONY: tools
-tools: ## Install yardstick, grype main and the repo's other pinned tools (a no-op when they're current)
+tools: ## Install yardstick and grype main from this directory's .binny.yaml (a no-op when they're current)
 	$(MAKE) -C ../.. tools
+	../../.tool/binny install -c .binny.yaml
 
 .PHONY: capture
 capture: clear-data clear-results configure build-db scans ## Build a DB for the given provider and scan its images with it and the reference DB

@@ -29,10 +29,10 @@ BIN_DIR = "./bin"
 CLONE_DIR = f"{BIN_DIR}/grype-db-src"
 GRYPE_DB = f"{BIN_DIR}/grype-db"
 GATES_DIR = "gates"
-BINNY_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".binny.yaml")
+BINNY_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".binny.yaml")
 
 # paths in a gate file resolve against the gate file's directory (tests/quality/gates)
-GATE_GRYPE = "../../../.tool/grype"
+GATE_GRYPE = "../.tool/grype"
 GATE_CANDIDATE_DB = "../build/vulnerability.db"
 
 
@@ -465,7 +465,7 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
     gate_globs = [
         "tests/quality/*.py",
         "tests/quality/.yardstick.yaml",
-        ".binny.yaml",
+        "tests/quality/.binny.yaml",
         ".github/workflows/pr-quality-gate.yaml",
         ".github/workflows/nightly-quality-gate.yaml",
         # shared code that affects all providers

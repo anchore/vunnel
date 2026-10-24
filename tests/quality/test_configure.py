@@ -289,8 +289,8 @@ class TestGate:
         gate = cfg.gate(test)
 
         assert gate["name"] == "alpine"
-        assert gate["candidate"] == {"grype": "../../../.tool/grype", "db": "../build/vulnerability.db"}
-        assert gate["reference"] == {"grype": "../../../.tool/grype", "db": "https://example.com/db.tar.zst"}
+        assert gate["candidate"] == {"grype": "../.tool/grype", "db": "../build/vulnerability.db"}
+        assert gate["reference"] == {"grype": "../.tool/grype", "db": "https://example.com/db.tar.zst"}
         assert gate["undecided"] == "pass"
         assert gate["subjects"] == ["oci:docker.io/alpine:3.2@sha256:abc"]
         assert gate["vulnerabilities"] == {"maxYear": 2023, "namespaces": ["alpine:distro:alpine:3.2", "nvd:cpe"]}
