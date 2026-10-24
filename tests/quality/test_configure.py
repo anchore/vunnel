@@ -270,3 +270,52 @@ tests:
         assert providers == set()
 
 
+
+
+class TestGate:
+    """Tests for Config.gate(), the mapping from a provider's config.yaml test to a yardstick gate."""
+
+    def test_maps_validations(self):
+        from tests.quality.configure import Config, Test, Validation, Yardstick
+
+        cfg = Config(yardstick=Yardstick(default_max_year=2021, reference_db="https://example.com/db.tar.zst"))
+        test = Test(
+            provider="alpine",
+            images=["docker.io/alpine:3.2@sha256:abc"],
+            expected_namespaces=["alpine:distro:alpine:3.2", "nvd:cpe"],
+            validations=[Validation(max_f1_regression=0.1, max_new_false_negatives=2, max_year=2023)],
+        )
+
+        gate = cfg.gate(test)
+
+        assert gate["name"] == "alpine"
+        assert gate["candidate"] == {"grype": "../.tool/grype", "db": "../build/vulnerability.db"}
+        assert gate["reference"] == {"grype": "../.tool/grype", "db": "https://example.com/db.tar.zst"}
+        assert gate["undecided"] == "pass"
+        assert gate["subjects"] == ["oci:docker.io/alpine:3.2@sha256:abc"]
+        assert gate["vulnerabilities"] == {"maxYear": 2023, "namespaces": ["alpine:distro:alpine:3.2", "nvd:cpe"]}
+        assert gate["checks"] == [
+            {"name": "f1NotWorse", "params": {"tolerance": 0.1}},
+            {"name": "noNewFalseNegatives", "params": {"max": 2}},
+            {"name": "matchesAtLeast", "params": {"min": 1}},
+        ]
+
+    def test_defaults_and_opt_outs(self):
+        from tests.quality.configure import Config, Test, Validation, Yardstick
+
+        cfg = Config(yardstick=Yardstick(default_max_year=2021, reference_db="https://example.com/db.tar.zst"))
+        test = Test(provider="amazon", images=["img@sha256:abc"], validations=[Validation(fail_on_empty_match_set=False)])
+
+        gate = cfg.gate(test)
+
+        # no expected_namespaces means no namespace filter, and max_year falls back to the default
+        assert gate["vulnerabilities"] == {"maxYear": 2021}
+        assert "matchesAtLeast" not in [c["name"] for c in gate["checks"]]
+
+    def test_requires_one_validation(self):
+        from tests.quality.configure import Config, Test, Yardstick
+
+        cfg = Config(yardstick=Yardstick(reference_db="https://example.com/db.tar.zst"))
+
+        with pytest.raises(ValueError, match="exactly one validation"):
+            cfg.gate(Test(provider="debian", images=["img@sha256:abc"]))
