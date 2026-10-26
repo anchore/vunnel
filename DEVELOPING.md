@@ -441,19 +441,17 @@ Pick an image that has a good representation of the package types that your new 
 
 #### **4. In Vunnel: run the quality gate with your Grype branch.**
 
-The gate scans with the grype in `tests/quality/.tool/grype` (grype `main`, installed by `make tools` in `tests/quality`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/tests/quality/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
+The gate scans with the grype in `tests/quality/.tool/grype` (grype `main`, installed by `make quality-gate-tools`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/tests/quality/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
 
 
 #### **5. In Vunnel: run the quality gate.**
 
 ```bash
-cd tests/quality
+# runs your specific provider to gather vulnerability data and builds a DB
+make quality-gate-db PROVIDER=<your-provider-name>
 
-# runs your specific provider to gather vulnerability data, builds a DB, and scans the provider's images with it and with a published DB
-make capture provider=<your-provider-name>
-
-# score both scans against the labels
-make validate provider=<your-provider-name>
+# scans the provider's images with that DB and with a published DB, and scores both scans against the labels
+make quality-gate-run PROVIDER=<your-provider-name>
 ```
 
 You are looking for a passing run before continuing further.

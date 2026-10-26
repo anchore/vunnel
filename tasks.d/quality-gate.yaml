@@ -1,0 +1,63 @@
+version: "3"
+
+# the quality gate (see tests/quality/README.md). Included flattened from the root Taskfile and run in
+# tests/quality, so every task carries a quality-gate- prefix instead of a namespace: the root
+# Makefile's `make <task>` shim strips colons from task names and could not reach a namespaced task.
+
+tasks:
+
+  quality-gate-tools:
+    desc: Install the quality gate's tools from tests/quality/.binny.yaml into tests/quality/.tool
+    # the root tools task is only here for binny itself
+    deps: [tools]
+    status:
+      - "{{ .ROOT_DIR }}/{{ .BINNY }} check -c .binny.yaml"
+    cmd: "{{ .ROOT_DIR }}/{{ .BINNY }} install -v -c .binny.yaml"
+    silent: true
+
+  quality-gate-db:
+    desc: Build a grype DB for PROVIDER from this checkout (plus cached data for the providers it needs)
+    deps: [quality-gate-tools]
+    requires:
+      vars: [PROVIDER]
+    cmds:
+      - "rm -rf .yardstick gates"
+      - "uv run python ./configure.py configure {{ .PROVIDER }}"
+      - "uv run python ./configure.py build-db"
+
+  quality-gate-run:
+    desc: Run PROVIDER's gate against the DB from quality-gate-db (exits 1 when the gate fails)
+    deps: [quality-gate-tools]
+    requires:
+      vars: [PROVIDER]
+    cmds:
+      - ".tool/yardstick collect scans gates/{{ .PROVIDER }}.yaml"
+      - ".tool/yardstick score gates/{{ .PROVIDER }}.yaml"
+
+  quality-gate-select-providers:
+    desc: Print the providers affected by the current changeset as a JSON list (TAG filters by vunnel tag)
+    # the PR workflow captures stdout, so nothing but the list may reach it
+    silent: true
+    cmd: "uv run python ./configure.py select-providers --json {{ if .TAG }}-t '{{ .TAG }}'{{ end }} 2>/dev/null"
+
+  quality-gate-all-providers:
+    desc: Print every provider the gate has a test for as a JSON list (TAG filters by vunnel tag)
+    silent: true
+    cmd: "uv run python ./configure.py all-providers --json {{ if .TAG }}-t '{{ .TAG }}'{{ end }} 2>/dev/null"
+
+  quality-gate-show-changes:
+    desc: Show the files changed against the base branch and the providers they select
+    cmds:
+      - "uv run python ./configure.py -v show-changes"
+      - "uv run python ./configure.py select-providers"
+
+  quality-gate-validate-tool-versions:
+    desc: Fail unless the quality gate is pinned to the production (main) versions of its tools
+    silent: true
+    cmd: "uv run python ./configure.py validate-test-tool-versions"
+
+  quality-gate-clean:
+    desc: Delete the quality gate's local data, DB, scans and generated gates
+    cmds:
+      - "rm -rf bin data build .yardstick gates"
+      - "find . -name '*.pyc' -delete"

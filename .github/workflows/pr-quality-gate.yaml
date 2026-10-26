@@ -51,21 +51,19 @@ jobs:
         id: determine-providers
         run: |
           # be nice to folks troubleshooting in CI...
-          cd tests/quality
-          make show-changes
+          make quality-gate-show-changes
 
           # determine which providers to run (to later populate the matrix)
-          content=`make select-providers`
+          content=`make quality-gate-select-providers`
           echo $content
           echo "providers=$content" >> $GITHUB_OUTPUT
 
       - name: Split providers by concurrency needs
         id: split-providers
         run: |
-          cd tests/quality
           # use vunnel's tag system to split providers by concurrency needs
-          multicore_providers=$(make select-providers TAG=multicore)
-          other_providers=$(make select-providers TAG='!multicore')
+          multicore_providers=$(make quality-gate-select-providers TAG=multicore)
+          other_providers=$(make quality-gate-select-providers TAG='!multicore')
           echo "multicore-providers=$multicore_providers" >> $GITHUB_OUTPUT
           echo "other-providers=$other_providers" >> $GITHUB_OUTPUT
 

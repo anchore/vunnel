@@ -35,6 +35,12 @@ vars:
 env:
   GNUMAKEFLAGS: '--no-print-directory'
 
+includes:
+  quality-gate:
+    taskfile: tasks.d/quality-gate.yaml
+    dir: tests/quality
+    flatten: true
+
 tasks:
 
   ## High-level tasks #################################

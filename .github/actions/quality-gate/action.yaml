@@ -20,19 +20,17 @@ runs:
       run: |
         echo "$GITHUB_TOKEN" | .tool/oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
-    - name: Capture vulnerability results
+    - name: Build the provider's DB
       shell: bash
-      working-directory: tests/quality
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make capture provider="$PROVIDER"
+      run: make quality-gate-db PROVIDER="$PROVIDER"
 
-    - name: Validate provider results
+    - name: Run the quality gate
       shell: bash
-      working-directory: tests/quality
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make validate provider="$PROVIDER"
+      run: make quality-gate-run PROVIDER="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -62,7 +60,7 @@ runs:
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
-        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`.tool/yardstick\` after \`make tools\` in \`tests/quality\`):
+        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/quality/.tool/yardstick\` after \`make quality-gate-tools\`):
         \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality
