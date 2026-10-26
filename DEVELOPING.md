@@ -434,7 +434,7 @@ The configuration maps a provider to test to specific images to test with, for e
 ...
 ```
 
-These images are used to test the provider on PRs and nightly builds to verify the specific provider is working.
+These images are used to test the provider on PRs to verify the specific provider is working.
 Always use both the image tag and digest for all container image entries.
 Pick an image that has a good representation of the package types that your new provider is adding vulnerability data for.
 
