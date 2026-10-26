@@ -30,9 +30,8 @@ tasks:
     deps: [quality-gate-tools]
     requires:
       vars: [PROVIDER]
-    cmds:
-      - ".tool/yardstick collect scans gates/{{ .PROVIDER }}.yaml"
-      - ".tool/yardstick score gates/{{ .PROVIDER }}.yaml"
+    # collects SBOMs, scans with both setups and scores in one step, writing .yardstick/runs either way
+    cmd: ".tool/yardstick gates/{{ .PROVIDER }}.yaml"
 
   quality-gate-select-providers:
     desc: Print the providers affected by the current changeset as a JSON list (TAG filters by vunnel tag)
