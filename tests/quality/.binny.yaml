@@ -25,3 +25,15 @@ tools:
     with:
       module: github.com/anchore/grype
       entrypoint: cmd/grype
+
+  # used in quality gate to build the DB under test from this checkout's vunnel
+  - name: grype-db
+    version:
+      want: main
+    method: go-install
+    with:
+      module: github.com/anchore/grype-db
+      entrypoint: cmd/grype-db
+      ldflags:
+        # without this grype-db reports its version as "[not provided] (adhoc-build)"
+        - -X github.com/anchore/grype-db/cmd/grype-db/application.version={{ .Version }}

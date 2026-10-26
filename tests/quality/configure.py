@@ -7,8 +7,6 @@ import glob
 import json
 import logging
 import os
-import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -18,16 +16,14 @@ from typing import Any
 import click
 import mergedeep
 import oras.client
-import requests
 import yaml
 from mashumaro.config import BaseConfig
 from mashumaro.mixins.dict import DataClassDictMixin
 
 from vunnel import providers as vunnel_providers
 
-BIN_DIR = "./bin"
-CLONE_DIR = f"{BIN_DIR}/grype-db-src"
-GRYPE_DB = f"{BIN_DIR}/grype-db"
+# installed by binny from .binny.yaml, like the gate's grype and yardstick
+GRYPE_DB = ".tool/grype-db"
 GATES_DIR = "gates"
 BINNY_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".binny.yaml")
 
@@ -79,14 +75,8 @@ class Test:
 
 
 @dataclass
-class GrypeDB:
-    version: str = "latest"
-
-
-@dataclass
 class Config(DataClassDictMixin):
     yardstick: Yardstick = field(default_factory=Yardstick)
-    grype_db: GrypeDB = field(default_factory=GrypeDB)
     tests: list[Test] = field(default_factory=list)
 
     @classmethod
@@ -414,8 +404,7 @@ def config_yaml_changes(changed_files: list[str]) -> tuple[bool, set[str]]:
     # Check if global settings changed - these affect all providers
     # x-ref contains YAML anchors that can be referenced by any provider
     # yardstick contains the reference DB and default max year used for all tests
-    # grype_db contains the grype-db version used for building test DBs
-    global_keys = ["x-ref", "yardstick", "grype_db"]
+    global_keys = ["x-ref", "yardstick"]
     for key in global_keys:
         old_val = old_config.get(key)
         new_val = new_config.get(key)
@@ -556,22 +545,18 @@ def all_providers(cfg: Config, output_json: bool, tag: str | None):
     help="Pass/Fail to indicate if production versions of grype and grype-db are used when testing",
 )
 @click.pass_obj
-def validate_test_tool_versions(cfg: Config):
+def validate_test_tool_versions(_: Config):
     logging.info("validating test tool versions")
 
     reasons = []
 
-    logging.info(f"grype-db version: {cfg.grype_db.version!r}")
-    if cfg.grype_db.version != "main":
-        reasons.append("grype-db version is not main")
-
-    # both gate setups scan with the grype binny installs
     with open(BINNY_CONFIG) as f:
         binny_tools = yaml.safe_load(f).get("tools", [])
-    grype_versions = [t.get("version", {}).get("want") for t in binny_tools if t.get("name") == "grype"]
-    logging.info(f"grype version (.binny.yaml): {grype_versions!r}")
-    if grype_versions != ["main"]:
-        reasons.append("grype version in .binny.yaml is not main")
+    for name in ["grype", "grype-db"]:
+        versions = [t.get("version", {}).get("want") for t in binny_tools if t.get("name") == name]
+        logging.info(f"{name} version (.binny.yaml): {versions!r}")
+        if versions != ["main"]:
+            reasons.append(f"{name} version in .binny.yaml is not main")
 
     for reason in reasons:
         logging.error(reason)
@@ -604,108 +589,7 @@ def configure(cfg: Config, provider_names: list[str]):
 
     write_config_state(cached_providers, uncached_providers)
 
-    _install_grype_db(cfg.grype_db.version)
-
     return cached_providers, uncached_providers
-
-
-@cli.command(name="install", help="install tooling (currently only grype-db)")
-@click.pass_obj
-def install(cfg: Config):
-    _install_grype_db(cfg.grype_db.version)
-
-
-def _install_grype_db(input: str):
-    os.makedirs(BIN_DIR, exist_ok=True)
-
-    version = input
-    is_semver = re.match(r"v\d+\.\d+\.\d+", input)
-    repo_user_and_name = "anchore/grype-db"
-    using_local_file = input.startswith("file://")
-    clone_dir = CLONE_DIR
-
-    if using_local_file:
-        clone_dir = os.path.expanduser(input.replace("file://", ""))
-    else:
-        if "/" in input:
-            # this is a fork...
-            if "@" in input:
-                # ... with a branch specification
-                repo_user_and_name, version = input.split("@")
-            else:
-                repo_user_and_name = input
-                version = "main"
-
-    repo_url = f"https://github.com/{repo_user_and_name}"
-
-    if input == "latest":
-        version = (
-            requests.get("https://github.com/anchore/grype-db/releases/latest", headers={"Accept": "application/json"})
-            .json()
-            .get("tag_name", "")
-        )
-        logging.info(f"latest released grype-db version is {version!r}")
-
-    elif is_semver:
-        install_version = version
-        if os.path.exists(GRYPE_DB):
-            existing_version = (
-                subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
-            )
-            if existing_version == install_version:
-                logging.info(f"grype-db already installed at version {install_version!r}")
-                return
-            else:
-                logging.info(f"updating grype-db from version {existing_version!r} to {install_version!r}")
-
-    if using_local_file:
-        _install_from_user_source(bin_dir=BIN_DIR, clone_dir=clone_dir)
-    else:
-        _install_from_clone(
-            bin_dir=BIN_DIR, checkout=version, clone_dir=clone_dir, repo_url=repo_url, repo_user_and_name=repo_user_and_name
-        )
-
-
-def _install_from_clone(bin_dir: str, checkout: str, clone_dir: str, repo_url: str, repo_user_and_name: str):
-    logging.info(f"creating grype-db repo at {clone_dir!r} from {repo_url}")
-
-    if os.path.exists(clone_dir):
-        remote_url = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=clone_dir).decode().strip()
-        if not remote_url.endswith(repo_user_and_name) or remote_url.endswith(repo_user_and_name + ".git"):
-            logging.info(f"removing grype-db clone at {clone_dir!r} because remote url does not match {repo_url!r}")
-            shutil.rmtree(clone_dir)
-
-    if not os.path.exists(clone_dir):
-        subprocess.run(["git", "clone", repo_url, clone_dir], check=True)
-    else:
-        subprocess.run(["git", "fetch", "--all"], cwd=clone_dir, check=True)
-
-    # use origin/{checkout} to ensure we get the latest fetched ref, not a stale local branch
-    # fall back to {checkout} directly for tags or if origin/{checkout} doesn't exist
-    result = subprocess.run(["git", "-c", "advice.detachedHead=false", "checkout", f"origin/{checkout}"], cwd=clone_dir)
-    if result.returncode != 0:
-        subprocess.run(["git", "checkout", checkout], cwd=clone_dir, check=True)
-
-    install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
-
-    _build_grype_db(bin_dir=bin_dir, install_version=install_version, clone_dir=clone_dir)
-
-
-def _install_from_user_source(bin_dir: str, clone_dir: str):
-    logging.info(f"using user grype-db repo at {clone_dir!r}")
-    install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
-    _build_grype_db(bin_dir=bin_dir, install_version=install_version, clone_dir=clone_dir)
-
-
-def _build_grype_db(bin_dir: str, install_version: str, clone_dir: str):
-    logging.info(f"installing grype-db at version {install_version!r}")
-
-    abs_bin_path = os.path.abspath(bin_dir)
-    cmd = f"go build -v -ldflags=\"-X 'github.com/anchore/grype-db/cmd/grype-db/application.version={install_version}'\" -o {abs_bin_path} ./cmd/grype-db"
-
-    logging.info(f"building grype-db: {cmd}")
-
-    subprocess.run(shlex.split(cmd), cwd=clone_dir, env=os.environ, check=True)
 
 
 def cache_file_path(provider: str) -> str:

@@ -106,26 +106,6 @@ class TestConfigYamlChanges:
 
         assert global_change is True
 
-    def test_grype_db_change_triggers_global(self, configure_test_harness, config_fixture):
-        """When grype_db settings change, all providers are affected."""
-        state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
-
-        old_config = config_fixture()
-        old_config.grype_db = {"version": "main"}
-
-        new_config = config_fixture()
-        new_config.grype_db = {"version": "v1.0.0"}  # Changed!
-
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
-        state.local_file_contents = {"config.yaml": new_config.to_yaml()}
-
-        from tests.quality.configure import config_yaml_changes
-
-        global_change, providers = config_yaml_changes(state.changed_files)
-
-        assert global_change is True
-
     def test_xref_change_triggers_global(self, configure_test_harness, config_fixture):
         """When x-ref (YAML anchors) change, all providers are affected."""
         state = configure_test_harness

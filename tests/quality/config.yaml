@@ -10,15 +10,6 @@ yardstick:
   # grype main as installed by binny (see .binny.yaml).
   reference_db: https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.4_2026-05-13T00:47:21Z_1778657102.tar.zst
 
-grype_db:
-  # values:
-  #  - "latest" to use the latest released grype-db
-  #  - a released version name (e.g. "v0.15.2")
-  #  - a branch name (e.g. "dev-fix-foo")
-  #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
-  #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
-
 tests:
   - provider: alpine
     use_cache: true

@@ -491,8 +491,8 @@ This is the same process as listed above with a few additional steps:
 
 1. You will need to add the new schema to the Vunnel repo in the `schemas` directory.
 2. Grype-DB will need to be updated to support the new schema in the `pkg/provider/unmarshal` and `pkg/process/v*` directories.
-3. The Vunnel `tests/quality/config.yaml` file will need to be updated to use development `grype-db.version`, pointing to your fork.
-4. The final Vunnel PR will not be able to be merged until the Grype-DB PR is merged and the `tests/quality/config.yaml` file is updated to point back to the `latest` Grype-DB version.
+3. To run the quality gate with your Grype-DB branch, build it over `tests/quality/.tool/grype-db` (`go build -o <vunnel>/tests/quality/.tool/grype-db ./cmd/grype-db` in the grype-db checkout).
+4. CI always builds grype-db `main`, so the final Vunnel PR will not pass the quality gate until the Grype-DB PR is merged.
 
 
 ## What might need refactoring?

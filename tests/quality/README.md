@@ -2,10 +2,10 @@
 
 The quality gate checks that a vunnel change does not make grype's matching worse. For each provider it builds a grype DB from this checkout's vunnel (plus cached data for any other providers the test needs), scans the provider's test images with grype `main` against that DB and against a published DB, and scores both scans against labels with [yardstick](https://github.com/anchore/yardstick).
 
-- `config.yaml` is the source of truth: the images, validations and expected namespaces per provider, the reference DB, and the grype-db version.
+- `config.yaml` is the source of truth: the images, validations and expected namespaces per provider, and the reference DB.
 - `configure.py configure <provider>` turns it into a yardstick gate at `gates/<provider>.yaml` (generated, not committed).
 - Labels and SBOMs come from [anchore/claims](https://github.com/anchore/claims), named in `.yardstick.yaml`.
-- yardstick and grype are pinned in `tests/quality/.binny.yaml` and installed into `tests/quality/.tool/` by `make quality-gate-tools`. They stay out of the repo root's `.binny.yaml`, so formatting and linting never build them.
+- yardstick, grype and grype-db are pinned in `tests/quality/.binny.yaml` and installed into `tests/quality/.tool/` by `make quality-gate-tools`. They stay out of the repo root's `.binny.yaml`, so formatting and linting never build them.
 - The gate's tasks live in `tasks.d/quality-gate.yaml`, run from the repo root (`make help` lists them).
 
 ## Getting started
@@ -15,7 +15,7 @@ make quality-gate-db PROVIDER=alpine    # build a DB for the provider from this 
 make quality-gate-run PROVIDER=alpine   # get SBOMs, scan with both setups and score; exits 1 when the gate fails
 ```
 
-Both install the gate's tools first. `make quality-gate-db` builds grype-db from source and pulls cached provider data from `ghcr.io`, so it needs Go and an `oras login ghcr.io`.
+Both install the gate's tools first. The tools are built with `go install`, and `make quality-gate-db` pulls cached provider data from `ghcr.io`, so it needs Go and an `oras login ghcr.io`.
 
 ## What is the quality gate criteria
 
@@ -137,4 +137,4 @@ yardstick score gates/<provider>.yaml -o table
 
 New labels are written to `./claims`. To keep them, open a pull request adding them to [anchore/claims](https://github.com/anchore/claims); the gate reads its `main` branch.
 
-To try a grype or yardstick branch, build it over the binary in `tests/quality/.tool/` (`go build -o <vunnel>/tests/quality/.tool/grype ./cmd/grype` in the grype checkout). CI always uses grype `main`, and `make quality-gate-validate-tool-versions` fails if `tests/quality/.binny.yaml` says otherwise.
+To try a grype, grype-db or yardstick branch, build it over the binary in `tests/quality/.tool/` (`go build -o <vunnel>/tests/quality/.tool/grype-db ./cmd/grype-db` in the grype-db checkout, and the same for the others). CI always uses grype and grype-db `main`, and `make quality-gate-validate-tool-versions` fails if `tests/quality/.binny.yaml` says otherwise.
