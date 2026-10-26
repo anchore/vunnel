@@ -5,8 +5,8 @@ tools:
   # used in quality gate to compare matching between the PR's DB and a published DB
   - name: yardstick
     version:
-      # a go-rewrite commit until the Go yardstick is released
-      want: ebf2565f57f9e37f6554d8560e931dc05c1f8050
+      # a main commit until v0.17.0 is tagged
+      want: b17b35f534ccb72c1fa89fd5579d022a4d140bae
     method: go-install
     with:
       module: github.com/anchore/yardstick
