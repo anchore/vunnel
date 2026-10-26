@@ -120,9 +120,9 @@ class Config(DataClassDictMixin):
         checks: list[dict[str, Any]] = [
             {"name": "f1NotWorse", "params": {"tolerance": v.max_f1_regression}},
             {"name": "noNewFalseNegatives", "params": {"max": v.max_new_false_negatives}},
+            # yardstick adds matchesAtLeast with min 1 to a gate that leaves it out, so min 0 is the only way to turn it off
+            {"name": "matchesAtLeast", "params": {"min": 1 if v.fail_on_empty_match_set else 0}},
         ]
-        if v.fail_on_empty_match_set:
-            checks.append({"name": "matchesAtLeast", "params": {"min": 1}})
 
         return {
             "schema": "v1",

@@ -23,7 +23,7 @@ Each provider's validation in `config.yaml` maps to the gate's checks, evaluated
 
  - `max_f1_regression` -> `f1NotWorse`: the candidate's F1 may not drop below the reference's by more than this
  - `max_new_false_negatives` -> `noNewFalseNegatives`: true positives the reference found and the candidate misses
- - `fail_on_empty_match_set` (default true) -> `matchesAtLeast {min: 1}`: the candidate and the reference together must match something on each image
+ - `fail_on_empty_match_set` (default true) -> `matchesAtLeast {min: 1}`: the candidate and the reference together must match something on each image. `false` gives `min: 0`, which turns the check off (yardstick adds `min: 1` to a gate that leaves it out)
  - `max_year` and `expected_namespaces` filter which matches and labels count at all
 
 A check that unlabeled matches leave undecided does not fail the gate (`undecided: pass`), since these gates are diff-based and only a decided regression should fail them.

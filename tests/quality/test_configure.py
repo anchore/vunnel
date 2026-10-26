@@ -290,7 +290,7 @@ class TestGate:
 
         # no expected_namespaces means no namespace filter, and max_year falls back to the default
         assert gate["vulnerabilities"] == {"maxYear": 2021}
-        assert "matchesAtLeast" not in [c["name"] for c in gate["checks"]]
+        assert {"name": "matchesAtLeast", "params": {"min": 0}} in gate["checks"]
 
     def test_requires_one_validation(self):
         from tests.quality.configure import Config, Test, Yardstick
