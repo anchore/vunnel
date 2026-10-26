@@ -71,7 +71,7 @@ runs:
 
         Now you can label what changed in the UI (it needs yardstick from the installer, since a \`go install\` build has no UI):
         \`\`\`bash
-        yardstick claims serve $PROVIDER --claims ./claims --open
-        yardstick score gates/$PROVIDER.yaml --claims ./claims
+        yardstick claims serve $PROVIDER --open   # new labels go to tests/quality/additional-claims
+        yardstick score gates/$PROVIDER.yaml
         \`\`\`
         EOF

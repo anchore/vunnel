@@ -4,7 +4,7 @@ The quality gate checks that a vunnel change does not make grype's matching wors
 
 - `config.yaml` is the source of truth: the images, validations and expected namespaces per provider, and the reference DB.
 - `configure.py configure <provider>` turns it into a yardstick gate at `gates/<provider>.yaml` (generated, not committed).
-- Labels and SBOMs come from [anchore/claims](https://github.com/anchore/claims), named in `.yardstick.yaml`.
+- Labels and SBOMs come from [anchore/claims](https://github.com/anchore/claims), then grype's `test/quality/additional-claims`, then this repo's `additional-claims/`, in that order (`.yardstick.yaml`). A later source wins on the same label.
 - yardstick, grype and grype-db are pinned in `tests/quality/.binny.yaml` and installed into `tests/quality/.tool/` by `make quality-gate-tools`. They stay out of the repo root's `.binny.yaml`, so formatting and linting never build them.
 - The gate's tasks live in `tasks.d/quality-gate.yaml`, run from the repo root (`make help` lists them).
 
@@ -123,9 +123,8 @@ When the gate fails, `make quality-gate-run` prints what changed between the two
 The commands below run in `tests/quality`, with `yardstick` meaning `.tool/yardstick` there. To label, use the yardstick label UI (it needs yardstick from the [installer](https://github.com/anchore/yardstick#installation), since a `go install` build has no UI):
 
 ```
-mkdir -p claims
-yardstick claims serve <provider> --claims ./claims --open
-yardstick score gates/<provider>.yaml --claims ./claims   # re-score with the new labels, no new scans
+yardstick claims serve <provider> --open
+yardstick score gates/<provider>.yaml   # re-score with the new labels, no new scans
 ```
 
 A failed CI run uploads a `qg-capture-state-<provider>` artifact holding the gate file, its scans and `.yardstick.yaml`, and the job summary says how to use it. Extracted into `tests/quality`, it re-scores and labels as above with no DB, no grype and no new scans:
@@ -135,6 +134,6 @@ unzip qg-capture-state-<provider>.zip && tar -xzf qg-capture-state-<provider>.ta
 yardstick score gates/<provider>.yaml -o table
 ```
 
-New labels are written to `./claims`. To keep them, open a pull request adding them to [anchore/claims](https://github.com/anchore/claims); the gate reads its `main` branch.
+New labels are written to `additional-claims/`. Labels only vunnel's gate needs are committed there with the PR that needs them. Generally useful ones belong in [anchore/claims](https://github.com/anchore/claims), by pull request there; the gate reads its `main` branch.
 
 To try a grype, grype-db or yardstick branch, build it over the binary in `tests/quality/.tool/` (`go build -o <vunnel>/tests/quality/.tool/grype-db ./cmd/grype-db` in the grype-db checkout, and the same for the others). CI always uses grype and grype-db `main`, and `make quality-gate-validate-tool-versions` fails if `tests/quality/.binny.yaml` says otherwise.

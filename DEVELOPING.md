@@ -459,23 +459,22 @@ You are looking for a passing run before continuing further.
 
 #### **6. Label what the gate could not judge.**
 
-A new provider's matches are mostly unlabeled at first. Label them in the [yardstick](https://github.com/anchore/yardstick) label UI, which writes labels into a local directory:
+A new provider's matches are mostly unlabeled at first. Label them in the [yardstick](https://github.com/anchore/yardstick) label UI, which writes labels into `tests/quality/additional-claims`:
 
 ```bash
 cd tests/quality
-mkdir -p claims
-yardstick claims serve <your-provider-name> --claims ./claims --open
+yardstick claims serve <your-provider-name> --open
 
 # re-score with the new labels without scanning again
-yardstick score gates/<your-provider-name>.yaml --claims ./claims
+yardstick score gates/<your-provider-name>.yaml
 ```
 
 See [tests/quality/README.md](tests/quality/README.md) for more on the gate.
 
 
-#### **7. Open a [claims](https://github.com/anchore/claims) PR to persist the new labels.**
+#### **7. Keep the new labels.**
 
-The gate reads labels from the `main` branch of anchore/claims, so add the files under `./claims` there in a pull request. You will not be able to open a Vunnel PR that passes PR checks until those labels are merged.
+Commit the new files under `tests/quality/additional-claims` with your Vunnel PR. Labels that are useful beyond vunnel's gate belong in [anchore/claims](https://github.com/anchore/claims): open a pull request there, and the gate picks them up once it merges.
 
 
 #### **8. In Vunnel: open a PR with your new provider.**
