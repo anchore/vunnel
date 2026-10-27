@@ -1,4 +1,4 @@
-name: "PR Quality Gate"
+name: "PR Integration Tests"
 on:
   pull_request:
     types:
@@ -15,12 +15,12 @@ on:
 permissions: {}
 
 concurrency:
-  group: pr-quality-gate-${{ github.event.pull_request.number }}
+  group: pr-integration-tests-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   select-providers:
-    # skip-quality-gate: nothing downstream runs; evaluate-quality-gate reports success.
+    # skip-quality-gate: nothing downstream runs; evaluate-integration-tests reports success.
     # dependabot applies it to github-actions bumps (see .github/dependabot.yml).
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-quality-gate') }}
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
@@ -94,7 +94,7 @@ jobs:
           # needed as a secret for the github provider
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  evaluate-quality-gate:
+  evaluate-integration-tests:
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     needs:
       - validate-provider

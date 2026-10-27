@@ -455,7 +455,7 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
         "tests/quality/*.py",
         "tests/quality/.yardstick.yaml",
         "tests/quality/.binny.yaml",
-        ".github/workflows/pr-quality-gate.yaml",
+        ".github/workflows/pr-integration-tests.yaml",
         # shared code that affects all providers
         "src/vunnel/result.py",
         "src/vunnel/provider.py",
