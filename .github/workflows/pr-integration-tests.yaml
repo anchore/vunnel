@@ -8,7 +8,7 @@ on:
       - reopened
       # custom types...
       - labeled
-      # so removing skip-quality-gate (or run-pr-quality-gate) re-evaluates the gate
+      # so removing skip-integration-tests (or run-integration-tests) re-evaluates the tests
       # instead of leaving a stale result in place
       - unlabeled
 
@@ -20,9 +20,9 @@ concurrency:
 
 jobs:
   select-providers:
-    # skip-quality-gate: nothing downstream runs; evaluate-integration-tests reports success.
+    # skip-integration-tests: nothing downstream runs; evaluate-integration-tests reports success.
     # dependabot applies it to github-actions bumps (see .github/dependabot.yml).
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-quality-gate') }}
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-integration-tests') }}
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     permissions:
       contents: read
@@ -60,7 +60,7 @@ jobs:
     runs-on: runs-on=${{ github.run_id }}-provider-${{ strategy.job-index }}/cpu=8/ram=16+64/family=c6gd+c5ad+m6gd+c7gd+c5d+c6id+m5ad+m7gd+m5d+r6gd+m6id+r5ad+r7gd+r5d+r6id/spot=price-capacity-optimized/retry=when-interrupted
     timeout-minutes: 480
     needs: select-providers
-    if: contains(github.event.pull_request.labels.*.name, 'run-pr-quality-gate') && needs.select-providers.outputs.providers != '[]'
+    if: contains(github.event.pull_request.labels.*.name, 'run-integration-tests') && needs.select-providers.outputs.providers != '[]'
 
     strategy:
       matrix:
@@ -107,19 +107,19 @@ jobs:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
 
       - env:
-          SKIP_QUALITY_GATE: ${{ contains(github.event.pull_request.labels.*.name, 'skip-quality-gate') }}
+          SKIP_INTEGRATION_TESTS: ${{ contains(github.event.pull_request.labels.*.name, 'skip-integration-tests') }}
           VALIDATION_STATUS: ${{ needs.validate-provider.result }}
           PROVIDERS_TO_TEST: ${{ needs.select-providers.outputs.providers }}
         run: |
-          if [ "$SKIP_QUALITY_GATE" == 'true' ]; then
-            echo "🟢 Quality gate skipped! (the 'skip-quality-gate' label is applied)"
+          if [ "$SKIP_INTEGRATION_TESTS" == 'true' ]; then
+            echo "🟢 Integration tests skipped! (the 'skip-integration-tests' label is applied)"
             exit 0
           fi
           echo "Validations Status: $VALIDATION_STATUS"
           echo "Providers that require testing: $PROVIDERS_TO_TEST"
           echo
           if [ "$PROVIDERS_TO_TEST" == '[]' ]; then
-            echo "🟢 Quality gate passed! (no providers changed)"
+            echo "🟢 Integration tests passed! (no providers changed)"
             exit 0
           fi
           # "skipped" with providers in the list means the label is missing
@@ -132,11 +132,11 @@ jobs:
             *) fail=1 ;;
           esac
           if [ "$fail" = 1 ]; then
-            echo "🔴 Quality gate FAILED! 😭"
+            echo "🔴 Integration tests FAILED! 😭"
             echo
             echo "This could happen for a couple of reasons:"
             echo "  - A provider test failed, in which case see the logs in previous jobs for more details"
-            echo "  - A required provider test was skipped. You might need to add the 'run-pr-quality-gate' label to your PR to prevent skipping the test."
+            echo "  - A required provider test was skipped. You might need to add the 'run-integration-tests' label to your PR to prevent skipping the test."
             exit 1
           fi
-          echo "🟢 Quality gate passed! (all tests passed)"
+          echo "🟢 Integration tests passed! (all tests passed)"
