@@ -41,7 +41,7 @@ jobs:
           persist-credentials: false
 
       - name: Bootstrap environment
-        uses: ./.github/actions/bootstrap
+        uses: $/.github/actions/bootstrap
         with:
           tools: false
 
@@ -84,10 +84,10 @@ jobs:
           persist-credentials: false
 
       - name: Bootstrap environment
-        uses: ./.github/actions/bootstrap
+        uses: $/.github/actions/bootstrap
 
       - name: Run quality gate
-        uses: ./.github/actions/quality-gate
+        uses: $/.github/actions/quality-gate
         with:
           provider: ${{ matrix.provider }}
         env:
