@@ -10,7 +10,7 @@ inputs:
   uv-version:
     description: "UV version to install"
     required: true
-    default: "0.5.16"
+    default: "0.13.4" # bump past https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62 fix
   cache-key-prefix:
     description: "Prefix all cache keys with this value"
     required: true
@@ -25,14 +25,15 @@ runs:
     # non-default branches (and the upstream repo's default branch only writes). This prevents
     # cache poisoning from PRs and forks.
     - name: Setup go and tool cache
-      uses: anchore/go-make/.github/actions/setup@27a9f35f41b5fe86d68815844efd2ba816e9ba6b # v0.9.1
+      uses: anchore/go-make/.github/actions/setup@abf41688f36f2cbec13105747abbe8e60f5c56ca # v0.9.3
       with:
         cache-key-prefix: ${{ inputs.cache-key-prefix }}
 
-    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+    - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       with:
         # built-in cache is disabled to prevent PRs from poisoning the cache; uv's resolver is
         # fast enough without it. See cache-poisoning audit for details.
+        version: ${{ inputs.uv-version }}
         enable-cache: false
 
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

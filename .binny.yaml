@@ -43,7 +43,7 @@ tools:
   # used in quality gate to pull cached provider data
   - name: oras
     version:
-      want: v1.3.4
+      want: v1.3.5
     method: github-release
     with:
       repo: oras-project/oras
