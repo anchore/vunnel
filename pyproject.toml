@@ -132,10 +132,10 @@ exclude = [
     "data",
     "backup",
     "src/vunnel/providers/mariner/model", # files in here are generated
-    "tests/quality/.yardstick",
-    "tests/quality/data",
-    "tests/quality/build",
-    "tests/quality/bin",
+    "tests/integration/.yardstick",
+    "tests/integration/data",
+    "tests/integration/build",
+    "tests/integration/bin",
 ]
 
 [tool.ruff]

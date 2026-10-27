@@ -27,7 +27,7 @@ GRYPE_DB = ".tool/grype-db"
 GATES_DIR = "gates"
 BINNY_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".binny.yaml")
 
-# paths in a gate file resolve against the gate file's directory (tests/quality/gates)
+# paths in a gate file resolve against the gate file's directory (tests/integration/gates)
 GATE_GRYPE = "../.tool/grype"
 GATE_CANDIDATE_DB = "../build/vulnerability.db"
 
@@ -367,11 +367,11 @@ def config_yaml_changes(changed_files: list[str]) -> tuple[bool, set[str]]:
 
     Note:
         - config_path uses repo-relative path for git operations and changed_files matching
-        - local_config_path uses CWD-relative path since this script runs from tests/quality/
+        - local_config_path uses CWD-relative path since this script runs from tests/integration/
     """
     # Repo-relative path (for git operations and changed_files matching)
-    config_path = "tests/quality/config.yaml"
-    # CWD-relative path (script runs from tests/quality/)
+    config_path = "tests/integration/config.yaml"
+    # CWD-relative path (script runs from tests/integration/)
     local_config_path = os.path.basename(config_path)
 
     if config_path not in changed_files:
@@ -452,9 +452,9 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
     # look for gate changes that affect all providers
     # note: config.yaml is handled specially below to allow provider-specific changes
     gate_globs = [
-        "tests/quality/*.py",
-        "tests/quality/.yardstick.yaml",
-        "tests/quality/.binny.yaml",
+        "tests/integration/*.py",
+        "tests/integration/.yardstick.yaml",
+        "tests/integration/.binny.yaml",
         ".github/workflows/pr-integration-tests.yaml",
         # shared code that affects all providers
         "src/vunnel/result.py",
