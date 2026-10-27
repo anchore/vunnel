@@ -24,13 +24,13 @@ runs:
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make quality-gate-db PROVIDER="$PROVIDER"
+      run: make integration:db PROVIDER="$PROVIDER"
 
     - name: Run the quality gate
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make quality-gate-run PROVIDER="$PROVIDER"
+      run: make integration:run PROVIDER="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -60,7 +60,7 @@ runs:
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
-        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/quality/.tool/yardstick\` after \`make quality-gate-tools\`):
+        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/quality/.tool/yardstick\` after \`make integration:tools\`):
         \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality

@@ -49,10 +49,10 @@ jobs:
         id: determine-providers
         run: |
           # be nice to folks troubleshooting in CI...
-          make quality-gate-show-changes
+          make integration:show-changes
 
           # determine which providers to run (to later populate the matrix)
-          content=`make quality-gate-select-providers`
+          content=`make integration:select-providers`
           echo $content
           echo "providers=$content" >> $GITHUB_OUTPUT
 

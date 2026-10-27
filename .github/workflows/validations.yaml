@@ -37,7 +37,7 @@ jobs:
         run: make static-analysis
 
       - name: Ensure quality gate tools are properly configured
-        run: make quality-gate-validate-tool-versions
+        run: make integration:validate-tool-versions
 
   Discover-Test-Envs:
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
