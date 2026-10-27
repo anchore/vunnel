@@ -422,7 +422,7 @@ Common reasons for needing Grype changes include:
 If you're using the developer shell (`make dev ...`) then you can run `make build-grype` to get a build of grype with your changes.
 
 
-#### **3. In Vunnel: add a new test case to `tests/quality/config.yaml` for the new provider.**
+#### **3. In Vunnel: add a new test case to `tests/integration/config.yaml` for the new provider.**
 
 The configuration maps a provider to test to specific images to test with, for example:
 ```yaml
@@ -441,17 +441,17 @@ Pick an image that has a good representation of the package types that your new 
 
 #### **4. In Vunnel: run the quality gate with your Grype branch.**
 
-The gate scans with the grype in `tests/quality/.tool/grype` (grype `main`, installed by `make integration:tools`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/tests/quality/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
+The gate scans with the grype in `tests/integration/.tool/grype` (grype `main`, installed by `make integration:tools`). If you have Grype changes, build them over it from your grype checkout with `go build -o <vunnel>/tests/integration/.tool/grype ./cmd/grype`. If you don't have any grype changes you can skip this step.
 
 
 #### **5. In Vunnel: run the quality gate.**
 
 ```bash
 # runs your specific provider to gather vulnerability data and builds a DB
-make integration:db PROVIDER=<your-provider-name>
+make integration:quality:db PROVIDER=<your-provider-name>
 
 # scans the provider's images with that DB and with a published DB, and scores both scans against the labels
-make integration:run PROVIDER=<your-provider-name>
+make integration:quality PROVIDER=<your-provider-name>
 ```
 
 You are looking for a passing run before continuing further.
@@ -459,22 +459,22 @@ You are looking for a passing run before continuing further.
 
 #### **6. Label what the gate could not judge.**
 
-A new provider's matches are mostly unlabeled at first. Label them in the [yardstick](https://github.com/anchore/yardstick) label UI, which writes labels into `tests/quality/additional-claims`:
+A new provider's matches are mostly unlabeled at first. Label them in the [yardstick](https://github.com/anchore/yardstick) label UI, which writes labels into `tests/integration/additional-claims`:
 
 ```bash
-cd tests/quality
+cd tests/integration
 yardstick claims serve <your-provider-name> --open
 
 # re-score with the new labels without scanning again
-yardstick score gates/<your-provider-name>.yaml
+make -C ../.. integration:quality:score PROVIDER=<your-provider-name>
 ```
 
-See [tests/quality/README.md](tests/quality/README.md) for more on the gate.
+See [tests/integration/README.md](tests/integration/README.md) for more on the gate.
 
 
 #### **7. Keep the new labels.**
 
-Commit the new files under `tests/quality/additional-claims` with your Vunnel PR. Labels that are useful beyond vunnel's gate belong in [anchore/claims](https://github.com/anchore/claims): open a pull request there, and the gate picks them up once it merges.
+Commit the new files under `tests/integration/additional-claims` with your Vunnel PR. Labels that are useful beyond vunnel's gate belong in [anchore/claims](https://github.com/anchore/claims): open a pull request there, and the gate picks them up once it merges.
 
 
 #### **8. In Vunnel: open a PR with your new provider.**
@@ -490,7 +490,7 @@ This is the same process as listed above with a few additional steps:
 
 1. You will need to add the new schema to the Vunnel repo in the `schemas` directory.
 2. Grype-DB will need to be updated to support the new schema in the `pkg/provider/unmarshal` and `pkg/process/v*` directories.
-3. To run the quality gate with your Grype-DB branch, build it over `tests/quality/.tool/grype-db` (`go build -o <vunnel>/tests/quality/.tool/grype-db ./cmd/grype-db` in the grype-db checkout).
+3. To run the quality gate with your Grype-DB branch, build it over `tests/integration/.tool/grype-db` (`go build -o <vunnel>/tests/integration/.tool/grype-db ./cmd/grype-db` in the grype-db checkout).
 4. CI always builds grype-db `main`, so the final Vunnel PR will not pass the quality gate until the Grype-DB PR is merged.
 
 

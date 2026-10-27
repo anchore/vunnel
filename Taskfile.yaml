@@ -38,7 +38,7 @@ env:
 includes:
   integration:
     taskfile: tasks.d/integration.yaml
-    dir: tests/quality
+    dir: tests/integration
 
 tasks:
 
@@ -190,13 +190,13 @@ tasks:
     desc: Run unit tests
     deps: [tools, tmpdir]
     cmds:
-      - "uv run pytest --cov vunnel -v --durations=10 tests/unit/"
+      - "uv run pytest --cov vunnel -v --durations=10 tests/unit/ tests/integration/test_configure.py"
 
   unit-coverage:
     desc: Run unit tests with HTML coverage report
     deps: [tools, tmpdir]
     cmds:
-      - "uv run pytest --cov vunnel --cov-report html -v --durations=10 tests/unit/"
+      - "uv run pytest --cov vunnel --cov-report html -v --durations=10 tests/unit/ tests/integration/test_configure.py"
 
   unit-matrix:
     desc: Run unit tests across multiple Python versions
