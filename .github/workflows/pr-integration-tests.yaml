@@ -95,6 +95,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   evaluate-integration-tests:
+    name: "Evaluate Integration Tests"
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
     needs:
       - validate-provider
