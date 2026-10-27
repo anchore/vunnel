@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from tests.integration.conftest import ConfigFixture
-
 
 class TestGetBaseRef:
     """Tests for get_base_ref() function."""
