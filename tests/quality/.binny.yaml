@@ -1,0 +1,32 @@
+# the quality gate's tools, kept out of the repo root's .binny.yaml so that `make tools` (and the
+# format, lint and type-check tasks that depend on it) never builds them. Installed into
+# tests/quality/.tool by `make integration:tools`.
+tools:
+  # used in quality gate to compare matching between the PR's DB and a published DB
+  - name: yardstick
+    version:
+      want: v0.17.0
+    method: github-release
+    with:
+      repo: anchore/yardstick
+
+  # used in quality gate (both setups scan with this one binary)
+  - name: grype
+    version:
+      want: main
+    method: go-install
+    with:
+      module: github.com/anchore/grype
+      entrypoint: cmd/grype
+
+  # used in quality gate to build the DB under test from this checkout's vunnel
+  - name: grype-db
+    version:
+      want: main
+    method: go-install
+    with:
+      module: github.com/anchore/grype-db
+      entrypoint: cmd/grype-db
+      ldflags:
+        # without this grype-db reports its version as "[not provided] (adhoc-build)"
+        - -X github.com/anchore/grype-db/cmd/grype-db/application.version={{ .Version }}

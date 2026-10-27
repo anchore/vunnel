@@ -20,26 +20,24 @@ runs:
       run: |
         echo "$GITHUB_TOKEN" | .tool/oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
-    - name: Capture vulnerability results
+    - name: Build the provider's DB
       shell: bash
-      working-directory: tests/quality
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make capture provider="$PROVIDER"
+      run: make integration:db PROVIDER="$PROVIDER"
 
-    - name: Validate provider results
+    - name: Run the quality gate
       shell: bash
-      working-directory: tests/quality
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make validate provider="$PROVIDER"
+      run: make integration:run PROVIDER="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
+      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/quality .yardstick.yaml "gates/$PROVIDER.yaml" .yardstick/runs
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -62,16 +60,18 @@ runs:
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
-        Then run the following commands to debug:
+        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/quality/.tool/yardstick\` after \`make integration:tools\`):
         \`\`\`bash
         # copy the archive to the tests/quality directory
         cd tests/quality
         unzip "$ARCHIVE_NAME" && tar -xzf "$ARCHIVE_BASENAME.tar.gz"
+        yardstick score gates/$PROVIDER.yaml
+        yardstick score gates/$PROVIDER.yaml -o table   # every check on every image
         \`\`\`
 
-        Now you can debug the provider with yardstick:
+        Now you can label what changed in the UI:
         \`\`\`bash
-        uv run yardstick result list
-        uv run yardstick label explore
+        yardstick claims serve $PROVIDER --open   # new labels go to tests/quality/additional-claims
+        yardstick score gates/$PROVIDER.yaml
         \`\`\`
         EOF

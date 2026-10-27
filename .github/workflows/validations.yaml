@@ -31,14 +31,13 @@ jobs:
           persist-credentials: false
 
       - name: Bootstrap environment
-        uses: ./.github/actions/bootstrap
+        uses: $/.github/actions/bootstrap
 
       - name: Run static analysis
         run: make static-analysis
 
       - name: Ensure quality gate tools are properly configured
-        run: |
-          cd tests/quality && make validate-test-tool-versions
+        run: make integration:validate-tool-versions
 
   Discover-Test-Envs:
     runs-on: runs-on=${{ github.run_id }}/cpu=2/ram=4+8/family=t4g+t3a+t3+m6g+m6a/spot=price-capacity-optimized/retry=when-interrupted
@@ -57,7 +56,7 @@ jobs:
           persist-credentials: false
 
       - name: Bootstrap environment
-        uses: ./.github/actions/bootstrap
+        uses: $/.github/actions/bootstrap
 
       - name: Get tox environments
         id: get-envs
@@ -87,7 +86,7 @@ jobs:
           persist-credentials: false
 
       - name: Bootstrap environment
-        uses: ./.github/actions/bootstrap
+        uses: $/.github/actions/bootstrap
 
       - name: Run unit tests
         env:

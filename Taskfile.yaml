@@ -35,6 +35,11 @@ vars:
 env:
   GNUMAKEFLAGS: '--no-print-directory'
 
+includes:
+  integration:
+    taskfile: tasks.d/integration.yaml
+    dir: tests/quality
+
 tasks:
 
   ## High-level tasks #################################

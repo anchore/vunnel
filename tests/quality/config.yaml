@@ -2,52 +2,13 @@ x-ref:
   default-validations: &default-validations
     max_f1_regression: 0.0
     max_new_false_negatives: 0
-    max_unlabeled_percent: 10
     max_year: 2021
-    candidate_tool_label: custom-db
 yardstick:
   default_max_year: 2021
 
-  tools:
-    - name: syft
-      # note: if there is ever a problem with the syft version, it can be pinned explicitly here (instead of "latest")
-      version: latest
-      produces: SBOM
-      refresh: false
-
-    - name: grype
-      label: custom-db
-      # allowed values:
-      #  - "latest" to use the latest released grype
-      #  - a released version name (e.g. "v0.52.1")
-      #  - a branch name (e.g. "dev-fix-foo")
-      #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
-      # Note:
-      #  - ALWAYS leave the "import-db" annotation as-is
-      #  - this version should ALWAYS match that of the other "grype" tool below
-      version: main+import-db=build/vulnerability.db
-      takes: SBOM
-
-    - name: grype
-      # allowed values:
-      #  - "latest" to use the latest released grype
-      #  - a released version name (e.g. "v0.52.1")
-      #  - a branch name (e.g. "dev-fix-foo")
-      #  - a repo reference and optional "@branch" (e.g. "github.com/my-user-fork/grype@dev-fix-foo")
-      # Note:
-      #  - this version should ALWAYS match that of the other "grype" tool above
-      version: main+import-db=https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.4_2026-05-13T00:47:21Z_1778657102.tar.zst
-      takes: SBOM
-      label: reference
-
-grype_db:
-  # values:
-  #  - "latest" to use the latest released grype-db
-  #  - a released version name (e.g. "v0.15.2")
-  #  - a branch name (e.g. "dev-fix-foo")
-  #  - a repo reference and optional "@branch" (e.g. "my-user-fork/grype-db@dev-fix-foo")
-  #  - a local file path (e.g. "file://~/code/grype-db")
-  version: main
+  # the published DB that the DB built from this vunnel is compared against. Both sides scan with
+  # grype main as installed by binny (see .binny.yaml).
+  reference_db: https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.4_2026-05-13T00:47:21Z_1778657102.tar.zst
 
 tests:
   - provider: alpine
@@ -57,7 +18,7 @@ tests:
         use_cache: true
     images:
       - docker.io/alpine:3.2@sha256:ddac200f3ebc9902fb8cfcd599f41feb2151f1118929da21bcef57dc276975f9
-      - docker.io/anchore/test_images:alpine-package-cpe-vuln-match-bd0aaef@sha256:0825acea611c7c5cc792bc7cc20de44d7413fd287dc5afc4aab9c1891d037b4f
+      - ghcr.io/anchore/test-images/alpine-package-cpe-vuln-match@sha256:0825acea611c7c5cc792bc7cc20de44d7413fd287dc5afc4aab9c1891d037b4f
     expected_namespaces:
       - alpine:distro:alpine:3.2
       - alpine:distro:alpine:3.3
@@ -107,7 +68,7 @@ tests:
         fail_on_empty_match_set: false
     images:
       - docker.io/amazonlinux:2@sha256:1301cc9f889f21dc45733df9e58034ac1c318202b4b0f0a08d88b3fdc03004de
-      - docker.io/anchore/test_images:vulnerabilities-amazonlinux-2-5c26ce9@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
+      - ghcr.io/anchore/test-images/vulnerabilities-amazonlinux-2@sha256:cf742eca189b02902a0a7926ac3fbb423e799937bf4358b0d2acc6cc36ab82aa
     expected_namespaces:
       - amazon:distro:amazonlinux:2
       - amazon:distro:amazonlinux:2022
@@ -116,7 +77,7 @@ tests:
   - provider: arch
     use_cache: true
     images:
-      - docker.io/anchore/test_images@sha256:a933b27534e5c911e2c660f7090aa497dee763fbbcb214a37207c2320cfedd98
+      - ghcr.io/anchore/test-images/archlinux@sha256:a933b27534e5c911e2c660f7090aa497dee763fbbcb214a37207c2320cfedd98
     expected_namespaces:
       - arch:distro:archlinux:rolling
     validations:
@@ -167,6 +128,8 @@ tests:
       - debian:distro:debian:13
       - debian:distro:debian:14
       - debian:distro:debian:unstable
+    validations:
+      - *default-validations
 
   - provider: fedora
     use_cache: true
@@ -214,15 +177,15 @@ tests:
     additional_trigger_globs:
       - src/vunnel/utils/fdb.py
     images:
-      - docker.io/anchore/test_images:java-56d52bc@sha256:10008791acbc5866de04108746a02a0c4029ce3a4400a9b3dad45d7f2245f9da
-      - docker.io/anchore/test_images:npm-56d52bc@sha256:ba42ded8613fc643d407a050faf5ab48cfb405ad3ef2015bf6feeb5dff44738d
-      - docker.io/anchore/test_images:gems-56d52bc@sha256:5763c8a225f950961bf01ddec68e36f18e236130e182f2b9290a6e03b9777bfe
-      - docker.io/anchore/test_images:golang-56d52bc@sha256:d1819e59e89e8ea90073460acb4ebb2ee18ccead9fa880dae91e8fc61b19ca1c
-      - docker.io/anchore/test_images:grype-quality-node-d89207b@sha256:f56164678054e5eb59ab838367373a49df723b324617b1ba6de775749d7f91d4
-      - docker.io/anchore/test_images:grype-quality-python-d89207b@sha256:b2b58a55c0b03c1626d2aaae2add9832208b02124dda7b7b41811e14f0fb272c
-      - docker.io/anchore/test_images:grype-quality-java-d89207b@sha256:b3534fc2e37943136d5b54e3a58b55d4ccd4363d926cf7aa5bf55a524cf8275b
-      - docker.io/anchore/test_images:grype-quality-golang-d89207b@sha256:7536ee345532f674ec9e448e3768db4e546c48220ba2b6ec9bc9cfbfb3b7b74a
-      - docker.io/anchore/test_images:grype-quality-ruby-d89207b@sha256:1a5a5f870924e88a6f0f2b8089cf276ef0a79b5244a052cdfe4a47bb9e5a2c10
+      - ghcr.io/anchore/test-images/java@sha256:10008791acbc5866de04108746a02a0c4029ce3a4400a9b3dad45d7f2245f9da
+      - ghcr.io/anchore/test-images/npm@sha256:ba42ded8613fc643d407a050faf5ab48cfb405ad3ef2015bf6feeb5dff44738d
+      - ghcr.io/anchore/test-images/gems@sha256:5763c8a225f950961bf01ddec68e36f18e236130e182f2b9290a6e03b9777bfe
+      - ghcr.io/anchore/test-images/golang@sha256:d1819e59e89e8ea90073460acb4ebb2ee18ccead9fa880dae91e8fc61b19ca1c
+      - ghcr.io/anchore/test-images/grype-quality-node@sha256:f56164678054e5eb59ab838367373a49df723b324617b1ba6de775749d7f91d4
+      - ghcr.io/anchore/test-images/grype-quality-python@sha256:b2b58a55c0b03c1626d2aaae2add9832208b02124dda7b7b41811e14f0fb272c
+      - ghcr.io/anchore/test-images/grype-quality-java@sha256:b3534fc2e37943136d5b54e3a58b55d4ccd4363d926cf7aa5bf55a524cf8275b
+      - ghcr.io/anchore/test-images/grype-quality-golang@sha256:7536ee345532f674ec9e448e3768db4e546c48220ba2b6ec9bc9cfbfb3b7b74a
+      - ghcr.io/anchore/test-images/grype-quality-ruby@sha256:1a5a5f870924e88a6f0f2b8089cf276ef0a79b5244a052cdfe4a47bb9e5a2c10
     expected_namespaces:
       - github:language:dart
       - github:language:dotnet
@@ -247,14 +210,13 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2026 # hummingbird is new
-        max_unlabeled_percent: 70 # hummingbird has data problems
 
 
   - provider: mariner
     use_cache: true
     images:
       - mcr.microsoft.com/cbl-mariner/base/core:2.0.20220731-amd64@sha256:3c0f7e103ff3c39e81e7c9c042d2b321d833fb6d26d8636567f7d88a6bdde74a
-      - docker.io/anchore/test_images:azurelinux3-63671fe@sha256:2d761ba36575ddd4e07d446f4f2a05448298c20e5bdcd3dedfbbc00f9865240d
+      - ghcr.io/anchore/test-images/azurelinux3@sha256:2d761ba36575ddd4e07d446f4f2a05448298c20e5bdcd3dedfbbc00f9865240d
     expected_namespaces:
       - mariner:distro:mariner:1.0
       - mariner:distro:mariner:2.0
@@ -262,7 +224,6 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2022 # important - Azure Linux 3 doesn't have much to match on going back to 2021
-        candidate_tool_label: custom-db
 
   - provider: minimos
     use_cache: true
@@ -280,7 +241,6 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2024 # important - minimOS is a new distro and older years don't find enough
-        candidate_tool_label: custom-db
 
   - provider: nvd
     # building nvd without cache takes ~3 hours
@@ -298,7 +258,7 @@ tests:
       - src/vunnel/providers/oracle/oval_parser.py
     images:
       - docker.io/oraclelinux:6@sha256:a06327c0f1d18d753f2a60bb17864c84a850bb6dcbcf5946dd1a8123f6e75495
-      - docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
+      - ghcr.io/anchore/test-images/appstreams-oraclelinux-8@sha256:c8d664b0e728d52f57eeb98ed1899c16d3b265f02ddfb41303d7a16c31e0b0f1
     expected_namespaces:
       - oracle:distro:oraclelinux:5
       - oracle:distro:oraclelinux:6
@@ -308,7 +268,7 @@ tests:
       - oracle:distro:oraclelinux:10
     validations:
       - <<: *default-validations
-        # TODO: docker.io/anchore/test_images:appstreams-oraclelinux-8-1a287dd@sha256:c8d664b0e728
+        # TODO: ghcr.io/anchore/test-images/appstreams-oraclelinux-8@sha256:c8d664b0e728
         # has no matches before 2022. Label more things, move max_year to 2022, and then
         # change fail_on_empty_match_set back to true (the default).
         max_year: 2021
@@ -323,8 +283,8 @@ tests:
       - docker.io/centos:6@sha256:3688aa867eb84332460e172b9250c9c198fdfd8d987605fd53f246f498c60bcf
       - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
       - docker.io/rockylinux:8@sha256:72afc2e1a20c9ddf56a81c51148ebcbe927c0a879849efe813bee77d69df1dd8
-      - docker.io/anchore/test_images:appstreams-centos-stream-8-1a287dd@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
-      - docker.io/anchore/test_images:appstreams-rhel-8-1a287dd@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
+      - ghcr.io/anchore/test-images/appstreams-centos-stream-8@sha256:808f6cf3cf4473eb39ff9bb47ead639d2ed71255b75b9b140162b58c6102bcc9
+      - ghcr.io/anchore/test-images/appstreams-rhel-8@sha256:524ff8a75f21fd886ec7ed82387766df386671e8b77e898d05786118d5b7880b
       - docker.io/anchore/test_images:vulnerabilities-centos@sha256:746d31247006cc06434ce91ccf3523b2c230ff6c378ffed7ca1c60bbb48ea86f
     validations:
       - *default-validations
@@ -381,7 +341,7 @@ tests:
       - docker.io/ubuntu:16.10@sha256:8dc9652808dc091400d7d5983949043a9f9c7132b15c14814275d25f94bca18a
       - docker.io/ubuntu:19.04@sha256:3db17bfc30b41cc18552578f4a66d7010050eb9fdc42bf6c3d82bb0dcdf88d58
       - docker.io/ubuntu:20.04@sha256:9d42d0e3e57bc067d10a75ee33bdd1a5298e95e5fc3c5d1fce98b455cb879249
-      - docker.io/anchore/test_images:vulnerabilities-ubuntu-20.04-8a033ba@sha256:f0f8e8ee94f8b5d9364f21ceffd50b7db7e19b1938271295eff8229b3cf56db2
+      - ghcr.io/anchore/test-images/vulnerabilities-ubuntu-20.04@sha256:f0f8e8ee94f8b5d9364f21ceffd50b7db7e19b1938271295eff8229b3cf56db2
       - docker.io/ubuntu:22.04@sha256:aa6c2c047467afc828e77e306041b7fa4a65734fe3449a54aa9c280822b0d87d
       - docker.io/ubuntu:22.10@sha256:80fb4ea0c0a384a3072a6be1879c342bb636b0d105209535ba893ba75ab38ede
       - docker.io/ubuntu:23.04@sha256:09f035f46361d193ded647342903b413d57d05cc06acff8285f9dda9f2d269d5
@@ -446,7 +406,7 @@ tests:
       - name: rhel
         use_cache: true
     images:
-      - docker.io/anchore/test_images:almalinux8-271722c@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
+      - ghcr.io/anchore/test-images/almalinux8@sha256:6485db654df0452bd15ea71ec43e808bc8eb05b91f1c2754669a5573479a6c19
       - docker.io/almalinux:8@sha256:cd49d7250ed7bb194d502d8a3e50bd775055ca275d1d9c2785aea72b890afe6a
     expected_namespaces:
       - almalinux:distro:almalinux:8
@@ -458,12 +418,11 @@ tests:
     validations:
       - <<: *default-validations
         max_year: 2022
-        candidate_tool_label: custom-db
 
   - provider: photon
     use_cache: true
     images:
-      - docker.io/anchore/test_images:photon4-bcdb8f0@sha256:1fcd94525a47fa3fb959e6c82fec473df477d256fbb520ab4d06b69769e52470
+      - ghcr.io/anchore/test-images/photon4@sha256:1fcd94525a47fa3fb959e6c82fec473df477d256fbb520ab4d06b69769e52470
     expected_namespaces:
       - photon:distro:photon:3.0
       - photon:distro:photon:4.0

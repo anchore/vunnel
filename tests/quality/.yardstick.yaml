@@ -1,0 +1,9 @@
+# the Go yardstick's app config: every gate in gates/ reads its labels and SBOMs from these, in order.
+# a later source wins on the same label, and new labels are written to the last one.
+#   - the published anchore/claims corpus
+#   - grype's quality gate labels (test/quality/additional-claims on grype main)
+#   - this repo's own labels (tests/quality/additional-claims)
+claims:
+  - github.com/anchore/claims@main
+  - github.com/anchore/grype/test/quality/additional-claims@main
+  - ./additional-claims

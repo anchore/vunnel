@@ -7,8 +7,6 @@ import glob
 import json
 import logging
 import os
-import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -18,26 +16,20 @@ from typing import Any
 import click
 import mergedeep
 import oras.client
-import requests
 import yaml
+from mashumaro.config import BaseConfig
 from mashumaro.mixins.dict import DataClassDictMixin
-from yardstick.cli.config import Application as YardstickApplication
-from yardstick.cli.config import (
-    ResultSet,
-    ScanMatrix,
-    Tool,
-    Validation,
-)
 
 from vunnel import providers as vunnel_providers
 
-BIN_DIR = "./bin"
-CLONE_DIR = f"{BIN_DIR}/grype-db-src"
-GRYPE_DB = f"{BIN_DIR}/grype-db"
+# installed by binny from .binny.yaml, like the gate's grype and yardstick
+GRYPE_DB = ".tool/grype-db"
+GATES_DIR = "gates"
+BINNY_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".binny.yaml")
 
-
-class Application(YardstickApplication, DataClassDictMixin):
-    pass
+# paths in a gate file resolve against the gate file's directory (tests/quality/gates)
+GATE_GRYPE = "../.tool/grype"
+GATE_CANDIDATE_DB = "../build/vulnerability.db"
 
 
 @dataclass
@@ -49,7 +41,20 @@ class ConfigurationState(DataClassDictMixin):
 @dataclass
 class Yardstick:
     default_max_year: int = 2021
-    tools: list[Tool] = field(default_factory=list)
+    # the published DB the PR's DB is compared against
+    reference_db: str = ""
+
+
+@dataclass
+class Validation(DataClassDictMixin):
+    class Config(BaseConfig):
+        # a removed knob (e.g. max_unlabeled_percent) should fail loudly, not be ignored
+        forbid_extra_keys = True
+
+    max_f1_regression: float = 0.0
+    max_new_false_negatives: int = 0
+    max_year: int | None = None
+    fail_on_empty_match_set: bool = True
 
 
 @dataclass
@@ -70,14 +75,8 @@ class Test:
 
 
 @dataclass
-class GrypeDB:
-    version: str = "latest"
-
-
-@dataclass
 class Config(DataClassDictMixin):
     yardstick: Yardstick = field(default_factory=Yardstick)
-    grype_db: GrypeDB = field(default_factory=GrypeDB)
     tests: list[Test] = field(default_factory=list)
 
     @classmethod
@@ -105,32 +104,38 @@ class Config(DataClassDictMixin):
 
         return cfg
 
-    def yardstick_application_config(self, test_configurations: list[Test]) -> Application:
-        # tests is the set of providers explicitly requested
-        # each provider is associated with the set of images it needs to scan
-        # and the set of validations it needs to perform.
-        images = []
-        for test in test_configurations:
-            images += test.images
-            for validation in test.validations:
-                if test.expected_namespaces:
-                    validation.allowed_namespaces = test.expected_namespaces
+    def gate(self, test: Test) -> dict[str, Any]:
+        """the yardstick gate file for one provider's test, as a dict ready to dump to YAML"""
+        if len(test.validations) != 1:
+            raise ValueError(f"provider {test.provider!r} must have exactly one validation, has {len(test.validations)}")
+        if not self.yardstick.reference_db:
+            raise ValueError("yardstick.reference_db is not set")
+        v = test.validations[0]
 
-        def result_set_from_test(t: Test) -> ResultSet:
-            return ResultSet(
-                description=f"latest vulnerability data vs current vunnel data with latest grype tooling (via SBOM ingestion) for {test.provider}",
-                validations=test.validations,
-                matrix=ScanMatrix(
-                    images=t.images,
-                    tools=self.yardstick.tools,
-                ),
-            )
+        # old yardstick semantics: expected_namespaces filtered matches, it never required them to be present
+        vulnerabilities: dict[str, Any] = {"maxYear": v.max_year if v.max_year is not None else self.yardstick.default_max_year}
+        if test.expected_namespaces:
+            vulnerabilities["namespaces"] = list(test.expected_namespaces)
 
-        result_sets = {f"pr_vs_latest_via_sbom_{test.provider}": result_set_from_test(test) for test in test_configurations}
-        return Application(
-            default_max_year=self.yardstick.default_max_year,
-            result_sets=result_sets,
-        )
+        checks: list[dict[str, Any]] = [
+            {"name": "f1NotWorse", "params": {"tolerance": v.max_f1_regression}},
+            {"name": "noNewFalseNegatives", "params": {"max": v.max_new_false_negatives}},
+            # yardstick adds matchesAtLeast with min 1 to a gate that leaves it out, so min 0 is the only way to turn it off
+            {"name": "matchesAtLeast", "params": {"min": 1 if v.fail_on_empty_match_set else 0}},
+        ]
+
+        return {
+            "schema": "v1",
+            "name": test.provider,
+            "description": f"grype main with a DB built from this vunnel vs a published DB, for {test.provider}",
+            "candidate": {"grype": GATE_GRYPE, "db": GATE_CANDIDATE_DB},
+            "reference": {"grype": GATE_GRYPE, "db": self.yardstick.reference_db},
+            # unlabeled deltas leave the F1/FN checks undecided. These gates are diff-based, so only a decided regression fails
+            "undecided": "pass",
+            "subjects": [f"oci:{image}" for image in test.images],
+            "vulnerabilities": vulnerabilities,
+            "checks": checks,
+        }
 
     def test_configuration_by_provider(self, provider: str) -> Test | None:
         for test in self.tests:
@@ -138,7 +143,7 @@ class Config(DataClassDictMixin):
                 return test
         return None
 
-    def provider_data_source(self, providers: list[str]) -> tuple[list[str], list[str], Application]:
+    def provider_data_source(self, providers: list[str]) -> tuple[list[str], list[str], list[Test]]:
         cached_providers = []
         uncached_providers = []
 
@@ -170,7 +175,7 @@ class Config(DataClassDictMixin):
             if provider in cached_providers and provider not in providers_under_test_that_require_cache:
                 cached_providers.remove(provider)
 
-        return cached_providers, uncached_providers, self.yardstick_application_config(tests)
+        return cached_providers, uncached_providers, tests
 
 
 @click.option("--verbose", "-v", default=False, help="show more logs", is_flag=True)
@@ -292,11 +297,13 @@ def read_config_state(path: str = ".state.yaml"):
         return ConfigurationState()
 
 
-def write_yardstick_config(cfg: Application, path: str = ".yardstick.yaml"):
-    logging.info(f"writing yardstick config to {path!r}")
-
-    with open(path, "w") as f:
-        f.write(yaml.dump(cfg.to_dict()))
+def write_gates(cfg: Config, tests: list[Test], gates_dir: str = GATES_DIR):
+    os.makedirs(gates_dir, exist_ok=True)
+    for test in tests:
+        path = os.path.join(gates_dir, f"{test.provider}.yaml")
+        logging.info(f"writing yardstick gate to {path!r}")
+        with open(path, "w") as f:
+            f.write(yaml.safe_dump(cfg.gate(test), sort_keys=False))
 
 
 def write_grype_db_config(providers: set[str], path: str = ".grype-db.yaml"):
@@ -396,9 +403,8 @@ def config_yaml_changes(changed_files: list[str]) -> tuple[bool, set[str]]:
 
     # Check if global settings changed - these affect all providers
     # x-ref contains YAML anchors that can be referenced by any provider
-    # yardstick contains tool versions (syft, grype) used for all tests
-    # grype_db contains the grype-db version used for building test DBs
-    global_keys = ["x-ref", "yardstick", "grype_db"]
+    # yardstick contains the reference DB and default max year used for all tests
+    global_keys = ["x-ref", "yardstick"]
     for key in global_keys:
         old_val = old_config.get(key)
         new_val = new_config.get(key)
@@ -447,9 +453,9 @@ def select_providers(cfg: Config, output_json: bool, tag: str | None):
     # note: config.yaml is handled specially below to allow provider-specific changes
     gate_globs = [
         "tests/quality/*.py",
-        "tests/quality/vulnerability-match-labels/**",
-        ".github/workflows/pr-quality-gate.yaml",
-        ".github/workflows/nightly-quality-gate.yaml",
+        "tests/quality/.yardstick.yaml",
+        "tests/quality/.binny.yaml",
+        ".github/workflows/pr-integration-tests.yaml",
         # shared code that affects all providers
         "src/vunnel/result.py",
         "src/vunnel/provider.py",
@@ -538,27 +544,18 @@ def all_providers(cfg: Config, output_json: bool, tag: str | None):
     help="Pass/Fail to indicate if production versions of grype and grype-db are used when testing",
 )
 @click.pass_obj
-def validate_test_tool_versions(cfg: Config):
+def validate_test_tool_versions(_: Config):
     logging.info("validating test tool versions")
 
     reasons = []
 
-    logging.info(f"grype-db version: {cfg.grype_db.version!r}")
-    if cfg.grype_db.version != "main":
-        reasons.append("grype-db version is not main")
-
-    for idx, tool in enumerate(cfg.yardstick.tools):
-        if tool.name != "grype":
-            continue
-
-        label = tool.label
-        if not label:
-            label = ""
-
-        logging.info(f"grype version (index={idx+1} label={label}): {tool.version!r}")
-
-        if tool.version != "main" and not tool.version.startswith("main+"):
-            reasons.append(f"grype version is not main (index {idx+1})")
+    with open(BINNY_CONFIG) as f:
+        binny_tools = yaml.safe_load(f).get("tools", [])
+    for name in ["grype", "grype-db"]:
+        versions = [t.get("version", {}).get("want") for t in binny_tools if t.get("name") == name]
+        logging.info(f"{name} version (.binny.yaml): {versions!r}")
+        if versions != ["main"]:
+            reasons.append(f"{name} version in .binny.yaml is not main")
 
     for reason in reasons:
         logging.error(reason)
@@ -569,13 +566,13 @@ def validate_test_tool_versions(cfg: Config):
     print("PASS")
 
 
-@cli.command(name="configure", help="setup yardstick and grype-db configurations for building a DB")
+@cli.command(name="configure", help="write the yardstick gates and grype-db configuration for building a DB")
 @click.argument("provider_names", metavar="PROVIDER", nargs=-1, required=True)
 @click.pass_obj
 def configure(cfg: Config, provider_names: list[str]):
-    logging.info(f"preparing yardstick and grype-db configurations with {provider_names!r}")
+    logging.info(f"preparing yardstick gates and grype-db configuration with {provider_names!r}")
 
-    cached_providers, uncached_providers, yardstick_app_cfg = cfg.provider_data_source(provider_names)
+    cached_providers, uncached_providers, tests = cfg.provider_data_source(provider_names)
 
     logging.info(f"providers uncached={uncached_providers!r} cached={cached_providers!r}")
 
@@ -587,112 +584,11 @@ def configure(cfg: Config, provider_names: list[str]):
 
     logging.info(f"writing grype-db config for {' '.join(providers)}")
     write_grype_db_config(providers)
-    write_yardstick_config(yardstick_app_cfg)
+    write_gates(cfg, tests)
 
     write_config_state(cached_providers, uncached_providers)
 
-    _install_grype_db(cfg.grype_db.version)
-
     return cached_providers, uncached_providers
-
-
-@cli.command(name="install", help="install tooling (currently only grype-db)")
-@click.pass_obj
-def install(cfg: Config):
-    _install_grype_db(cfg.grype_db.version)
-
-
-def _install_grype_db(input: str):
-    os.makedirs(BIN_DIR, exist_ok=True)
-
-    version = input
-    is_semver = re.match(r"v\d+\.\d+\.\d+", input)
-    repo_user_and_name = "anchore/grype-db"
-    using_local_file = input.startswith("file://")
-    clone_dir = CLONE_DIR
-
-    if using_local_file:
-        clone_dir = os.path.expanduser(input.replace("file://", ""))
-    else:
-        if "/" in input:
-            # this is a fork...
-            if "@" in input:
-                # ... with a branch specification
-                repo_user_and_name, version = input.split("@")
-            else:
-                repo_user_and_name = input
-                version = "main"
-
-    repo_url = f"https://github.com/{repo_user_and_name}"
-
-    if input == "latest":
-        version = (
-            requests.get("https://github.com/anchore/grype-db/releases/latest", headers={"Accept": "application/json"})
-            .json()
-            .get("tag_name", "")
-        )
-        logging.info(f"latest released grype-db version is {version!r}")
-
-    elif is_semver:
-        install_version = version
-        if os.path.exists(GRYPE_DB):
-            existing_version = (
-                subprocess.check_output([f"{BIN_DIR}/grype-db", "--version"]).decode("utf-8").strip().split(" ")[-1]
-            )
-            if existing_version == install_version:
-                logging.info(f"grype-db already installed at version {install_version!r}")
-                return
-            else:
-                logging.info(f"updating grype-db from version {existing_version!r} to {install_version!r}")
-
-    if using_local_file:
-        _install_from_user_source(bin_dir=BIN_DIR, clone_dir=clone_dir)
-    else:
-        _install_from_clone(
-            bin_dir=BIN_DIR, checkout=version, clone_dir=clone_dir, repo_url=repo_url, repo_user_and_name=repo_user_and_name
-        )
-
-
-def _install_from_clone(bin_dir: str, checkout: str, clone_dir: str, repo_url: str, repo_user_and_name: str):
-    logging.info(f"creating grype-db repo at {clone_dir!r} from {repo_url}")
-
-    if os.path.exists(clone_dir):
-        remote_url = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=clone_dir).decode().strip()
-        if not remote_url.endswith(repo_user_and_name) or remote_url.endswith(repo_user_and_name + ".git"):
-            logging.info(f"removing grype-db clone at {clone_dir!r} because remote url does not match {repo_url!r}")
-            shutil.rmtree(clone_dir)
-
-    if not os.path.exists(clone_dir):
-        subprocess.run(["git", "clone", repo_url, clone_dir], check=True)
-    else:
-        subprocess.run(["git", "fetch", "--all"], cwd=clone_dir, check=True)
-
-    # use origin/{checkout} to ensure we get the latest fetched ref, not a stale local branch
-    # fall back to {checkout} directly for tags or if origin/{checkout} doesn't exist
-    result = subprocess.run(["git", "-c", "advice.detachedHead=false", "checkout", f"origin/{checkout}"], cwd=clone_dir)
-    if result.returncode != 0:
-        subprocess.run(["git", "checkout", checkout], cwd=clone_dir, check=True)
-
-    install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
-
-    _build_grype_db(bin_dir=bin_dir, install_version=install_version, clone_dir=clone_dir)
-
-
-def _install_from_user_source(bin_dir: str, clone_dir: str):
-    logging.info(f"using user grype-db repo at {clone_dir!r}")
-    install_version = subprocess.check_output(["git", "describe", "--always", "--tags"], cwd=clone_dir).decode("utf-8").strip()
-    _build_grype_db(bin_dir=bin_dir, install_version=install_version, clone_dir=clone_dir)
-
-
-def _build_grype_db(bin_dir: str, install_version: str, clone_dir: str):
-    logging.info(f"installing grype-db at version {install_version!r}")
-
-    abs_bin_path = os.path.abspath(bin_dir)
-    cmd = f"go build -v -ldflags=\"-X 'github.com/anchore/grype-db/cmd/grype-db/application.version={install_version}'\" -o {abs_bin_path} ./cmd/grype-db"
-
-    logging.info(f"building grype-db: {cmd}")
-
-    subprocess.run(shlex.split(cmd), cwd=clone_dir, env=os.environ, check=True)
 
 
 def cache_file_path(provider: str) -> str:
