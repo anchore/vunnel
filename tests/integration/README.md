@@ -11,11 +11,13 @@ The quality gate checks that a vunnel change does not make grype's matching wors
 ## Getting started
 
 ```
-make integration:db PROVIDER=alpine    # build a DB for the provider from this checkout
-make integration:run PROVIDER=alpine   # get SBOMs, scan with both setups and score; exits 1 when the gate fails
+make integration PROVIDER=alpine                 # run every integration suite (the quality gate, so far)
+make integration:quality:db PROVIDER=alpine      # build a DB for the provider from this checkout
+make integration:quality PROVIDER=alpine         # get SBOMs, scan with both setups and score; exits 1 when the gate fails
+make integration:quality:score PROVIDER=alpine   # re-score the last scans against the current labels, without scanning
 ```
 
-Both install the gate's tools first: yardstick from its GitHub release, grype and grype-db with `go install`. `make integration:db` pulls cached provider data from `ghcr.io`, so it needs Go and an `oras login ghcr.io`.
+Each installs the gate's tools first: yardstick from its GitHub release, grype and grype-db with `go install`. `make integration:quality:db` pulls cached provider data from `ghcr.io`, so it needs Go and an `oras login ghcr.io`.
 
 ## What is the quality gate criteria
 
@@ -118,7 +120,7 @@ to keep in mind:
 
 ## Workflow
 
-When the gate fails, `make integration:run` prints what changed between the two setups, grouped by cause, with the labels each change hits and what labeling the unlabeled ones would do to the verdict. Some failures are real regressions in the provider, and some only need labels.
+When the gate fails, `make integration:quality` prints what changed between the two setups, grouped by cause, with the labels each change hits and what labeling the unlabeled ones would do to the verdict. Some failures are real regressions in the provider, and some only need labels.
 
 The commands below run in `tests/integration`, with `yardstick` meaning `.tool/yardstick` there. To label, use the yardstick label UI:
 

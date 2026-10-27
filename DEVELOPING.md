@@ -448,10 +448,10 @@ The gate scans with the grype in `tests/integration/.tool/grype` (grype `main`, 
 
 ```bash
 # runs your specific provider to gather vulnerability data and builds a DB
-make integration:db PROVIDER=<your-provider-name>
+make integration:quality:db PROVIDER=<your-provider-name>
 
 # scans the provider's images with that DB and with a published DB, and scores both scans against the labels
-make integration:run PROVIDER=<your-provider-name>
+make integration:quality PROVIDER=<your-provider-name>
 ```
 
 You are looking for a passing run before continuing further.
@@ -466,7 +466,7 @@ cd tests/integration
 yardstick claims serve <your-provider-name> --open
 
 # re-score with the new labels without scanning again
-yardstick score gates/<your-provider-name>.yaml
+make -C ../.. integration:quality:score PROVIDER=<your-provider-name>
 ```
 
 See [tests/integration/README.md](tests/integration/README.md) for more on the gate.

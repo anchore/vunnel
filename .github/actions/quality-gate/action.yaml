@@ -24,13 +24,13 @@ runs:
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make integration:db PROVIDER="$PROVIDER"
+      run: make integration:quality:db PROVIDER="$PROVIDER"
 
     - name: Run the quality gate
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make integration:run PROVIDER="$PROVIDER"
+      run: make integration:quality PROVIDER="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}

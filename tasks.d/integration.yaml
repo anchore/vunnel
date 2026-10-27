@@ -1,9 +1,15 @@
 version: "3"
 
-# the quality gate (see tests/integration/README.md), included from the root Taskfile under the integration
-# namespace and run in tests/integration.
+# the integration suites (see tests/integration/README.md), included from the root Taskfile under the integration
+# namespace and run in tests/integration. The quality gate is the only suite, so far.
 
 tasks:
+
+  default:
+    desc: Run every integration suite for PROVIDER, building its DB first (exits 1 when a suite fails)
+    cmds:
+      - task: quality:db
+      - task: quality
 
   tools:
     desc: Install the quality gate's tools from tests/integration/.binny.yaml into tests/integration/.tool
@@ -14,7 +20,7 @@ tasks:
     cmd: "{{ .ROOT_DIR }}/{{ .BINNY }} install -v -c .binny.yaml"
     silent: true
 
-  db:
+  quality:db:
     desc: Build a grype DB for PROVIDER from this checkout (plus cached data for the providers it needs)
     deps: [tools]
     requires:
@@ -24,13 +30,20 @@ tasks:
       - "uv run python ./configure.py configure {{ .PROVIDER }}"
       - "uv run python ./configure.py build-db"
 
-  run:
-    desc: Run PROVIDER's gate against the DB from integration:db (exits 1 when the gate fails)
+  quality:
+    desc: Run PROVIDER's gate against the DB from integration:quality:db (exits 1 when the gate fails)
     deps: [tools]
     requires:
       vars: [PROVIDER]
     # collects SBOMs, scans with both setups and scores in one step, writing .yardstick/runs either way
     cmd: ".tool/yardstick gates/{{ .PROVIDER }}.yaml"
+
+  quality:score:
+    desc: Re-score PROVIDER's last gate scans against the current labels, without scanning
+    deps: [tools]
+    requires:
+      vars: [PROVIDER]
+    cmd: ".tool/yardstick score gates/{{ .PROVIDER }}.yaml {{ .CLI_ARGS }}"
 
   select-providers:
     desc: Print the providers affected by the current changeset as a JSON list (TAG filters by vunnel tag)
