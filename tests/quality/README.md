@@ -15,7 +15,7 @@ make quality-gate-db PROVIDER=alpine    # build a DB for the provider from this 
 make quality-gate-run PROVIDER=alpine   # get SBOMs, scan with both setups and score; exits 1 when the gate fails
 ```
 
-Both install the gate's tools first. The tools are built with `go install`, and `make quality-gate-db` pulls cached provider data from `ghcr.io`, so it needs Go and an `oras login ghcr.io`.
+Both install the gate's tools first: yardstick from its GitHub release, grype and grype-db with `go install`. `make quality-gate-db` pulls cached provider data from `ghcr.io`, so it needs Go and an `oras login ghcr.io`.
 
 ## What is the quality gate criteria
 
@@ -120,7 +120,7 @@ to keep in mind:
 
 When the gate fails, `make quality-gate-run` prints what changed between the two setups, grouped by cause, with the labels each change hits and what labeling the unlabeled ones would do to the verdict. Some failures are real regressions in the provider, and some only need labels.
 
-The commands below run in `tests/quality`, with `yardstick` meaning `.tool/yardstick` there. To label, use the yardstick label UI (it needs yardstick from the [installer](https://github.com/anchore/yardstick#installation), since a `go install` build has no UI):
+The commands below run in `tests/quality`, with `yardstick` meaning `.tool/yardstick` there. To label, use the yardstick label UI:
 
 ```
 yardstick claims serve <provider> --open
