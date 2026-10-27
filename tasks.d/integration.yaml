@@ -35,15 +35,16 @@ tasks:
     deps: [tools]
     requires:
       vars: [PROVIDER]
-    # collects SBOMs, scans with both setups and scores in one step, writing .yardstick/runs either way
-    cmd: ".tool/yardstick gates/{{ .PROVIDER }}.yaml"
+    # collects SBOMs, scans with both setups and scores in one step, writing .yardstick/runs either way. yardstick
+    # shows progress only on a terminal, so CI gets its logs instead of nothing until the verdict
+    cmd: ".tool/yardstick {{ if .CI }}-v {{ end }}gates/{{ .PROVIDER }}.yaml"
 
   quality:score:
     desc: Re-score PROVIDER's last gate scans against the current labels, without scanning
     deps: [tools]
     requires:
       vars: [PROVIDER]
-    cmd: ".tool/yardstick score gates/{{ .PROVIDER }}.yaml {{ .CLI_ARGS }}"
+    cmd: ".tool/yardstick score {{ if .CI }}-v {{ end }}gates/{{ .PROVIDER }}.yaml {{ .CLI_ARGS }}"
 
   select-providers:
     desc: Print the providers affected by the current changeset as a JSON list (TAG filters by vunnel tag)
