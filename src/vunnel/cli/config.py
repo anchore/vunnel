@@ -62,6 +62,7 @@ class Providers:
     minimos: providers.minimos.Config = field(default_factory=providers.minimos.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)
     oracle: providers.oracle.Config = field(default_factory=providers.oracle.Config)
+    rapidfort: providers.rapidfort.Config = field(default_factory=providers.rapidfort.Config)
     rhel: providers.rhel.Config = field(default_factory=providers.rhel.Config)
     rocky: providers.rocky.Config = field(default_factory=providers.rocky.Config)
     secureos: providers.secureos.Config = field(default_factory=providers.secureos.Config)
