@@ -1,6 +1,6 @@
 venv
-.yardstick/tools
-.yardstick/result
+.yardstick/
+gates/
 stage
 pull
 migrate.py
@@ -9,6 +9,6 @@ bin/
 .grype-db.yaml
 build/
 *.tar.gz
-.yardstick.yaml
 .grype-db.yaml
 .state.yaml
+.tool/

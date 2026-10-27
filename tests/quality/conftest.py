@@ -150,7 +150,6 @@ class ConfigFixture:
     """Helper for creating config.yaml content for tests."""
 
     yardstick: dict = field(default_factory=lambda: {"default_max_year": 2021})
-    grype_db: dict = field(default_factory=lambda: {"version": "main"})
     x_ref: dict | None = None
     tests: list[dict] = field(default_factory=list)
 
@@ -160,7 +159,6 @@ class ConfigFixture:
 
         data = {
             "yardstick": self.yardstick,
-            "grype_db": self.grype_db,
             "tests": self.tests,
         }
         if self.x_ref is not None:
