@@ -38,7 +38,7 @@ env:
 includes:
   integration:
     taskfile: tasks.d/integration.yaml
-    dir: tests/quality
+    dir: tests/integration
 
 tasks:
 

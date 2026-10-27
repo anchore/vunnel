@@ -1,10 +1,10 @@
-"""Unit tests for tests/quality/configure.py."""
+"""Unit tests for tests/integration/configure.py."""
 
 from __future__ import annotations
 
 import pytest
 
-from tests.quality.conftest import ConfigFixture
+from tests.integration.conftest import ConfigFixture
 
 
 class TestGetBaseRef:
@@ -14,7 +14,7 @@ class TestGetBaseRef:
         """When GITHUB_BASE_REF is not set, returns origin/main."""
         monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
 
-        from tests.quality.configure import get_base_ref
+        from tests.integration.configure import get_base_ref
 
         assert get_base_ref() == "origin/main"
 
@@ -22,7 +22,7 @@ class TestGetBaseRef:
         """Uses GITHUB_BASE_REF when set."""
         monkeypatch.setenv("GITHUB_BASE_REF", "develop")
 
-        from tests.quality.configure import get_base_ref
+        from tests.integration.configure import get_base_ref
 
         assert get_base_ref() == "origin/develop"
 
@@ -30,7 +30,7 @@ class TestGetBaseRef:
         """Falls back to origin/main when GITHUB_BASE_REF is empty string."""
         monkeypatch.setenv("GITHUB_BASE_REF", "")
 
-        from tests.quality.configure import get_base_ref
+        from tests.integration.configure import get_base_ref
 
         assert get_base_ref() == "origin/main"
 
@@ -38,7 +38,7 @@ class TestGetBaseRef:
         """When GITHUB_BASE_REF already has slash, doesn't add origin/ prefix."""
         monkeypatch.setenv("GITHUB_BASE_REF", "upstream/feature")
 
-        from tests.quality.configure import get_base_ref
+        from tests.integration.configure import get_base_ref
 
         assert get_base_ref() == "upstream/feature"
 
@@ -51,7 +51,7 @@ class TestConfigYamlChanges:
         state = configure_test_harness
         state.changed_files = ["src/vunnel/providers/alpine/parser.py"]
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -61,11 +61,11 @@ class TestConfigYamlChanges:
     def test_new_config_file_triggers_global_change(self, configure_test_harness):
         """When config.yaml is new (doesn't exist in base), returns global change."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
         # Don't set base_file_contents - simulates file not existing in base branch
         state.local_file_contents = {"config.yaml": "yardstick:\n  default_max_year: 2021\n"}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -74,13 +74,13 @@ class TestConfigYamlChanges:
     def test_missing_local_config_triggers_global_change(self, configure_test_harness):
         """When config.yaml doesn't exist locally, returns global change."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
         state.base_file_contents = {
-            "tests/quality/config.yaml": "yardstick:\n  default_max_year: 2021\n"
+            "tests/integration/config.yaml": "yardstick:\n  default_max_year: 2021\n"
         }
         # Don't set local_file_contents - simulates file not found
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -89,7 +89,7 @@ class TestConfigYamlChanges:
     def test_yardstick_change_triggers_global(self, configure_test_harness, config_fixture):
         """When yardstick settings change, all providers are affected."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         old_config = config_fixture()
         old_config.yardstick = {"default_max_year": 2021}
@@ -97,10 +97,10 @@ class TestConfigYamlChanges:
         new_config = config_fixture()
         new_config.yardstick = {"default_max_year": 2022}  # Changed!
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
+        state.base_file_contents = {"tests/integration/config.yaml": old_config.to_yaml()}
         state.local_file_contents = {"config.yaml": new_config.to_yaml()}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -109,7 +109,7 @@ class TestConfigYamlChanges:
     def test_xref_change_triggers_global(self, configure_test_harness, config_fixture):
         """When x-ref (YAML anchors) change, all providers are affected."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         old_config = config_fixture()
         old_config.x_ref = {"default-validations": {"max_f1_regression": 0.0}}
@@ -117,10 +117,10 @@ class TestConfigYamlChanges:
         new_config = config_fixture()
         new_config.x_ref = {"default-validations": {"max_f1_regression": 0.1}}  # Changed!
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
+        state.base_file_contents = {"tests/integration/config.yaml": old_config.to_yaml()}
         state.local_file_contents = {"config.yaml": new_config.to_yaml()}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -129,7 +129,7 @@ class TestConfigYamlChanges:
     def test_provider_specific_change_returns_provider(self, configure_test_harness, config_fixture):
         """When only a provider's config changes, only that provider is returned."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         old_config = config_fixture()
         old_config.with_provider("alpine", images=["old-image:v1"])
@@ -139,10 +139,10 @@ class TestConfigYamlChanges:
         new_config.with_provider("alpine", images=["new-image:v2"])  # Changed!
         new_config.with_provider("amazon", images=["amazon-image:v1"])  # Unchanged
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
+        state.base_file_contents = {"tests/integration/config.yaml": old_config.to_yaml()}
         state.local_file_contents = {"config.yaml": new_config.to_yaml()}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -152,7 +152,7 @@ class TestConfigYamlChanges:
     def test_new_provider_returns_that_provider(self, configure_test_harness, config_fixture):
         """When a new provider is added, it's returned in the set."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         old_config = config_fixture()
         old_config.with_provider("alpine", images=["alpine-image:v1"])
@@ -161,10 +161,10 @@ class TestConfigYamlChanges:
         new_config.with_provider("alpine", images=["alpine-image:v1"])
         new_config.with_provider("amazon", images=["amazon-image:v1"])  # New!
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
+        state.base_file_contents = {"tests/integration/config.yaml": old_config.to_yaml()}
         state.local_file_contents = {"config.yaml": new_config.to_yaml()}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -174,7 +174,7 @@ class TestConfigYamlChanges:
     def test_removed_provider_not_returned(self, configure_test_harness, config_fixture):
         """When a provider is removed, it's not in the returned set (no testing needed)."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         old_config = config_fixture()
         old_config.with_provider("alpine", images=["alpine-image:v1"])
@@ -184,10 +184,10 @@ class TestConfigYamlChanges:
         new_config.with_provider("alpine", images=["alpine-image:v1"])
         # amazon removed
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
+        state.base_file_contents = {"tests/integration/config.yaml": old_config.to_yaml()}
         state.local_file_contents = {"config.yaml": new_config.to_yaml()}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -197,7 +197,7 @@ class TestConfigYamlChanges:
     def test_multiple_provider_changes(self, configure_test_harness, config_fixture):
         """When multiple providers change, all are returned."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         old_config = config_fixture()
         old_config.with_provider("alpine", images=["alpine:v1"])
@@ -209,10 +209,10 @@ class TestConfigYamlChanges:
         new_config.with_provider("amazon", images=["amazon:v2"])  # Changed
         new_config.with_provider("debian", images=["debian:v1"])  # Unchanged
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_config.to_yaml()}
+        state.base_file_contents = {"tests/integration/config.yaml": old_config.to_yaml()}
         state.local_file_contents = {"config.yaml": new_config.to_yaml()}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -222,7 +222,7 @@ class TestConfigYamlChanges:
     def test_semantically_equivalent_yaml_returns_empty(self, configure_test_harness):
         """When YAML parses to identical structure despite textual differences, no providers are affected."""
         state = configure_test_harness
-        state.changed_files = ["tests/quality/config.yaml"]
+        state.changed_files = ["tests/integration/config.yaml"]
 
         # Different text, same parsed structure (extra whitespace, different quote styles)
         old_yaml = """yardstick:
@@ -239,10 +239,10 @@ tests:
     images: ['img1']
 """
 
-        state.base_file_contents = {"tests/quality/config.yaml": old_yaml}
+        state.base_file_contents = {"tests/integration/config.yaml": old_yaml}
         state.local_file_contents = {"config.yaml": new_yaml}
 
-        from tests.quality.configure import config_yaml_changes
+        from tests.integration.configure import config_yaml_changes
 
         global_change, providers = config_yaml_changes(state.changed_files)
 
@@ -256,7 +256,7 @@ class TestGate:
     """Tests for Config.gate(), the mapping from a provider's config.yaml test to a yardstick gate."""
 
     def test_maps_validations(self):
-        from tests.quality.configure import Config, Test, Validation, Yardstick
+        from tests.integration.configure import Config, Test, Validation, Yardstick
 
         cfg = Config(yardstick=Yardstick(default_max_year=2021, reference_db="https://example.com/db.tar.zst"))
         test = Test(
@@ -281,7 +281,7 @@ class TestGate:
         ]
 
     def test_defaults_and_opt_outs(self):
-        from tests.quality.configure import Config, Test, Validation, Yardstick
+        from tests.integration.configure import Config, Test, Validation, Yardstick
 
         cfg = Config(yardstick=Yardstick(default_max_year=2021, reference_db="https://example.com/db.tar.zst"))
         test = Test(provider="amazon", images=["img@sha256:abc"], validations=[Validation(fail_on_empty_match_set=False)])
@@ -293,7 +293,7 @@ class TestGate:
         assert {"name": "matchesAtLeast", "params": {"min": 0}} in gate["checks"]
 
     def test_requires_one_validation(self):
-        from tests.quality.configure import Config, Test, Yardstick
+        from tests.integration.configure import Config, Test, Yardstick
 
         cfg = Config(yardstick=Yardstick(reference_db="https://example.com/db.tar.zst"))
 

@@ -1,4 +1,4 @@
-"""Test fixtures for tests/quality/configure.py tests."""
+"""Test fixtures for tests/integration/configure.py tests."""
 
 from __future__ import annotations
 
@@ -41,9 +41,9 @@ def mock_git_operations(monkeypatch, git_mock_state: GitMockState):
 
     Usage:
         def test_something(mock_git_operations, git_mock_state):
-            git_mock_state.changed_files = ["src/foo.py", "tests/quality/config.yaml"]
+            git_mock_state.changed_files = ["src/foo.py", "tests/integration/config.yaml"]
             git_mock_state.base_file_contents = {
-                "tests/quality/config.yaml": "old: content"
+                "tests/integration/config.yaml": "old: content"
             }
             # Now calls to changes() will return the mocked files
     """
@@ -62,7 +62,7 @@ def mock_git_operations(monkeypatch, git_mock_state: GitMockState):
 
         # git show <ref>:<path>
         if cmd[1] == "show" and len(cmd) >= 3:
-            ref_path = cmd[2]  # e.g., "origin/main:tests/quality/config.yaml"
+            ref_path = cmd[2]  # e.g., "origin/main:tests/integration/config.yaml"
             if ":" in ref_path:
                 _, file_path = ref_path.split(":", 1)
                 if file_path in git_mock_state.base_file_contents:
@@ -115,9 +115,9 @@ def configure_test_harness(mock_git_operations, mock_local_files, git_mock_state
             state = configure_test_harness
 
             # Setup: config.yaml changed with provider-specific change
-            state.changed_files = ["tests/quality/config.yaml"]
+            state.changed_files = ["tests/integration/config.yaml"]
             state.base_file_contents = {
-                "tests/quality/config.yaml": '''
+                "tests/integration/config.yaml": '''
                     yardstick:
                       default_max_year: 2021
                     tests:

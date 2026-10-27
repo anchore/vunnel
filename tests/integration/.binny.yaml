@@ -1,6 +1,6 @@
 # the quality gate's tools, kept out of the repo root's .binny.yaml so that `make tools` (and the
 # format, lint and type-check tasks that depend on it) never builds them. Installed into
-# tests/quality/.tool by `make integration:tools`.
+# tests/integration/.tool by `make integration:tools`.
 tools:
   # used in quality gate to compare matching between the PR's DB and a published DB
   - name: yardstick

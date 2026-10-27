@@ -37,7 +37,7 @@ runs:
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/quality .yardstick.yaml "gates/$PROVIDER.yaml" .yardstick/runs
+      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/integration .yardstick.yaml "gates/$PROVIDER.yaml" .yardstick/runs
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
@@ -60,10 +60,10 @@ runs:
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
-        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/quality/.tool/yardstick\` after \`make integration:tools\`):
+        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/integration/.tool/yardstick\` after \`make integration:tools\`):
         \`\`\`bash
-        # copy the archive to the tests/quality directory
-        cd tests/quality
+        # copy the archive to the tests/integration directory
+        cd tests/integration
         unzip "$ARCHIVE_NAME" && tar -xzf "$ARCHIVE_BASENAME.tar.gz"
         yardstick score gates/$PROVIDER.yaml
         yardstick score gates/$PROVIDER.yaml -o table   # every check on every image
@@ -71,7 +71,7 @@ runs:
 
         Now you can label what changed in the UI:
         \`\`\`bash
-        yardstick claims serve $PROVIDER --open   # new labels go to tests/quality/additional-claims
+        yardstick claims serve $PROVIDER --open   # new labels go to tests/integration/additional-claims
         yardstick score gates/$PROVIDER.yaml
         \`\`\`
         EOF

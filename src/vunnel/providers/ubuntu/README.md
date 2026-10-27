@@ -470,7 +470,7 @@ would notice a release that simply stops being named at all, in either
 archive, with no snapshot behind it to fall back to and no announcement like
 the one above. That release would quietly stop being emitted until someone
 adds wherever Canonical moved it as a second URL. The backstop is
-`tests/quality/config.yaml`'s `expected_namespaces` list for this provider,
+`tests/integration/config.yaml`'s `expected_namespaces` list for this provider,
 which names every Ubuntu namespace from 12.04 through 26.04: the quality gate
 fails the day one of them stops showing up, which is the alarm this provider
 has no code-level equivalent of.

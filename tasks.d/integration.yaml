@@ -1,12 +1,12 @@
 version: "3"
 
-# the quality gate (see tests/quality/README.md), included from the root Taskfile under the integration
-# namespace and run in tests/quality.
+# the quality gate (see tests/integration/README.md), included from the root Taskfile under the integration
+# namespace and run in tests/integration.
 
 tasks:
 
   tools:
-    desc: Install the quality gate's tools from tests/quality/.binny.yaml into tests/quality/.tool
+    desc: Install the quality gate's tools from tests/integration/.binny.yaml into tests/integration/.tool
     # the root tools task is only here for binny itself
     deps: [":tools"]
     status:
