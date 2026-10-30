@@ -11,14 +11,16 @@ repository and emits them unchanged as OSV provider results. Grype's `DHI-` OSV 
 |--------------------|-----------------------------------------------------------------|
 | `repository_url`   | `https://github.com/docker-hardened-images/advisories.git`      |
 | `repository_branch`| `main`                                                          |
-| `advisories_path`  | `osv/dhi`                                                       |
+| `advisories_path`  | `dhi/osv`                                                       |
 
 Each run deletes any previous checkout, performs a shallow (`--depth 1`) clone of the configured branch into
 `<workspace>/dhi/input/advisories`, and records the exact Git revision in the provider metadata `urls`
-(`.../tree/<sha>/osv/dhi`). Set `runtime.skip_download: true` to reuse an existing checkout instead of cloning.
+(`.../tree/<sha>/dhi/osv`). Set `runtime.skip_download: true` to reuse an existing checkout instead of cloning.
 
-The repository publishes detached signatures and checksums (`*.sig`, `*.sha256`, `*.sha512`) alongside each
-record. The provider does not verify them; only `*.json` files are read.
+Records are published one file per advisory under year directories (`dhi/osv/<YYYY>/<DHI-id>.json`), with the
+matching OpenVEX documents in a sibling `dhi/vex` tree that the provider does not read. Detached signatures and
+checksums (`*.asc`, `*.sha256`, `*.sha256.asc`, `*.sha512`, `*.sha512.asc`) may sit beside each record. The
+provider does not verify them; only `*.json` files are read.
 
 ## Record selection and validation
 
@@ -30,7 +32,8 @@ Any other JSON in that tree is ignored. A selected record must satisfy:
 - `affected` is a non-empty list.
 - every `affected[].package.ecosystem` starts with `Docker Hardened Images:` (for example
   `Docker Hardened Images:Alpine:3.24` or `Docker Hardened Images:Debian:13`).
-- every `affected[].package.purl` is a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL.
+- every `affected[].package.purl` is a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL. The `os_name`, `os_distro`
+  and `os_version` qualifiers are optional; the release is carried by the ecosystem.
 
 Two records with the same `id` are tolerated only when their contents are identical; a conflicting duplicate
 fails the run.

@@ -60,6 +60,8 @@ def test_provider_via_snapshot(mock_revision, mock_clone, helpers, auto_fake_fix
 @patch.object(Parser, "_clone")
 @patch.object(Parser, "_record_source_revision")
 def test_parser_selects_only_dhi_records(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
+    # the fixture mirrors the published layout: year-sharded OSV records with .asc/.sha256 sidecars,
+    # a non-DHI record, and a sibling dhi/vex tree, none of which may be read as advisories
     workspace = prepare_workspace(helpers)
     parser = make_parser(workspace)
 
@@ -92,11 +94,11 @@ def test_parser_patches_fix_dates(mock_revision, mock_clone, helpers, auto_fake_
 @patch.object(Parser, "_record_source_revision")
 def test_parser_rejects_conflicting_duplicate_ids(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
     workspace = prepare_workspace(helpers)
-    advisories_dir = os.path.join(workspace.input_dir, "advisories", "osv", "dhi")
-    os.makedirs(os.path.join(advisories_dir, "nested"))
-    with open(os.path.join(advisories_dir, "alpine.json")) as f:
+    advisories_dir = os.path.join(workspace.input_dir, "advisories", "dhi", "osv")
+    os.makedirs(os.path.join(advisories_dir, "2027"))
+    with open(os.path.join(advisories_dir, "2026", "DHI-CVE-2016-2781-coreutils.json")) as f:
         conflicting = f.read().replace("9.11-r1", "9.11-r2")
-    with open(os.path.join(advisories_dir, "nested", "alpine-copy.json"), "w") as f:
+    with open(os.path.join(advisories_dir, "2027", "DHI-CVE-2016-2781-coreutils.json"), "w") as f:
         f.write(conflicting)
     parser = make_parser(workspace)
 
@@ -128,6 +130,26 @@ def test_parser_clone_failure_surfaces_stderr(mock_revision, helpers, auto_fake_
 @pytest.mark.parametrize("schema_version, expected", [("1.5.0", schema.OSVSchema("1.5.0")), ("1.6.1", schema.OSVSchema("1.6.1")), ("2.0.0", None)])
 def test_compatible_schema(schema_version, expected):
     assert Provider.compatible_schema(schema_version) == expected
+
+
+def test_default_advisories_path():
+    assert Config().advisories_path == "dhi/osv"
+
+
+@pytest.mark.parametrize(
+    "purl",
+    [
+        "pkg:apk/dhi/package?os_distro=alpine&os_name=dhi&os_version=3.24",
+        "pkg:apk/dhi/package",
+    ],
+)
+def test_validate_accepts_dhi_package_with_or_without_os_qualifiers(purl):
+    record = {
+        "id": "DHI-CVE-1234-package",
+        "schema_version": "1.6.1",
+        "affected": [{"package": {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24", "purl": purl}}],
+    }
+    assert Parser._validate(record) == ("DHI-CVE-1234-package", "1.6.1")
 
 
 def test_validate_rejects_non_dhi_package():
