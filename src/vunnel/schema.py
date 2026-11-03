@@ -18,6 +18,7 @@ EPSS_SCHEMA_VERSION = "1.0.0"
 ANNOTATED_OPENVEX_SCHEMA_VERSION = "1.0.0"
 EOL_SCHEMA_VERSION = "1.0.0"
 CSAF_VEX_SCHEMA_VERSION = "2.0.0"
+CVE5_SCHEMA_VERSION = "5.2.0"
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,13 @@ def ProviderListingSchema(version: str = PROVIDER_ARCHIVE_LISTING_SCHEMA_VERSION
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/provider-archive-listing/schema-{version}.json",
+    )
+
+
+def CVE5Schema(version: str = CVE5_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/cve5/schema-{version}.json",
     )
 
 
