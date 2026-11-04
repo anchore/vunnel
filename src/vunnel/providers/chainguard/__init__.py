@@ -27,6 +27,12 @@ class Config:
     osv_url: str = "https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz"
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
     use_osv: bool = False
+    # Override with VUNNEL_PROVIDERS_CHAINGUARD_INCLUDE_SECDB
+    # Only valid with use_osv: also write the secdb feed's records, under the same "chainguard" namespace
+    # and provider as a secdb-only run. grype-db keeps them where released grype clients look (OS
+    # "chainguard") and puts the OSV records under OSs of their own ("chainguard-osv", "wolfi-osv"),
+    # which only clients that honour the OSV feed's applies_to_subpackages=false are redirected to.
+    include_secdb: bool = False
 
 
 class Provider(provider.Provider):
@@ -46,6 +52,12 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
+        if self.config.include_secdb and not self.config.use_osv:
+            raise ValueError("include_secdb requires use_osv: without the OSV feed the secdb feed is already the one written")
+
+        # the secdb feed, written alongside the OSV feed (see Config.include_secdb)
+        self.secdb_parser: SecDBParser | None = None
+
         if self.config.use_osv:
             self.feed_url = self.config.osv_url
             self.parser: Parser = OSVParser(
@@ -57,6 +69,17 @@ class Provider(provider.Provider):
                 skip_download=self.config.runtime.skip_download,
             )
             self._schema = schema.OSVSchema(version="1.7.0")
+            if self.config.include_secdb:
+                # exactly the parser a secdb-only run uses: same namespace, so the same identifiers,
+                # records and fix-date lookups (ecosystem "chainguard:rolling")
+                self.secdb_parser = SecDBParser(
+                    workspace=self.workspace,
+                    url=config.secdb_url,
+                    namespace=self._namespace,
+                    download_timeout=self.config.request_timeout,
+                    logger=self.logger,
+                    skip_download=self.config.runtime.skip_download,
+                )
         else:
             self.parser = SecDBParser(
                 workspace=self.workspace,
@@ -86,15 +109,33 @@ class Provider(provider.Provider):
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         self.logger.info(f"Using {'OSV' if self.config.use_osv else 'SecDB'} data source")
-        with timer(self.name(), self.logger):
-            with self.results_writer() as writer, self.parser:
-                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-                for release, vuln_dict in self.parser.get():
-                    for vuln_id, record in vuln_dict.items():
-                        writer.write(
-                            identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                            schema=self._schema,
-                            payload=record,
-                        )
+        feeds: list[tuple[Parser, schema.Schema, str]] = [(self.parser, self._schema, self.feed_url)]
+        if self.secdb_parser:
+            self.logger.info("Also writing the SecDB data source")
+            feeds.append((self.secdb_parser, schema.OSSchema(), self.config.secdb_url))
 
-            return [self.feed_url], len(writer)
+        with timer(self.name(), self.logger):
+            with self.results_writer() as writer:
+                # identifiers written by earlier feeds: OSV ids (CGA-*) and secdb ids (CVE-*, GHSA-*, GO-*)
+                # don't overlap, so both feeds share the namespace; a collision would silently overwrite
+                # one feed's record with the other's, so fail instead
+                earlier: set[str] = set()
+                for parser, record_schema, _ in feeds:
+                    written: set[str] = set()
+                    with parser:
+                        # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                        for release, vuln_dict in parser.get():
+                            for vuln_id, record in vuln_dict.items():
+                                identifier = os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id)
+                                if identifier in earlier:
+                                    raise ValueError(f"record {identifier!r} is in both the OSV and the secdb feed")
+                                if len(feeds) > 1:
+                                    written.add(identifier)
+                                writer.write(
+                                    identifier=identifier,
+                                    schema=record_schema,
+                                    payload=record,
+                                )
+                    earlier |= written
+
+            return [url for _, _, url in feeds], len(writer)

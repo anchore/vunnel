@@ -265,6 +265,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   chainguard:
+    include_secdb: false
     osv_url: https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz
     request_timeout: 125
     runtime:
