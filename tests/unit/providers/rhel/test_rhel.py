@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -9,6 +9,9 @@ from vunnel import result, workspace
 from vunnel.providers.rhel import Config, Provider
 from vunnel.providers.rhel.parser import Advisory, AffectedRelease, FixedIn, Parser, StreamAdvisory
 from vunnel.providers.rhel.rhsa_provider import RHSAProvider
+from vunnel.tool.fixdate.finder import Finder
+
+from tests.conftest import FakeLocalStrategy
 
 
 class FakeRHSAProvider(RHSAProvider):
@@ -1257,3 +1260,29 @@ class TestExtendedSupportInference:
             f"ELS namespaces should not be emitted, but found: {[r.namespace for r in els_results]}. "
             "Old clients strip +els and get unique constraint violations with the base namespace."
         )
+
+
+def test_skip_download_prepares_fix_dates(tmpdir, monkeypatch):
+    # a real Finder in skip mode over a strategy that raises "has not been downloaded" until prepared
+    strategy = FakeLocalStrategy()
+    finder = Finder(strategies=[], first_observed=strategy, skip_download=True)
+    driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True), fixdater=finder, skip_download=True)
+    os.makedirs(os.path.join(driver.cve_dir_path, driver.__full_dir_name__))
+    sync_cves = MagicMock()
+    monkeypatch.setattr(driver, "_sync_cves", sync_cves)
+    monkeypatch.setattr(driver, "_init_rhsa_data", lambda **kwargs: None)
+
+    assert list(driver.get()) == []
+
+    sync_cves.assert_not_called()
+    assert strategy.ready
+
+
+def test_parser_default_finder_gets_skip_download(tmpdir, monkeypatch):
+    default_finder = MagicMock()
+    monkeypatch.setattr("vunnel.providers.rhel.parser.fixdate.default_finder", default_finder)
+    ws = workspace.Workspace(tmpdir, "test", create=True)
+
+    Parser(workspace=ws, skip_download=True)
+
+    default_finder.assert_called_once_with(ws, skip_download=True)

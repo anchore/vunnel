@@ -11,7 +11,7 @@ runs:
     # assume we have python and uv installed
 
     # required for magic-cache from runs-on to function with artifact upload/download (see https://runs-on.com/caching/magic-cache/#actionsupload-artifact-compatibility)
-    - uses: runs-on/action@dfae4d98c5537a0dc7bbb7e6b9211f30ba240f6d # v2.4.0
+    - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 # v2.5.0
 
     - name: Login to ghcr.io
       shell: bash
@@ -20,30 +20,28 @@ runs:
       run: |
         echo "$GITHUB_TOKEN" | .tool/oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
-    - name: Capture vulnerability results
+    - name: Build the provider's DB
       shell: bash
-      working-directory: tests/quality
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make capture provider="$PROVIDER"
+      run: make integration:quality:db PROVIDER="$PROVIDER"
 
-    - name: Validate provider results
+    - name: Run the quality gate
       shell: bash
-      working-directory: tests/quality
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: make validate provider="$PROVIDER"
+      run: make integration:quality PROVIDER="$PROVIDER"
 
     - name: Archive the provider state (${{ inputs.provider }})
       if: ${{ failure() }}
       shell: bash
       env:
         PROVIDER: ${{ inputs.provider }}
-      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/quality --exclude tools --exclude labels .yardstick.yaml .yardstick
+      run: tar -czvf "qg-capture-state-$PROVIDER.tar.gz" -C tests/integration .yardstick.yaml "gates/$PROVIDER.yaml" .yardstick/runs
 
     - name: Upload the provider state archive (${{ inputs.provider }})
       if: ${{ failure() }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: qg-capture-state-${{ inputs.provider }}
         path: qg-capture-state-${{ inputs.provider }}.tar.gz
@@ -62,16 +60,18 @@ runs:
 
         Download the artifact from this workflow run: \`$ARCHIVE_NAME\`
 
-        Then run the following commands to debug:
+        It holds the gate file and its scans, which re-score without the DB or new scans (\`yardstick\` is \`tests/integration/.tool/yardstick\` after \`make integration:tools\`):
         \`\`\`bash
-        # copy the archive to the tests/quality directory
-        cd tests/quality
+        # copy the archive to the tests/integration directory
+        cd tests/integration
         unzip "$ARCHIVE_NAME" && tar -xzf "$ARCHIVE_BASENAME.tar.gz"
+        yardstick score gates/$PROVIDER.yaml
+        yardstick score gates/$PROVIDER.yaml -o table   # every check on every image
         \`\`\`
 
-        Now you can debug the provider with yardstick:
+        Now you can label what changed in the UI:
         \`\`\`bash
-        uv run yardstick result list
-        uv run yardstick label explore
+        yardstick claims serve $PROVIDER --open   # new labels go to tests/integration/additional-claims
+        yardstick score gates/$PROVIDER.yaml
         \`\`\`
         EOF

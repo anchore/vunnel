@@ -1,0 +1,35 @@
+{
+  "identifier": "chainguard-libraries:npm/CGA-w7fj-pwh8-gfwh",
+  "item": {
+    "document": {
+      "last_updated": "2026-09-29T09:02:28.603Z",
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:npm/%40babel/traverse@7.23.0-cgr.1"
+          }
+        }
+      ],
+      "status": "fixed",
+      "timestamp": "2026-09-29T09:02:28.603Z",
+      "vulnerability": {
+        "aliases": [
+          "CGA-6j48-q922-m585",
+          "CVE-2023-45133",
+          "GHSA-67hx-6x53-jw92"
+        ],
+        "name": "CGA-w7fj-pwh8-gfwh"
+      }
+    },
+    "fixes": [
+      {
+        "available": {
+          "date": "2026-09-29",
+          "kind": "advisory"
+        },
+        "product": "pkg:npm/%40babel/traverse@7.23.0-cgr.1"
+      }
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/annotated-openvex/schema-1.0.0.json"
+}

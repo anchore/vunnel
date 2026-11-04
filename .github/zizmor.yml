@@ -3,9 +3,9 @@ rules:
     ignore:
       # Allow provider name in step names for debugging purposes
       # These template expansions are not in shell execution context
-      - actions/quality-gate/action.yaml:27  # Archive step name
-      - actions/quality-gate/action.yaml:34  # Upload step name
-      - actions/quality-gate/action.yaml:41  # Debug step name
+      - actions/quality-gate/action.yaml:35  # Archive step name
+      - actions/quality-gate/action.yaml:42  # Upload step name
+      - actions/quality-gate/action.yaml:49  # Debug step name
       # Upload artifact uses provider in 'with:' section which is not shell execution
-      - actions/quality-gate/action.yaml:38  # Artifact name
-      - actions/quality-gate/action.yaml:39  # Artifact path
+      - actions/quality-gate/action.yaml:46  # Artifact name
+      - actions/quality-gate/action.yaml:47  # Artifact path

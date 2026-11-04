@@ -39,7 +39,7 @@ class Parser(abc.ABC):
         skip_download: bool = False,
     ):
         if not fixdater:
-            fixdater = fixdate.default_finder(workspace)
+            fixdater = fixdate.default_finder(workspace, skip_download=skip_download)
         self.fixdater = fixdater
         self.download_timeout = download_timeout
         self.input_dir_path = os.path.join(workspace.input_path, self._input_dir_)
@@ -130,14 +130,14 @@ class SecDBParser(Parser):
         )
 
     def _download(self) -> None:
+        self.fixdater.download()
+
         if self.skip_download:
             self.logger.info(f"skip_download is enabled for {self.namespace} secdb feed")
             return
 
         if not os.path.exists(self.input_dir_path):
             os.makedirs(self.input_dir_path, exist_ok=True)
-
-        self.fixdater.download()
 
         try:
             self.logger.info(f"downloading {self.namespace} secdb {self.url}")
@@ -287,8 +287,16 @@ class OSVParser(Parser):
     def _load(self) -> Generator[tuple[str, dict[str, Any]]]:
         self.logger.info(f"load files for {self.namespace} osv feed")
         try:
-            with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz") as tf:
+            # stream=True stops TarFile from keeping every TarInfo it reads in tf.members, none
+            # of which we look back at
+            with tarfile.open(os.path.join(self.input_dir_path, self._tar_file), mode="r:gz", stream=True) as tf:
                 for member in tf:
+                    # extractfile() on a symlink or hardlink resolves the target through the
+                    # member list, which stream mode does not keep (the lookup raises). The feed
+                    # only ships regular files, so skip anything else rather than follow it.
+                    if not member.isfile():
+                        continue
+
                     n = member.name
                     if not n.endswith(".json"):
                         continue

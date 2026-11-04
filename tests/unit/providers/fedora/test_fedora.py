@@ -4,6 +4,7 @@ import datetime
 import os
 
 import orjson
+from unittest import mock
 import pytest
 
 from vunnel import result, workspace
@@ -547,3 +548,15 @@ class TestIncremental:
         vuln_id, record = results[0]
         assert vuln_id == "fedora:40/CVE-2025-0001"
         assert record["Vulnerability"]["Severity"] == "Critical"
+
+
+def test_parser_default_finder_gets_skip_download(tmpdir, monkeypatch):
+    default_finder = mock.MagicMock()
+    monkeypatch.setattr("vunnel.providers.fedora.parser.fixdate.default_finder", default_finder)
+    ws = workspace.Workspace(tmpdir, "test", create=True)
+    config = Config()
+    config.runtime.skip_download = True
+
+    Parser(workspace=ws, config=config)
+
+    default_finder.assert_called_once_with(ws, skip_download=True)

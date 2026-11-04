@@ -13,10 +13,19 @@ from vunnel.utils import date, vulnerability
 from vunnel.utils import http_wrapper as http
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Mapping
     from types import TracebackType
 
     from vunnel import workspace
+
+# purl type -> version fragment that marks an artifact as built by chainguard. Only products whose type has a marker
+# and whose version carries it are kept, so that chainguard does not make statements about upstream artifacts.
+DEFAULT_VERSION_MARKERS = {
+    "pypi": "+cgr.",
+    "maven": ".cgr.",
+    "npm": "-cgr.",
+    "golang": "-cgr.",
+}
 
 
 class OpenVEXParser:
@@ -33,6 +42,7 @@ class OpenVEXParser:
         logger: logging.Logger | None = None,
         security_reference_url: str | None = None,
         user_agent: str | None = None,
+        version_markers: dict[str, str | None] | None = None,
     ):
         """
         :param workspace.Workspace workspace: workspace to use for downloads and storage
@@ -42,11 +52,19 @@ class OpenVEXParser:
         :param logging.Logger logger:
         :type string security_reference_url: location for security information
         :param str user_agent: User-Agent header for HTTP requests
+        :param dict version_markers: purl type -> chainguard version marker; a None marker disables the type
+            (default: DEFAULT_VERSION_MARKERS)
         """
         self.download_timeout = download_timeout
         self.namespace = namespace
         self.workspace = workspace
         self.user_agent = user_agent
+
+        markers: Mapping[str, str | None] = DEFAULT_VERSION_MARKERS if version_markers is None else version_markers
+        # an empty marker is a substring of every version, which would let upstream artifacts through
+        if empty := sorted(t for t, m in markers.items() if m == ""):
+            raise ValueError(f"empty version marker for {empty}, use null to disable an ecosystem")
+        self.version_markers = {t: m for t, m in markers.items() if m is not None}
 
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
@@ -236,10 +254,7 @@ class OpenVEXParser:
         :param statement: [openvex statement](https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md)
         :return: statement with only chainguard products
         """
-        d = {
-            "pypi": "+cgr.",
-            "maven": ".cgr.",
-        }
+        d = self.version_markers
         new_products = []
         for product in statement.get("products", []):
             pid = self._get_purl(product)

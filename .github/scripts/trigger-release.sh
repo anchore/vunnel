@@ -35,11 +35,6 @@ while true; do
     esac
 done
 
-# TODO: kick off nightly quality gate if:... (could we do this in the release workflow instead?)
-# ... it's not already running
-# ... it's not already failed (use the check name)
-# ... it's not already succeeded (use the check name)
-
 echo "${bold}Kicking off release for ${NEXT_VERSION}${normal}..."
 echo
 gh workflow run release.yaml -f version=${NEXT_VERSION}

@@ -34,8 +34,6 @@ class Client:
         self._skip_download = skip_download
 
     def _download(self) -> None:
-        self.fixdater.download()
-
         next_page = self._default_api_path_
         while next_page:
             response = http_wrapper.get(f"{self.api_host}{next_page}", self.logger)
@@ -53,6 +51,7 @@ class Client:
 
     def get(self) -> Generator[Path]:
         os.makedirs(self.download_path, exist_ok=True)
+        self.fixdater.download()
         if not self._skip_download:
             self._download()
         else:

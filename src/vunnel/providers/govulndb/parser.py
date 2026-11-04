@@ -44,7 +44,7 @@ class Parser:
         release_date_resolver: ReleaseDateResolver | None = None,
     ):
         if not fixdater:
-            fixdater = fixdate.default_finder(ws)
+            fixdater = fixdate.default_finder(ws, skip_download=skip_download)
         self.fixdater = fixdater
         self.workspace = ws
         self.url = url or self._source_url_

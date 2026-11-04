@@ -18,7 +18,7 @@ import sqlalchemy as db
 from sqlalchemy.pool import NullPool
 
 from vunnel.tool import fixdate
-from vunnel.tool.fixdate.finder import Finder, Result
+from vunnel.tool.fixdate.finder import Finder, Result, Strategy
 from vunnel.utils import http_wrapper
 
 # Store the original create_engine function
@@ -66,6 +66,27 @@ def no_retry_backoff(monkeypatch):
     monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
 
+class FakeLocalStrategy(Strategy):
+    """Serves one fixed date, but, like the grype-db store, refuses lookups until download() or skip_download() ran."""
+
+    def __init__(self):
+        self.ready = False
+
+    def download(self) -> None:
+        self.ready = True
+
+    def skip_download(self) -> None:
+        self.ready = True
+
+    def find(self, vuln_id, cpe_or_package, fix_version, ecosystem=None):
+        if not self.ready:
+            raise RuntimeError("fix date database has not been downloaded")
+        return [Result(date=datetime.date(2024, 1, 1), kind="first-observed")]
+
+    def get_changed_vuln_ids_since(self, since_date):
+        return set()
+
+
 class MockFixDateFinder(Finder):
     """Mock finder that prevents actual downloads and allows configurable responses."""
 
@@ -93,6 +114,11 @@ class MockFixDateFinder(Finder):
 
     def download(self) -> None:
         # no-op, prevents actual download
+        pass
+
+    def skip_download(self) -> None:
+        # no-op; this mock stands in as the first_observed strategy of the finder that default_finder
+        # builds around it, and that finder calls strategy.skip_download() when its flag is set
         pass
 
     def find(

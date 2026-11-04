@@ -1,6 +1,9 @@
 import datetime
 from unittest.mock import Mock, MagicMock
 import pytest
+from dateutil.parser import parse as dateutil_parse
+from vunnel import workspace
+from vunnel.tool.fixdate import first_observed
 from vunnel.tool.fixdate.finder import Finder, Result, Strategy
 
 
@@ -182,6 +185,30 @@ class TestFinder:
         result = finder.best("CVE-2023-0001", "package", "1.0.0")
 
         assert result == first_observed_result
+
+    def test_download_with_skip_download_flag(self):
+        """Test that download() with skip_download=True calls skip_download() on every strategy and never downloads."""
+        first_observed = self.create_mock_strategy([])
+        strategies = [self.create_mock_strategy([]), self.create_mock_strategy([])]
+        finder = Finder(strategies, first_observed, skip_download=True)
+
+        finder.download()
+
+        for s in [first_observed, *strategies]:
+            s.skip_download.assert_called_once_with()
+            s.download.assert_not_called()
+
+    def test_download_without_skip_download_flag(self):
+        """Test that download() by default downloads every strategy and never skips."""
+        first_observed = self.create_mock_strategy([])
+        strategies = [self.create_mock_strategy([]), self.create_mock_strategy([])]
+        finder = Finder(strategies, first_observed)
+
+        finder.download()
+
+        for s in [first_observed, *strategies]:
+            s.download.assert_called_once_with()
+            s.skip_download.assert_not_called()
 
     def test_best_with_none_dates_in_results(self):
         """Test handling of Result objects with None dates."""
@@ -365,29 +392,84 @@ class TestFinder:
         strategy2.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
         first_observed.find.assert_called_once_with("CVE-2023-0001", "package", "1.0.0", "php-composer")
 
-    def test_caching_reduces_database_calls(self):
-        """test that repeated queries use cache instead of hitting database"""
+    def test_repeated_queries_are_not_memoized(self):
+        """repeated queries go back to the strategies every time (lookups are not memoized)."""
         # Create mock strategy that counts calls
         call_count = {"count": 0}
         test_result = self.create_result("2023-01-01", "test")
-        
+
         def counted_find(*args, **kwargs):
             call_count["count"] += 1
             return [test_result]
-        
+
         mock_strategy = Mock(spec=Strategy)
         mock_strategy.find = counted_find
-        
+
         mock_first_observed = Mock(spec=Strategy)
         mock_first_observed.find = Mock(return_value=[])
-        
+
         finder = Finder(strategies=[mock_strategy], first_observed=mock_first_observed)
-        
+
         # Make the same query three times
         result1 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
         result2 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
         result3 = finder.best("CVE-2023-1234", "pkg:pypi/requests", "2.28.0", "pypi")
-        
-        # Should only call find once - subsequent calls use cache
-        assert call_count["count"] == 1, f"Expected 1 database call, got {call_count['count']}"
-        assert result1 == result2 == result3, "Cached results should match original"
+
+        assert call_count["count"] == 3, f"Expected 3 database calls, got {call_count['count']}"
+        assert result1 == result2 == result3, "Repeated lookups should agree"
+
+
+def test_repeated_lookup_with_future_dated_candidate(tmpdir):
+    """a key looked up twice in one run sees the first call's first-observed row on the second.
+
+    Lookups are not memoized, so the second call finds the row the first call recorded (dated
+    today, accurate) and discards a candidate dated after it. The second answer is the one
+    every later run gives for this key; this pins that behaviour deliberately."""
+    ws = workspace.Workspace(tmpdir, "test-db", create=True)
+    fo = first_observed.Store(ws)
+    # behave as a provider with no published grype-db fix date database
+    fo.grype_db_store._downloaded = True
+    fo.grype_db_store._not_found = True
+    finder = Finder(strategies=[], first_observed=fo)
+
+    today = datetime.datetime.now(datetime.UTC).date()
+    tomorrow = today + datetime.timedelta(days=1)
+    candidate = Result(date=tomorrow, kind="advisory", accurate=True)
+
+    with finder:
+        first = finder.best("CVE-2024-0001", "pkg", "1.0.0", "alpine", candidates=[candidate])
+        second = finder.best("CVE-2024-0001", "pkg", "1.0.0", "alpine", candidates=[candidate])
+
+    # nothing recorded yet: the candidate wins
+    assert (first.date, first.kind) == (tomorrow, "advisory")
+    # the first call's row is now an accurate first-observed date, and the candidate postdates it
+    assert (second.date, second.kind) == (today, "first-observed")
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2024-05-03T12:34:56Z",
+        "2024-05-03T23:59:59.123456Z",
+        "2024-02-29T00:00:00Z",
+        "2024-05-03",
+        "2024-05-03T12:34:56+05:00",
+        "May 3, 2024",
+    ],
+)
+def test_result_string_date_matches_dateutil(value):
+    """every string must give the same date as dateutil, whichever way it is parsed."""
+    expected = datetime.date.fromisoformat(dateutil_parse(value).strftime("%Y-%m-%d"))
+    assert Result(date=value, kind="advisory").date == expected
+
+
+@pytest.mark.parametrize("value", ["2024-05-03T12:34:56Z", "2024-05-03T23:59:59.123456Z"])
+def test_result_osv_timestamp_skips_dateutil(value, mocker):
+    normalize_date = mocker.patch("vunnel.tool.fixdate.finder.date.normalize_date")
+    assert Result(date=value, kind="advisory").date == datetime.date(2024, 5, 3)
+    normalize_date.assert_not_called()
+
+
+@pytest.mark.parametrize("value", ["2024-13-01T00:00:00Z", "2023-02-29T00:00:00Z", "2024-W18-5", "not a date"])
+def test_result_string_date_invalid_is_dropped(value):
+    assert Result(date=value, kind="advisory").date is None

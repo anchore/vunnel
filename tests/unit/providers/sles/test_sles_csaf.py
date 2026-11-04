@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import tarfile
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -845,3 +846,15 @@ def test_provider_via_snapshot_csaf(helpers, disable_get_requests, monkeypatch, 
 
     assert workspace.result_schemas_valid(require_entries=True)
     workspace.assert_result_snapshots()
+
+
+def test_provider_csaf_default_finder_gets_skip_download(helpers, monkeypatch):
+    default_finder = MagicMock()
+    monkeypatch.setattr("vunnel.providers.sles.fixdate.default_finder", default_finder)
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    c = Config(use_csaf=True)
+    c.runtime.skip_download = True
+
+    p = Provider(root=workspace.root, config=c)
+
+    default_finder.assert_called_once_with(p.workspace, skip_download=True)

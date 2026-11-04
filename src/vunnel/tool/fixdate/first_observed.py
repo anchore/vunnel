@@ -29,6 +29,9 @@ class Store(Strategy):
     def download(self) -> None:
         self.grype_db_store.download()
 
+    def skip_download(self) -> None:
+        self.grype_db_store.skip_download()
+
     def get_changed_vuln_ids_since(self, since_date: datetime) -> set[str]:
         return self.grype_db_store.get_changed_vuln_ids_since(since_date)
 

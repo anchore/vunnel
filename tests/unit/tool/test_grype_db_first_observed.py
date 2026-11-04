@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -467,6 +468,48 @@ class TestStore:
                 cpe_or_package="test",
                 fix_version="1.0.0",
             )
+
+    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_skip_download_with_local_db(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir):
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+
+        # a local db left over from a previous run
+        DatabaseFixture(store.db_path).insert_standard_data(store.db_path)
+
+        store.skip_download()
+
+        # no registry traffic of any kind
+        mock_oras_client_class.assert_not_called()
+        mock_oras_client_constructor.assert_not_called()
+
+        # lookups are served from the local db instead of raising
+        results = store.find(
+            vuln_id="CVE-2023-0001",
+            cpe_or_package="cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*",
+            fix_version="2.4.42",
+        )
+        assert len(results) == 1
+        assert results[0].kind == "first-observed"
+
+    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_skip_download_without_local_db(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir, caplog):
+        ws = workspace.Workspace(tmpdir, "test-db", create=True)
+        store = Store(ws)
+        assert not store.db_path.exists()
+
+        with caplog.at_level(logging.WARNING):
+            store.skip_download()
+
+        mock_oras_client_class.assert_not_called()
+        mock_oras_client_constructor.assert_not_called()
+        assert "no local copy" in caplog.text
+
+        # behaves like a provider with no published database: lookups are empty, not errors
+        assert store.get("CVE-2023-0001", "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "2.4.42") == []
+        assert store.find("CVE-2023-0001", "cpe:2.3:a:apache:httpd:2.4.41:*:*:*:*:*:*:*", "2.4.42") == []
 
     @patch("oras.client.OrasClient")
     @patch.dict("os.environ", {"GITHUB_TOKEN": "test-token"})
