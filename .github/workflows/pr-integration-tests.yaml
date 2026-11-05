@@ -29,7 +29,7 @@ jobs:
     outputs:
       providers: ${{ steps.determine-providers.outputs.providers }}
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
@@ -72,7 +72,7 @@ jobs:
       packages: read
 
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
@@ -102,7 +102,7 @@ jobs:
       - select-providers
     if: ${{ always() }}
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}

@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
@@ -46,7 +46,7 @@ jobs:
     outputs:
       envs: ${{ steps.get-envs.outputs.envs }}
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
@@ -74,7 +74,7 @@ jobs:
       matrix:
         toxenv: ${{ fromJson(needs.Discover-Test-Envs.outputs.envs) }}
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
@@ -105,7 +105,7 @@ jobs:
     name: Test Gate
     needs: [Test]
     steps:
-      - uses: runs-on/action@17b59092eb37ebfdbb034460892887c09100eaa3 #v2.5.0
+      - uses: runs-on/action@284bff869d4a825f778ac7c38e50f1e31ef198fd #v2.6.0
         if: ${{ vars.TRACK_RESOURCE_METRICS != '' }}
         with:
           metrics: ${{ vars.TRACK_RESOURCE_METRICS }}
