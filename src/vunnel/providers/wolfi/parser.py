@@ -255,6 +255,9 @@ class SecDBParser(Parser):
 
 
 class OSVParser(Parser):
+    # CGA advisories are labeled distinctly from the secdb "rolling" release so both feeds
+    # can be written by the same provider and kept apart downstream
+    _release_ = "cga"
     _input_dir_ = "osv"
     _cga_id_re = re.compile(r"^CGA(-[23456789cfghjmpqrvwx]{4}){3}$")
     _tar_file = "chainguard.tar.gz"

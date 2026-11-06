@@ -26,13 +26,12 @@ class Config:
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_OSV_URL
     osv_url: str = "https://advisories.cgr.dev/chainguard/v3/osv/chainguard-osv.tar.gz"
     # Override with VUNNEL_PROVIDERS_CHAINGUARD_USE_OSV
-    use_osv: bool = False
+    use_osv: bool = True
 
 
 class Provider(provider.Provider):
-    # NOTE: schema and distribution version are actually set on init depending
-    # on which feed we configure the provider to use.
-    # we use self._schema for this value
+    # NOTE: records are written with the schema of the feed they came from (OS for secdb, OSV for osv);
+    # __schema__ reflects the secdb feed, which is always processed
     __schema__ = schema.OSSchema()
     __distribution_version__ = int(__schema__.major_version)
 
@@ -46,28 +45,37 @@ class Provider(provider.Provider):
 
         self.logger.debug(f"config: {config}")
 
+        # the secdb feed is always processed and written under chainguard:rolling. When use_osv is set, the
+        # OSV feed is processed as well and written under chainguard:cga (see OSVParser._release_) so the two
+        # data sets remain distinguishable downstream.
+        self.parsers: list[tuple[Parser, schema.Schema]] = [
+            (
+                SecDBParser(
+                    workspace=self.workspace,
+                    url=config.secdb_url,
+                    namespace=self._namespace,
+                    download_timeout=self.config.request_timeout,
+                    logger=self.logger,
+                    skip_download=self.config.runtime.skip_download,
+                ),
+                schema.OSSchema(),
+            ),
+        ]
+
         if self.config.use_osv:
-            self.feed_url = self.config.osv_url
-            self.parser: Parser = OSVParser(
-                workspace=self.workspace,
-                url=config.osv_url,
-                namespace=self._namespace,
-                download_timeout=self.config.request_timeout,
-                logger=self.logger,
-                skip_download=self.config.runtime.skip_download,
+            self.parsers.append(
+                (
+                    OSVParser(
+                        workspace=self.workspace,
+                        url=config.osv_url,
+                        namespace=self._namespace,
+                        download_timeout=self.config.request_timeout,
+                        logger=self.logger,
+                        skip_download=self.config.runtime.skip_download,
+                    ),
+                    schema.OSVSchema(version="1.7.0"),
+                ),
             )
-            self._schema = schema.OSVSchema(version="1.7.0")
-        else:
-            self.parser = SecDBParser(
-                workspace=self.workspace,
-                url=config.secdb_url,
-                namespace=self._namespace,
-                download_timeout=self.config.request_timeout,
-                logger=self.logger,
-                skip_download=self.config.runtime.skip_download,
-            )
-            self.feed_url = self.config.secdb_url
-            self._schema = schema.OSSchema()
 
         # this provider requires the previous state from former runs
         provider.disallow_existing_input_policy(config.runtime)
@@ -85,16 +93,19 @@ class Provider(provider.Provider):
         return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
-        self.logger.info(f"Using {'OSV' if self.config.use_osv else 'SecDB'} data source")
+        self.logger.info(f"Using {'SecDB and OSV' if self.config.use_osv else 'SecDB'} data sources")
         with timer(self.name(), self.logger):
-            with self.results_writer() as writer, self.parser:
-                # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
-                for release, vuln_dict in self.parser.get():
-                    for vuln_id, record in vuln_dict.items():
-                        writer.write(
-                            identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
-                            schema=self._schema,
-                            payload=record,
-                        )
+            with self.results_writer() as writer:
+                # parsers run one at a time: each owns a fix date finder backed by the same workspace store
+                for parser, record_schema in self.parsers:
+                    with parser:
+                        # TODO: tech debt: on subsequent runs, we should only write new vulns (this currently re-writes all)
+                        for release, vuln_dict in parser.get():
+                            for vuln_id, record in vuln_dict.items():
+                                writer.write(
+                                    identifier=os.path.join(f"{self._namespace.lower()}:{release.lower()}", vuln_id),
+                                    schema=record_schema,
+                                    payload=record,
+                                )
 
-            return [self.feed_url], len(writer)
+            return [parser.url for parser, _ in self.parsers], len(writer)

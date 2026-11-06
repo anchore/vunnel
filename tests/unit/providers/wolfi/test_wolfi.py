@@ -419,8 +419,8 @@ class TestOSVParser:
         results = list(p._load())
 
         assert sorted((release, data["id"]) for release, data in results) == [
-            ("rolling", "CGA-2222-3333-4444"),
-            ("rolling", "CGA-5555-6666-7777"),
+            ("cga", "CGA-2222-3333-4444"),
+            ("cga", "CGA-5555-6666-7777"),
         ]
 
     def test_normalize_wraps_by_id(self, tmpdir, auto_fake_fixdate_finder, osv_record):

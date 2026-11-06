@@ -1,26 +1,26 @@
 {
-  "identifier": "chainguard:rolling/CGA-xcpc-gm23-prj9",
+  "identifier": "chainguard:cga/CGA-224q-ccj5-2p53",
   "item": {
     "affected": [
       {
         "ecosystem_specific": {
           "components": [
             {
-              "advisory_id": "CGA-xcpc-gm23-0001",
-              "component_location": "/usr/bin/syncthing",
-              "component_name": "syncthing",
-              "component_purl": "pkg:golang/github.com/syncthing/syncthing@v2.0.13",
-              "component_type": "go-module",
-              "component_version": "2.0.13",
-              "note": "Upgraded to 2.0.14",
+              "advisory_id": "CGA-224q-ccj5-0001",
+              "component_location": "/usr/sbin/haproxy",
+              "component_name": "haproxy",
+              "component_purl": "pkg:apk/chainguard/haproxy@2.2.33",
+              "component_type": "apk",
+              "component_version": "2.2.33",
+              "note": "Upgraded to 2.2.34",
               "status": "fixed"
             }
           ]
         },
         "package": {
           "ecosystem": "Chainguard",
-          "name": "syncthing",
-          "purl": "pkg:apk/chainguard/syncthing?arch=x86_64"
+          "name": "haproxy-2.2",
+          "purl": "pkg:apk/chainguard/haproxy-2.2?arch=x86_64"
         },
         "ranges": [
           {
@@ -28,9 +28,9 @@
               "anchore": {
                 "fixes": [
                   {
-                    "date": "2026-02-20",
+                    "date": "2026-01-07",
                     "kind": "advisory",
-                    "version": "2.0.14-r1"
+                    "version": "2.2.34-r0"
                   }
                 ]
               }
@@ -40,7 +40,7 @@
                 "introduced": "0"
               },
               {
-                "fixed": "2.0.14-r1"
+                "fixed": "2.2.34-r0"
               }
             ],
             "type": "ECOSYSTEM"
@@ -50,8 +50,8 @@
       {
         "package": {
           "ecosystem": "Chainguard",
-          "name": "syncthing-fips",
-          "purl": "pkg:apk/chainguard/syncthing-fips?arch=x86_64"
+          "name": "haproxy-2.8",
+          "purl": "pkg:apk/chainguard/haproxy-2.8?arch=x86_64"
         },
         "ranges": [
           {
@@ -59,9 +59,9 @@
               "anchore": {
                 "fixes": [
                   {
-                    "date": "2026-02-20",
+                    "date": "2026-01-07",
                     "kind": "advisory",
-                    "version": "2.0.14-r1"
+                    "version": "2.8.18-r0"
                   }
                 ]
               }
@@ -71,42 +71,7 @@
                 "introduced": "0"
               },
               {
-                "fixed": "2.0.14-r1"
-              }
-            ],
-            "type": "ECOSYSTEM"
-          }
-        ]
-      },
-      {
-        "ecosystem_specific": {
-          "components": [
-            {
-              "advisory_id": "CGA-xcpc-gm23-0003",
-              "component_location": "/usr/bin/syncthing",
-              "component_name": "syncthing",
-              "component_purl": "pkg:golang/github.com/syncthing/syncthing@v2.0.13",
-              "component_type": "go-module",
-              "component_version": "2.0.13",
-              "justification": "VULNERABLE_CODE_NOT_PRESENT",
-              "note": "Binary compiled without affected temp directory code path",
-              "status": "not_affected"
-            }
-          ]
-        },
-        "package": {
-          "ecosystem": "Chainguard",
-          "name": "syncthing-compat",
-          "purl": "pkg:apk/chainguard/syncthing-compat?arch=x86_64"
-        },
-        "ranges": [
-          {
-            "events": [
-              {
-                "introduced": "0"
-              },
-              {
-                "fixed": "0"
+                "fixed": "2.8.18-r0"
               }
             ],
             "type": "ECOSYSTEM"
@@ -116,8 +81,8 @@
       {
         "package": {
           "ecosystem": "Wolfi",
-          "name": "syncthing",
-          "purl": "pkg:apk/wolfi/syncthing?arch=aarch64"
+          "name": "haproxy-3.0",
+          "purl": "pkg:apk/wolfi/haproxy-3.0?arch=aarch64"
         },
         "ranges": [
           {
@@ -125,9 +90,9 @@
               "anchore": {
                 "fixes": [
                   {
-                    "date": "2026-02-20",
+                    "date": "2026-01-07",
                     "kind": "advisory",
-                    "version": "2.0.14-r1"
+                    "version": "3.0.10-r0"
                   }
                 ]
               }
@@ -137,7 +102,38 @@
                 "introduced": "0"
               },
               {
-                "fixed": "2.0.14-r1"
+                "fixed": "3.0.10-r0"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      },
+      {
+        "package": {
+          "ecosystem": "Wolfi",
+          "name": "haproxy-3.1",
+          "purl": "pkg:apk/wolfi/haproxy-3.1"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-01-07",
+                    "kind": "advisory",
+                    "version": "3.1.7-r0"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "3.1.7-r0"
               }
             ],
             "type": "ECOSYSTEM"
@@ -145,30 +141,30 @@
         ]
       }
     ],
-    "id": "CGA-xcpc-gm23-prj9",
-    "modified": "2026-02-20T00:00:00Z",
-    "published": "2026-02-20T00:00:00Z",
+    "id": "CGA-224q-ccj5-2p53",
+    "modified": "2026-01-07T00:00:00Z",
+    "published": "2026-01-07T00:00:00Z",
     "references": [
       {
         "type": "ADVISORY",
-        "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-68121"
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-32464"
       },
       {
-        "type": "FIX",
-        "url": "https://github.com/netty/netty/pull/12345"
+        "type": "ADVISORY",
+        "url": "https://github.com/advisories/GHSA-frg5-h47x-75j9"
       }
     ],
     "schema_version": "1.7.0",
     "severity": [
       {
-        "score": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+        "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
         "type": "CVSS_V3"
       }
     ],
-    "summary": "Netty: Information disclosure via local system temporary directory",
+    "summary": "HAProxy: HTTP request smuggling via malformed header",
     "upstream": [
-      "CVE-2025-68121",
-      "GHSA-qgxr-kfqx-v5q9"
+      "CVE-2025-32464",
+      "GHSA-frg5-h47x-75j9"
     ]
   },
   "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.0.json"
