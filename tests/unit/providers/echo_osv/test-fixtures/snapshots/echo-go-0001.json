@@ -1,0 +1,56 @@
+{
+  "identifier": "echo-go-0001",
+  "item": {
+    "affected": [
+      {
+        "package": {
+          "ecosystem": "Echo:Go",
+          "name": "golang.org/x/net",
+          "purl": "pkg:golang/golang.org/x/net"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2024-01-01",
+                    "kind": "first-observed",
+                    "version": "v0.55.0+echo.1"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "0"
+              },
+              {
+                "fixed": "v0.55.0+echo.1"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ]
+      }
+    ],
+    "aliases": [
+      "CVE-2026-46600"
+    ],
+    "database_specific": {
+      "anchore": {
+        "record_type": "advisory"
+      }
+    },
+    "id": "ECHO-go-0001",
+    "modified": "2026-09-30T09:00:00.000Z",
+    "references": [
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-46600"
+      }
+    ],
+    "schema_version": "1.7.5"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.7.5.json"
+}

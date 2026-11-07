@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.7.5",
+  "id": "ECHO-aa11-bb22-cc33",
+  "modified": "2026-01-15T10:00:00.000Z",
+  "aliases": [
+    "CVE-2025-99999"
+  ],
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Echo:PyPi",
+        "name": "requests",
+        "purl": "pkg:pypi/requests"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "2.0.0"
+            },
+            {
+              "fixed": "2.31.0+echo.1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "type": "WEB",
+      "url": "https://advisory.echohq.com/cve/CVE-2025-99999"
+    }
+  ]
+}
