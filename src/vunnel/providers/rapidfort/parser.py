@@ -1,20 +1,23 @@
 """RapidFort security advisories parser.
 
 Reads RapidFort advisory data and normalizes to vunnel OSSchema format.
-Supports Ubuntu (dpkg), Debian (dpkg), Alpine (apk), and Red Hat (rpm).
+Supports Ubuntu and Debian (dpkg), Alpine (apk), and Red Hat, Rocky, Alma, Oracle and Amazon
+(rpm); see base_oses.
 
 Input format: OS/{os}/{package}.json with package_name, advisory: {version: {CVE: ...}}
 
 RapidFort images mix packages from several release streams (e.g. native el9 builds, Fedora
 builds, and RapidFort rebuilds inside one rapidfort-redhat:9 image). Each advisory event may
-carry an `identifier` naming its stream (el9, fc43, rf, ubuntu, ...). Streams are emitted as
-separate grype namespaces so their fix ranges are never merged into one constraint:
+carry an `identifier` naming its stream (el9, fc43, rf, amzn2023, ubuntu, ...). Streams are
+emitted as separate grype namespaces so their fix ranges are never merged into one constraint:
 
-- the image's native stream (el{major} for redhat, ubuntu/unidentified for ubuntu, everything
-  for alpine/debian) folds into the channel-less namespace, e.g. rapidfort-redhat:9 — so a
-  package that matches no client-side routing rule degrades to sane native-stream matching
-- foreign/rebuild streams get a +channel namespace, e.g. rapidfort-redhat:9+fc43 or
-  rapidfort-ubuntu:20.04+rf, which grype routes to per package via version/name markers
+- the image's native stream (el{major} for the EL family, amzn{release} for amazon,
+  ubuntu/unidentified for ubuntu, everything for alpine) folds into the channel-less namespace,
+  e.g. rapidfort-redhat:9 — so a package that matches no client-side routing rule degrades to
+  sane native-stream matching
+- foreign/rebuild streams get a +channel namespace, e.g. rapidfort-redhat:9+fc43,
+  rapidfort-ubuntu:20.04+rf, or rapidfort-redhat:10+el9 for an el9 build shipped in RHEL 10
+  images, which grype routes to per package via version/name markers
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ import copy
 import logging
 import os
 import zipfile
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import orjson
@@ -40,15 +44,46 @@ namespace = "rapidfort"
 default_repo_url = "https://github.com/rapidfort/security-advisories.git"
 repo_branch = "main"
 repo_os_path = "OS"  # OS/{osName}/{package}.json (source format)
-default_supported_oses = ("ubuntu", "debian", "alpine", "redhat")
 
-# Version format per base OS
-version_formats = {
-    "ubuntu": "dpkg",
-    "debian": "dpkg",
-    "alpine": "apk",
-    "redhat": "rpm",
+
+@dataclass(frozen=True)
+class BaseOS:
+    """How one OS/{name} tree of the advisory repo maps onto grype."""
+
+    # the grype distro type the namespaces are named after (rapidfort-{distro}), which grype's
+    # RapidFort identifier remaps the detected base distro to
+    distro: str
+    version_format: str
+    # the identifier of the image's own release stream, with {version} standing for the release key
+    # (e.g. "el{version}"); None for a tree whose events carry no identifiers
+    native_identifier: str | None
+
+    def native_stream(self, os_version: str) -> str | None:
+        if not self.native_identifier:
+            return None
+        return self.native_identifier.format(version=os_version)
+
+    @property
+    def release_prefix(self) -> str:
+        """The native identifier's prefix before the version (e.g. "el"), which a few release keys carry."""
+        if not self.native_identifier or "{version}" not in self.native_identifier:
+            return ""
+        return self.native_identifier.partition("{version}")[0]
+
+
+# keyed by the repo's OS/{name} directory; onboarding a base OS is one entry here plus its distro in
+# grype's RapidFort identifier
+base_oses = {
+    "ubuntu": BaseOS(distro="ubuntu", version_format="dpkg", native_identifier="ubuntu"),
+    "debian": BaseOS(distro="debian", version_format="dpkg", native_identifier="debian"),
+    "alpine": BaseOS(distro="alpine", version_format="apk", native_identifier=None),
+    "redhat": BaseOS(distro="redhat", version_format="rpm", native_identifier="el{version}"),
+    "rocky": BaseOS(distro="rockylinux", version_format="rpm", native_identifier="el{version}"),
+    "alma": BaseOS(distro="almalinux", version_format="rpm", native_identifier="el{version}"),
+    "oracle": BaseOS(distro="oraclelinux", version_format="rpm", native_identifier="el{version}"),
+    "amazon": BaseOS(distro="amazonlinux", version_format="rpm", native_identifier="amzn{version}"),
 }
+default_supported_oses = tuple(base_oses)
 
 
 def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]]:
@@ -107,7 +142,7 @@ def _vendor_advisory(os_name: str, pkg_name: str) -> dict[str, Any]:
 
 
 def _namespace_name(os_name: str, os_version: str, channel: str | None = None) -> str:
-    ns = f"{namespace}-{os_name}:{os_version}"
+    ns = f"{namespace}-{base_oses[os_name].distro}:{os_version}"
     if channel:
         ns += f"+{channel}"
     return ns
@@ -123,24 +158,24 @@ def _channel_for(os_name: str, os_version: str, identifier: str | None) -> str |
     """Map an event's release-stream identifier to a namespace channel.
 
     None means the event belongs to the image's native (channel-less) namespace:
-    - redhat events identified as el{major} are the native stream for that major
+    - EL-family events identified as el{release} (amazon: amzn{release}) are the native stream
     - ubuntu/debian events identified with the distro's own name (distro-patched builds) or
       carrying no identifier (upstream/vendored builds) are both native; the fold-safety guard
       in the parser ensures those two never carry conflicting ranges for the same CVE+package
     - alpine events carry no identifiers at all
 
-    Anything else is a foreign stream and gets a channel. Note that the native identifier must
-    fold rather than pass through: a channel literally named after the base distro is one no
-    client routes to, so every record in it would be unreachable.
+    Anything else is a foreign stream and gets a channel, including a build for another release of
+    the same family (el9 under the redhat 10 key). Note that the native identifier must fold rather
+    than pass through: grype searches the channel-less namespace for native builds, so records filed
+    under a channel named for the native stream would be unreachable.
     """
     if not identifier:
         return None
     ident = str(identifier).strip().lower()
     if not ident:
         return None
-    if os_name == "redhat" and ident == f"el{os_version}":
-        return None
-    if os_name in NATIVE_FOLD_DISTROS and ident == os_name:
+    base = base_oses.get(os_name)
+    if base and ident == base.native_stream(os_version):
         return None
     return ident
 
@@ -250,6 +285,10 @@ class Parser:
             if not files:
                 self.logger.warning("RapidFort OS root not found in archive: %s", self._archive_path)
                 return
+
+            unknown = sorted(set(files) - set(base_oses))
+            if unknown:
+                self.logger.warning("skipping RapidFort OS trees with no known base OS: %s", ", ".join(unknown))
 
             for os_name in self.supported_oses:
                 yield from self._load_os(archive, files, os_name)
@@ -363,12 +402,13 @@ class Parser:
     def _normalize_os_version(self, os_name: str, os_version: str) -> str | None:
         """Normalize an advisory's OS version key; return None (with a warning) when unusable.
 
-        The redhat tree mostly keys on the bare numeric major ("9") but a handful of files use
-        an el-prefixed form ("el4"); normalize those to the numeric major.
+        The EL trees mostly key on the bare numeric major ("9") but a handful of files use an
+        el-prefixed form ("el4"); normalize those to the numeric major.
         """
         version = str(os_version).strip()
-        if os_name == "redhat" and version.startswith("el") and version[2:].isdigit():
-            version = version[2:]
+        prefix = base_oses[os_name].release_prefix if os_name in base_oses else ""
+        if prefix and version.startswith(prefix) and version[len(prefix) :].isdigit():
+            version = version[len(prefix) :]
         if not version or not version[0].isdigit():
             self.logger.warning("skipping advisory with unusable OS version key %r for %s", os_version, os_name)
             return None
@@ -413,33 +453,14 @@ class Parser:
         self,
         os_name: str,
         os_version: str,
-        vid: str,
-        pkg_name: str,
         events: list[dict[str, Any]],
     ) -> dict[str | None, list[dict[str, Any]]]:
-        """Group events by their namespace channel (None = the native, channel-less namespace).
-
-        Cross-el noise (e.g. an el8-identified event under the redhat 9 key — a handful of
-        entries in the dataset) is dropped with a warning: it belongs to neither the native
-        stream nor any stream a scanned package can be routed to within this OS version.
-        """
+        """Group events by their namespace channel (None = the native, channel-less namespace)."""
         by_channel: dict[str | None, list[dict[str, Any]]] = {}
         for ev in events:
             if not isinstance(ev, dict):
                 continue
-            identifier = ev.get("identifier")
-            channel = _channel_for(os_name, os_version, identifier)
-            if channel is not None and os_name == "redhat" and channel.startswith("el"):
-                self.logger.warning(
-                    "%s/%s: dropping cross-release event identified %r under %s %s",
-                    vid,
-                    pkg_name,
-                    identifier,
-                    os_name,
-                    os_version,
-                )
-                continue
-            by_channel.setdefault(channel, []).append(ev)
+            by_channel.setdefault(_channel_for(os_name, os_version, ev.get("identifier")), []).append(ev)
         return by_channel
 
     def _normalize(
@@ -457,7 +478,7 @@ class Parser:
         channel per release stream.
         """
         result: dict[str, dict[str, Any]] = {}
-        version_format = version_formats.get(os_name.lower(), "dpkg")
+        version_format = base_oses[os_name].version_format
 
         for cve_id, cve_entry in cve_map.items():
             vid, entry = self._get_valid_cve_entry(cve_id, cve_entry)
@@ -466,13 +487,7 @@ class Parser:
 
             events = self._apply_fold_safety(os_name, vid, pkg_name, entry.get("events") or [])
 
-            for channel, channel_events in self._partition_events_by_channel(
-                os_name,
-                os_version,
-                vid,
-                pkg_name,
-                events,
-            ).items():
+            for channel, channel_events in self._partition_events_by_channel(os_name, os_version, events).items():
                 # Build FixedIn from events (one per introduced/fixed pair, like GHSA)
                 range_pairs = _events_to_range_pairs(channel_events)
                 if not range_pairs:

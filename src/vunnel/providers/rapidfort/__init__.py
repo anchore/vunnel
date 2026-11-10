@@ -1,10 +1,10 @@
 """RapidFort security advisories provider.
 
 Ingests vulnerability data from the RapidFort security-advisories GitHub repo
-for Ubuntu, Debian, Alpine, and Red Hat bases. Used when scanning RapidFort-curated
-images (identified via maintainer metadata) to apply RapidFort-specific advisory
-and version checks; release streams are emitted as OS channels (e.g.
-rapidfort-redhat:9+fc43).
+for Ubuntu, Debian, Alpine, Red Hat, Rocky, Alma, Oracle, and Amazon bases. Used when
+scanning RapidFort-curated images (identified by grype's RapidFort distro identifier) to
+apply RapidFort-specific advisory and version checks; release streams are emitted as OS
+channels (e.g. rapidfort-redhat:9+fc43).
 """
 
 from __future__ import annotations

@@ -91,6 +91,23 @@ class TestChannelFor:
     def test_channels_are_lowercased(self):
         assert _channel_for("redhat", "9", "FC43") == "fc43"
 
+    @pytest.mark.parametrize("os_name", ["redhat", "rocky", "alma", "oracle"])
+    def test_el_family_native_stream_is_the_release_major(self, os_name):
+        assert _channel_for(os_name, "9", "el9") is None
+        assert _channel_for(os_name, "9", "fc43") == "fc43"
+        assert _channel_for(os_name, "9", "rf") == "rf"
+
+    @pytest.mark.parametrize("os_name", ["redhat", "rocky", "alma", "oracle"])
+    def test_el_family_cross_release_builds_become_channels(self, os_name):
+        # an el9 build shipped in a release 10 image is not the native stream there
+        assert _channel_for(os_name, "10", "el9") == "el9"
+        assert _channel_for(os_name, "9", "el10") == "el10"
+
+    def test_amazon_native_stream(self):
+        assert _channel_for("amazon", "2023", "amzn2023") is None
+        assert _channel_for("amazon", "2023", "amzn2") == "amzn2"
+        assert _channel_for("amazon", "2023", "fc43") == "fc43"
+
 
 class TestNormalize:
     """Tests for _normalize: namespace-keyed output with per-stream channels."""
@@ -232,10 +249,10 @@ class TestNormalize:
         assert len(rf_fixed_in) == 1
         assert rf_fixed_in[0]["Version"] == "0:7.88.0-1.rf"
 
-    def test_redhat_cross_release_events_are_dropped(
-        self, tmpdir, auto_fake_fixdate_finder, caplog
+    def test_cross_release_events_get_their_release_channel(
+        self, tmpdir, auto_fake_fixdate_finder
     ):
-        """An el8-identified event under the redhat 9 key belongs to no reachable stream and is dropped."""
+        """An el8-identified event under the redhat 9 key is an el8 build shipped in RHEL 9 images: +el8."""
         ws = workspace.Workspace(tmpdir, "test", create=True)
         parser = Parser(workspace=ws)
 
@@ -253,10 +270,44 @@ class TestNormalize:
         with parser:
             by_namespace = parser._normalize("redhat", "9", "curl", cve_map)
 
-        assert sorted(by_namespace) == ["rapidfort-redhat:9"]
-        fixed_in = by_namespace["rapidfort-redhat:9"]["CVE-2014-0139"]["Vulnerability"]["FixedIn"]
-        assert len(fixed_in) == 1
-        assert fixed_in[0]["Version"] == "7.76.1-19.el9_2"
+        assert sorted(by_namespace) == ["rapidfort-redhat:9", "rapidfort-redhat:9+el8"]
+        native = by_namespace["rapidfort-redhat:9"]["CVE-2014-0139"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in native] == ["7.76.1-19.el9_2"]
+        el8 = by_namespace["rapidfort-redhat:9+el8"]["CVE-2014-0139"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in el8] == ["7.61.1-34.el8"]
+
+    @pytest.mark.parametrize(
+        ("os_name", "os_version", "identifier", "expected"),
+        [
+            ("rocky", "9", "el9", "rapidfort-rockylinux:9"),
+            ("alma", "9", "el9", "rapidfort-almalinux:9"),
+            ("oracle", "9", "el9", "rapidfort-oraclelinux:9"),
+            ("amazon", "2023", "amzn2023", "rapidfort-amazonlinux:2023"),
+        ],
+    )
+    def test_namespaces_are_named_for_the_grype_distro(
+        self, tmpdir, auto_fake_fixdate_finder, os_name, os_version, identifier, expected
+    ):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2026-54369": {
+                "cve_id": "CVE-2026-54369",
+                "severity": "HIGH",
+                "events": [
+                    {"introduced": "0", "fixed": "0:2.4.0-1", "identifier": identifier},
+                    {"introduced": "0", "fixed": "0:2.4.0-1.fc43", "identifier": "fc43"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize(os_name, os_version, "rf-acl", cve_map)
+
+        assert sorted(by_namespace) == [expected, f"{expected}+fc43"]
+        fixed_in = by_namespace[expected]["CVE-2026-54369"]["Vulnerability"]["FixedIn"]
+        assert [(f["VersionFormat"], f["Version"]) for f in fixed_in] == [("rpm", "0:2.4.0-1")]
 
     def test_ubuntu_native_streams_fold_together(
         self, tmpdir, auto_fake_fixdate_finder
@@ -325,6 +376,10 @@ class TestNormalizeOSVersion:
 
     def test_el_prefixed_redhat_key_is_normalized(self, parser):
         assert parser._normalize_os_version("redhat", "el4") == "4"
+        assert parser._normalize_os_version("rocky", "el8") == "8"
+
+    def test_native_prefixed_amazon_key_is_normalized(self, parser):
+        assert parser._normalize_os_version("amazon", "amzn2023") == "2023"
 
     def test_unusable_keys_are_skipped(self, parser):
         assert parser._normalize_os_version("redhat", "elX") is None
