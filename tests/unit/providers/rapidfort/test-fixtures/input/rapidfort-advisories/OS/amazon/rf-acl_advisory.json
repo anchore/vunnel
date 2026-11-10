@@ -1,0 +1,26 @@
+{
+    "package_name": "rf-acl",
+    "advisory": {
+        "2023": {
+            "CVE-2026-54369": {
+                "cve_id": "CVE-2026-54369",
+                "title": "acl before version 2.4.0 contains a symlink traversal vulnerability",
+                "description": "acl before version 2.4.0 contains a symlink traversal vulnerability.",
+                "severity": "HIGH",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "0:2.3.1-2.amzn2023.0.2",
+                        "fixed": "0:2.4.0-1.amzn2023.0.1",
+                        "identifier": "amzn2023"
+                    },
+                    {
+                        "introduced": "0:2.3.2-4.fc43",
+                        "fixed": "0:2.4.0-1.fc43",
+                        "identifier": "fc43"
+                    }
+                ]
+            }
+        }
+    }
+}
