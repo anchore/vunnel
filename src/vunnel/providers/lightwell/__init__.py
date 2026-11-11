@@ -40,11 +40,9 @@ class Provider(provider.Provider):
 
         self.parser = Parser(
             ws=self.workspace,
+            download_timeout=config.request_timeout,
             logger=self.logger,
         )
-
-        # this provider requires the previous state from former runs
-        provider.disallow_existing_input_policy(config.runtime)
 
     @classmethod
     def name(cls) -> str:

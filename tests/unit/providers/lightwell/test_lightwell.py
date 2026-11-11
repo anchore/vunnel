@@ -1,4 +1,5 @@
-import shutil
+import os
+import zipfile
 from unittest.mock import patch
 
 import pytest
@@ -7,31 +8,36 @@ from vunnel.providers.lightwell import Config, Provider
 from vunnel.providers.lightwell.parser import Parser
 
 
-@patch("vunnel.providers.lightwell.git.GitWrapper.clone_repo")
-@patch("vunnel.providers.lightwell.git.GitWrapper.delete_repo")
-def test_provider_schema(mock_git_delete, mock_git_clone, helpers, auto_fake_fixdate_finder, disable_get_requests):
-    mock_git_clone.return_value = None
-    mock_git_delete.return_value = None
+def _mock_download(fixture_dir):
+    """Return a side_effect that builds a zip from the test-fixture advisories."""
+
+    def _download(url, dest, logger, **kwargs):
+        with zipfile.ZipFile(dest, "w") as zf:
+            advisories_dir = os.path.join(fixture_dir, "lightwell-osv", "advisories")
+            for name in sorted(os.listdir(advisories_dir)):
+                full = os.path.join(advisories_dir, name)
+                zf.write(full, f"lightwell-osv-main/advisories/{name}")
+
+    return _download
+
+
+@patch("vunnel.providers.lightwell.parser.http.download_to_file")
+def test_provider_schema(mock_download, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
+    mock_download.side_effect = _mock_download(helpers.local_dir("test-fixtures"))
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
-    mock_data_path = helpers.local_dir("test-fixtures")
-    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
     p.update(None)
 
     assert 3 == workspace.num_result_entries()
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-@patch("vunnel.providers.lightwell.git.GitWrapper.clone_repo")
-@patch("vunnel.providers.lightwell.git.GitWrapper.delete_repo")
-def test_parser(mock_git_delete, mock_git_clone, helpers, disable_get_requests, auto_fake_fixdate_finder):
-    mock_git_clone.return_value = None
-    mock_git_delete.return_value = None
+@patch("vunnel.providers.lightwell.parser.http.download_to_file")
+def test_parser(mock_download, helpers, disable_get_requests, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
-    mock_data_path = helpers.local_dir("test-fixtures")
-    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
+    mock_download.side_effect = _mock_download(helpers.local_dir("test-fixtures"))
     parser = Parser(ws=workspace, logger=None)
     vuln_tuples = list(parser.get())
 
@@ -59,17 +65,13 @@ def test_compatible_schema(schema_version, expected):
     assert Provider.compatible_schema(schema_version) == expected
 
 
-@patch("vunnel.providers.lightwell.git.GitWrapper.clone_repo")
-@patch("vunnel.providers.lightwell.git.GitWrapper.delete_repo")
-def test_provider_via_snapshot(mock_git_delete, mock_git_clone, helpers, auto_fake_fixdate_finder, disable_get_requests):
-    mock_git_clone.return_value = None
-    mock_git_delete.return_value = None
+@patch("vunnel.providers.lightwell.parser.http.download_to_file")
+def test_provider_via_snapshot(mock_download, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
+    mock_download.side_effect = _mock_download(helpers.local_dir("test-fixtures"))
     c = Config()
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     p = Provider(root=workspace.root, config=c)
-    mock_data_path = helpers.local_dir("test-fixtures")
-    shutil.copytree(mock_data_path, workspace.input_dir, dirs_exist_ok=True)
     p.update(None)
 
     workspace.assert_result_snapshots()
