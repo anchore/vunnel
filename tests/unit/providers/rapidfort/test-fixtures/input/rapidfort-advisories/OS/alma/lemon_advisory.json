@@ -1,0 +1,26 @@
+{
+    "package_name": "lemon",
+    "advisory": {
+        "9": {
+            "CVE-2026-11822CVE-2026-11824": {
+                "cve_id": "CVE-2026-11822CVE-2026-11824",
+                "title": "lemon: two parser generator flaws fixed together",
+                "description": "Upstream packs two CVE ids into one advisory key; each gets its own record.",
+                "severity": "MEDIUM",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "3.34.1",
+                        "fixed": "3.34.1-8.el9_6",
+                        "identifier": "el9"
+                    },
+                    {
+                        "introduced": "3.46.0",
+                        "fixed": "3.46.1-4.fc43",
+                        "identifier": "fc43"
+                    }
+                ]
+            }
+        }
+    }
+}

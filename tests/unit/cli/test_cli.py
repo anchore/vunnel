@@ -543,7 +543,7 @@ providers:
       skip_newer_archive_check: false
       user_agent: null
   rapidfort:
-    repo_url: https://github.com/rapidfort/security-advisories.git
+    archive_url: https://github.com/rapidfort/security-advisories/archive/refs/heads/main.zip
     request_timeout: 125
     runtime:
       existing_input: keep

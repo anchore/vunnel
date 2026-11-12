@@ -11,13 +11,17 @@ builds, and RapidFort rebuilds inside one rapidfort-redhat:9 image). Each adviso
 carry an `identifier` naming its stream (el9, fc43, rf, amzn2023, ubuntu, ...). Streams are
 emitted as separate grype namespaces so their fix ranges are never merged into one constraint:
 
-- the image's native stream (el{major} for the EL family, amzn{release} for amazon,
-  ubuntu/unidentified for ubuntu, everything for alpine) folds into the channel-less namespace,
-  e.g. rapidfort-redhat:9 — so a package that matches no client-side routing rule degrades to
-  sane native-stream matching
+- the image's native stream (el{major} for the EL family, amzn{release} for amazon, ubuntu or
+  debian for those trees) and unidentified events (all of alpine today) fold into the channel-less
+  namespace, e.g. rapidfort-redhat:9, so a package that matches no client-side routing rule degrades
+  to sane native-stream matching
 - foreign/rebuild streams get a +channel namespace, e.g. rapidfort-redhat:9+fc43,
   rapidfort-ubuntu:20.04+rf, or rapidfort-redhat:10+el9 for an el9 build shipped in RHEL 10
   images, which grype routes to per package via version/name markers
+
+Everything read from the archive is upstream data that ends up in namespace names, record ids and
+version constraints, so it is validated as it is loaded and anything unrecognized is skipped with a
+warning rather than passed through.
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from __future__ import annotations
 import copy
 import logging
 import os
+import re
 import zipfile
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -40,10 +45,24 @@ if TYPE_CHECKING:
 
     from vunnel.workspace import Workspace
 
+logger = logging.getLogger(__name__)
+
 namespace = "rapidfort"
-default_repo_url = "https://github.com/rapidfort/security-advisories.git"
-repo_branch = "main"
+default_archive_url = "https://github.com/rapidfort/security-advisories/archive/refs/heads/main.zip"
+advisory_base_url = "https://github.com/rapidfort/security-advisories/blob/main"
 repo_os_path = "OS"  # OS/{osName}/{package}.json (source format)
+
+# every release stream seen upstream: EL majors, Fedora releases, Amazon releases and RapidFort rebuilds.
+# grype only routes to channels it knows about, so records under any other channel would be unreachable
+known_channel = re.compile(r"(el|fc|amzn)[0-9]+|rf")
+
+# vulnerability ids upstream uses. They double as result identifiers, so nothing else gets through
+vuln_id_pattern = re.compile(r"CVE-[0-9]{4}-[0-9]{4,}|GHSA(-[0-9a-z]{4}){3}|DSA-[0-9]+-[0-9]+|DLA-[0-9]+-[0-9]+", re.IGNORECASE)
+
+os_version_pattern = re.compile(r"[0-9]+(\.[0-9]+)*")
+
+# characters that would change the meaning of a version constraint if interpolated into one
+unsafe_version_chars = re.compile(r"[\s,<>=|]")
 
 
 @dataclass(frozen=True)
@@ -83,7 +102,26 @@ base_oses = {
     "oracle": BaseOS(distro="oraclelinux", version_format="rpm", native_identifier="el{version}"),
     "amazon": BaseOS(distro="amazonlinux", version_format="rpm", native_identifier="amzn{version}"),
 }
-default_supported_oses = tuple(base_oses)
+
+
+def _vuln_ids(raw: Any) -> list[str]:
+    """Extract canonical vulnerability ids from an advisory's cve_id.
+
+    Upstream occasionally packs several ids into one key ("CVE-a, CVE-b", "CVE-aCVE-b") or appends a
+    note ("CVE-a follow-up"), so every id found gets its own record. GHSA ids keep their canonical
+    lowercase body, everything else is uppercased.
+    """
+    ids: list[str] = []
+    for m in vuln_id_pattern.finditer(str(raw)):
+        vid = m.group(0)
+        vid = "GHSA-" + vid[5:].lower() if vid[:5].upper() == "GHSA-" else vid.upper()
+        if vid not in ids:
+            ids.append(vid)
+    return ids
+
+
+def _is_plain_version(value: Any) -> bool:
+    return isinstance(value, str) and not unsafe_version_chars.search(value)
 
 
 def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]]:
@@ -104,6 +142,9 @@ def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]
             continue
         introduced = ev.get("introduced")
         fixed = ev.get("fixed")
+        if any(v and not _is_plain_version(v) for v in (introduced, fixed)):
+            logger.warning("skipping RapidFort event with unusable version(s): introduced=%r fixed=%r", introduced, fixed)
+            continue
 
         if introduced and fixed:
             range_str = f">= {introduced}, < {fixed}"
@@ -129,7 +170,7 @@ def _events_to_range_pairs(events: list[dict[str, Any]]) -> list[tuple[str, str]
 
 def _advisory_url(os_name: str, pkg_name: str) -> str:
     # upstream names every advisory file {package_name}_advisory.json
-    return f"https://github.com/rapidfort/security-advisories/blob/{repo_branch}/OS/{os_name}/{pkg_name}_advisory.json"
+    return f"{advisory_base_url}/{repo_os_path}/{os_name}/{pkg_name}_advisory.json"
 
 
 def _vendor_advisory(os_name: str, pkg_name: str) -> dict[str, Any]:
@@ -148,21 +189,15 @@ def _namespace_name(os_name: str, os_version: str, channel: str | None = None) -
     return ns
 
 
-# base distros whose native stream is named by the distro itself (e.g. a debian-identified event
-# in the debian tree is a stock debian build). Those events fold into the channel-less namespace
-# alongside the unidentified ones, which is what NATIVE_FOLD_DISTROS gates the fold-safety guard on.
-NATIVE_FOLD_DISTROS = ("ubuntu", "debian")
-
-
 def _channel_for(os_name: str, os_version: str, identifier: str | None) -> str | None:
     """Map an event's release-stream identifier to a namespace channel.
 
     None means the event belongs to the image's native (channel-less) namespace:
     - EL-family events identified as el{release} (amazon: amzn{release}) are the native stream
-    - ubuntu/debian events identified with the distro's own name (distro-patched builds) or
-      carrying no identifier (upstream/vendored builds) are both native; the fold-safety guard
-      in the parser ensures those two never carry conflicting ranges for the same CVE+package
-    - alpine events carry no identifiers at all
+    - ubuntu/debian events identified with the distro's own name (distro-patched builds) are native
+    - events carrying no identifier (upstream/vendored builds, and all of alpine today) are native;
+      the fold-safety guard in the parser ensures they never mix with native-stream events for the
+      same CVE+package
 
     Anything else is a foreign stream and gets a channel, including a build for another release of
     the same family (el9 under the redhat 10 key). Note that the native identifier must fold rather
@@ -188,27 +223,26 @@ class Parser:
         workspace: Workspace,
         fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
-        repo_url: str | None = None,
-        supported_oses: tuple[str, ...] | None = None,
-        timeout: int | None = None,
+        archive_url: str = default_archive_url,
+        download_timeout: int = 125,
+        skip_download: bool = False,
     ):
         if not fixdater:
-            fixdater = fixdate.default_finder(workspace)
+            fixdater = fixdate.default_finder(workspace, skip_download=skip_download)
         self.fixdater = fixdater
         self.workspace = workspace
-        self.repo_url = repo_url or default_repo_url
-        self.supported_oses = supported_oses or default_supported_oses
-        self.urls = [self.repo_url]
+        self.archive_url = archive_url
+        self.urls = [archive_url]
+        self.download_timeout = download_timeout
+        self.skip_download = skip_download
 
         if not logger:
             logger = logging.getLogger(self.__class__.__name__)
         self.logger = logger
 
-        self.timeout = timeout
-        self._archive_url = f"{self.repo_url.removesuffix('.git')}/archive/refs/heads/{repo_branch}.zip"
         self._archive_path = os.path.join(self.workspace.input_path, "rapidfort-advisories.zip")
-
-        self.security_reference_url = "https://github.com/rapidfort/security-advisories/tree/main/OS"
+        # unknown release streams already warned about, so each is reported once per run
+        self._unknown_channels: set[str] = set()
 
     def __enter__(self) -> Parser:
         self.fixdater.__enter__()
@@ -224,8 +258,10 @@ class Parser:
 
     def _download(self) -> None:
         """Download the repo's branch archive (much faster and smaller than cloning ~35k files)."""
-        kwargs: dict[str, Any] = {"timeout": self.timeout} if self.timeout else {}
-        http_wrapper.download_to_file(self._archive_url, self._archive_path, self.logger, **kwargs)
+        if self.skip_download:
+            self.logger.info("skip_download is enabled, using existing archive at %s", self._archive_path)
+            return
+        http_wrapper.download_to_file(self.archive_url, self._archive_path, self.logger, timeout=self.download_timeout)
 
     def _load_package_file(
         self,
@@ -240,9 +276,13 @@ class Parser:
             self.logger.warning("Failed to parse %s", file_path, exc_info=True)
             return
 
+        if not isinstance(data, dict):
+            self.logger.warning("advisory file %s is not a JSON object, skipping", file_path)
+            return
+
         pkg_name = data.get("package_name")
-        if not pkg_name:
-            self.logger.warning("Missing package_name in %s, skipping", file_path)
+        if not pkg_name or not isinstance(pkg_name, str):
+            self.logger.warning("missing or invalid package_name in %s, skipping", file_path)
             return
 
         advisory = data.get("advisory")
@@ -290,23 +330,8 @@ class Parser:
             if unknown:
                 self.logger.warning("skipping RapidFort OS trees with no known base OS: %s", ", ".join(unknown))
 
-            for os_name in self.supported_oses:
+            for os_name in base_oses:
                 yield from self._load_os(archive, files, os_name)
-
-    def _get_valid_cve_entry(
-        self,
-        cve_id: str,
-        cve_entry: Any,
-    ) -> tuple[str | None, dict[str, Any] | None]:
-        """Return normalized CVE ID and entry if valid."""
-        if not isinstance(cve_entry, dict):
-            return None, None
-
-        vid = cve_entry.get("cve_id") or cve_id
-        if not vid:
-            return None, None
-
-        return str(vid), cve_entry
 
     def _get_or_create_vuln_record(
         self,
@@ -407,9 +432,10 @@ class Parser:
         """
         version = str(os_version).strip()
         prefix = base_oses[os_name].release_prefix if os_name in base_oses else ""
-        if prefix and version.startswith(prefix) and version[len(prefix) :].isdigit():
+        if prefix and version.startswith(prefix):
             version = version[len(prefix) :]
-        if not version or not version[0].isdigit():
+        # the version becomes part of the namespace (and so of each result identifier): digits and dots only
+        if not os_version_pattern.fullmatch(version):
             self.logger.warning("skipping advisory with unusable OS version key %r for %s", os_version, os_name)
             return None
         return version
@@ -417,34 +443,34 @@ class Parser:
     def _apply_fold_safety(
         self,
         os_name: str,
+        os_version: str,
         vid: str,
         pkg_name: str,
         events: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        """Guard the native fold for distros that name their own stream (see NATIVE_FOLD_DISTROS).
+        """Guard the native fold: never merge native-stream and unidentified events into one namespace.
 
-        Both the distro-identified stream (distro-patched builds) and the unidentified stream
-        (upstream/vendored builds) fold into the channel-less namespace. That is safe only while
-        no CVE+package entry carries events from BOTH streams (verified against the full dataset:
-        0 of 30,699 ubuntu entries, and 0 overlapping CVE+package pairs for debian). If the data
-        ever changes, folding both would OR-merge cross-stream constraints — so degrade loudly and
-        keep only the distro-patched events.
+        Both the native stream (el9 under redhat 9, ubuntu under ubuntu, ...) and unidentified events
+        fold into the channel-less namespace. That is safe only while no CVE+package entry carries
+        events from BOTH (verified against the full dataset: no tree has such an entry today). If the
+        data ever changes, folding both would OR-merge cross-stream constraints, so degrade loudly
+        and keep only the native-stream events.
         """
-        if os_name not in NATIVE_FOLD_DISTROS:
+        native = base_oses[os_name].native_stream(os_version)
+        if not native:
             return events
 
         def ident(ev: dict[str, Any]) -> str:
             return str(ev.get("identifier") or "").strip().lower()
 
-        has_native = any(ident(ev) == os_name for ev in events if isinstance(ev, dict))
+        has_native = any(ident(ev) == native for ev in events if isinstance(ev, dict))
         has_unidentified = any(not ident(ev) for ev in events if isinstance(ev, dict))
         if has_native and has_unidentified:
             self.logger.warning(
-                "%s/%s carries both %s-identified and unidentified events; keeping only the %s-identified events to avoid merging release streams",
+                "%s/%s carries both %s-identified and unidentified events; keeping only the identified events to avoid merging release streams",
                 vid,
                 pkg_name,
-                os_name,
-                os_name,
+                native,
             )
             return [ev for ev in events if not isinstance(ev, dict) or ident(ev)]
         return events
@@ -460,7 +486,13 @@ class Parser:
         for ev in events:
             if not isinstance(ev, dict):
                 continue
-            by_channel.setdefault(_channel_for(os_name, os_version, ev.get("identifier")), []).append(ev)
+            channel = _channel_for(os_name, os_version, ev.get("identifier"))
+            if channel is not None and not known_channel.fullmatch(channel):
+                if channel not in self._unknown_channels:
+                    self._unknown_channels.add(channel)
+                    self.logger.warning("skipping events from unknown RapidFort release stream %r (grype has no routing for it)", channel)
+                continue
+            by_channel.setdefault(channel, []).append(ev)
         return by_channel
 
     def _normalize(
@@ -480,38 +512,53 @@ class Parser:
         result: dict[str, dict[str, Any]] = {}
         version_format = base_oses[os_name].version_format
 
-        for cve_id, cve_entry in cve_map.items():
-            vid, entry = self._get_valid_cve_entry(cve_id, cve_entry)
-            if not vid or entry is None:
+        for cve_id, entry in cve_map.items():
+            if not isinstance(entry, dict):
                 continue
 
-            events = self._apply_fold_safety(os_name, vid, pkg_name, entry.get("events") or [])
+            raw_id = entry.get("cve_id") or cve_id
+            vids = _vuln_ids(raw_id)
+            if not vids:
+                self.logger.warning("skipping %s/%s advisory with unrecognized vulnerability id %r", os_name, pkg_name, raw_id)
+                continue
 
-            for channel, channel_events in self._partition_events_by_channel(os_name, os_version, events).items():
-                # Build FixedIn from events (one per introduced/fixed pair, like GHSA)
-                range_pairs = _events_to_range_pairs(channel_events)
-                if not range_pairs:
-                    continue
+            events = entry.get("events") or []
+            if not isinstance(events, list):
+                self.logger.warning("skipping %s/%s %s: events is not a list", os_name, pkg_name, raw_id)
+                continue
 
-                ns = _namespace_name(os_name, os_version, channel)
-                vuln_dict = result.setdefault(ns, {})
+            events = self._apply_fold_safety(os_name, os_version, raw_id, pkg_name, events)
+            by_channel = self._partition_events_by_channel(os_name, os_version, events)
 
-                vuln_record = self._get_or_create_vuln_record(
-                    vuln_dict=vuln_dict,
-                    vid=vid,
-                    cve_entry=entry,
-                    ecosystem=ns,
-                )
+            for vid in vids:
+                for channel, channel_events in by_channel.items():
+                    # Build FixedIn from events (one per introduced/fixed pair, like GHSA)
+                    range_pairs = _events_to_range_pairs(channel_events)
+                    if not range_pairs:
+                        continue
 
-                for fixed_el in self._build_fixed_in_elements(
-                    vid=vid,
-                    os_name=os_name,
-                    pkg_name=pkg_name,
-                    range_pairs=range_pairs,
-                    ecosystem=ns,
-                    version_format=version_format,
-                ):
-                    vuln_record["Vulnerability"]["FixedIn"].append(fixed_el)
+                    ns = _namespace_name(os_name, os_version, channel)
+                    vuln_dict = result.setdefault(ns, {})
+
+                    vuln_record = self._get_or_create_vuln_record(
+                        vuln_dict=vuln_dict,
+                        vid=vid,
+                        cve_entry=entry,
+                        ecosystem=ns,
+                    )
+
+                    fixed_in = vuln_record["Vulnerability"]["FixedIn"]
+                    for fixed_el in self._build_fixed_in_elements(
+                        vid=vid,
+                        os_name=os_name,
+                        pkg_name=pkg_name,
+                        range_pairs=range_pairs,
+                        ecosystem=ns,
+                        version_format=version_format,
+                    ):
+                        # a split id ("CVE-a follow-up") can repeat a range already recorded under the same id
+                        if fixed_el not in fixed_in:
+                            fixed_in.append(fixed_el)
 
         return result
 
@@ -549,9 +596,10 @@ class Parser:
 
     def get(self) -> Generator[tuple[str, dict[str, dict[str, Any]]]]:
         """Download repo archive, load advisories, normalize and yield (namespace, vuln_dict)."""
-        self._download()
-
+        # fixdate first: if it fails there is no point fetching the much larger advisory archive
         self.fixdater.download()
+
+        self._download()
 
         namespace_vulns: dict[str, dict[str, dict[str, Any]]] = {}
 

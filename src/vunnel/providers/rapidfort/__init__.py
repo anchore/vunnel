@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
-from .parser import Parser
+from .parser import Parser, default_archive_url
 
 if TYPE_CHECKING:
     import datetime
@@ -31,7 +31,7 @@ class Config:
         ),
     )
     request_timeout: int = 125
-    repo_url: str = "https://github.com/rapidfort/security-advisories.git"
+    archive_url: str = default_archive_url
 
 
 class Provider(provider.Provider):
@@ -49,8 +49,9 @@ class Provider(provider.Provider):
         self.parser = Parser(
             workspace=self.workspace,
             logger=self.logger,
-            repo_url=config.repo_url,
-            timeout=config.request_timeout,
+            archive_url=config.archive_url,
+            download_timeout=config.request_timeout,
+            skip_download=config.runtime.skip_download,
         )
 
         provider.disallow_existing_input_policy(config.runtime)
@@ -62,6 +63,10 @@ class Provider(provider.Provider):
     @classmethod
     def tags(cls) -> list[str]:
         return ["vulnerability", "os"]
+
+    @classmethod
+    def supports_skip_download(cls) -> bool:
+        return True
 
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
@@ -76,4 +81,6 @@ class Provider(provider.Provider):
                             payload=record,
                         )
 
+            if len(writer) == 0 and self.config.runtime.skip_download:
+                raise RuntimeError("download skipped on empty workspace")
             return self.parser.urls, len(writer)
