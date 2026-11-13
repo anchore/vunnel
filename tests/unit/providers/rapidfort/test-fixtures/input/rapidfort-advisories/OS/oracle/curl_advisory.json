@@ -1,0 +1,26 @@
+{
+    "package_name": "curl",
+    "advisory": {
+        "10": {
+            "CVE-2024-2398": {
+                "cve_id": "CVE-2024-2398",
+                "title": "curl: HTTP/2 push headers memory-leak",
+                "description": "When an application tells libcurl it wants to allow HTTP/2 server push and the amount of received headers exceeds the limit, memory can leak.",
+                "severity": "MEDIUM",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "8.9.1",
+                        "fixed": "8.9.1-5.el10_0.1",
+                        "identifier": "el10"
+                    },
+                    {
+                        "introduced": "7.76.1",
+                        "fixed": "7.76.1-29.el9_4.1",
+                        "identifier": "el9"
+                    }
+                ]
+            }
+        }
+    }
+}

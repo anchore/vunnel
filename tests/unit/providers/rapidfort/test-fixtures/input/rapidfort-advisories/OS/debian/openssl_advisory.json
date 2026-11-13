@@ -1,0 +1,26 @@
+{
+    "package_name": "openssl",
+    "advisory": {
+        "12": {
+            "CVE-2024-5535": {
+                "cve_id": "CVE-2024-5535",
+                "title": "openssl: SSL_select_next_proto buffer overread",
+                "description": "Calling SSL_select_next_proto with an empty supported client protocols buffer may cause a crash or memory contents to be sent to the peer.",
+                "severity": "LOW",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "3.0.0",
+                        "fixed": "3.0.15-1~deb12u1",
+                        "identifier": "debian"
+                    },
+                    {
+                        "introduced": "3.0.0",
+                        "fixed": "3.0.14-1rf1",
+                        "identifier": "rf"
+                    }
+                ]
+            }
+        }
+    }
+}

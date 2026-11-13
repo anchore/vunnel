@@ -1,0 +1,723 @@
+"""Tests for RapidFort parser: schema compliance, release-stream channels, and multi-range CVE handling."""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import zipfile
+
+import pytest
+from vunnel import result, workspace
+from vunnel.providers.rapidfort.parser import Parser, _channel_for, _events_to_range_pairs, _vuln_ids
+
+
+class TestEventsToRangePairs:
+    """Tests for _events_to_range_pairs helper."""
+
+    def test_single_event(self):
+        events = [{"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.1"}]
+        pairs = _events_to_range_pairs(events)
+        assert len(pairs) == 1
+        assert pairs[0] == (">= 7.68.0, < 7.68.0-1ubuntu2.1", "7.68.0-1ubuntu2.1")
+
+    def test_multi_range_cve_2022_22576(self):
+        """CVE-2022-22576 has two events (two branches: 7.68.0 and 7.81.0)."""
+        events = [
+            {"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.10"},
+            {"introduced": "7.81.0", "fixed": "7.81.0-1ubuntu1.1"},
+        ]
+        pairs = _events_to_range_pairs(events)
+        assert len(pairs) == 2
+        assert pairs[0] == (">= 7.68.0, < 7.68.0-1ubuntu2.10", "7.68.0-1ubuntu2.10")
+        assert pairs[1] == (">= 7.81.0, < 7.81.0-1ubuntu1.1", "7.81.0-1ubuntu1.1")
+
+    def test_deduplication(self):
+        """Duplicate events should be deduplicated."""
+        events = [
+            {"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.10"},
+            {"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.10"},
+        ]
+        pairs = _events_to_range_pairs(events)
+        assert len(pairs) == 1
+
+    def test_introduced_only(self):
+        events = [{"introduced": "7.68.0"}]
+        pairs = _events_to_range_pairs(events)
+        assert len(pairs) == 1
+        assert pairs[0] == (">= 7.68.0", "None")
+
+    def test_fixed_only(self):
+        events = [{"fixed": "7.68.0-1ubuntu2.1"}]
+        pairs = _events_to_range_pairs(events)
+        assert len(pairs) == 1
+        assert pairs[0] == ("< 7.68.0-1ubuntu2.1", "7.68.0-1ubuntu2.1")
+
+
+class TestChannelFor:
+    """Tests for _channel_for: mapping release-stream identifiers to namespace channels."""
+
+    def test_no_identifier_is_native(self):
+        assert _channel_for("alpine", "3.20", None) is None
+        assert _channel_for("debian", "12", None) is None
+        assert _channel_for("ubuntu", "20.04", None) is None
+
+    def test_redhat_native_el_stream_folds_to_channel_less(self):
+        assert _channel_for("redhat", "9", "el9") is None
+
+    def test_redhat_foreign_streams_become_channels(self):
+        assert _channel_for("redhat", "9", "fc43") == "fc43"
+        assert _channel_for("redhat", "9", "rf") == "rf"
+
+    def test_ubuntu_native_stream_folds_to_channel_less(self):
+        assert _channel_for("ubuntu", "20.04", "ubuntu") is None
+
+    def test_ubuntu_rf_stream_becomes_channel(self):
+        assert _channel_for("ubuntu", "20.04", "rf") == "rf"
+
+    def test_debian_native_stream_folds_to_channel_less(self):
+        # a debian-identified event in the debian tree is a stock debian build, i.e. the native
+        # stream -- exactly as "ubuntu" is for ubuntu. Passing it through instead would mint a
+        # channel named after the base distro, which no client routes to, leaving every record
+        # in it unreachable.
+        assert _channel_for("debian", "12", "debian") is None
+
+    def test_debian_rf_stream_becomes_channel(self):
+        assert _channel_for("debian", "12", "rf") == "rf"
+
+    def test_native_fold_is_scoped_to_the_matching_distro(self):
+        # the fold keys off the distro's own name, so a foreign distro's name stays a channel
+        assert _channel_for("debian", "12", "ubuntu") == "ubuntu"
+        assert _channel_for("ubuntu", "20.04", "debian") == "debian"
+
+    def test_channels_are_lowercased(self):
+        assert _channel_for("redhat", "9", "FC43") == "fc43"
+
+    @pytest.mark.parametrize("os_name", ["redhat", "rocky", "alma", "oracle"])
+    def test_el_family_native_stream_is_the_release_major(self, os_name):
+        assert _channel_for(os_name, "9", "el9") is None
+        assert _channel_for(os_name, "9", "fc43") == "fc43"
+        assert _channel_for(os_name, "9", "rf") == "rf"
+
+    @pytest.mark.parametrize("os_name", ["redhat", "rocky", "alma", "oracle"])
+    def test_el_family_cross_release_builds_become_channels(self, os_name):
+        # an el9 build shipped in a release 10 image is not the native stream there
+        assert _channel_for(os_name, "10", "el9") == "el9"
+        assert _channel_for(os_name, "9", "el10") == "el10"
+
+    def test_amazon_native_stream(self):
+        assert _channel_for("amazon", "2023", "amzn2023") is None
+        assert _channel_for("amazon", "2023", "amzn2") == "amzn2"
+        assert _channel_for("amazon", "2023", "fc43") == "fc43"
+
+
+class TestNormalize:
+    """Tests for _normalize: namespace-keyed output with per-stream channels."""
+
+    def test_multi_range_cve_produces_two_fixed_in_entries(
+        self, tmpdir, auto_fake_fixdate_finder
+    ):
+        """CVE-2022-22576 must produce exactly 2 FixedIn entries with correct ranges."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2022-22576": {
+                "cve_id": "CVE-2022-22576",
+                "description": "Test description",
+                "severity": "HIGH",
+                "events": [
+                    {"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.10"},
+                    {"introduced": "7.81.0", "fixed": "7.81.0-1ubuntu1.1"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("ubuntu", "20.04", "curl", cve_map)
+
+        assert list(by_namespace) == ["rapidfort-ubuntu:20.04"]
+        vuln_dict = by_namespace["rapidfort-ubuntu:20.04"]
+
+        assert "CVE-2022-22576" in vuln_dict
+        record = vuln_dict["CVE-2022-22576"]
+        fixed_in = record["Vulnerability"]["FixedIn"]
+
+        assert len(fixed_in) == 2, "Multi-range CVE must produce 2 FixedIn entries"
+
+        fixed_in_sorted = sorted(fixed_in, key=lambda x: x["Version"])
+        assert fixed_in_sorted[0]["Version"] == "7.68.0-1ubuntu2.10"
+        assert fixed_in_sorted[0]["VulnerableRange"] == ">= 7.68.0, < 7.68.0-1ubuntu2.10", (
+            fixed_in_sorted[0]["VulnerableRange"]
+        )
+        assert fixed_in_sorted[0]["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "curl",
+                "Link": "https://github.com/rapidfort/security-advisories/blob/main/OS/ubuntu/curl_advisory.json",
+            },
+        ]
+        assert fixed_in_sorted[1]["Version"] == "7.81.0-1ubuntu1.1"
+        assert fixed_in_sorted[1]["VulnerableRange"] == ">= 7.81.0, < 7.81.0-1ubuntu1.1", (
+            fixed_in_sorted[1]["VulnerableRange"]
+        )
+
+    def test_fix_availability_field_present(
+        self, tmpdir, auto_fake_fixdate_finder
+    ):
+        """Output must include 'Available' field (matching grype OSFixedIn struct and all other providers)."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2020-8169": {
+                "cve_id": "CVE-2020-8169",
+                "description": "Test description",
+                "severity": "HIGH",
+                "events": [{"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.1"}],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("ubuntu", "20.04", "curl", cve_map)
+
+        record = by_namespace["rapidfort-ubuntu:20.04"]["CVE-2020-8169"]
+        fixed_in = record["Vulnerability"]["FixedIn"]
+        assert len(fixed_in) == 1
+        assert "Available" in fixed_in[0], "Must use 'Available' to match grype OSFixedIn struct"
+        assert fixed_in[0]["Available"]["Date"] == "2024-01-01"
+        assert fixed_in[0]["Available"]["Kind"] == "first-observed"
+
+    def test_redhat_streams_split_into_channel_namespaces(
+        self, tmpdir, auto_fake_fixdate_finder
+    ):
+        """The native el stream folds channel-less; each foreign stream gets its own +channel namespace."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2014-0139": {
+                "cve_id": "CVE-2014-0139",
+                "description": "Test description",
+                "severity": "LOW",
+                "events": [
+                    {"introduced": "0", "identifier": "el9"},
+                    {"introduced": "0", "fixed": "7.78.0-4.fc36", "identifier": "fc36"},
+                    {"introduced": "0", "fixed": "7.81.0-3.fc37", "identifier": "fc37"},
+                    {"introduced": "0", "fixed": "0:7.88.0-1.rf", "identifier": "rf"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("redhat", "9", "curl", cve_map)
+
+        assert sorted(by_namespace) == [
+            "rapidfort-redhat:9",
+            "rapidfort-redhat:9+fc36",
+            "rapidfort-redhat:9+fc37",
+            "rapidfort-redhat:9+rf",
+        ]
+
+        # the native el9 event (no fix) lands in the channel-less namespace
+        native = by_namespace["rapidfort-redhat:9"]["CVE-2014-0139"]
+        assert native["Vulnerability"]["NamespaceName"] == "rapidfort-redhat:9"
+        native_fixed_in = native["Vulnerability"]["FixedIn"]
+        assert len(native_fixed_in) == 1
+        assert native_fixed_in[0]["NamespaceName"] == "rapidfort-redhat:9"
+        assert native_fixed_in[0]["VersionFormat"] == "rpm"
+        assert native_fixed_in[0]["Version"] == "None"
+        assert native_fixed_in[0]["VulnerableRange"] == ">= 0"
+        assert "Identifier" not in native_fixed_in[0]
+        assert native_fixed_in[0]["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "curl",
+                "Link": "https://github.com/rapidfort/security-advisories/blob/main/OS/redhat/curl_advisory.json",
+            },
+        ]
+
+        # each fedora stream lands in its own channel namespace
+        fc36 = by_namespace["rapidfort-redhat:9+fc36"]["CVE-2014-0139"]
+        assert fc36["Vulnerability"]["NamespaceName"] == "rapidfort-redhat:9+fc36"
+        fc36_fixed_in = fc36["Vulnerability"]["FixedIn"]
+        assert len(fc36_fixed_in) == 1
+        assert fc36_fixed_in[0]["NamespaceName"] == "rapidfort-redhat:9+fc36"
+        assert fc36_fixed_in[0]["Version"] == "7.78.0-4.fc36"
+        assert fc36_fixed_in[0]["VulnerableRange"] == ">= 0, < 7.78.0-4.fc36"
+        assert "Identifier" not in fc36_fixed_in[0]
+
+        # the rapidfort rebuild stream lands in +rf
+        rf = by_namespace["rapidfort-redhat:9+rf"]["CVE-2014-0139"]
+        rf_fixed_in = rf["Vulnerability"]["FixedIn"]
+        assert len(rf_fixed_in) == 1
+        assert rf_fixed_in[0]["Version"] == "0:7.88.0-1.rf"
+
+    def test_cross_release_events_get_their_release_channel(
+        self, tmpdir, auto_fake_fixdate_finder
+    ):
+        """An el8-identified event under the redhat 9 key is an el8 build shipped in RHEL 9 images: +el8."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2014-0139": {
+                "cve_id": "CVE-2014-0139",
+                "severity": "LOW",
+                "events": [
+                    {"introduced": "0", "fixed": "7.61.1-34.el8", "identifier": "el8"},
+                    {"introduced": "0", "fixed": "7.76.1-19.el9_2", "identifier": "el9"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("redhat", "9", "curl", cve_map)
+
+        assert sorted(by_namespace) == ["rapidfort-redhat:9", "rapidfort-redhat:9+el8"]
+        native = by_namespace["rapidfort-redhat:9"]["CVE-2014-0139"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in native] == ["7.76.1-19.el9_2"]
+        el8 = by_namespace["rapidfort-redhat:9+el8"]["CVE-2014-0139"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in el8] == ["7.61.1-34.el8"]
+
+    @pytest.mark.parametrize(
+        ("os_name", "os_version", "identifier", "expected"),
+        [
+            ("rocky", "9", "el9", "rapidfort-rockylinux:9"),
+            ("alma", "9", "el9", "rapidfort-almalinux:9"),
+            ("oracle", "9", "el9", "rapidfort-oraclelinux:9"),
+            ("amazon", "2023", "amzn2023", "rapidfort-amazonlinux:2023"),
+        ],
+    )
+    def test_namespaces_are_named_for_the_grype_distro(
+        self, tmpdir, auto_fake_fixdate_finder, os_name, os_version, identifier, expected
+    ):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2026-54369": {
+                "cve_id": "CVE-2026-54369",
+                "severity": "HIGH",
+                "events": [
+                    {"introduced": "0", "fixed": "0:2.4.0-1", "identifier": identifier},
+                    {"introduced": "0", "fixed": "0:2.4.0-1.fc43", "identifier": "fc43"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize(os_name, os_version, "rf-acl", cve_map)
+
+        assert sorted(by_namespace) == [expected, f"{expected}+fc43"]
+        fixed_in = by_namespace[expected]["CVE-2026-54369"]["Vulnerability"]["FixedIn"]
+        assert [(f["VersionFormat"], f["Version"]) for f in fixed_in] == [("rpm", "0:2.4.0-1")]
+
+    def test_ubuntu_native_streams_fold_together(
+        self, tmpdir, auto_fake_fixdate_finder
+    ):
+        """ubuntu-identified and rf-identified events split; unidentified events are native."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2022-22576": {
+                "cve_id": "CVE-2022-22576",
+                "severity": "HIGH",
+                "events": [
+                    {"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.10", "identifier": "ubuntu"},
+                    {"introduced": "7.68.0", "fixed": "7.68.0-1rfubu.1", "identifier": "rf"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("ubuntu", "20.04", "curl", cve_map)
+
+        assert sorted(by_namespace) == ["rapidfort-ubuntu:20.04", "rapidfort-ubuntu:20.04+rf"]
+        native = by_namespace["rapidfort-ubuntu:20.04"]["CVE-2022-22576"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in native] == ["7.68.0-1ubuntu2.10"]
+        rf = by_namespace["rapidfort-ubuntu:20.04+rf"]["CVE-2022-22576"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in rf] == ["7.68.0-1rfubu.1"]
+
+    def test_ubuntu_fold_safety_guard(
+        self, tmpdir, auto_fake_fixdate_finder, caplog
+    ):
+        """Both ubuntu-identified AND unidentified events for one CVE+package: keep only the
+        ubuntu-identified events (never OR-merge two streams into one namespace) and warn."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2022-22576": {
+                "cve_id": "CVE-2022-22576",
+                "severity": "HIGH",
+                "events": [
+                    {"introduced": "7.68.0", "fixed": "7.68.0-1ubuntu2.10", "identifier": "ubuntu"},
+                    {"introduced": "7.68.0", "fixed": "7.68.1-1"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("ubuntu", "20.04", "curl", cve_map)
+
+        fixed_in = by_namespace["rapidfort-ubuntu:20.04"]["CVE-2022-22576"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in fixed_in] == ["7.68.0-1ubuntu2.10"]
+        assert "keeping only the identified events" in caplog.text
+
+    def test_el_fold_safety_guard(self, tmpdir, auto_fake_fixdate_finder, caplog):
+        """The guard covers every tree with a native stream, not just ubuntu/debian."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2014-0139": {
+                "events": [
+                    {"introduced": "7.29.0", "fixed": "7.29.0-1.el9", "identifier": "el9"},
+                    {"introduced": "7.29.0", "fixed": "7.30.0-1"},
+                ],
+            },
+        }
+
+        with parser:
+            by_namespace = parser._normalize("redhat", "9", "curl", cve_map)
+
+        fixed_in = by_namespace["rapidfort-redhat:9"]["CVE-2014-0139"]["Vulnerability"]["FixedIn"]
+        assert [f["Version"] for f in fixed_in] == ["7.29.0-1.el9"]
+        assert "keeping only the identified events" in caplog.text
+
+    def test_unknown_channels_are_skipped_once_with_a_warning(self, tmpdir, auto_fake_fixdate_finder, caplog):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            vid: {
+                "events": [
+                    {"introduced": "1.0", "fixed": "1.1.el9", "identifier": "el9"},
+                    {"introduced": "1.0", "fixed": "1.1.x", "identifier": "../../etc"},
+                ],
+            }
+            for vid in ("CVE-2024-0001", "CVE-2024-0002")
+        }
+
+        with parser:
+            by_namespace = parser._normalize("redhat", "9", "pkg", cve_map)
+
+        assert set(by_namespace) == {"rapidfort-redhat:9"}
+        assert caplog.text.count("unknown RapidFort release stream") == 1
+
+    def test_split_vuln_ids_get_their_own_records(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        events = [{"introduced": "1.0", "fixed": "1.1"}]
+        cve_map = {
+            "CVE-2024-0001, CVE-2024-0002": {"events": events},
+            "CVE-2024-0001 follow-up": {"events": events},
+            "not-a-vuln-id/../../x": {"events": events},
+        }
+
+        with parser:
+            by_namespace = parser._normalize("alpine", "3.20", "pkg", cve_map)
+
+        records = by_namespace["rapidfort-alpine:3.20"]
+        assert set(records) == {"CVE-2024-0001", "CVE-2024-0002"}
+        # the follow-up repeats an already recorded range, which is not duplicated
+        assert len(records["CVE-2024-0001"]["Vulnerability"]["FixedIn"]) == 1
+
+    def test_malformed_entries_are_skipped(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2024-0001": {"events": 5},
+            "CVE-2024-0002": ["not", "a", "dict"],
+            "CVE-2024-0003": {"events": [{"introduced": "1.0", "fixed": "1.1, || < 99"}, {"fixed": {"x": 1}}]},
+            "CVE-2024-0004": {"events": [{"introduced": "1.0", "fixed": "1.1"}]},
+        }
+
+        with parser:
+            by_namespace = parser._normalize("alpine", "3.20", "pkg", cve_map)
+
+        assert set(by_namespace["rapidfort-alpine:3.20"]) == {"CVE-2024-0004"}
+
+
+class TestVulnIds:
+    def test_single_ids(self):
+        assert _vuln_ids("CVE-2024-1234") == ["CVE-2024-1234"]
+        assert _vuln_ids(" cve-2024-1234 ") == ["CVE-2024-1234"]
+        assert _vuln_ids("DSA-6578-1") == ["DSA-6578-1"]
+        assert _vuln_ids("DLA-4851-1") == ["DLA-4851-1"]
+
+    def test_ghsa_keeps_canonical_case(self):
+        assert _vuln_ids("GHSA-CFP4-M43R-V9Q4") == ["GHSA-cfp4-m43r-v9q4"]
+        assert _vuln_ids("ghsa-cfp4-m43r-v9q4") == ["GHSA-cfp4-m43r-v9q4"]
+
+    def test_packed_ids_are_split(self):
+        assert _vuln_ids("CVE-2026-11822CVE-2026-11824") == ["CVE-2026-11822", "CVE-2026-11824"]
+        assert _vuln_ids("CVE-2026-18295, CVE-2026-18296") == ["CVE-2026-18295", "CVE-2026-18296"]
+        assert _vuln_ids("CVE-2026-2920 follow-up") == ["CVE-2026-2920"]
+
+    def test_unrecognized_ids_yield_nothing(self):
+        assert _vuln_ids("/tmp/x") == []
+        assert _vuln_ids("") == []
+        assert _vuln_ids(None) == []
+
+
+class TestNormalizeOSVersion:
+    """Tests for _normalize_os_version: version-key normalization."""
+
+    @pytest.fixture()
+    def parser(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        return Parser(workspace=ws)
+
+    def test_numeric_versions_pass_through(self, parser):
+        assert parser._normalize_os_version("redhat", "9") == "9"
+        assert parser._normalize_os_version("ubuntu", "20.04") == "20.04"
+
+    def test_el_prefixed_redhat_key_is_normalized(self, parser):
+        assert parser._normalize_os_version("redhat", "el4") == "4"
+        assert parser._normalize_os_version("rocky", "el8") == "8"
+
+    def test_native_prefixed_amazon_key_is_normalized(self, parser):
+        assert parser._normalize_os_version("amazon", "amzn2023") == "2023"
+
+    def test_unusable_keys_are_skipped(self, parser):
+        assert parser._normalize_os_version("redhat", "elX") is None
+        assert parser._normalize_os_version("ubuntu", "") is None
+        assert parser._normalize_os_version("ubuntu", "unknown") is None
+        # the version ends up in result identifiers, so nothing path-like gets through
+        assert parser._normalize_os_version("redhat", "9/../../x") is None
+        assert parser._normalize_os_version("redhat", "\u0669") is None  # a non-ASCII digit
+
+
+class TestLoad:
+    """Tests for reading the branch archive, the boundary where upstream data comes in."""
+
+    def _write_archive(self, parser, members):
+        with zipfile.ZipFile(parser._archive_path, "w") as zf:
+            for name, content in members.items():
+                zf.writestr(f"security-advisories-main/{name}", content if isinstance(content, str) else json.dumps(content))
+
+    def test_malformed_files_are_skipped(self, tmpdir, auto_fake_fixdate_finder, caplog):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+        good = {"package_name": "zlib", "advisory": {"3.20": {"CVE-2022-37434": {"events": []}}}}
+        self._write_archive(
+            parser,
+            {
+                "OS/alpine/zlib_advisory.json": good,
+                "OS/alpine/broken_advisory.json": "{not json",
+                "OS/alpine/list_advisory.json": [1, 2],
+                "OS/alpine/nameless_advisory.json": {"advisory": good["advisory"]},
+                "OS/alpine/badname_advisory.json": {"package_name": ["x"], "advisory": good["advisory"]},
+                "OS/alpine/README.md": "not an advisory",
+                "OS/alpine/nested/deep_advisory.json": good,
+                "OS/plan9/x_advisory.json": good,
+            },
+        )
+
+        with caplog.at_level(logging.WARNING):
+            rows = list(parser._load())
+
+        assert [(os_name, version, pkg) for os_name, version, pkg, _ in rows] == [("alpine", "3.20", "zlib")]
+        assert "no known base OS: plan9" in caplog.text
+        assert "not a JSON object" in caplog.text
+        assert "invalid package_name" in caplog.text
+
+    def test_el_prefixed_keys_end_to_end(self, tmpdir, auto_fake_fixdate_finder, monkeypatch):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+        self._write_archive(
+            parser,
+            {
+                "OS/redhat/curl_advisory.json": {
+                    "package_name": "curl",
+                    "advisory": {"el8": {"CVE-2014-0139": {"events": [{"introduced": "1", "fixed": "2.el8", "identifier": "el8"}]}}},
+                },
+            },
+        )
+        monkeypatch.setattr(parser, "_download", lambda: None)
+
+        with parser:
+            namespaces = [ns for ns, _ in parser.get()]
+
+        assert namespaces == ["rapidfort-redhat:8"]
+
+
+class TestSkipDownload:
+    def test_skip_download_uses_existing_archive_and_skips_fixdate_fetch(self, tmpdir, monkeypatch):
+        from vunnel.providers.rapidfort.parser import http_wrapper
+
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws, skip_download=True)
+        with zipfile.ZipFile(parser._archive_path, "w") as zf:
+            zf.writestr(
+                "security-advisories-main/OS/alpine/zlib_advisory.json",
+                json.dumps({"package_name": "zlib", "advisory": {"3.20": {"CVE-2022-37434": {"events": [{"fixed": "1.3"}]}}}}),
+            )
+
+        def fail(*args, **kwargs):
+            raise AssertionError("nothing should be downloaded")
+
+        monkeypatch.setattr(http_wrapper, "download_to_file", fail)
+        monkeypatch.setattr(parser.fixdater.first_observed.grype_db_store, "download", fail)
+
+        with parser:
+            namespaces = [ns for ns, _ in parser.get()]
+
+        assert namespaces == ["rapidfort-alpine:3.20"]
+
+    def test_provider_supports_skip_download(self):
+        from vunnel.providers.rapidfort import Provider
+
+        assert Provider.supports_skip_download()
+
+
+def _use_fixture_archive(parser, monkeypatch):
+    """Zip the fixture checkout the way GitHub's branch archive is laid out, instead of downloading."""
+    src = os.path.join(parser.workspace.input_path, "rapidfort-advisories")
+    with zipfile.ZipFile(parser._archive_path, "w") as zf:
+        for dirpath, _, filenames in os.walk(src):
+            for filename in filenames:
+                path = os.path.join(dirpath, filename)
+                zf.write(path, os.path.join("security-advisories-main", os.path.relpath(path, src)))
+    monkeypatch.setattr(parser, "_download", lambda: None)
+
+
+def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
+    """Provider output must validate against schema-1.1.0.json."""
+    ws = helpers.provider_workspace_helper(
+        name="rapidfort",
+        input_fixture="test-fixtures/input",
+    )
+
+    from vunnel.providers.rapidfort import Config, Provider
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=str(ws.root), config=c)
+    _use_fixture_archive(p.parser, monkeypatch)
+
+    p.update(None)
+
+    assert ws.num_result_entries() >= 2
+    assert ws.result_schemas_valid(require_entries=True)
+
+
+def test_provider_via_snapshot(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
+    """Snapshot test for multi-range CVE and release-stream channel regression."""
+    ws = helpers.provider_workspace_helper(
+        name="rapidfort",
+        input_fixture="test-fixtures/input",
+    )
+
+    from vunnel.providers.rapidfort import Config, Provider
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    p = Provider(root=str(ws.root), config=c)
+    _use_fixture_archive(p.parser, monkeypatch)
+
+    p.update(None)
+
+    ws.assert_result_snapshots()
+
+
+class TestMergeIntoNamespace:
+    """Tests for _merge_into_namespace: same CVE in multiple packages."""
+
+    def test_same_cve_in_two_packages_merges_fixed_in(self, tmpdir, auto_fake_fixdate_finder):
+        """Same CVE appearing in curl and libcurl4 must produce one record with two FixedIn entries."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map = {
+            "CVE-2022-22576": {
+                "cve_id": "CVE-2022-22576",
+                "description": "Test",
+                "severity": "HIGH",
+                "events": [{"introduced": "1.0.0", "fixed": "1.0.1"}],
+            },
+        }
+
+        ns = "rapidfort-ubuntu:20.04"
+        namespace_vulns: dict = {}
+
+        with parser:
+            curl_vulns = parser._normalize("ubuntu", "20.04", "curl", cve_map)[ns]
+            libcurl_vulns = parser._normalize("ubuntu", "20.04", "libcurl4", cve_map)[ns]
+
+        parser._merge_into_namespace(namespace_vulns, ns, curl_vulns)
+        parser._merge_into_namespace(namespace_vulns, ns, libcurl_vulns)
+
+        assert len(namespace_vulns[ns]) == 1, "same CVE must produce one vuln record"
+        fixed_in = namespace_vulns[ns]["CVE-2022-22576"]["Vulnerability"]["FixedIn"]
+        assert len(fixed_in) == 2, "FixedIn must have one entry per package"
+        package_names = {f["Name"] for f in fixed_in}
+        assert package_names == {"curl", "libcurl4"}
+
+    def test_distinct_cves_are_not_merged(self, tmpdir, auto_fake_fixdate_finder):
+        """Different CVEs in the same package must remain as separate records."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        cve_map_a = {
+            "CVE-2022-00001": {
+                "cve_id": "CVE-2022-00001",
+                "severity": "HIGH",
+                "events": [{"introduced": "1.0.0", "fixed": "1.0.1"}],
+            },
+        }
+        cve_map_b = {
+            "CVE-2022-00002": {
+                "cve_id": "CVE-2022-00002",
+                "severity": "LOW",
+                "events": [{"introduced": "2.0.0", "fixed": "2.0.1"}],
+            },
+        }
+
+        ns = "rapidfort-ubuntu:20.04"
+        namespace_vulns: dict = {}
+
+        with parser:
+            vulns_a = parser._normalize("ubuntu", "20.04", "curl", cve_map_a)[ns]
+            vulns_b = parser._normalize("ubuntu", "20.04", "curl", cve_map_b)[ns]
+
+        parser._merge_into_namespace(namespace_vulns, ns, vulns_a)
+        parser._merge_into_namespace(namespace_vulns, ns, vulns_b)
+
+        assert len(namespace_vulns[ns]) == 2, "distinct CVEs must remain as separate records"
+
+
+class TestMapSeverity:
+    """Tests for _map_severity helper."""
+
+    def test_known_severities_case_insensitive(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity("critical") == "Critical"
+        assert parser._map_severity("HIGH") == "High"
+        assert parser._map_severity("medium") == "Medium"
+        assert parser._map_severity("Low") == "Low"
+        assert parser._map_severity("NEGLIGIBLE") == "Negligible"
+
+    def test_unknown_on_none(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity(None) == "Unknown"
+
+    def test_unknown_on_empty_string(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity("") == "Unknown"
+
+    def test_unknown_on_unrecognized_value(self, tmpdir, auto_fake_fixdate_finder):
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        parser = Parser(workspace=ws)
+
+        assert parser._map_severity("invalid") == "Unknown"
+        assert parser._map_severity("NONE") == "Unknown"
