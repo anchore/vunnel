@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.6.1",
+  "id": "CVE-2026-0001",
+  "modified": "2026-07-29T00:00:00Z",
+  "affected": [{"package": {"name": "example", "ecosystem": "DHI", "purl": "pkg:dhi/example"}}]
+}
