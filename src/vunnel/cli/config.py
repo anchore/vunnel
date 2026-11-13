@@ -58,6 +58,7 @@ class Providers:
     fedora: providers.fedora.Config = field(default_factory=providers.fedora.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
     kev: providers.kev.Config = field(default_factory=providers.kev.Config)
+    lightwell: providers.lightwell.Config = field(default_factory=providers.lightwell.Config)
     mariner: providers.mariner.Config = field(default_factory=providers.mariner.Config)
     minimos: providers.minimos.Config = field(default_factory=providers.minimos.Config)
     nvd: providers.nvd.Config = field(default_factory=providers.nvd.Config)

@@ -1,0 +1,94 @@
+{
+  "identifier": "rhlw-2026-403d1e66c95ef9bb",
+  "item": {
+    "affected": [
+      {
+        "database_specific": {
+          "lightwell": {
+            "backport_base_version": "6.0.3",
+            "remediated_version": "6.0.3.rhlw-00001",
+            "repository_url": "https://packages.redhat.com/lightwell/java/remediated/"
+          }
+        },
+        "package": {
+          "ecosystem": "Red Hat Lightwell:Maven",
+          "name": "com.fasterxml.woodstox:woodstox-core",
+          "purl": "pkg:maven/com.fasterxml.woodstox/woodstox-core"
+        },
+        "ranges": [
+          {
+            "database_specific": {
+              "anchore": {
+                "fixes": [
+                  {
+                    "date": "2026-10-08",
+                    "kind": "advisory",
+                    "version": "6.0.3.rhlw-00001"
+                  }
+                ]
+              }
+            },
+            "events": [
+              {
+                "introduced": "6.0.3"
+              },
+              {
+                "fixed": "6.0.3.rhlw-00001"
+              }
+            ],
+            "type": "ECOSYSTEM"
+          }
+        ],
+        "versions": [
+          "6.0.3"
+        ]
+      }
+    ],
+    "credits": [
+      {
+        "name": "Red Hat Lightwell",
+        "type": "REMEDIATION_DEVELOPER"
+      }
+    ],
+    "database_specific": {
+      "anchore": {
+        "record_type": "advisory"
+      }
+    },
+    "details": "Red Hat Lightwell has released com.fasterxml.woodstox:woodstox-core 6.0.3.rhlw-00001 with a backported security fix.\n\nCVE-2022-40152: Stack Buffer Overflow in Woodstox\n\nThis patched artifact is a drop-in replacement for com.fasterxml.woodstox:woodstox-core 6.0.3 from Maven Central.",
+    "id": "RHLW-2026-403d1e66c95ef9bb",
+    "modified": "2026-10-27T21:27:53Z",
+    "published": "2026-10-08T19:45:11Z",
+    "references": [
+      {
+        "type": "ADVISORY",
+        "url": "https://github.com/CVEProject/cvelistV5/tree/main/cves/2022/40xxx/CVE-2022-40152.json"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-40152"
+      },
+      {
+        "type": "REPORT",
+        "url": "https://github.com/x-stream/xstream/issues/304"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://github.com/advisories/GHSA-3f7h-mf4q-vrm4"
+      }
+    ],
+    "schema_version": "1.9.0",
+    "severity": [
+      {
+        "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+        "type": "CVSS_V3"
+      }
+    ],
+    "summary": "Lightwell Security Advisory: woodstox-core 6.0.3.rhlw-00001",
+    "upstream": [
+      "CVE-2022-40152",
+      "GHSA-3f7h-mf4q-vrm4"
+    ]
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.9.2.json"
+}
