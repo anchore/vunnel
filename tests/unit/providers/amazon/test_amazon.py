@@ -26,6 +26,15 @@ class TestParser:
 
         # TODO: beef up these assertions (should cover the full data shape)
 
+    def test_rss_parsing_skips_malformed_titles(self, tmpdir, helpers):
+        # a single item whose title does not match the ALAS pattern used to raise
+        # AttributeError on the None match and abort the whole Amazon feed
+        mock_data_path = helpers.local_dir("test-fixtures/mock_rss_malformed_title")
+        p = parser.Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        summaries = p._parse_rss(mock_data_path)
+
+        assert [alas.id for alas in summaries] == ["ALAS-2099-1000"]
+
     def test_html_parsing(self, helpers):
         new_packages = [
             "java-1.8.0-openjdk-javadoc-1.8.0.161-0.b14.amzn2.noarch",
