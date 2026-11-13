@@ -58,7 +58,9 @@ class Parser:
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
     _security_reference_url_ = "https://security.alpinelinux.org/vuln"
-    _cve_id_regex_ = re.compile(r"CVE-\d{4}-\d{4,}")
+    # a CVE id at the start of an entry that is not followed by a letter or digit, so a typo inside
+    # the number (e.g. "CVE-2026-2916i7") is not read as a different, valid CVE id ("CVE-2026-2916")
+    _cve_id_regex_ = re.compile(r"CVE-\d{4}-\d{4,}(?![A-Za-z0-9])")
 
     _rejections_url_ = "https://gitlab.alpinelinux.org/alpine/security/security-rejections/-/raw/master"
 
@@ -117,7 +119,8 @@ class Parser:
     def _cve_ids(self, raw_ids: Iterable[str]) -> list[str]:
         """
         Return the distinct CVE ids in raw_ids, in order. The secdb sometimes has junk appended
-        to an id (e.g. "CVE-2026-1965_1"), so only the leading CVE id is kept.
+        to an id (e.g. "CVE-2017-17434-1"), so only the leading CVE id is kept. An entry that does
+        not start with a well-formed CVE id (e.g. "CVE-46838") is skipped.
         """
         cve_ids = []
         for raw_id in raw_ids:

@@ -164,6 +164,8 @@ class TestAlpineProvider:
             pytest.param(["CVE-2021-35940.patch"], ["CVE-2021-35940"], id="dot-suffix"),
             pytest.param(["CVE-2026-109618,", "CVE-2026-109619,"], ["CVE-2026-109618", "CVE-2026-109619"], id="comma-suffix"),
             pytest.param(["CVE-2026-291i67", "CVE-46838", "CVE-????-?????"], [], id="unrecoverable"),
+            # a typo inside the number must not be read as a different, valid CVE id
+            pytest.param(["CVE-2026-2916i7", "CVE-2026-29167x", "CVE-2026-1965a"], [], id="typo-is-not-a-shorter-id"),
             pytest.param(["GHSA-1234-abcd-5678", "XSA-123"], [], id="non-cve"),
         ],
     )
@@ -171,38 +173,74 @@ class TestAlpineProvider:
         p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         assert p._cve_ids(raw_ids) == expected
 
-    def test_normalize_malformed_cve_ids(self, tmpdir, auto_fake_fixdate_finder):
+    def test_normalize_repairs_cve_ids_with_junk_appended(self, tmpdir, auto_fake_fixdate_finder):
         p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        # the rsync record of the v3.4 main secdb
         dbtype_data_dict = {
             "main": {
                 "packages": [
                     {
                         "pkg": {
-                            "name": "curl",
+                            "name": "rsync",
                             "secfixes": {
-                                "8.14.1-r3": ["CVE-2026-1965_1", "CVE-2026-1965_2", "CVE-2026-3783"],
+                                "3.1.2-r3": ["CVE-2017-16548", "CVE-2017-17433", "CVE-2017-17434-1", "CVE-2017-17434-2"],
+                                "3.1.3-r0": ["CVE-2018-5764"],
                             },
-                        },
-                    },
-                    {
-                        "pkg": {
-                            "name": "linux-lts",
-                            "secfixes": {"6.6.7-r0": ["CVE-46838"]},
                         },
                     },
                 ],
             },
         }
 
-        vuln_records = p._normalize("3.21", dbtype_data_dict)
+        vuln_records = p._normalize("3.4", dbtype_data_dict)
 
-        assert sorted(vuln_records.keys()) == ["CVE-2026-1965", "CVE-2026-3783"]
-        vulnerability = vuln_records["CVE-2026-1965"]["Vulnerability"]
-        assert vulnerability["Name"] == "CVE-2026-1965"
-        assert vulnerability["Link"] == "https://security.alpinelinux.org/vuln/CVE-2026-1965"
+        assert sorted(vuln_records.keys()) == ["CVE-2017-16548", "CVE-2017-17433", "CVE-2017-17434", "CVE-2018-5764"]
+        vulnerability = vuln_records["CVE-2017-17434"]["Vulnerability"]
+        assert vulnerability["Name"] == "CVE-2017-17434"
+        assert vulnerability["Link"] == "https://security.alpinelinux.org/vuln/CVE-2017-17434"
         assert len(vulnerability["FixedIn"]) == 1
-        assert vulnerability["FixedIn"][0]["Name"] == "curl"
-        assert vulnerability["FixedIn"][0]["Version"] == "8.14.1-r3"
+        assert vulnerability["FixedIn"][0]["Name"] == "rsync"
+        assert vulnerability["FixedIn"][0]["Version"] == "3.1.2-r3"
+
+    def test_normalize_skips_malformed_cve_ids(self, tmpdir, auto_fake_fixdate_finder):
+        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        # the linux-lts 6.6.13-r1 secfix of the v3.20 main secdb and the tailscale record of the
+        # v3.20 community secdb: neither malformed id holds a CVE id that can be recovered
+        dbtype_data_dict = {
+            "main": {
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "linux-lts",
+                            "secfixes": {"6.6.13-r1": ["CVE-46838"]},
+                        },
+                    },
+                ],
+            },
+            "community": {
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "tailscale",
+                            "secfixes": {
+                                "0": ["CVE-2022-41925 TS-2022-005"],
+                                "1.32.3-r0": ["CVE-2022-41924 TS-2022-004"],
+                                "1.66.1-r0": ["CVE-????-????? TS-2024-005"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        vuln_records = p._normalize("3.20", dbtype_data_dict)
+
+        # the valid ids of the same package keep their fixes
+        assert sorted(vuln_records.keys()) == ["CVE-2022-41924", "CVE-2022-41925"]
+        fixed_in = vuln_records["CVE-2022-41924"]["Vulnerability"]["FixedIn"]
+        assert len(fixed_in) == 1
+        assert fixed_in[0]["Name"] == "tailscale"
+        assert fixed_in[0]["Version"] == "1.32.3-r0"
 
     @pytest.mark.parametrize(
         ("content", "expected"),
