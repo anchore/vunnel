@@ -77,6 +77,8 @@ ubuntu
 wolfi
 ```
 
+For RHEL provider coverage and EAP 7.4 RPM limitations, see the [RHEL provider documentation](src/vunnel/providers/rhel/README.md).
+
 Download and process a provider:
 
 ```

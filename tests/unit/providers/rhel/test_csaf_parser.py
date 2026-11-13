@@ -240,3 +240,40 @@ class TestChannelsFromFpis:
         assert csaf_parser.channels_from_fpis(
             Mock(), fpis, "bind", "cpe:/a:redhat:enterprise_linux:8", None, None,
         ) == []
+
+def test_get_fix_info_eap_hibernate_validator(fixture_dir):
+    doc = from_path(
+        fixture_dir / "csaf/advisories/rhsa-2025_10925.json"
+    )
+    client = Mock()
+    client.csaf_doc_for_rhsa.return_value = doc
+
+    parser = CSAFParser(
+        workspace=Mock(),
+        client=client,
+        logger=Mock(),
+        download_timeout=125,
+    )
+
+    affected_release = {
+        "rhsa_id": "RHSA-2025:10925",
+        "platform_cpe": (
+            "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el8"
+        ),
+    }
+
+    version, module, product_id, channels = parser.get_fix_info(
+        "CVE-2025-35036",
+        affected_release,
+        "eap7-hibernate-validator",
+    )
+
+    assert version == "0:6.0.23-3.SP2_redhat_00001.1.el8eap"
+    assert module is None
+    assert product_id in {
+        "8Base-JBEAP-7.4:eap7-hibernate-validator-"
+        "0:6.0.23-3.SP2_redhat_00001.1.el8eap.noarch",
+        "8Base-JBEAP-7.4:eap7-hibernate-validator-"
+        "0:6.0.23-3.SP2_redhat_00001.1.el8eap.src",
+    }
+    client.csaf_doc_for_rhsa.assert_called_once_with("RHSA-2025:10925")
