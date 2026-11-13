@@ -17,6 +17,7 @@ from vunnel.utils.vulnerability import build_reference_links, vulnerability_elem
 from .rejections import SecurityRejections
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import TracebackType
 
     import requests
@@ -57,6 +58,9 @@ class Parser:
     _release_regex_ = re.compile(r"v([0-9]+.[0-9]+)")
     _link_finder_regex_ = re.compile(r'href\s*=\s*"([^\.+].*)"')
     _security_reference_url_ = "https://security.alpinelinux.org/vuln"
+    # a CVE id at the start of an entry that is not followed by a letter or digit, so a typo inside
+    # the number (e.g. "CVE-2026-2916i7") is not read as a different, valid CVE id ("CVE-2026-2916")
+    _cve_id_regex_ = re.compile(r"CVE-\d{4}-\d{4,}(?![A-Za-z0-9])")
 
     _rejections_url_ = "https://gitlab.alpinelinux.org/alpine/security/security-rejections/-/raw/master"
 
@@ -111,6 +115,31 @@ class Parser:
 
         urls.extend(build_reference_links(vulnerability_id))
         return urls
+
+    def _cve_ids(self, raw_ids: Iterable[str]) -> list[str]:
+        """
+        Return the distinct CVE ids in raw_ids, in order. The secdb sometimes has junk appended
+        to an id (e.g. "CVE-2017-17434-1"), so only the leading CVE id is kept. An entry that does
+        not start with a well-formed CVE id (e.g. "CVE-46838") is skipped.
+        """
+        cve_ids = []
+        for raw_id in raw_ids:
+            if not raw_id.startswith("CVE-"):
+                continue
+
+            match = self._cve_id_regex_.match(raw_id)
+            if not match:
+                self.logger.warning(f"skipping malformed CVE id {raw_id!r}")
+                continue
+
+            cve_id = match.group(0)
+            if cve_id != raw_id:
+                self.logger.debug(f"normalized malformed CVE id {raw_id!r} to {cve_id!r}")
+
+            if cve_id not in cve_ids:
+                cve_ids.append(cve_id)
+
+        return cve_ids
 
     def _download(self):  # noqa: C901, PLR0912
         """
@@ -223,7 +252,7 @@ class Parser:
             self.logger.exception("Failed to load alpine sec db data")
             raise
 
-    def _normalize(self, release, dbtype_data_dict):  # noqa: C901, PLR0912
+    def _normalize(self, release, dbtype_data_dict):  # noqa: C901
         """
         Normalize all the sec db entries into vulnerability payload records
         :param release:
@@ -240,9 +269,8 @@ class Parser:
             # secfix entries for CVEs that Alpine has determined do not apply
             rejected_pairs = set()
             for pkg_name, cve_ids in self.rejections.get(dbtype).items():
-                for cve_id in cve_ids:
-                    if re.match("^CVE-.*", cve_id):
-                        rejected_pairs.add((pkg_name, cve_id))
+                for cve_id in self._cve_ids(cve_ids):
+                    rejected_pairs.add((pkg_name, cve_id))
 
             if data["packages"]:
                 for el in data["packages"]:
@@ -250,19 +278,10 @@ class Parser:
 
                     pkg = pkg_el["name"]
                     for fix_version in pkg_el["secfixes"]:
-                        vids = []
-                        if pkg_el["secfixes"][fix_version]:
-                            for rawvid in pkg_el["secfixes"][fix_version]:
-                                tmp = rawvid.split()
-                                for newvid in tmp:
-                                    if newvid not in vids:
-                                        vids.append(newvid)
+                        rawvids = pkg_el["secfixes"][fix_version] or []
+                        vids = self._cve_ids(newvid for rawvid in rawvids for newvid in rawvid.split())
 
                         for vid in vids:
-                            if not re.match("^CVE-.*", vid):
-                                # skip non-CVE records
-                                continue
-
                             # skip secfix entries for rejected CVEs; the NAK
                             # will be emitted by _process_rejections instead
                             if (pkg, vid) in rejected_pairs:
@@ -319,10 +338,7 @@ class Parser:
         """
         rejections = self.rejections.get(dbtype)
         for pkg, cve_ids in rejections.items():
-            for vid in cve_ids:
-                if not re.match("^CVE-.*", vid):
-                    continue
-
+            for vid in self._cve_ids(cve_ids):
                 if vid not in vuln_dict:
                     vuln_dict[vid] = copy.deepcopy(vulnerability_element)
                     vuln_record = vuln_dict[vid]
