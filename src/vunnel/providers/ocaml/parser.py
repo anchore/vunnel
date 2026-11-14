@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -26,6 +27,7 @@ namespace = "ocaml"
 class Parser:
     # OSV records generated from https://github.com/ocaml/security-advisories (generated-osv branch)
     _source_url_ = "https://github.com/ocaml/security-advisories/archive/refs/heads/generated-osv.zip"
+    _advisory_file_ = re.compile(r"^OSEC-\d{4}-\d+\.json$")
 
     def __init__(  # noqa: PLR0913
         self,
@@ -85,11 +87,11 @@ class Parser:
             self.logger.warning(f"no directory found at {self.extract_dir}; nothing to load")
             return
 
-        # the archive is laid out as <branch-dir>/<year>/OSEC-<year>-<n>.json
+        # the archive is laid out as <branch-dir>/<year>/OSEC-<year>-<n>.json; other files are not advisories
         for root, dirs, files in os.walk(self.extract_dir):
             dirs.sort()
             for name in sorted(files):
-                if not name.endswith(".json"):
+                if not self._advisory_file_.match(name):
                     continue
                 with open(os.path.join(root, name), encoding="utf-8") as f:
                     yield orjson.loads(f.read())

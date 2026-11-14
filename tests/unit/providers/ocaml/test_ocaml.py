@@ -78,6 +78,23 @@ def test_extract(helpers, auto_fake_fixdate_finder):
     assert [record["id"] for record in parser._load()] == ["OSEC-2026-01"]
 
 
+def test_load_only_reads_advisories(helpers, auto_fake_fixdate_finder):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    parser = Parser(ws=workspace, logger=None)
+    os.makedirs(workspace.input_dir, exist_ok=True)
+
+    with zipfile.ZipFile(parser.zip_path, "w") as zf:
+        zf.writestr("security-advisories-generated-osv/2026/OSEC-2026-01.json", '{"id": "OSEC-2026-01"}')
+        zf.writestr("security-advisories-generated-osv/2026/OSEC-2026-01.json.bak", "not json")
+        zf.writestr("security-advisories-generated-osv/index.json", '["OSEC-2026-01"]')
+        zf.writestr("security-advisories-generated-osv/.github/config.json", "{}")
+        zf.writestr("security-advisories-generated-osv/README.md", "# generated OSV")
+
+    parser._extract()
+
+    assert [record["id"] for record in parser._load()] == ["OSEC-2026-01"]
+
+
 def test_load_without_extracted_data(helpers, auto_fake_fixdate_finder):
     workspace = helpers.provider_workspace_helper(name=Provider.name())
     parser = Parser(ws=workspace, logger=None)
