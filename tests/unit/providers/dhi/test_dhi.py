@@ -201,7 +201,7 @@ def test_parser_skips_invalid_record_and_emits_the_rest(mock_revision, mock_clon
 
 @patch.object(Parser, "_clone")
 @patch.object(Parser, "_record_source_revision")
-def test_provider_skips_unsupported_schema_version(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, disable_get_requests, caplog):
+def test_provider_skips_unsupported_schema_version(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = prepare_workspace(helpers)
     path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-de24-slch-2lnk-uslp.json")
     with open(path) as f:
@@ -213,11 +213,14 @@ def test_provider_skips_unsupported_schema_version(mock_revision, mock_clone, he
     config.runtime.result_store = result.StoreStrategy.FLAT_FILE
     provider = Provider(root=workspace.root, config=config)
 
-    _, count = provider.update(None)
+    # the provider logger is asserted directly: other tests reconfigure logging, so caplog does not always see it
+    with patch.object(provider.logger, "warning") as warning:
+        _, count = provider.update(None)
 
     assert count == 2
-    assert "DHI-de24-slch-2lnk-uslp uses unsupported OSV schema version 2.0.0" in caplog.text
-    assert "skipped 1 DHI advisories that failed validation" in caplog.text
+    warnings = [call.args[0] for call in warning.call_args_list]
+    assert "skipping DHI advisory: DHI-de24-slch-2lnk-uslp uses unsupported OSV schema version 2.0.0" in warnings
+    assert "skipped 1 DHI advisories that failed validation" in warnings
 
 
 @patch.object(Parser, "_record_source_revision")
