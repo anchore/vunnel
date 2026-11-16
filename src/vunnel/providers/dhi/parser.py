@@ -109,13 +109,10 @@ class Parser:
         schema_version = record.get("schema_version")
         if not isinstance(schema_version, str):
             raise ValueError(f"DHI advisory {vuln_id} has no schema_version")
-        affected = record.get("affected")
-        withdrawn = record.get("withdrawn")
-        if affected in (None, []) and isinstance(withdrawn, str) and withdrawn:
-            # a withdrawn advisory is published without its affected packages
-            return vuln_id, schema_version
-        if not isinstance(affected, list) or not affected:
-            raise ValueError(f"DHI advisory {vuln_id} has no affected packages")
+        # an advisory may list no affected packages; a withdrawn advisory is published without them
+        affected = record.get("affected") or []
+        if not isinstance(affected, list):
+            raise ValueError(f"DHI advisory {vuln_id} has an invalid affected list")
         for item in affected:
             package = item.get("package") if isinstance(item, dict) else None
             if not isinstance(package, dict):

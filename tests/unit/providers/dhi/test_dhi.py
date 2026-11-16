@@ -213,25 +213,16 @@ def test_validate_accepts_dhi_package_with_or_without_os_qualifiers(purl):
 
 
 @pytest.mark.parametrize("affected", [{}, {"affected": None}, {"affected": []}])
-def test_validate_accepts_withdrawn_record_without_affected_packages(affected):
-    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", "withdrawn": "2026-11-13T20:35:26Z", **affected}
+@pytest.mark.parametrize("withdrawn", [{}, {"withdrawn": "2026-11-13T20:35:26Z"}])
+def test_validate_accepts_record_without_affected_packages(affected, withdrawn):
+    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", **affected, **withdrawn}
     assert Parser._validate(record) == ("DHI-CVE-1234-package", "1.6.1")
 
 
-@pytest.mark.parametrize(
-    "fields",
-    [
-        {},
-        {"affected": None},
-        {"affected": []},
-        {"withdrawn": None},
-        {"withdrawn": ""},
-        {"affected": {}, "withdrawn": "2026-11-13T20:35:26Z"},
-    ],
-)
-def test_validate_rejects_record_without_affected_packages(fields):
-    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", **fields}
-    with pytest.raises(ValueError, match="DHI advisory DHI-CVE-1234-package has no affected packages"):
+@pytest.mark.parametrize("affected", [{"package": {}}, "coreutils", 1])
+def test_validate_rejects_invalid_affected_list(affected):
+    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", "affected": affected}
+    with pytest.raises(ValueError, match="DHI advisory DHI-CVE-1234-package has an invalid affected list"):
         Parser._validate(record)
 
 

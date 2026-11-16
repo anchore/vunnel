@@ -29,17 +29,15 @@ Any other JSON in that tree is ignored. A selected record must satisfy:
 
 - `schema_version` is present and has the same major version as the provider schema (currently OSV 1.x); any
   other version fails the run rather than being skipped.
-- `affected` is a non-empty list, unless the record is withdrawn (see below).
+- `affected`, when present, is a list. It may be empty, `null` or absent (see below).
 - every `affected[].package.ecosystem` starts with `Docker Hardened Images:` (for example
   `Docker Hardened Images:Alpine:3.24` or `Docker Hardened Images:Debian:13`).
 - every `affected[].package.purl` is a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL. The `os_name`, `os_distro`
   and `os_version` qualifiers are optional; the release is carried by the ecosystem.
 
-A withdrawn record carries a `withdrawn` timestamp and is published without `affected` (the key is absent or
-`null`). It is emitted like any other record, with `withdrawn` intact, so the consumer decides what a withdrawal
-means: Grype's transformer produces no entries for a record with no affected packages, and marks a withdrawn
-record that still lists affected packages as rejected. A record with no affected packages and no `withdrawn`
-timestamp fails the run.
+A record with no affected packages is emitted like any other record, so the consumer decides what it means.
+Upstream publishes a withdrawn record this way: it carries a `withdrawn` timestamp and no `affected` key. The
+`withdrawn` field is passed through intact whether or not the record lists affected packages.
 
 Two records with the same `id` are tolerated only when their contents are identical; a conflicting duplicate
 fails the run.
