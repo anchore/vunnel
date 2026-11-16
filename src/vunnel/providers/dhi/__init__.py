@@ -69,8 +69,10 @@ class Provider(provider.Provider):
                 for vuln_id, schema_version, record in self.parser.get():
                     vuln_schema = self.compatible_schema(schema_version)
                     if vuln_schema is None:
-                        raise ValueError(
-                            f"DHI advisory {vuln_id} uses unsupported OSV schema version {schema_version}",
-                        )
+                        self.parser.skipped += 1
+                        self.logger.warning(f"skipping DHI advisory: {vuln_id} uses unsupported OSV schema version {schema_version}")
+                        continue
                     writer.write(identifier=vuln_id.lower(), schema=vuln_schema, payload=record)
+                if self.parser.skipped:
+                    self.logger.warning(f"skipped {self.parser.skipped} DHI advisories that failed validation")
             return self.parser.urls, len(writer)

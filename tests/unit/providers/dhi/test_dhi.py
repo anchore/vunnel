@@ -152,7 +152,7 @@ def test_parser_emits_withdrawn_record_with_affected_packages(mock_revision, moc
 
 @patch.object(Parser, "_clone")
 @patch.object(Parser, "_record_source_revision")
-def test_parser_rejects_conflicting_duplicate_ids(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
+def test_parser_keeps_first_of_conflicting_duplicate_ids(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, caplog):
     workspace = prepare_workspace(helpers)
     advisories_dir = os.path.join(workspace.input_dir, "advisories", "dhi", "osv")
     os.makedirs(os.path.join(advisories_dir, "2027"))
@@ -162,8 +162,62 @@ def test_parser_rejects_conflicting_duplicate_ids(mock_revision, mock_clone, hel
         f.write(conflicting)
     parser = make_parser(workspace)
 
-    with pytest.raises(ValueError, match="conflicting duplicate DHI advisory ID: DHI-CVE-2016-2781-coreutils"):
-        list(parser.get())
+    records = {vuln_id: record for vuln_id, _, record in parser.get()}
+
+    assert len(records) == 3
+    events = records["DHI-CVE-2016-2781-coreutils"]["affected"][0]["ranges"][0]["events"]
+    assert {"fixed": "9.11-r1"} in events
+    assert parser.skipped == 1
+    assert "conflicting duplicate DHI advisory ID: DHI-CVE-2016-2781-coreutils" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "content, reason",
+    [
+        ('{"id": "DHI-bad-record", "affected": []}', "has no schema_version"),
+        ('{"id": "DHI-bad-record", ', "is not valid JSON"),
+    ],
+)
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_skips_invalid_record_and_emits_the_rest(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, caplog, content, reason):
+    workspace = prepare_workspace(helpers)
+    path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-bad-record.json")
+    with open(path, "w") as f:
+        f.write(content)
+    parser = make_parser(workspace)
+
+    records = list(parser.get())
+
+    assert [record[0] for record in records] == [
+        "DHI-CVE-2016-2781-coreutils",
+        "DHI-CVE-2017-18018-coreutils",
+        "DHI-de24-slch-2lnk-uslp",
+    ]
+    assert parser.skipped == 1
+    assert "skipping DHI advisory" in caplog.text
+    assert reason in caplog.text
+
+
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_provider_skips_unsupported_schema_version(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, disable_get_requests, caplog):
+    workspace = prepare_workspace(helpers)
+    path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-de24-slch-2lnk-uslp.json")
+    with open(path) as f:
+        record = json.load(f)
+    record["schema_version"] = "2.0.0"
+    with open(path, "w") as f:
+        json.dump(record, f)
+    config = Config()
+    config.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    provider = Provider(root=workspace.root, config=config)
+
+    _, count = provider.update(None)
+
+    assert count == 2
+    assert "DHI-de24-slch-2lnk-uslp uses unsupported OSV schema version 2.0.0" in caplog.text
+    assert "skipped 1 DHI advisories that failed validation" in caplog.text
 
 
 @patch.object(Parser, "_record_source_revision")
@@ -196,60 +250,29 @@ def test_default_advisories_path():
     assert Config().advisories_path == "dhi/osv"
 
 
+
 @pytest.mark.parametrize(
-    "purl",
+    "package",
     [
-        "pkg:apk/dhi/package?os_distro=alpine&os_name=dhi&os_version=3.24",
-        "pkg:apk/dhi/package",
+        {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24", "purl": "pkg:apk/dhi/package?os_name=dhi&os_version=3.24"},
+        {"name": "package", "ecosystem": "Alpine:3.24", "purl": "pkg:apk/dhi/package"},
+        {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24", "purl": "pkg:apk/alpine/package"},
+        {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24", "purl": "not-a-purl"},
+        {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24"},
     ],
 )
-def test_validate_accepts_dhi_package_with_or_without_os_qualifiers(purl):
-    record = {
-        "id": "DHI-CVE-1234-package",
-        "schema_version": "1.6.1",
-        "affected": [{"package": {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24", "purl": purl}}],
-    }
-    assert Parser._validate(record) == ("DHI-CVE-1234-package", "1.6.1")
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_passes_affected_packages_through_as_published(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, package):
+    # the provider does not judge an affected package: the consumer of the record decides what it means
+    workspace = prepare_workspace(helpers)
+    path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-any-package.json")
+    record = {"id": "DHI-any-package", "schema_version": "1.6.1", "affected": [{"package": package, "versions": ["1.0-r0"]}]}
+    with open(path, "w") as f:
+        json.dump(record, f)
+    parser = make_parser(workspace)
 
+    records = {vuln_id: emitted for vuln_id, _, emitted in parser.get()}
 
-@pytest.mark.parametrize("affected", [{}, {"affected": None}, {"affected": []}])
-@pytest.mark.parametrize("withdrawn", [{}, {"withdrawn": "2026-11-13T20:35:26Z"}])
-def test_validate_accepts_record_without_affected_packages(affected, withdrawn):
-    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", **affected, **withdrawn}
-    assert Parser._validate(record) == ("DHI-CVE-1234-package", "1.6.1")
-
-
-@pytest.mark.parametrize("affected", [{"package": {}}, "coreutils", 1])
-def test_validate_rejects_invalid_affected_list(affected):
-    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", "affected": affected}
-    with pytest.raises(ValueError, match="DHI advisory DHI-CVE-1234-package has an invalid affected list"):
-        Parser._validate(record)
-
-
-def test_validate_rejects_withdrawn_record_with_non_dhi_package():
-    record = {
-        "id": "DHI-CVE-1234-package",
-        "schema_version": "1.6.1",
-        "withdrawn": "2026-11-13T20:35:26Z",
-        "affected": [{"package": {"name": "package", "ecosystem": "Alpine:3.24", "purl": "pkg:apk/dhi/package"}}],
-    }
-    with pytest.raises(ValueError, match="non-DHI ecosystem"):
-        Parser._validate(record)
-
-
-def test_validate_rejects_non_dhi_package():
-    record = {
-        "id": "DHI-CVE-1234-package",
-        "schema_version": "1.6.1",
-        "affected": [
-            {
-                "package": {
-                    "name": "package",
-                    "ecosystem": "Docker Hardened Images:Alpine:3.24",
-                    "purl": "pkg:apk/alpine/package?os_name=dhi&os_version=3.24",
-                },
-            },
-        ],
-    }
-    with pytest.raises(ValueError, match="non-DHI OS package PURL"):
-        Parser._validate(record)
+    assert records["DHI-any-package"]["affected"] == record["affected"]
+    assert parser.skipped == 0

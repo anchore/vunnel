@@ -25,22 +25,21 @@ provider does not verify them; only `*.json` files are read.
 ## Record selection and validation
 
 The provider walks `advisories_path` recursively in sorted order and keeps records whose `id` starts with `DHI-`.
-Any other JSON in that tree is ignored. A selected record must satisfy:
+Any other JSON in that tree is ignored. A selected record is emitted as published. The provider does not
+inspect `affected`: the consumer of the record decides what each affected package means, as with the other OSV
+providers. Upstream writes `affected[].package.ecosystem` as `Docker Hardened Images:<Alpine|Debian>:<release>`
+and `affected[].package.purl` as a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL.
 
-- `schema_version` is present and has the same major version as the provider schema (currently OSV 1.x); any
-  other version fails the run rather than being skipped.
-- `affected`, when present, is a list. It may be empty, `null` or absent (see below).
-- every `affected[].package.ecosystem` starts with `Docker Hardened Images:` (for example
-  `Docker Hardened Images:Alpine:3.24` or `Docker Hardened Images:Debian:13`).
-- every `affected[].package.purl` is a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL. The `os_name`, `os_distro`
-  and `os_version` qualifiers are optional; the release is carried by the ecosystem.
+A record is skipped with a warning, and the run continues, when its `schema_version` is missing or has a
+different major version from the provider schema (currently OSV 1.x). The run logs the number of skipped records.
 
 A record with no affected packages is emitted like any other record, so the consumer decides what it means.
 Upstream publishes a withdrawn record this way: it carries a `withdrawn` timestamp and no `affected` key. The
 `withdrawn` field is passed through intact whether or not the record lists affected packages.
 
-Two records with the same `id` are tolerated only when their contents are identical; a conflicting duplicate
-fails the run.
+Two records with the same `id` and identical contents are emitted once. When their contents differ, the first
+one read in sorted path order is kept and the other is skipped with a warning. A `*.json` file that is not valid
+JSON is skipped the same way.
 
 Example record:
 

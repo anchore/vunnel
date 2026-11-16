@@ -7,7 +7,6 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 import orjson
-from packageurl import PackageURL
 
 from vunnel import utils
 from vunnel.tool import fixdate
@@ -22,7 +21,6 @@ if TYPE_CHECKING:
 
 class Parser:
     advisory_id_prefix = "DHI-"
-    ecosystem_prefix = "Docker Hardened Images:"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -45,6 +43,7 @@ class Parser:
         self.logger = logger or logging.getLogger(self.__class__.__name__)
         self.checkout_path = os.path.join(self.workspace.input_path, "advisories")
         self.urls = [repository_url]
+        self.skipped = 0
         git_executable = shutil.which("git")
         if git_executable is None:
             raise RuntimeError("git executable is required by the DHI provider")
@@ -97,36 +96,19 @@ class Parser:
                     continue
                 path = os.path.join(root, filename)
                 with open(path, "rb") as f:
-                    record = orjson.loads(f.read())
+                    content = f.read()
+                try:
+                    record = orjson.loads(content)
+                except orjson.JSONDecodeError as e:
+                    self._skip(f"{path} is not valid JSON: {e}")
+                    continue
                 if isinstance(record, dict):
                     yield record
 
-    @classmethod
-    def _validate(cls, record: dict[str, Any]) -> tuple[str, str]:
-        vuln_id = record.get("id")
-        if not isinstance(vuln_id, str) or not vuln_id.startswith(cls.advisory_id_prefix):
-            raise ValueError("record is not a DHI advisory")
-        schema_version = record.get("schema_version")
-        if not isinstance(schema_version, str):
-            raise ValueError(f"DHI advisory {vuln_id} has no schema_version")
-        # an advisory may list no affected packages; a withdrawn advisory is published without them
-        affected = record.get("affected") or []
-        if not isinstance(affected, list):
-            raise ValueError(f"DHI advisory {vuln_id} has an invalid affected list")
-        for item in affected:
-            package = item.get("package") if isinstance(item, dict) else None
-            if not isinstance(package, dict):
-                raise ValueError(f"DHI advisory {vuln_id} has an invalid affected package")
-            ecosystem = package.get("ecosystem")
-            if not isinstance(ecosystem, str) or not ecosystem.startswith(cls.ecosystem_prefix):
-                raise ValueError(f"DHI advisory {vuln_id} has a non-DHI ecosystem")
-            purl_value = package.get("purl")
-            if not isinstance(purl_value, str):
-                raise ValueError(f"DHI advisory {vuln_id} has no affected-package PURL")
-            purl = PackageURL.from_string(purl_value)
-            if purl.namespace != "dhi" or purl.type not in {"apk", "deb"}:
-                raise ValueError(f"DHI advisory {vuln_id} has a non-DHI OS package PURL")
-        return vuln_id, schema_version
+    def _skip(self, reason: str) -> None:
+        # one malformed upstream record must not fail the run for every other record
+        self.skipped += 1
+        self.logger.warning(f"skipping DHI advisory: {reason}")
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
         self._clone()
@@ -141,10 +123,15 @@ class Parser:
             previous = seen.get(vuln_id)
             if previous is not None:
                 if previous != normalized:
-                    raise ValueError(f"conflicting duplicate DHI advisory ID: {vuln_id}")
+                    self._skip(f"conflicting duplicate DHI advisory ID: {vuln_id}, keeping the first record read")
                 continue
             seen[vuln_id] = normalized
-            validated_id, schema_version = self._validate(record)
-            if record.get("affected"):
+            schema_version = record.get("schema_version")
+            if not isinstance(schema_version, str):
+                self._skip(f"{vuln_id} has no schema_version")
+                continue
+            # the affected packages are passed through as published: the consumer decides what an entry means,
+            # and a withdrawn advisory is published with none
+            if isinstance(record.get("affected"), list):
                 osv.patch_fix_date(record, self.fixdater)
-            yield validated_id, schema_version, record
+            yield vuln_id, schema_version, record
