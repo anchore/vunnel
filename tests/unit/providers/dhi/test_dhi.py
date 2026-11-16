@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -39,8 +40,8 @@ def test_provider_schema(mock_revision, mock_clone, helpers, auto_fake_fixdate_f
     urls, count = provider.update(None)
 
     assert urls == [config.repository_url]
-    assert count == 2
-    assert workspace.num_result_entries() == 2
+    assert count == 3
+    assert workspace.num_result_entries() == 3
     assert workspace.result_schemas_valid(require_entries=True)
 
 
@@ -67,7 +68,11 @@ def test_parser_selects_only_dhi_records(mock_revision, mock_clone, helpers, aut
 
     records = list(parser.get())
 
-    assert [record[0] for record in records] == ["DHI-CVE-2016-2781-coreutils", "DHI-CVE-2017-18018-coreutils"]
+    assert [record[0] for record in records] == [
+        "DHI-CVE-2016-2781-coreutils",
+        "DHI-CVE-2017-18018-coreutils",
+        "DHI-de24-slch-2lnk-uslp",
+    ]
     assert all(record[1] == "1.6.1" for record in records)
 
 
@@ -87,6 +92,61 @@ def test_parser_patches_fix_dates(mock_revision, mock_clone, helpers, auto_fake_
     debian_range = records["DHI-CVE-2017-18018-coreutils"]["affected"][0]["ranges"][0]
     assert debian_range["database_specific"]["anchore"]["fixes"] == [
         {"version": "9.7-3+dhi4", "date": "2026-07-29", "kind": "advisory"},
+    ]
+
+
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_emits_withdrawn_record_without_affected_packages(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
+    # upstream publishes a withdrawn advisory with a withdrawn timestamp and no affected key
+    workspace = prepare_workspace(helpers)
+    parser = make_parser(workspace)
+
+    records = {vuln_id: record for vuln_id, _, record in parser.get()}
+
+    withdrawn = records["DHI-de24-slch-2lnk-uslp"]
+    assert withdrawn["withdrawn"] == "2026-11-13T20:35:26Z"
+    assert "affected" not in withdrawn
+
+
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_emits_withdrawn_record_with_null_affected(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
+    workspace = prepare_workspace(helpers)
+    path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-de24-slch-2lnk-uslp.json")
+    with open(path) as f:
+        record = json.load(f)
+    record["affected"] = None
+    record["aliases"] = None
+    with open(path, "w") as f:
+        json.dump(record, f)
+    parser = make_parser(workspace)
+
+    records = {vuln_id: record for vuln_id, _, record in parser.get()}
+
+    withdrawn = records["DHI-de24-slch-2lnk-uslp"]
+    assert withdrawn["withdrawn"] == "2026-11-13T20:35:26Z"
+    assert withdrawn["affected"] is None
+
+
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_emits_withdrawn_record_with_affected_packages(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
+    workspace = prepare_workspace(helpers)
+    path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-CVE-2016-2781-coreutils.json")
+    with open(path) as f:
+        record = json.load(f)
+    record["withdrawn"] = "2026-08-01T00:00:00Z"
+    with open(path, "w") as f:
+        json.dump(record, f)
+    parser = make_parser(workspace)
+
+    records = {vuln_id: record for vuln_id, _, record in parser.get()}
+
+    withdrawn = records["DHI-CVE-2016-2781-coreutils"]
+    assert withdrawn["withdrawn"] == "2026-08-01T00:00:00Z"
+    assert withdrawn["affected"][0]["ranges"][0]["database_specific"]["anchore"]["fixes"] == [
+        {"version": "9.11-r1", "date": "2026-07-29", "kind": "advisory"},
     ]
 
 
@@ -150,6 +210,40 @@ def test_validate_accepts_dhi_package_with_or_without_os_qualifiers(purl):
         "affected": [{"package": {"name": "package", "ecosystem": "Docker Hardened Images:Alpine:3.24", "purl": purl}}],
     }
     assert Parser._validate(record) == ("DHI-CVE-1234-package", "1.6.1")
+
+
+@pytest.mark.parametrize("affected", [{}, {"affected": None}, {"affected": []}])
+def test_validate_accepts_withdrawn_record_without_affected_packages(affected):
+    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", "withdrawn": "2026-11-13T20:35:26Z", **affected}
+    assert Parser._validate(record) == ("DHI-CVE-1234-package", "1.6.1")
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {},
+        {"affected": None},
+        {"affected": []},
+        {"withdrawn": None},
+        {"withdrawn": ""},
+        {"affected": {}, "withdrawn": "2026-11-13T20:35:26Z"},
+    ],
+)
+def test_validate_rejects_record_without_affected_packages(fields):
+    record = {"id": "DHI-CVE-1234-package", "schema_version": "1.6.1", **fields}
+    with pytest.raises(ValueError, match="DHI advisory DHI-CVE-1234-package has no affected packages"):
+        Parser._validate(record)
+
+
+def test_validate_rejects_withdrawn_record_with_non_dhi_package():
+    record = {
+        "id": "DHI-CVE-1234-package",
+        "schema_version": "1.6.1",
+        "withdrawn": "2026-11-13T20:35:26Z",
+        "affected": [{"package": {"name": "package", "ecosystem": "Alpine:3.24", "purl": "pkg:apk/dhi/package"}}],
+    }
+    with pytest.raises(ValueError, match="non-DHI ecosystem"):
+        Parser._validate(record)
 
 
 def test_validate_rejects_non_dhi_package():

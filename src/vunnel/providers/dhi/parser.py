@@ -110,6 +110,10 @@ class Parser:
         if not isinstance(schema_version, str):
             raise ValueError(f"DHI advisory {vuln_id} has no schema_version")
         affected = record.get("affected")
+        withdrawn = record.get("withdrawn")
+        if affected in (None, []) and isinstance(withdrawn, str) and withdrawn:
+            # a withdrawn advisory is published without its affected packages
+            return vuln_id, schema_version
         if not isinstance(affected, list) or not affected:
             raise ValueError(f"DHI advisory {vuln_id} has no affected packages")
         for item in affected:
@@ -144,5 +148,6 @@ class Parser:
                 continue
             seen[vuln_id] = normalized
             validated_id, schema_version = self._validate(record)
-            osv.patch_fix_date(record, self.fixdater)
+            if record.get("affected"):
+                osv.patch_fix_date(record, self.fixdater)
             yield validated_id, schema_version, record
