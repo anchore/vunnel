@@ -39,6 +39,7 @@ class Provider(provider.Provider):
             repository_url=config.repository_url,
             repository_branch=config.repository_branch,
             advisories_path=config.advisories_path,
+            compatible_schema=self.compatible_schema,
             skip_download=config.runtime.skip_download,
             logger=self.logger,
         )
@@ -66,13 +67,12 @@ class Provider(provider.Provider):
     def update(self, last_updated: datetime.datetime | None) -> tuple[list[str], int]:
         with timer(self.name(), self.logger):
             with self.results_writer() as writer, self.parser:
-                for vuln_id, schema_version, record in self.parser.get():
-                    vuln_schema = self.compatible_schema(schema_version)
-                    if vuln_schema is None:
-                        self.parser.skipped += 1
-                        self.logger.warning(f"skipping DHI advisory: {vuln_id} uses unsupported OSV schema version {schema_version}")
-                        continue
+                for vuln_id, vuln_schema, record in self.parser.get():
                     writer.write(identifier=vuln_id.lower(), schema=vuln_schema, payload=record)
                 if self.parser.skipped:
-                    self.logger.warning(f"skipped {self.parser.skipped} DHI advisories that failed validation")
+                    self.logger.warning(f"skipped {self.parser.skipped} DHI records, each with a warning above")
+                if len(writer) == 0 and self.parser.skipped:
+                    # a few skipped records are tolerated; a feed with no usable record is a failed run,
+                    # so the previous results are not left in place as if they were current
+                    raise RuntimeError(f"no DHI advisory could be read: all {self.parser.skipped} records were skipped")
             return self.parser.urls, len(writer)

@@ -25,6 +25,7 @@ def make_parser(workspace, **kwargs):
         repository_url=config.repository_url,
         repository_branch=config.repository_branch,
         advisories_path=config.advisories_path,
+        compatible_schema=Provider.compatible_schema,
         **kwargs,
     )
 
@@ -73,7 +74,7 @@ def test_parser_selects_only_dhi_records(mock_revision, mock_clone, helpers, aut
         "DHI-CVE-2017-18018-coreutils",
         "DHI-de24-slch-2lnk-uslp",
     ]
-    assert all(record[1] == "1.6.1" for record in records)
+    assert all(record[1] == schema.OSVSchema("1.6.1") for record in records)
 
 
 @patch.object(Parser, "_clone")
@@ -168,14 +169,27 @@ def test_parser_keeps_first_of_conflicting_duplicate_ids(mock_revision, mock_clo
     events = records["DHI-CVE-2016-2781-coreutils"]["affected"][0]["ranges"][0]["events"]
     assert {"fixed": "9.11-r1"} in events
     assert parser.skipped == 1
-    assert "conflicting duplicate DHI advisory ID: DHI-CVE-2016-2781-coreutils" in caplog.text
+    assert "DHI-CVE-2016-2781-coreutils conflicts with a record of the same id that was already emitted" in caplog.text
 
 
 @pytest.mark.parametrize(
     "content, reason",
     [
-        ('{"id": "DHI-bad-record", "affected": []}', "has no schema_version"),
-        ('{"id": "DHI-bad-record", ', "is not valid JSON"),
+        ('{"id": "DHI-bad-record", "affected": []}', "DHI-bad-record has no schema_version"),
+        ('{"id": "DHI-bad-record", "schema_version": "2.0.0"}', "DHI-bad-record uses unsupported OSV schema version 2.0.0"),
+        ('{"id": "DHI-bad-record", ', "dhi/osv/2026/DHI-bad-record.json is not valid JSON"),
+        (
+            '{"id": "DHI-bad-record", "schema_version": "1.6.1", "affected": [null]}',
+            "DHI-bad-record has an affected package that is not an OSV object",
+        ),
+        (
+            '{"id": "DHI-bad-record", "schema_version": "1.6.1", "affected": [{"package": null}]}',
+            "DHI-bad-record has an affected package that is not an OSV object",
+        ),
+        (
+            '{"id": "DHI-bad-record", "schema_version": "1.6.1", "affected": [{"package": {"name": "p", "ecosystem": "Docker Hardened Images:Alpine:3.24"}, "ranges": null}]}',
+            "DHI-bad-record has an affected package that is not an OSV object",
+        ),
     ],
 )
 @patch.object(Parser, "_clone")
@@ -195,7 +209,7 @@ def test_parser_skips_invalid_record_and_emits_the_rest(mock_revision, mock_clon
         "DHI-de24-slch-2lnk-uslp",
     ]
     assert parser.skipped == 1
-    assert "skipping DHI advisory" in caplog.text
+    assert "skipping DHI record" in caplog.text
     assert reason in caplog.text
 
 
@@ -219,8 +233,8 @@ def test_provider_skips_unsupported_schema_version(mock_revision, mock_clone, he
 
     assert count == 2
     warnings = [call.args[0] for call in warning.call_args_list]
-    assert "skipping DHI advisory: DHI-de24-slch-2lnk-uslp uses unsupported OSV schema version 2.0.0" in warnings
-    assert "skipped 1 DHI advisories that failed validation" in warnings
+    assert "skipping DHI record: DHI-de24-slch-2lnk-uslp uses unsupported OSV schema version 2.0.0" in warnings
+    assert "skipped 1 DHI records, each with a warning above" in warnings
 
 
 @patch.object(Parser, "_record_source_revision")
@@ -278,3 +292,60 @@ def test_parser_passes_affected_packages_through_as_published(mock_revision, moc
 
     assert records["DHI-any-package"]["affected"] == record["affected"]
     assert parser.skipped == 0
+
+
+@pytest.mark.parametrize("first", ['{"id": "DHI-twice"}', '{"id": "DHI-twice", "schema_version": "2.0.0"}'])
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_skipped_record_does_not_block_a_later_record_with_its_id(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, first):
+    workspace = prepare_workspace(helpers)
+    advisories_dir = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026")
+    with open(os.path.join(advisories_dir, "DHI-twice-a.json"), "w") as f:
+        f.write(first)
+    with open(os.path.join(advisories_dir, "DHI-twice-b.json"), "w") as f:
+        f.write('{"id": "DHI-twice", "schema_version": "1.6.1"}')
+    parser = make_parser(workspace)
+
+    records = {vuln_id: record for vuln_id, _, record in parser.get()}
+
+    assert records["DHI-twice"] == {"id": "DHI-twice", "schema_version": "1.6.1"}
+    assert parser.skipped == 1
+
+
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_parser_counts_skips_for_one_run(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder):
+    # a provider retry calls get() again on the same parser, and its count must not include the earlier attempt
+    workspace = prepare_workspace(helpers)
+    path = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026", "DHI-bad-record.json")
+    with open(path, "w") as f:
+        f.write('{"id": "DHI-bad-record"}')
+    parser = make_parser(workspace)
+
+    list(parser.get())
+    list(parser.get())
+
+    assert parser.skipped == 1
+
+
+@patch.object(Parser, "_clone")
+@patch.object(Parser, "_record_source_revision")
+def test_provider_fails_when_every_record_is_skipped(mock_revision, mock_clone, helpers, auto_fake_fixdate_finder, disable_get_requests):
+    # one skipped record is tolerated, but a feed with no usable record must not pass as a successful run
+    workspace = prepare_workspace(helpers)
+    advisories_dir = os.path.join(workspace.input_dir, "advisories", "dhi", "osv", "2026")
+    for filename in os.listdir(advisories_dir):
+        if not filename.startswith("DHI-") or not filename.endswith(".json"):
+            continue
+        path = os.path.join(advisories_dir, filename)
+        with open(path) as f:
+            record = json.load(f)
+        record["schema_version"] = "2.0.0"
+        with open(path, "w") as f:
+            json.dump(record, f)
+    config = Config()
+    config.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    provider = Provider(root=workspace.root, config=config)
+
+    with pytest.raises(RuntimeError, match="no DHI advisory could be read: all 3 records were skipped"):
+        provider.update(None)
