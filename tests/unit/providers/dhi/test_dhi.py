@@ -253,7 +253,6 @@ def test_default_advisories_path():
     assert Config().advisories_path == "dhi/osv"
 
 
-
 @pytest.mark.parametrize(
     "package",
     [
