@@ -146,6 +146,10 @@ class TestConfig:
         c = Config(token="t", repos=["https://github.com/netty/netty", "netty/netty", "FasterXML/jackson-databind"])
         assert c.repos == ["netty/netty", "FasterXML/jackson-databind"]
 
+    def test_repos_deduplicated_case_insensitively(self):
+        c = Config(token="t", repos=["netty/netty", "Netty/Netty", "https://github.com/NETTY/netty"])
+        assert c.repos == ["netty/netty"]
+
     def test_invalid_repo_fails_fast(self):
         with pytest.raises(ValueError):
             Config(token="t", repos=["not-a-repo"])
@@ -286,9 +290,13 @@ class TestParser:
         with pytest.raises(ValueError, match="token is required"):
             list(new_parser(helpers, token="").get())
 
-    def test_invalid_ghsa_id_skipped(self, helpers, fake_github, auto_fake_fixdate_finder):
+    @pytest.mark.parametrize(
+        "ghsa_id",
+        ['GHSA-abcd") { x } b: securityAdvisory(ghsaId: "x', "GHSA-abcd-efgh-ijkl\n", "GHSA-abcd-efgh"],
+    )
+    def test_invalid_ghsa_id_skipped(self, ghsa_id, helpers, fake_github, auto_fake_fixdate_finder):
         advisories = load_fixture("advisories-page-2.json")
-        advisories[0]["ghsa_id"] = 'GHSA-abcd") { x } b: securityAdvisory(ghsaId: "x'
+        advisories[0]["ghsa_id"] = ghsa_id
         calls = fake_github({REPO_URL: make_response(body=advisories)})
         assert list(new_parser(helpers).get()) == []
         assert calls.graphql == []
@@ -299,16 +307,40 @@ class TestParser:
         fake_github({REPO_URL: make_response(body=advisories)})
         assert list(new_parser(helpers).get()) == []
 
-    def test_missing_repo_is_skipped(self, helpers, fake_github, auto_fake_fixdate_finder):
+    @patch("time.sleep")
+    @pytest.mark.parametrize("status", [404, 410, 451])
+    def test_unavailable_repo_is_skipped(self, mock_sleep, status, helpers, fake_github, auto_fake_fixdate_finder):
         other = f"{API}/repos/netty/gone/security-advisories"
         fake_github(
             {
-                other: make_response(404, body={"message": "Not Found"}),
+                other: make_response(status, body={"message": "unavailable"}),
                 REPO_URL: make_response(body=load_fixture("advisories-page-2.json")),
             },
         )
         ids = [a["ghsaId"] for a in new_parser(helpers, repos=("netty/gone", "netty/netty")).get()]
         assert ids == ["GHSA-abcd-efgh-ijkl"]
+        # permanent answers are not retried
+        mock_sleep.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "response",
+        [
+            {"data": None},
+            {},
+            {"data": {"a0": None}},  # some aliases unanswered
+        ],
+    )
+    def test_incomplete_graphql_response_raises(self, response, helpers, fake_github, monkeypatch, auto_fake_fixdate_finder):
+        fake_github()
+        monkeypatch.setattr(parser, "get_query", lambda *args, **kwargs: response)
+        with pytest.raises(RuntimeError, match="unexpected response"):
+            list(new_parser(helpers).get())
+
+    def test_no_repos_is_a_no_op_without_token(self, helpers, fake_github, auto_fake_fixdate_finder):
+        calls = fake_github({})
+        assert list(new_parser(helpers, repos=(), token="").get()) == []
+        assert calls.rest == []
+        assert calls.graphql == []
 
     def test_repo_with_no_advisories(self, helpers, fake_github, auto_fake_fixdate_finder):
         fake_github({REPO_URL: make_response(body=[])})
@@ -340,8 +372,8 @@ class TestParser:
         mock_sleep.assert_called_once()
 
 
-def run_provider(helpers, repos=("netty/netty",)):
-    workspace = helpers.provider_workspace_helper(name=Provider.name())
+def run_provider(helpers, repos=("netty/netty",), workspace=None):
+    workspace = workspace or helpers.provider_workspace_helper(name=Provider.name())
     c = Config(token="secret", api_url=API, repos=list(repos))
     c.runtime.result_store = result.StoreStrategy.FLAT_FILE
     provider = Provider(root=workspace.root, config=c)
@@ -372,3 +404,36 @@ def test_provider_via_snapshot(helpers, fake_github, auto_fake_fixdate_finder):
     fake_github()
     workspace, _, _ = run_provider(helpers)
     workspace.assert_result_snapshots()
+
+
+@pytest.mark.parametrize("store", [result.StoreStrategy.FLAT_FILE, result.StoreStrategy.SQLITE])
+def test_provider_clears_stale_results_when_nothing_to_emit(store, helpers, fake_github, auto_fake_fixdate_finder):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    def run():
+        c = Config(token="secret", api_url=API, repos=["netty/netty"])
+        c.runtime.result_store = store
+        provider = Provider(root=workspace.root, config=c)
+        return provider.update(None)[1]
+
+    def stored_ids():
+        if store == result.StoreStrategy.FLAT_FILE:
+            return {os.path.relpath(f, workspace.results_dir) for f in workspace.result_files()}
+        with result.SQLiteReader(os.path.join(workspace.results_dir, "results.db")) as reader:
+            return {envelope.identifier for envelope in reader.read_all()}
+
+    fake_github()
+    assert run() == 3
+    assert len(stored_ids()) == 3
+
+    # a file the results directory holds besides the results themselves (e.g. the fix-date store)
+    sidecar = os.path.join(workspace.results_dir, "observed-fix-dates.db")
+    with open(sidecar, "w") as fh:
+        fh.write("keep")
+
+    # every advisory has since been merged into the global database
+    fake_github(merged={"GHSA-rmcw-9fcq-wjq7", MERGED_ID, "GHSA-abcd-efgh-ijkl"})
+    assert run() == 0
+    assert stored_ids() == set()
+    if store == result.StoreStrategy.SQLITE:
+        assert os.path.exists(sidecar)

@@ -60,8 +60,12 @@ class Config:
         if self.token.startswith("env:"):
             self.token = os.environ.get(self.token[4:], "")
 
-        # normalize and de-duplicate (preserving order); invalid entries fail fast
-        self.repos = list(dict.fromkeys(normalize_repo(r) for r in self.repos or []))
+        # normalize and de-duplicate (preserving order and first spelling); GitHub names are
+        # case-insensitive. Invalid entries fail fast.
+        repos: dict[str, str] = {}
+        for repo in (normalize_repo(r) for r in self.repos or []):
+            repos.setdefault(repo.casefold(), repo)
+        self.repos = list(repos.values())
 
     def __str__(self) -> str:
         # sanitize secrets from any output
@@ -124,5 +128,14 @@ class Provider(provider.Provider):
                             schema=self.__schema__,
                             payload={"Vulnerability": {}, "Advisory": dict(advisory)},
                         )
+
+                # the result store is only initialised on the first write, so a run with nothing to emit
+                # (e.g. every advisory has since been merged) would otherwise leave the previous run's
+                # records in place, duplicating what the github provider now emits. Initialise it anyway
+                # so the (empty) result set replaces the old one according to the result state policy.
+                if len(writer) == 0:
+                    writer.store.prepare()
+                    if isinstance(writer.store, result.SQLiteStore):
+                        writer.store.connection()
 
             return self.parser.urls, len(writer)

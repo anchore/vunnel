@@ -38,6 +38,10 @@ if TYPE_CHECKING:
 DEFAULT_API_URL = "https://api.github.com"
 GITHUB_API_VERSION = "2022-11-28"
 
+# HTTP statuses for a repository that are permanent answers, not transient errors: skip the repo
+# instead of retrying (not found / disabled, gone, unavailable for legal reasons)
+SKIP_REPO_STATUSES = {404, 410, 451}
+
 # number of advisories checked against the global database per GraphQL request
 MERGE_CHECK_BATCH_SIZE = 100
 
@@ -54,7 +58,7 @@ _REPO_PATTERN = re.compile(
     r"^(?:https?://(?:www\.)?github\.com/)?(?P<owner>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)/(?P<repo>[A-Za-z0-9._-]+?)(?:\.git)?/?$",
 )
 
-_GHSA_PATTERN = re.compile(r"^GHSA(?:-[0-9a-z]{4}){3}$", re.IGNORECASE)
+_GHSA_PATTERN = re.compile(r"GHSA(?:-[0-9a-z]{4}){3}", re.IGNORECASE)
 
 
 def graphql_merge_check(ghsa_ids: list[str]) -> str:
@@ -182,12 +186,12 @@ class Parser:
     @utils.retry_with_backoff()
     def _get(self, url: str, params: dict[str, Any] | None = None) -> requests.Response:
         """
-        GET a GitHub API URL, honouring rate limits. A 404 is returned to the caller
-        (it is an expected answer, not an error); other HTTP errors raise and are retried.
+        GET a GitHub API URL, honouring rate limits. Statuses in SKIP_REPO_STATUSES are returned
+        to the caller (they are permanent answers, not errors); other HTTP errors raise and are retried.
         """
         response = requests.get(url, params=params, headers=self._headers(), timeout=self.download_timeout)
         respect_rate_limit(response, self.logger)
-        if response.status_code == 404:
+        if response.status_code in SKIP_REPO_STATUSES:
             return response
         response.raise_for_status()
         return response
@@ -201,8 +205,10 @@ class Parser:
         while url:
             self.logger.info(f"downloading published security advisories from {url}")
             response = self._get(url, params=params)
-            if response.status_code == 404:
-                self.logger.warning(f"repository {repo!r} not found or has no accessible security advisories, skipping")
+            if response.status_code in SKIP_REPO_STATUSES:
+                self.logger.warning(
+                    f"repository {repo!r} returned HTTP {response.status_code} (not found, gone or unavailable), skipping",
+                )
                 return []
             advisories.extend(response.json())
             # the next link already carries the query parameters (including the cursor)
@@ -218,10 +224,10 @@ class Parser:
         with open(path, "wb") as fh:
             fh.write(orjson.dumps(advisories))
 
-    def _merged_ids(self, ghsa_ids: list[str], merged: set[str]) -> set[str]:
+    def _check_merged(self, ghsa_ids: list[str], merged: set[str]) -> None:
         """
-        Return the subset of `ghsa_ids` that are in the global GitHub Advisory Database
-        (and are therefore produced by the `github` provider).
+        Add each of `ghsa_ids` that is in the global GitHub Advisory Database (and is
+        therefore produced by the `github` provider) to the `merged` cache.
 
         Lookups are batched into GraphQL requests of up to `MERGE_CHECK_BATCH_SIZE`
         aliased `securityAdvisory` queries; this is the same API the `github` provider
@@ -240,15 +246,21 @@ class Parser:
             if unexpected:
                 raise RuntimeError(f"error checking advisories against the GitHub Advisory Database: {unexpected}")
 
-            data = response.get("data") or {}
-            for idx, ghsa_id in enumerate(batch):
-                if data.get(f"a{idx}"):
-                    merged.add(ghsa_id)
+            # every alias must be answered (null when not found); anything else means we cannot
+            # tell merged from unmerged, and guessing "unmerged" would duplicate github provider records
+            data = response.get("data")
+            if not isinstance(data, dict) or any(f"a{idx}" not in data for idx in range(len(batch))):
+                raise RuntimeError(f"unexpected response checking advisories against the GitHub Advisory Database: {response}")
 
-        return {i for i in ghsa_ids if i in merged}
+            for idx, ghsa_id in enumerate(batch):
+                if data[f"a{idx}"]:
+                    merged.add(ghsa_id)
 
     def get(self) -> Generator[NodeParser]:
         """Yield parsed advisories that are published on a repository but not yet in the global database."""
+        if not self.repos:
+            return
+
         if not self.token:
             raise ValueError("a GitHub token is required (the merge check uses the GitHub GraphQL API)")
 
@@ -260,7 +272,7 @@ class Parser:
                 ghsa_id = advisory.get("ghsa_id")
                 if advisory.get("state") != "published" or not isinstance(ghsa_id, str):
                     continue
-                if not _GHSA_PATTERN.match(ghsa_id):
+                if not _GHSA_PATTERN.fullmatch(ghsa_id):
                     self.logger.warning(f"skipping advisory with unexpected identifier {ghsa_id!r} from {repo}")
                     continue
                 published.append(advisory)
@@ -268,14 +280,14 @@ class Parser:
         metadata = self.db.get_metadata()
         merged = set(metadata.data.get("merged", []))
         try:
-            already_merged = self._merged_ids([a["ghsa_id"] for a in published], merged)
+            self._check_merged([a["ghsa_id"] for a in published], merged)
         finally:
             metadata.data["merged"] = sorted(merged)
             metadata.commit()
 
         for advisory in published:
             ghsa_id = advisory["ghsa_id"]
-            if ghsa_id in already_merged:
+            if ghsa_id in merged:
                 self.logger.debug(f"skipping {ghsa_id}: already in the GitHub Advisory Database")
                 continue
 
