@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from unittest.mock import Mock, patch
 
@@ -35,34 +36,62 @@ def make_response(status_code: int = 200, body=None, next_url: str | None = None
     return response
 
 
+class Calls:
+    def __init__(self):
+        self.rest: list[str] = []
+        # one entry per GraphQL request: the GHSA IDs looked up in that request
+        self.graphql: list[list[str]] = []
+
+
+_ALIAS = re.compile(r'(a\d+): securityAdvisory\(ghsaId: "([^"]+)"\)')
+
+
 @pytest.fixture()
 def fake_github(monkeypatch):
     """
-    Route requests.get calls to canned responses. `routes` maps URL -> response (or list of
-    responses consumed in order). Unknown global advisory lookups return 404 (not merged).
+    Route REST requests.get calls to canned responses (`routes` maps URL -> response, or a list of
+    responses consumed in order) and answer GraphQL merge checks: IDs in `merged` resolve, everything
+    else resolves to null with a NOT_FOUND error, as the real API does.
     """
 
-    def apply(routes: dict | None = None):
+    def apply(routes: dict | None = None, merged: set[str] | None = None, graphql_errors: list | None = None):
         if routes is None:
             routes = {
                 REPO_URL: make_response(body=load_fixture("advisories-page-1.json"), next_url=PAGE_2_URL),
                 PAGE_2_URL: make_response(body=load_fixture("advisories-page-2.json")),
-                f"{API}/advisories/{MERGED_ID}": make_response(body={"ghsa_id": MERGED_ID, "type": "reviewed"}),
             }
-        calls: list[str] = []
+        if merged is None:
+            merged = {MERGED_ID}
+        calls = Calls()
 
         def get(url, params=None, headers=None, timeout=None):
-            calls.append(url)
+            calls.rest.append(url)
             route = routes.get(url)
             if isinstance(route, list):
                 return route.pop(0)
             if route is not None:
                 return route
-            if url.startswith(f"{API}/advisories/"):
-                return make_response(404, body={"message": "Not Found"})
             raise AssertionError(f"unexpected request to {url}")
 
+        def get_query(token, query, timeout=125, api_url=None):
+            assert api_url == f"{API}/graphql"
+            assert token
+            lookups = _ALIAS.findall(query)
+            calls.graphql.append([ghsa_id for _, ghsa_id in lookups])
+            data = {alias: ({"ghsaId": ghsa_id} if ghsa_id in merged else None) for alias, ghsa_id in lookups}
+            errors = [
+                {"type": "NOT_FOUND", "path": [alias], "message": f"Could not resolve to a Security Advisory with ID '{ghsa_id}'"}
+                for alias, ghsa_id in lookups
+                if ghsa_id not in merged
+            ]
+            errors.extend(graphql_errors or [])
+            response = {"data": data}
+            if errors:
+                response["errors"] = errors
+            return response
+
         monkeypatch.setattr(parser.requests, "get", get)
+        monkeypatch.setattr(parser, "get_query", get_query)
         return calls
 
     return apply
@@ -191,7 +220,7 @@ class TestParser:
         ids = [a["ghsaId"] for a in p.get()]
 
         assert ids == ["GHSA-rmcw-9fcq-wjq7", "GHSA-abcd-efgh-ijkl"]
-        assert PAGE_2_URL in calls
+        assert PAGE_2_URL in calls.rest
 
     def test_parsed_output(self, helpers, fake_github, auto_fake_fixdate_finder):
         fake_github()
@@ -206,30 +235,63 @@ class TestParser:
         assert {f["identifier"] for f in advisory["FixedIn"]} == {"4.2.18.Final", "None"}
         assert len(advisory["cvss_severities"]) == 2
 
+    def test_merge_check_is_one_batched_request(self, helpers, fake_github, auto_fake_fixdate_finder):
+        calls = fake_github()
+        list(new_parser(helpers).get())
+        assert calls.graphql == [sorted(["GHSA-rmcw-9fcq-wjq7", MERGED_ID, "GHSA-abcd-efgh-ijkl"])]
+        # no per-advisory REST lookups against the global database
+        assert not [u for u in calls.rest if "/advisories/" in u]
+
+    def test_merge_check_batches_by_size(self, helpers, fake_github, auto_fake_fixdate_finder):
+        advisories = []
+        for i in range(250):
+            adv = load_fixture("advisories-page-2.json")[0]
+            adv["ghsa_id"] = f"GHSA-{i:04d}-aaaa-aaaa"
+            advisories.append(adv)
+        merged = {a["ghsa_id"] for a in advisories[::2]}
+        calls = fake_github({REPO_URL: make_response(body=advisories)}, merged=merged)
+
+        ids = [a["ghsaId"] for a in new_parser(helpers).get()]
+
+        assert [len(batch) for batch in calls.graphql] == [100, 100, 50]
+        assert len(ids) == 125
+        assert not set(ids) & merged
+
     def test_merged_cache_avoids_repeat_lookup(self, helpers, fake_github, auto_fake_fixdate_finder):
         calls = fake_github()
         p = new_parser(helpers)
         list(p.get())
-        assert calls.count(f"{API}/advisories/{MERGED_ID}") == 1
         assert p.db.get_metadata().data["merged"] == [MERGED_ID]
 
-        calls.clear()
+        calls.graphql.clear()
         list(p.get())
-        assert f"{API}/advisories/{MERGED_ID}" not in calls
-        # unmerged advisories are re-checked every run
-        assert f"{API}/advisories/GHSA-rmcw-9fcq-wjq7" in calls
+        # merged advisories are never re-checked; unmerged ones are re-checked every run
+        assert calls.graphql == [["GHSA-abcd-efgh-ijkl", "GHSA-rmcw-9fcq-wjq7"]]
 
-    def test_unreviewed_global_advisory_is_not_merged(self, helpers, fake_github, auto_fake_fixdate_finder):
-        fake_github(
-            {
-                REPO_URL: make_response(body=load_fixture("advisories-page-1.json")),
-                f"{API}/advisories/{MERGED_ID}": make_response(body={"ghsa_id": MERGED_ID, "type": "unreviewed"}),
-            },
-        )
+    def test_fully_cached_run_makes_no_graphql_request(self, helpers, fake_github, auto_fake_fixdate_finder):
+        calls = fake_github({REPO_URL: make_response(body=load_fixture("advisories-page-1.json")[1:])})
         p = new_parser(helpers)
-        ids = [a["ghsaId"] for a in p.get()]
-        assert MERGED_ID in ids
-        assert p.db.get_metadata().data["merged"] == []
+        list(p.get())
+        calls.graphql.clear()
+        assert list(p.get()) == []
+        assert calls.graphql == []
+
+    def test_unexpected_graphql_error_raises(self, helpers, fake_github, auto_fake_fixdate_finder):
+        fake_github(graphql_errors=[{"type": "RATE_LIMITED", "message": "slow down"}])
+        with pytest.raises(RuntimeError, match="RATE_LIMITED"):
+            list(new_parser(helpers).get())
+
+    def test_token_required(self, helpers, fake_github, auto_fake_fixdate_finder):
+        fake_github()
+        with pytest.raises(ValueError, match="token is required"):
+            list(new_parser(helpers, token="").get())
+
+    def test_invalid_ghsa_id_skipped(self, helpers, fake_github, auto_fake_fixdate_finder):
+        advisories = load_fixture("advisories-page-2.json")
+        advisories[0]["ghsa_id"] = 'GHSA-abcd") { x } b: securityAdvisory(ghsaId: "x'
+        calls = fake_github({REPO_URL: make_response(body=advisories)})
+        assert list(new_parser(helpers).get()) == []
+        assert calls.graphql == []
 
     def test_non_published_advisories_skipped(self, helpers, fake_github, auto_fake_fixdate_finder):
         advisories = load_fixture("advisories-page-2.json")
@@ -302,7 +364,8 @@ def test_provider_no_repos(helpers, fake_github, auto_fake_fixdate_finder):
     _, urls, count = run_provider(helpers, repos=())
     assert count == 0
     assert urls == []
-    assert calls == []
+    assert calls.rest == []
+    assert calls.graphql == []
 
 
 def test_provider_via_snapshot(helpers, fake_github, auto_fake_fixdate_finder):

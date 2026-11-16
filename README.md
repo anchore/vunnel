@@ -158,7 +158,7 @@ list of repositories you choose:
 # .vunnel.yaml
 providers:
   github_repo:
-    # optional, but strongly recommended: unauthenticated requests are limited to 60 per hour
+    # required: the merge check uses the GitHub GraphQL API, which always needs a token
     token: env:GITHUB_TOKEN
     repos:
       - netty/netty
@@ -169,8 +169,9 @@ How it behaves:
 
 - Only **published** advisories are considered; draft, triage, closed and withdrawn advisories are ignored. Only
   publicly visible data is used, so the token needs no scopes.
-- Advisories that are already in the GitHub Advisory Database (reviewed or malware) are skipped. Once an advisory
-  is merged it disappears from `github_repo` output on the next run and the `github` provider becomes its source.
+- Advisories that are already in the GitHub Advisory Database are skipped. This is checked against the same
+  GraphQL API the `github` provider reads, in batches of up to 100 advisories per request. Once an advisory is
+  merged it disappears from `github_repo` output on the next run and the `github` provider becomes its source.
   Merged advisory IDs are cached in the provider's input directory so they are not re-checked.
 - Records use the same schema and `github:<ecosystem>` namespaces as the `github` provider, so they are consumed
   identically downstream. The advisory `url` points at the repository's advisory page, since the global advisory

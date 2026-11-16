@@ -25,7 +25,7 @@ import orjson
 import requests
 
 from vunnel import utils
-from vunnel.providers.github.parser import NodeParser, respect_rate_limit
+from vunnel.providers.github.parser import NodeParser, get_query, respect_rate_limit
 from vunnel.tool import fixdate
 from vunnel.utils import fdb as db
 
@@ -38,8 +38,8 @@ if TYPE_CHECKING:
 DEFAULT_API_URL = "https://api.github.com"
 GITHUB_API_VERSION = "2022-11-28"
 
-# advisory types in the global database that are visible to the `github` provider
-MERGED_ADVISORY_TYPES = {"reviewed", "malware"}
+# number of advisories checked against the global database per GraphQL request
+MERGE_CHECK_BATCH_SIZE = 100
 
 # REST severity -> GraphQL severity (as understood by NodeParser)
 SEVERITY_MAP = {
@@ -53,6 +53,17 @@ SEVERITY_MAP = {
 _REPO_PATTERN = re.compile(
     r"^(?:https?://(?:www\.)?github\.com/)?(?P<owner>[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)/(?P<repo>[A-Za-z0-9._-]+?)(?:\.git)?/?$",
 )
+
+_GHSA_PATTERN = re.compile(r"^GHSA(?:-[0-9a-z]{4}){3}$", re.IGNORECASE)
+
+
+def graphql_merge_check(ghsa_ids: list[str]) -> str:
+    """
+    Build a single GraphQL query that looks up each advisory by alias (``a0``, ``a1``, ...).
+    IDs must already be validated against ``_GHSA_PATTERN`` since they are interpolated.
+    """
+    lookups = "\n".join(f'  a{idx}: securityAdvisory(ghsaId: "{ghsa_id}") {{ ghsaId }}' for idx, ghsa_id in enumerate(ghsa_ids))
+    return f"{{\n{lookups}\n}}"
 
 
 def normalize_repo(value: str) -> str:
@@ -141,6 +152,7 @@ class Parser:
         self.token = token
         self.repos = repos
         self.api_url = api_url.rstrip("/")
+        self.graphql_url = f"{self.api_url}/graphql"
         self.download_timeout = download_timeout
         self.db = db.connection(workspace.input_path, serializer="json")
         if not logger:
@@ -206,51 +218,69 @@ class Parser:
         with open(path, "wb") as fh:
             fh.write(orjson.dumps(advisories))
 
-    def _is_merged(self, ghsa_id: str, merged: set[str]) -> bool:
+    def _merged_ids(self, ghsa_ids: list[str], merged: set[str]) -> set[str]:
         """
-        Determine whether an advisory has been merged into the global GitHub Advisory
-        Database (and is therefore produced by the `github` provider). Merging is
-        one-way, so positive answers are cached in `merged` and never re-queried.
+        Return the subset of `ghsa_ids` that are in the global GitHub Advisory Database
+        (and are therefore produced by the `github` provider).
+
+        Lookups are batched into GraphQL requests of up to `MERGE_CHECK_BATCH_SIZE`
+        aliased `securityAdvisory` queries; this is the same API the `github` provider
+        reads, so "found" means exactly "emitted by the github provider". Unknown
+        advisories resolve to null with a NOT_FOUND error, which is the expected answer.
+        Merging is one-way, so positive answers are added to the `merged` cache and
+        never re-queried.
         """
-        if ghsa_id in merged:
-            return True
+        to_check = sorted({i for i in ghsa_ids if i not in merged})
+        for start in range(0, len(to_check), MERGE_CHECK_BATCH_SIZE):
+            batch = to_check[start : start + MERGE_CHECK_BATCH_SIZE]
+            self.logger.info(f"checking {len(batch)} advisories against the GitHub Advisory Database")
+            response = get_query(self.token, graphql_merge_check(batch), self.download_timeout, self.graphql_url)
 
-        response = self._get(f"{self.api_url}/advisories/{ghsa_id}")
-        if response.status_code == 404:
-            return False
+            unexpected = [e for e in response.get("errors") or [] if e.get("type") != "NOT_FOUND"]
+            if unexpected:
+                raise RuntimeError(f"error checking advisories against the GitHub Advisory Database: {unexpected}")
 
-        advisory_type = str(response.json().get("type", "")).lower()
-        if advisory_type in MERGED_ADVISORY_TYPES:
-            merged.add(ghsa_id)
-            return True
-        return False
+            data = response.get("data") or {}
+            for idx, ghsa_id in enumerate(batch):
+                if data.get(f"a{idx}"):
+                    merged.add(ghsa_id)
+
+        return {i for i in ghsa_ids if i in merged}
 
     def get(self) -> Generator[NodeParser]:
         """Yield parsed advisories that are published on a repository but not yet in the global database."""
         if not self.token:
-            self.logger.warning("no GitHub token configured; unauthenticated requests are limited to 60 per hour")
+            raise ValueError("a GitHub token is required (the merge check uses the GitHub GraphQL API)")
 
         self.fixdater.download()
 
+        published: list[dict[str, Any]] = []
+        for repo in self.repos:
+            for advisory in self._repo_advisories(repo):
+                ghsa_id = advisory.get("ghsa_id")
+                if advisory.get("state") != "published" or not isinstance(ghsa_id, str):
+                    continue
+                if not _GHSA_PATTERN.match(ghsa_id):
+                    self.logger.warning(f"skipping advisory with unexpected identifier {ghsa_id!r} from {repo}")
+                    continue
+                published.append(advisory)
+
         metadata = self.db.get_metadata()
         merged = set(metadata.data.get("merged", []))
-
         try:
-            for repo in self.repos:
-                for advisory in self._repo_advisories(repo):
-                    ghsa_id = advisory.get("ghsa_id")
-                    if not ghsa_id or advisory.get("state") != "published":
-                        continue
-
-                    if self._is_merged(ghsa_id, merged):
-                        self.logger.info(f"skipping {ghsa_id} from {repo}: already in the GitHub Advisory Database")
-                        continue
-
-                    parsed = NodeParser(to_graphql_node(advisory), self.fixdater, logger=self.logger).parse()
-                    # the global advisory URL does not resolve until the advisory is merged
-                    if advisory.get("html_url"):
-                        parsed["url"] = advisory["html_url"]
-                    yield parsed
+            already_merged = self._merged_ids([a["ghsa_id"] for a in published], merged)
         finally:
             metadata.data["merged"] = sorted(merged)
             metadata.commit()
+
+        for advisory in published:
+            ghsa_id = advisory["ghsa_id"]
+            if ghsa_id in already_merged:
+                self.logger.debug(f"skipping {ghsa_id}: already in the GitHub Advisory Database")
+                continue
+
+            parsed = NodeParser(to_graphql_node(advisory), self.fixdater, logger=self.logger).parse()
+            # the global advisory URL does not resolve until the advisory is merged
+            if advisory.get("html_url"):
+                parsed["url"] = advisory["html_url"]
+            yield parsed

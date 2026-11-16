@@ -14,7 +14,7 @@ Example configuration::
 
     providers:
       github_repo:
-        token: env:GITHUB_TOKEN   # optional, but unauthenticated requests are limited to 60/hour
+        token: env:GITHUB_TOKEN   # required: the merge check uses the GitHub GraphQL API
         repos:
           - netty/netty
           - https://github.com/FasterXML/jackson-databind
