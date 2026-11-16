@@ -2,7 +2,7 @@
 
 The `dhi` provider ingests OS-package advisories for [Docker Hardened Images](https://www.docker.com/products/hardened-images/)
 (DHI) from Docker's canonical [`docker-hardened-images/advisories`](https://github.com/docker-hardened-images/advisories)
-repository and emits them unchanged as OSV provider results. Grype's `DHI-` OSV transformer turns them into
+repository and emits them as OSV provider results, as published apart from added fix dates. Grype's `DHI-` OSV transformer turns them into
 `dhi:distro:dhi:<release>` records.
 
 ## Source
@@ -25,18 +25,31 @@ provider does not verify them; only `*.json` files are read.
 ## Record selection and validation
 
 The provider walks `advisories_path` recursively in sorted order and keeps records whose `id` starts with `DHI-`.
-Any other JSON in that tree is ignored. A selected record must satisfy:
+Any other JSON in that tree is ignored. A selected record is emitted as published, with one addition:
+fix dates are written into `database_specific.anchore` on each affected range. The provider does not validate
+`affected`: the consumer of the record decides what each affected package means, as with the other OSV providers.
+A `DHI-` record that names a non-DHI ecosystem or PURL is therefore emitted, and the consumer must leave that
+package out. Grype does so from anchore/grype#3613 on; a grype-db build with an earlier Grype does not read
+`DHI-` records at all. Upstream writes `affected[].package.ecosystem` as `Docker Hardened Images:<Alpine|Debian>:<release>`
+and `affected[].package.purl` as a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL.
 
-- `schema_version` is present and has the same major version as the provider schema (currently OSV 1.x); any
-  other version fails the run rather than being skipped.
-- `affected` is a non-empty list.
-- every `affected[].package.ecosystem` starts with `Docker Hardened Images:` (for example
-  `Docker Hardened Images:Alpine:3.24` or `Docker Hardened Images:Debian:13`).
-- every `affected[].package.purl` is a `pkg:apk/dhi/...` or `pkg:deb/dhi/...` PURL. The `os_name`, `os_distro`
-  and `os_version` qualifiers are optional; the release is carried by the ecosystem.
+A record is skipped with a warning, and the run continues, when:
 
-Two records with the same `id` are tolerated only when their contents are identical; a conflicting duplicate
-fails the run.
+- its `schema_version` is missing or has a different major version from the provider schema (currently OSV 1.x);
+- an entry of `affected`, or its `package`, `ranges` or `events`, is not the JSON type OSV gives it, so fix dates
+  cannot be written into it;
+- its `id` is the `id` of a record already emitted and its contents differ. The first record that is emitted, in
+  sorted path order, is kept.
+
+A `*.json` file that is not valid JSON is skipped the same way. The run logs the number of skipped records. A run
+in which every record is skipped fails, so that an upstream format change is not reported as a successful run
+with the previous results left in place.
+
+A record with no affected packages is emitted like any other record, so the consumer decides what it means.
+Upstream publishes a withdrawn record this way: it carries a `withdrawn` timestamp and no `affected` key. The
+`withdrawn` field is passed through intact whether or not the record lists affected packages.
+
+Two records with the same `id` and identical contents are emitted once.
 
 Example record:
 

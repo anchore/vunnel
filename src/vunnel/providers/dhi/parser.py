@@ -7,22 +7,21 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 
 import orjson
-from packageurl import PackageURL
 
 from vunnel import utils
 from vunnel.tool import fixdate
 from vunnel.utils import osv
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
     from types import TracebackType
 
+    from vunnel import schema
     from vunnel.workspace import Workspace
 
 
 class Parser:
     advisory_id_prefix = "DHI-"
-    ecosystem_prefix = "Docker Hardened Images:"
 
     def __init__(  # noqa: PLR0913
         self,
@@ -30,6 +29,7 @@ class Parser:
         repository_url: str,
         repository_branch: str,
         advisories_path: str,
+        compatible_schema: Callable[[str], schema.Schema | None],
         skip_download: bool = False,
         fixdater: fixdate.Finder | None = None,
         logger: logging.Logger | None = None,
@@ -41,10 +41,12 @@ class Parser:
         self.repository_url = repository_url
         self.repository_branch = repository_branch
         self.advisories_path = advisories_path
+        self.compatible_schema = compatible_schema
         self.skip_download = skip_download
         self.logger = logger or logging.getLogger(self.__class__.__name__)
         self.checkout_path = os.path.join(self.workspace.input_path, "advisories")
         self.urls = [repository_url]
+        self.skipped = 0
         git_executable = shutil.which("git")
         if git_executable is None:
             raise RuntimeError("git executable is required by the DHI provider")
@@ -97,40 +99,47 @@ class Parser:
                     continue
                 path = os.path.join(root, filename)
                 with open(path, "rb") as f:
-                    record = orjson.loads(f.read())
+                    content = f.read()
+                try:
+                    record = orjson.loads(content)
+                except orjson.JSONDecodeError as e:
+                    self._skip(f"{os.path.relpath(path, self.checkout_path)} is not valid JSON: {e}")
+                    continue
                 if isinstance(record, dict):
                     yield record
 
-    @classmethod
-    def _validate(cls, record: dict[str, Any]) -> tuple[str, str]:
-        vuln_id = record.get("id")
-        if not isinstance(vuln_id, str) or not vuln_id.startswith(cls.advisory_id_prefix):
-            raise ValueError("record is not a DHI advisory")
+    def _skip(self, reason: str) -> None:
+        # one malformed upstream record must not fail the run for every other record
+        self.skipped += 1
+        self.logger.warning(f"skipping DHI record: {reason}")
+
+    def _accept(self, record: dict[str, Any]) -> tuple[str, schema.Schema, dict[str, Any]] | None:
+        """Return what to emit for a DHI record, or None after logging why the record is skipped."""
+        vuln_id: str = record["id"]
         schema_version = record.get("schema_version")
         if not isinstance(schema_version, str):
-            raise ValueError(f"DHI advisory {vuln_id} has no schema_version")
-        affected = record.get("affected")
-        if not isinstance(affected, list) or not affected:
-            raise ValueError(f"DHI advisory {vuln_id} has no affected packages")
-        for item in affected:
-            package = item.get("package") if isinstance(item, dict) else None
-            if not isinstance(package, dict):
-                raise ValueError(f"DHI advisory {vuln_id} has an invalid affected package")
-            ecosystem = package.get("ecosystem")
-            if not isinstance(ecosystem, str) or not ecosystem.startswith(cls.ecosystem_prefix):
-                raise ValueError(f"DHI advisory {vuln_id} has a non-DHI ecosystem")
-            purl_value = package.get("purl")
-            if not isinstance(purl_value, str):
-                raise ValueError(f"DHI advisory {vuln_id} has no affected-package PURL")
-            purl = PackageURL.from_string(purl_value)
-            if purl.namespace != "dhi" or purl.type not in {"apk", "deb"}:
-                raise ValueError(f"DHI advisory {vuln_id} has a non-DHI OS package PURL")
-        return vuln_id, schema_version
+            self._skip(f"{vuln_id} has no schema_version")
+            return None
+        vuln_schema = self.compatible_schema(schema_version)
+        if vuln_schema is None:
+            self._skip(f"{vuln_id} uses unsupported OSV schema version {schema_version}")
+            return None
+        # the affected packages are passed through as published: the consumer decides what an entry means,
+        # and a withdrawn advisory is published with none. Fix dates are the one thing added to them.
+        if isinstance(record.get("affected"), list):
+            try:
+                osv.patch_fix_date(record, self.fixdater)
+            except (AttributeError, TypeError) as e:
+                self._skip(f"{vuln_id} has an affected package that is not an OSV object: {e}")
+                return None
+        return vuln_id, vuln_schema, record
 
-    def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
+    def get(self) -> Generator[tuple[str, schema.Schema, dict[str, Any]]]:
+        self.skipped = 0
         self._clone()
         self._record_source_revision()
         self.fixdater.download()
+        # an id is recorded once a record with it is accepted, so a skipped record does not block a later one
         seen: dict[str, bytes] = {}
         for record in self._load():
             vuln_id = record.get("id")
@@ -140,9 +149,10 @@ class Parser:
             previous = seen.get(vuln_id)
             if previous is not None:
                 if previous != normalized:
-                    raise ValueError(f"conflicting duplicate DHI advisory ID: {vuln_id}")
+                    self._skip(f"{vuln_id} conflicts with a record of the same id that was already emitted")
+                continue
+            accepted = self._accept(record)
+            if accepted is None:
                 continue
             seen[vuln_id] = normalized
-            validated_id, schema_version = self._validate(record)
-            osv.patch_fix_date(record, self.fixdater)
-            yield validated_id, schema_version, record
+            yield accepted
