@@ -15,6 +15,7 @@ Supported data sources:
 - Debian (https://security-tracker.debian.org/tracker/data/json & https://salsa.debian.org/security-tracker-team/security-tracker/raw/master/data/DSA/list)
 - Echo (https://advisory.echohq.com/data.json)
 - GitHub Security Advisories (https://api.github.com/graphql)
+- GitHub repository security advisories not yet in the GitHub Advisory Database (https://api.github.com/repos/{owner}/{repo}/security-advisories)
 - NVD (https://services.nvd.nist.gov/rest/json/cves/2.0)
 - Oracle (https://linux.oracle.com/security/oval)
 - RedHat (https://www.redhat.com/security/data/oval)
@@ -67,6 +68,7 @@ chainguard
 debian
 echo
 github
+github_repo
 mariner
 minimos
 nvd
@@ -144,6 +146,39 @@ providers:
 ```
 
 Use `vunnel config` to get a better idea of all of the possible configuration options.
+
+### Tracking unmerged GitHub repository advisories (`github_repo`)
+
+When a maintainer publishes a security advisory on a GitHub repository, it is visible on the repository's
+Security tab immediately, but it only reaches the global GitHub Advisory Database (and therefore the `github`
+provider) after GitHub has reviewed it, which can take weeks. The `github_repo` provider closes that gap for a
+list of repositories you choose:
+
+```yaml
+# .vunnel.yaml
+providers:
+  github_repo:
+    # optional, but strongly recommended: unauthenticated requests are limited to 60 per hour
+    token: env:GITHUB_TOKEN
+    repos:
+      - netty/netty
+      - https://github.com/FasterXML/jackson-databind
+```
+
+How it behaves:
+
+- Only **published** advisories are considered; draft, triage, closed and withdrawn advisories are ignored. Only
+  publicly visible data is used, so the token needs no scopes.
+- Advisories that are already in the GitHub Advisory Database (reviewed or malware) are skipped. Once an advisory
+  is merged it disappears from `github_repo` output on the next run and the `github` provider becomes its source.
+  Merged advisory IDs are cached in the provider's input directory so they are not re-checked.
+- Records use the same schema and `github:<ecosystem>` namespaces as the `github` provider, so they are consumed
+  identically downstream. The advisory `url` points at the repository's advisory page, since the global advisory
+  URL does not resolve until the advisory is merged.
+- Every run is a full refresh (results are deleted before writing). Missing or renamed repositories are logged
+  and skipped; malformed `repos` entries fail at configuration load.
+- An advisory can briefly appear in both providers if GitHub merges it after a `github_repo` run but before a
+  `github` run; both records carry the same GHSA ID and equivalent content.
 
 
 ## FAQ

@@ -1,0 +1,45 @@
+[
+  {
+    "ghsa_id": "GHSA-rmcw-9fcq-wjq7",
+    "cve_id": null,
+    "url": "https://api.github.com/repos/netty/netty/security-advisories/GHSA-rmcw-9fcq-wjq7",
+    "html_url": "https://github.com/netty/netty/security/advisories/GHSA-rmcw-9fcq-wjq7",
+    "summary": "SpdySessionHandler accepts an unlimited number of concurrent remote-initiated",
+    "description": "Trimmed description.",
+    "severity": "medium",
+    "state": "published",
+    "identifiers": [{"value": "GHSA-rmcw-9fcq-wjq7", "type": "GHSA"}],
+    "vulnerabilities": [
+      {"package": {"ecosystem": "maven", "name": "io.netty:netty-codec-http"}, "vulnerable_version_range": "<= 4.1.137.Final", "patched_versions": "4.1.138.Final", "vulnerable_functions": []},
+      {"package": {"ecosystem": "maven", "name": "io.netty:netty-codec-http"}, "vulnerable_version_range": ">= 4.2.0.Final, <= 4.2.17.Final", "patched_versions": "4.2.18.Final", "vulnerable_functions": []},
+      {"package": {"ecosystem": "maven", "name": "io.netty:netty-codec-http"}, "vulnerable_version_range": "<= 4.1.137.Final", "patched_versions": "4.1.138.Final", "vulnerable_functions": []}
+    ],
+    "cvss_severities": {"cvss_v3": {"vector_string": null, "score": null}, "cvss_v4": {"vector_string": null, "score": null}},
+    "cwe_ids": ["CWE-770"],
+    "created_at": "2026-09-01T10:00:00Z",
+    "updated_at": "2026-09-10T00:39:48Z",
+    "published_at": "2026-09-10T00:39:48Z",
+    "closed_at": null,
+    "withdrawn_at": null
+  },
+  {
+    "ghsa_id": "GHSA-xxxx-yyyy-zzzz",
+    "cve_id": "CVE-2026-12345",
+    "url": "https://api.github.com/repos/netty/netty/security-advisories/GHSA-xxxx-yyyy-zzzz",
+    "html_url": "https://github.com/netty/netty/security/advisories/GHSA-xxxx-yyyy-zzzz",
+    "summary": "Already merged advisory",
+    "description": "Trimmed description.",
+    "severity": "high",
+    "state": "published",
+    "identifiers": [{"value": "GHSA-xxxx-yyyy-zzzz", "type": "GHSA"}, {"value": "CVE-2026-12345", "type": "CVE"}],
+    "vulnerabilities": [
+      {"package": {"ecosystem": "maven", "name": "io.netty:netty-handler"}, "vulnerable_version_range": "< 4.1.100.Final", "patched_versions": "4.1.100.Final", "vulnerable_functions": []}
+    ],
+    "cvss_severities": {"cvss_v3": {"vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H", "score": 7.5}, "cvss_v4": {"vector_string": null, "score": null}},
+    "created_at": "2026-08-01T10:00:00Z",
+    "updated_at": "2026-08-10T00:00:00Z",
+    "published_at": "2026-08-10T00:00:00Z",
+    "closed_at": null,
+    "withdrawn_at": null
+  }
+]

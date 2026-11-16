@@ -229,14 +229,12 @@ class Parser:
         metadata.commit()
 
 
-@utils.retry_with_backoff()
-def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql"):
-    logger = logging.getLogger("get-query")
-
-    headers = {"Authorization": f"token {token}"}
-    logger.info(f"downloading github advisories from {api_url}")
-
-    response = requests.post(api_url, json={"query": query}, timeout=timeout, headers=headers)
+def respect_rate_limit(response: requests.Response, logger: logging.Logger) -> None:
+    """
+    Inspect the GitHub rate limit headers on a response and sleep until the limit
+    resets if the remaining request budget is nearly exhausted. Shared by all
+    providers that talk to the GitHub API (GraphQL or REST).
+    """
     if GITHUB_RATE_LIMIT_REMAINING_HEADER in response.headers and GITHUB_RATE_LIMIT_RESET_HEADER in response.headers:
         remaining = int(response.headers[GITHUB_RATE_LIMIT_REMAINING_HEADER])
         # reset time is the time in UNIX Epoch Seconds at which
@@ -254,6 +252,17 @@ def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql
                 raise Exception(
                     f"github rate limit exhaused and not expected to reset for {sleep_time} seconds. Try again later.",
                 )
+
+
+@utils.retry_with_backoff()
+def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql"):
+    logger = logging.getLogger("get-query")
+
+    headers = {"Authorization": f"token {token}"}
+    logger.info(f"downloading github advisories from {api_url}")
+
+    response = requests.post(api_url, json={"query": query}, timeout=timeout, headers=headers)
+    respect_rate_limit(response, logger)
     response.raise_for_status()
     if response.status_code == 200:
         return response.json()
