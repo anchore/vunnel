@@ -25,11 +25,11 @@ runs:
     # non-default branches (and the upstream repo's default branch only writes). This prevents
     # cache poisoning from PRs and forks.
     - name: Setup go and tool cache
-      uses: anchore/go-make/.github/actions/setup@abf41688f36f2cbec13105747abbe8e60f5c56ca # v0.9.3
+      uses: anchore/go-make/.github/actions/setup@cf465259f4c9f0b0b0bcb35164ede11f7dc6d9f6 # v0.9.6
       with:
         cache-key-prefix: ${{ inputs.cache-key-prefix }}
 
-    - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
         # built-in cache is disabled to prevent PRs from poisoning the cache; uv's resolver is
         # fast enough without it. See cache-poisoning audit for details.

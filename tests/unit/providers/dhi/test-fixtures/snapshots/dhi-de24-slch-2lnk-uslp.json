@@ -1,0 +1,45 @@
+{
+  "identifier": "dhi-de24-slch-2lnk-uslp",
+  "item": {
+    "details": "A flaw was found in dash. The printf builtin reserves four bytes before converting a Unicode \\u or \\U escape, but the multi-byte token can need five or six bytes. A local user who can supply such an escape to dash printf or echo %b, including through dash -c and a positional argument, can write one or two bytes past that reservation.",
+    "id": "DHI-de24-slch-2lnk-uslp",
+    "modified": "2026-11-13T20:35:26Z",
+    "published": "2026-11-09T21:44:26Z",
+    "references": [
+      {
+        "type": "ADVISORY",
+        "url": "https://scout.docker.com/v/DHI-de24-slch-2lnk-uslp"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-102474"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://security-tracker.debian.org/tracker/CVE-2026-102474"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://access.redhat.com/security/cve/CVE-2026-102474"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "https://ubuntu.com/security/CVE-2026-102474"
+      },
+      {
+        "type": "ADVISORY",
+        "url": "http://people.ubuntu.com/~ubuntu-security/cve/CVE-2026-102474"
+      }
+    ],
+    "schema_version": "1.6.1",
+    "severity": [
+      {
+        "score": "CVSS:3.1/AV:L/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+        "type": "CVSS_V3"
+      }
+    ],
+    "summary": "A flaw was found in dash. The printf builtin reserves four bytes before converting a Unicode \\u or \\U escape, but the…",
+    "withdrawn": "2026-11-13T20:35:26Z"
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/osv/schema-1.6.1.json"
+}
