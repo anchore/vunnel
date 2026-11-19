@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import zipfile
@@ -93,6 +94,53 @@ def test_load_only_reads_advisories(helpers, auto_fake_fixdate_finder):
     parser._extract()
 
     assert [record["id"] for record in parser._load()] == ["OSEC-2026-01"]
+
+
+def test_extract_skips_absolute_paths(helpers, auto_fake_fixdate_finder):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    parser = Parser(ws=workspace, logger=None)
+    os.makedirs(workspace.input_dir, exist_ok=True)
+
+    with zipfile.ZipFile(parser.zip_path, "w") as zf:
+        zf.writestr("security-advisories-generated-osv/2026/OSEC-2026-01.json", '{"id": "OSEC-2026-01"}')
+        zf.writestr("/tmp/OSEC-2026-99.json", '{"id": "OSEC-2026-99"}')
+
+    parser._extract()
+
+    assert [record["id"] for record in parser._load()] == ["OSEC-2026-01"]
+
+
+def test_normalize_defaults_schema_version(helpers, auto_fake_fixdate_finder):
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+    parser = Parser(ws=workspace, logger=None)
+
+    assert parser._normalize({"id": "OSEC-2026-01"}) == ("OSEC-2026-01", "1.0.0", {"id": "OSEC-2026-01"})
+
+
+def test_provider_skips_incompatible_schema(helpers, auto_fake_fixdate_finder, disable_get_requests):
+    workspace = _stage(helpers)
+    # a record with an incompatible schema next to the compatible ones
+    path = os.path.join(
+        workspace.input_dir,
+        "security-advisories",
+        "security-advisories-generated-osv",
+        "2026",
+        "OSEC-2026-28.json",
+    )
+    with open(path, encoding="utf-8") as f:
+        record = json.load(f)
+    record["schema_version"] = "2.0.0"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(record, f)
+
+    c = Config()
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    c.runtime.skip_download = True
+    p = Provider(root=workspace.root, config=c)
+    p.update(None)
+
+    assert sorted(os.path.basename(f) for f in workspace.result_files()) == ["osec-2017-01.json", "osec-2026-01.json"]
+    assert workspace.result_schemas_valid(require_entries=True)
 
 
 def test_load_without_extracted_data(helpers, auto_fake_fixdate_finder):

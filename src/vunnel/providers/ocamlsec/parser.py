@@ -99,7 +99,8 @@ class Parser:
     def _normalize(self, vuln_entry: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         # the OSV record is kept as it is; grype-db transforms it into the grype schema
         vuln_id = vuln_entry["id"]
-        vuln_schema = vuln_entry["schema_version"]
+        # schema_version is optional in OSV, and a record without it is 1.0.0
+        vuln_schema = vuln_entry.get("schema_version", "1.0.0")
         return vuln_id, vuln_schema, vuln_entry
 
     def get(self) -> Generator[tuple[str, str, dict[str, Any]]]:
