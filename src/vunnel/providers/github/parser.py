@@ -20,7 +20,9 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+import re
 import time
+from dataclasses import dataclass
 from decimal import Decimal, DecimalException
 from typing import TYPE_CHECKING
 
@@ -58,6 +60,24 @@ GITHUB_RATE_LIMIT_REMAINING_HEADER = "x-ratelimit-remaining"
 GITHUB_RATE_LIMIT_RESET_HEADER = "x-ratelimit-reset"
 
 
+@dataclass
+class RepoAdvisorySource:
+    """
+    A GitHub repository whose repository-scoped security advisories should be
+    fetched in addition to the global GitHub Advisory Database.
+
+    Repository advisories that are never reviewed into the global database
+    (common for projects that are not themselves a package in a GHSA ecosystem,
+    such as language runtimes) carry a free-form or empty ecosystem, so the
+    ecosystem (a syft package type) must be given explicitly. When package is
+    set, it replaces the package name on every affected entry.
+    """
+
+    repo: str = ""
+    ecosystem: str = ""
+    package: str | None = None
+
+
 class Parser:
     def __init__(  # noqa: PLR0913
         self,
@@ -67,7 +87,11 @@ class Parser:
         download_timeout: int = 125,
         api_url: str = "https://api.github.com/graphql",
         logger: logging.Logger | None = None,
+        repos: list[RepoAdvisorySource] | None = None,
+        rest_api_url: str = "https://api.github.com",
     ):
+        self.repos = repos or []
+        self.rest_api_url = rest_api_url.rstrip("/")
         if not fixdater:
             fixdater = fixdate.default_finder(workspace)
         self.fixdater = fixdater
@@ -198,10 +222,13 @@ class Parser:
 
         current_timestamp = datetime.datetime.now(tz=datetime.UTC).isoformat()
         has_cursor = True
+        global_ids: set[str] = set()
 
         # Process everything that was persisted first
         for node_data in self.db.get_all():
-            yield NodeParser(node_data.load(), self.fixdater, logger=self.logger).parse()
+            parsed = NodeParser(node_data.load(), self.fixdater, logger=self.logger).parse()
+            global_ids.add(parsed.data.get("ghsaId", ""))
+            yield parsed
 
         while has_cursor:
             # download graphql data as json, if the timestamp is present, then the
@@ -222,11 +249,40 @@ class Parser:
             for advisory in advisories:
                 record = self.db.create(advisory.data["ghsaId"])
                 record.commit(advisory.data)
+                global_ids.add(advisory.data["ghsaId"])
                 yield advisory
+
+        # Repository advisories are refetched in full every run and never persisted to the incremental
+        # store, so edits and withdrawals upstream take effect on the next run. Once GitHub reviews one
+        # into the global database (same GHSA ID), the global record wins and the repository copy is skipped.
+        yield from self._get_repo_advisories(global_ids)
 
         # No more work to do. Persist the timestamp and return
         metadata.data["timestamp"] = current_timestamp
         metadata.commit()
+
+    def _get_repo_advisories(self, global_ids: set[str]):
+        for source in self.repos:
+            advisories = get_repo_advisories(source.repo, self.token, self.download_timeout, self.rest_api_url)
+            self.logger.info(f"fetched {len(advisories)} repository advisories from {source.repo}")
+            for rest_advisory in advisories:
+                ghsa_id = rest_advisory.get("ghsa_id")
+                if not ghsa_id:
+                    continue
+                if ghsa_id in global_ids:
+                    self.logger.debug(f"skipping repository advisory {ghsa_id} from {source.repo}: present in global database")
+                    continue
+                node = repo_advisory_to_node(rest_advisory, source, logger=self.logger)
+                if not node["vulnerabilities"]["nodes"]:
+                    self.logger.warning(f"skipping repository advisory {ghsa_id} from {source.repo}: no usable affected packages")
+                    continue
+                yield NodeParser(
+                    node,
+                    self.fixdater,
+                    logger=self.logger,
+                    ecosystem_override=source.ecosystem,
+                    advisory_url=rest_advisory.get("html_url"),
+                ).parse()
 
 
 @utils.retry_with_backoff()
@@ -258,6 +314,134 @@ def get_query(token, query, timeout=125, api_url="https://api.github.com/graphql
     if response.status_code == 200:
         return response.json()
     raise Exception(f"Unable to retrieve Github Advisories. HTTP Code: {response.status_code}")
+
+
+@utils.retry_with_backoff()
+def _get_rest_page(url: str, token: str, timeout: int) -> requests.Response:
+    headers = {"Accept": "application/vnd.github+json"}
+    if token:
+        headers["Authorization"] = f"token {token}"
+    response = requests.get(url, headers=headers, timeout=timeout)
+    response.raise_for_status()
+    return response
+
+
+def get_repo_advisories(repo: str, token: str, timeout: int = 125, rest_api_url: str = "https://api.github.com") -> list[dict]:
+    """
+    Fetch all published repository-scoped security advisories for an "owner/name" repository
+    via the REST API, following pagination.
+    """
+    logger = logging.getLogger("get-repo-advisories")
+    url: str | None = f"{rest_api_url}/repos/{repo}/security-advisories?state=published&per_page=100"
+    advisories: list[dict] = []
+    while url:
+        logger.info(f"downloading github repository advisories from {url}")
+        response = _get_rest_page(url, token, timeout)
+        page = response.json()
+        if not isinstance(page, list):
+            raise RuntimeError(f"unexpected response fetching repository advisories for {repo}: {page}")
+        advisories.extend(page)
+        url = response.links.get("next", {}).get("url")
+    return advisories
+
+
+_REST_SEVERITY_MAP = {
+    "low": "LOW",
+    "medium": "MODERATE",
+    "high": "HIGH",
+    "critical": "CRITICAL",
+}
+
+
+def _version_key(version: str) -> tuple[int, ...] | None:
+    parts = re.findall(r"\d+", version)
+    if not parts:
+        return None
+    return tuple(int(p) for p in parts)
+
+
+def select_fix_version(version_range: str, patched_versions: str) -> str | None:
+    """
+    Repository advisories carry a free-form, comma separated "patched_versions" string per affected range,
+    e.g. range ">= 3.4.0, <= 3.4.11" with patched versions "3.4.12, 4.0.0". Pick the lowest patched
+    version that lies above the range's upper bound, which is the fix for that range. Fall back to the
+    first listed version when the range has no usable upper bound.
+    """
+    candidates = [v.strip() for v in (patched_versions or "").split(",") if v.strip()]
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+
+    upper = re.search(r"(<=?)\s*([^\s,]+)", version_range or "")
+    upper_key = _version_key(upper.group(2)) if upper else None
+    if not upper or upper_key is None:
+        return candidates[0]
+    inclusive = upper.group(1) == "<="
+
+    eligible = []
+    for c in candidates:
+        key = _version_key(c)
+        if key is None:
+            continue
+        if key > upper_key or (not inclusive and key == upper_key):
+            eligible.append((key, c))
+    if not eligible:
+        return candidates[0]
+    return min(eligible)[1]
+
+
+def repo_advisory_to_node(rest: dict, source: RepoAdvisorySource, logger: logging.Logger | None = None) -> dict:
+    """
+    Convert a REST repository advisory into the GraphQL securityAdvisories node shape that NodeParser consumes.
+    """
+    if not logger:
+        logger = logging.getLogger("repo-advisory-to-node")
+
+    vulnerabilities = []
+    for v in rest.get("vulnerabilities") or []:
+        version_range = (v.get("vulnerable_version_range") or "").strip()
+        if not version_range:
+            logger.warning(f"dropping affected entry without a version range from {rest.get('ghsa_id')} ({source.repo})")
+            continue
+        package = v.get("package") or {}
+        fix_version = select_fix_version(version_range, v.get("patched_versions") or "")
+        vulnerabilities.append(
+            {
+                "package": {
+                    "ecosystem": package.get("ecosystem") or "",
+                    "name": source.package or package.get("name"),
+                },
+                "firstPatchedVersion": {"identifier": fix_version} if fix_version else None,
+                "vulnerableVersionRange": version_range,
+            },
+        )
+
+    cvss_severities = {}
+    for rest_key, gql_key in (("cvss_v3", "cvssV3"), ("cvss_v4", "cvssV4")):
+        entry = (rest.get("cvss_severities") or {}).get(rest_key) or {}
+        if entry.get("vector_string"):
+            cvss_severities[gql_key] = {"score": entry.get("score"), "vectorString": entry["vector_string"]}
+
+    identifiers = list(rest.get("identifiers") or [])
+    if rest.get("cve_id") and not any(i.get("value") == rest["cve_id"] for i in identifiers):
+        identifiers.append({"type": "CVE", "value": rest["cve_id"]})
+
+    references = [{"url": rest["html_url"]}] if rest.get("html_url") else []
+
+    return {
+        "ghsaId": rest.get("ghsa_id"),
+        "classification": "GENERAL",
+        "summary": rest.get("summary"),
+        "severity": _REST_SEVERITY_MAP.get((rest.get("severity") or "").lower()),
+        "cvssSeverities": cvss_severities or None,
+        "identifiers": identifiers,
+        "references": references,
+        "vulnerabilities": {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": vulnerabilities},
+        "publishedAt": rest.get("published_at"),
+        "updatedAt": rest.get("updated_at"),
+        "withdrawnAt": rest.get("withdrawn_at"),
+    }
 
 
 def get_advisory(ghsaId, data):
@@ -547,8 +731,18 @@ class NodeParser(dict):
         "_references",
     )
 
-    def __init__(self, data: dict, fixdater: fixdate.Finder, logger: logging.Logger | None = None):
+    def __init__(
+        self,
+        data: dict,
+        fixdater: fixdate.Finder,
+        logger: logging.Logger | None = None,
+        ecosystem_override: str | None = None,
+        advisory_url: str | None = None,
+    ):
         self.fixdater = fixdater
+        # repository advisories have no usable GHSA ecosystem, so the syft package type is configured explicitly
+        self.ecosystem_override = ecosystem_override
+        self.advisory_url = advisory_url
         self.description = None
         self.identifier = None
         self.summary = None
@@ -717,7 +911,7 @@ class NodeParser(dict):
             # identify the type of package, if this is a DEB or RPM or
             # something we haven't seen before, ignore it
             github_ecosystem = item.get("package", {}).get("ecosystem")
-            ecosystem = ecosystem_map.get(github_ecosystem)
+            ecosystem = self.ecosystem_override or ecosystem_map.get(github_ecosystem)
             if ecosystem:
                 self.ecosystems.add(ecosystem)
 
@@ -775,6 +969,9 @@ class NodeParser(dict):
         This creates the advisory URL which doesn't exist as part of the API,
         using the ID.
         """
+        if self.advisory_url:
+            self["url"] = self.advisory_url
+            return
         self["url"] = os.path.join("https://github.com/advisories/", self.data.get("ghsaId"))
 
     def _cves(self):

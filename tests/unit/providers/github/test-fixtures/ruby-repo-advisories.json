@@ -1,0 +1,108 @@
+[
+  {
+    "ghsa_id": "GHSA-gfj3-8wj9-qx8p",
+    "cve_id": null,
+    "url": "https://api.github.com/repos/ruby/ruby/security-advisories/GHSA-gfj3-8wj9-qx8p",
+    "html_url": "https://github.com/ruby/ruby/security/advisories/GHSA-gfj3-8wj9-qx8p",
+    "summary": "Double free in regular expression parsing",
+    "severity": "critical",
+    "identifiers": [
+      {
+        "value": "GHSA-gfj3-8wj9-qx8p",
+        "type": "GHSA"
+      }
+    ],
+    "published_at": "2026-11-17T04:17:18Z",
+    "updated_at": "2026-11-17T05:05:38Z",
+    "withdrawn_at": null,
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "",
+          "name": "ruby"
+        },
+        "vulnerable_version_range": "<= 3.3.12",
+        "patched_versions": "3.3.13"
+      },
+      {
+        "package": {
+          "ecosystem": "",
+          "name": "ruby"
+        },
+        "vulnerable_version_range": ">= 3.4.0, <= 3.4.11",
+        "patched_versions": "3.4.12, 4.0.0"
+      }
+    ],
+    "cvss_severities": {
+      "cvss_v3": {
+        "vector_string": null,
+        "score": null
+      },
+      "cvss_v4": {
+        "vector_string": null,
+        "score": null
+      }
+    },
+    "cwe_ids": [
+      "CWE-415"
+    ],
+    "state": "published"
+  },
+  {
+    "ghsa_id": "GHSA-34m4-m9fh-gqp5",
+    "cve_id": null,
+    "url": "https://api.github.com/repos/ruby/ruby/security-advisories/GHSA-34m4-m9fh-gqp5",
+    "html_url": "https://github.com/ruby/ruby/security/advisories/GHSA-34m4-m9fh-gqp5",
+    "summary": "Heap buffer overflow in case conversion of strings",
+    "severity": "critical",
+    "identifiers": [
+      {
+        "value": "GHSA-34m4-m9fh-gqp5",
+        "type": "GHSA"
+      }
+    ],
+    "published_at": "2026-11-19T00:13:57Z",
+    "updated_at": "2026-11-19T00:13:57Z",
+    "withdrawn_at": null,
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "",
+          "name": "ruby"
+        },
+        "vulnerable_version_range": "<= 3.3.13",
+        "patched_versions": "3.3.14"
+      },
+      {
+        "package": {
+          "ecosystem": "",
+          "name": "ruby"
+        },
+        "vulnerable_version_range": ">= 3.4.0, <= 3.4.12",
+        "patched_versions": "3.4.13"
+      },
+      {
+        "package": {
+          "ecosystem": "",
+          "name": "ruby"
+        },
+        "vulnerable_version_range": ">= 4.0.0, <= 4.0.9",
+        "patched_versions": "4.0.10"
+      }
+    ],
+    "cvss_severities": {
+      "cvss_v3": {
+        "vector_string": null,
+        "score": null
+      },
+      "cvss_v4": {
+        "vector_string": null,
+        "score": null
+      }
+    },
+    "cwe_ids": [
+      "CWE-193"
+    ],
+    "state": "published"
+  }
+]
