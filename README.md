@@ -14,6 +14,7 @@ Supported data sources:
 - Azure (https://github.com/microsoft/AzureLinuxVulnerabilityData)
 - Debian (https://security-tracker.debian.org/tracker/data/json & https://salsa.debian.org/security-tracker-team/security-tracker/raw/master/data/DSA/list)
 - Echo (https://advisory.echohq.com/data.json)
+- Echo OSV (https://advisory.echohq.com/osv/all.zip)
 - GitHub Security Advisories (https://api.github.com/graphql)
 - NVD (https://services.nvd.nist.gov/rest/json/cves/2.0)
 - Oracle (https://linux.oracle.com/security/oval)
@@ -66,6 +67,7 @@ amazon
 chainguard
 debian
 echo
+echo-osv
 github
 mariner
 minimos
