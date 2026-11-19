@@ -445,7 +445,12 @@ providers:
       user_agent: anchore/vunnel-$VUNNEL_VERSION
   github:
     api_url: https://api.github.com/graphql
+    repos:
+      - ecosystem: binary
+        package: ruby
+        repo: ruby/ruby
     request_timeout: 125
+    rest_api_url: https://api.github.com
     runtime:
       existing_input: keep
       existing_results: delete-before-write

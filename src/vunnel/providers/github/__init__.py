@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from vunnel import provider, result, schema
 from vunnel.utils import timer
 
-from .parser import Parser
+from .parser import Parser, RepoAdvisorySource
 
 if TYPE_CHECKING:
     import datetime
@@ -26,6 +26,16 @@ class Config:
         ),
     )
     request_timeout: int = 125
+    rest_api_url: str = "https://api.github.com"
+    # repositories whose repository-scoped advisories are fetched in addition to the global
+    # GitHub Advisory Database. These advisories have no usable GHSA ecosystem, so each entry
+    # names the syft package type (and optionally the package name) to emit them under.
+    repos: list[RepoAdvisorySource] = field(
+        default_factory=lambda: [
+            # the ruby interpreter is cataloged by syft as a binary package named "ruby"
+            RepoAdvisorySource(repo="ruby/ruby", ecosystem="binary", package="ruby"),
+        ],
+    )
 
     def __post_init__(self) -> None:
         if self.token.startswith("env:"):
@@ -60,6 +70,8 @@ class Provider(provider.Provider):
             api_url=config.api_url,
             download_timeout=config.request_timeout,
             logger=self.logger,
+            repos=config.repos,
+            rest_api_url=config.rest_api_url,
         )
 
     @classmethod

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import os
+
 import pytest
 import time
 from unittest.mock import patch, Mock
@@ -8,6 +11,34 @@ from vunnel.providers.github import Config, Provider, parser
 from vunnel.utils import fdb as db
 from vunnel.utils.vulnerability import CVSS, CVSSBaseMetrics
 from vunnel.tool import fixdate
+
+
+@pytest.fixture(autouse=True)
+def no_repo_advisory_downloads(monkeypatch):
+    """the default config fetches repository advisories (e.g. ruby/ruby); never hit the network in tests"""
+    monkeypatch.setattr(parser, "get_repo_advisories", lambda *a, **kw: [])
+
+
+@pytest.fixture()
+def ruby_repo_advisories():
+    path = os.path.join(os.path.dirname(__file__), "test-fixtures", "ruby-repo-advisories.json")
+    with open(path) as f:
+        return json.load(f)
+
+
+@pytest.fixture()
+def fake_repo_advisories(monkeypatch):
+    def apply(by_repo: dict[str, list[dict]]):
+        calls = []
+
+        def fake(repo, *a, **kw):
+            calls.append(repo)
+            return by_repo.get(repo, [])
+
+        monkeypatch.setattr(parser, "get_repo_advisories", fake)
+        return calls
+
+    return apply
 
 
 @pytest.fixture()
@@ -626,3 +657,142 @@ def test_provider_via_snapshot(helpers, fake_get_query, advisories, auto_fake_fi
     provider.update(None)
 
     workspace.assert_result_snapshots()
+
+
+RUBY_SOURCE = parser.RepoAdvisorySource(repo="ruby/ruby", ecosystem="binary", package="ruby")
+
+
+class TestSelectFixVersion:
+    @pytest.mark.parametrize(
+        ("version_range", "patched", "expected"),
+        [
+            ("<= 3.3.12", "3.3.13", "3.3.13"),
+            # one patched-versions string covering two release lines: pick the one that fixes this range
+            (">= 3.4.0, <= 3.4.11", "3.4.12, 4.0.0", "3.4.12"),
+            (">= 3.4.0, <= 3.4.11", "4.0.0, 3.4.12", "3.4.12"),
+            (">= 3.4.0, < 3.4.12", "3.4.12, 4.0.0", "3.4.12"),
+            ("<= 3.3.12", "3.3.13, 3.4.12", "3.3.13"),
+            # no usable upper bound: fall back to the first listed version
+            (">= 1.0", "1.2, 2.0", "1.2"),
+            ("All", "1.2, 2.0", "1.2"),
+            ("<= 1.0", "", None),
+            ("<= 1.0", None, None),
+        ],
+    )
+    def test_select_fix_version(self, version_range, patched, expected):
+        assert parser.select_fix_version(version_range, patched) == expected
+
+
+class TestRepoAdvisoryToNode:
+    def test_converts_ruby_advisory(self, ruby_repo_advisories, auto_fake_fixdate_finder):
+        rest = next(a for a in ruby_repo_advisories if a["ghsa_id"] == "GHSA-gfj3-8wj9-qx8p")
+        node = parser.repo_advisory_to_node(rest, RUBY_SOURCE)
+        parsed = parser.NodeParser(
+            node,
+            fixdate.default_finder(None),
+            ecosystem_override=RUBY_SOURCE.ecosystem,
+            advisory_url=rest["html_url"],
+        ).parse()
+
+        assert parsed["ghsaId"] == "GHSA-gfj3-8wj9-qx8p"
+        assert parsed["Severity"] == "Critical"
+        assert parsed["Classification"] == "GENERAL"
+        assert parsed["url"] == "https://github.com/ruby/ruby/security/advisories/GHSA-gfj3-8wj9-qx8p"
+        assert parsed["references"] == [{"url": "https://github.com/ruby/ruby/security/advisories/GHSA-gfj3-8wj9-qx8p"}]
+        assert parsed["CVE"] == []
+        assert parsed.ecosystems == {"binary"}
+        assert [(f["name"], f["ecosystem"], f["namespace"], f["range"], f["identifier"]) for f in parsed["FixedIn"]] == [
+            ("ruby", "binary", "github:binary", "<= 3.3.12", "3.3.13"),
+            ("ruby", "binary", "github:binary", ">= 3.4.0 <= 3.4.11", "3.4.12"),
+        ]
+        # null CVSS vectors from the REST API are dropped rather than emitted
+        assert "cvss_severities" not in parsed
+
+    def test_rest_fields(self):
+        rest = {
+            "ghsa_id": "GHSA-xxxx-xxxx-xxxx",
+            "cve_id": "CVE-2026-0001",
+            "html_url": "https://github.com/o/r/security/advisories/GHSA-xxxx-xxxx-xxxx",
+            "summary": "s",
+            "severity": "medium",
+            "identifiers": [{"type": "GHSA", "value": "GHSA-xxxx-xxxx-xxxx"}],
+            "published_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-02T00:00:00Z",
+            "withdrawn_at": None,
+            "cvss_severities": {
+                "cvss_v3": {"vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "score": 9.8},
+                "cvss_v4": {"vector_string": None, "score": None},
+            },
+            "vulnerabilities": [
+                {"package": {"ecosystem": "", "name": "thing"}, "vulnerable_version_range": "< 2.0", "patched_versions": "2.0"},
+                {"package": {"ecosystem": "", "name": "thing"}, "vulnerable_version_range": "", "patched_versions": "3.0"},
+            ],
+        }
+        node = parser.repo_advisory_to_node(rest, parser.RepoAdvisorySource(repo="o/r", ecosystem="binary"))
+        assert node["severity"] == "MODERATE"
+        assert node["identifiers"][-1] == {"type": "CVE", "value": "CVE-2026-0001"}
+        assert node["cvssSeverities"] == {
+            "cvssV3": {"score": 9.8, "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"},
+        }
+        # entries without a range are dropped; the package name is kept when no override is configured
+        assert node["vulnerabilities"]["nodes"] == [
+            {
+                "package": {"ecosystem": "", "name": "thing"},
+                "firstPatchedVersion": {"identifier": "2.0"},
+                "vulnerableVersionRange": "< 2.0",
+            },
+        ]
+
+
+class TestParserRepoAdvisories:
+    def test_yields_repo_advisories(self, fake_get_query, fake_repo_advisories, ruby_repo_advisories, tmpdir, empty_response, auto_fake_fixdate_finder):
+        fake_get_query([empty_response])
+        calls = fake_repo_advisories({"ruby/ruby": ruby_repo_advisories})
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret", repos=[RUBY_SOURCE])
+        result = list(p.get())
+        assert calls == ["ruby/ruby"]
+        assert sorted(r["ghsaId"] for r in result) == ["GHSA-34m4-m9fh-gqp5", "GHSA-gfj3-8wj9-qx8p"]
+        assert all(r.ecosystems == {"binary"} for r in result)
+
+    def test_repo_advisories_not_persisted(self, fake_get_query, fake_repo_advisories, ruby_repo_advisories, tmpdir, empty_response, auto_fake_fixdate_finder):
+        fake_get_query([empty_response])
+        fake_repo_advisories({"ruby/ruby": ruby_repo_advisories})
+        ws = workspace.Workspace(root=tmpdir.strpath, name="test", create=True)
+        p = parser.Parser(ws, "secret", repos=[RUBY_SOURCE])
+        list(p.get())
+        assert list(db.connection(ws.input_path, serializer="json").get_all()) == []
+
+    def test_global_advisory_wins(self, fake_get_query, fake_repo_advisories, advisories, tmpdir, auto_fake_fixdate_finder):
+        # a repository advisory that GitHub has since reviewed into the global database (same GHSA ID)
+        fake_get_query([advisories()])
+        repo_copy = {
+            "ghsa_id": "GHSA-mh6f-8j2x-4483",
+            "html_url": "https://github.com/o/r/security/advisories/GHSA-mh6f-8j2x-4483",
+            "severity": "low",
+            "vulnerabilities": [{"package": {"ecosystem": "", "name": "x"}, "vulnerable_version_range": "< 1", "patched_versions": "1"}],
+        }
+        fake_repo_advisories({"o/r": [repo_copy]})
+        source = parser.RepoAdvisorySource(repo="o/r", ecosystem="binary")
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret", repos=[source])
+        result = list(p.get())
+        assert [r["ghsaId"] for r in result] == ["GHSA-mh6f-8j2x-4483"]
+        assert "binary" not in result[0].ecosystems
+
+
+def test_provider_writes_repo_advisories(helpers, fake_get_query, fake_repo_advisories, ruby_repo_advisories, empty_response, auto_fake_fixdate_finder):
+    fake_get_query([empty_response])
+    fake_repo_advisories({"ruby/ruby": ruby_repo_advisories})
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    c = Config(token="secret", api_url="https://localhost")
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    provider = Provider(root=workspace.root, config=c)
+    provider.update(None)
+
+    assert workspace.result_schemas_valid(require_entries=True)
+    written = sorted(os.path.basename(os.path.dirname(f)) + "/" + os.path.basename(f) for f in workspace.result_files())
+    assert written == ["github:binary/ghsa-34m4-m9fh-gqp5.json", "github:binary/ghsa-gfj3-8wj9-qx8p.json"]
+
+
+def test_default_config_includes_ruby():
+    assert parser.RepoAdvisorySource(repo="ruby/ruby", ecosystem="binary", package="ruby") in Config().repos
