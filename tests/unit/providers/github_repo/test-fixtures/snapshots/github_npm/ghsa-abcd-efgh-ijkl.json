@@ -1,0 +1,61 @@
+{
+  "identifier": "github:npm/ghsa-abcd-efgh-ijkl",
+  "item": {
+    "Advisory": {
+      "CVE": [
+        "CVE-2026-54321"
+      ],
+      "CVSS": {
+        "base_metrics": {
+          "base_score": 9.8,
+          "base_severity": "Critical",
+          "exploitability_score": 3.9,
+          "impact_score": 5.9
+        },
+        "status": "N/A",
+        "vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "version": "3.1"
+      },
+      "Classification": "GENERAL",
+      "FixedIn": [
+        {
+          "ecosystem": "npm",
+          "identifier": "None",
+          "name": "netty-js",
+          "namespace": "github:npm",
+          "range": "< 1.0.0"
+        }
+      ],
+      "Metadata": {
+        "CVE": [
+          "CVE-2026-54321"
+        ]
+      },
+      "Severity": "Critical",
+      "Summary": "Unmerged advisory with CVE, CVSS and multiple ecosystems",
+      "cvss_severities": [
+        {
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "version": "3.1"
+        },
+        {
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+          "version": "4.0"
+        }
+      ],
+      "ghsaId": "GHSA-abcd-efgh-ijkl",
+      "namespace": "github:npm",
+      "published": "2026-09-11T00:00:00Z",
+      "references": [
+        {
+          "url": "https://github.com/netty/netty/security/advisories/GHSA-abcd-efgh-ijkl"
+        }
+      ],
+      "updated": "2026-09-12T00:00:00Z",
+      "url": "https://github.com/netty/netty/security/advisories/GHSA-abcd-efgh-ijkl",
+      "withdrawn": null
+    },
+    "Vulnerability": {}
+  },
+  "schema": "https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/github-security-advisory/schema-1.0.3.json"
+}

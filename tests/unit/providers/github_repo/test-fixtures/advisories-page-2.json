@@ -1,0 +1,27 @@
+[
+  {
+    "ghsa_id": "GHSA-abcd-efgh-ijkl",
+    "cve_id": "CVE-2026-54321",
+    "url": "https://api.github.com/repos/netty/netty/security-advisories/GHSA-abcd-efgh-ijkl",
+    "html_url": "https://github.com/netty/netty/security/advisories/GHSA-abcd-efgh-ijkl",
+    "summary": "Unmerged advisory with CVE, CVSS and multiple ecosystems",
+    "description": "Trimmed description.",
+    "severity": "critical",
+    "state": "published",
+    "identifiers": [{"value": "GHSA-abcd-efgh-ijkl", "type": "GHSA"}],
+    "vulnerabilities": [
+      {"package": {"ecosystem": "maven", "name": "io.netty:netty-codec-http2"}, "vulnerable_version_range": ">= 4.2.0.Final, < 4.2.18.Final", "patched_versions": "4.2.18.Final, 4.1.138.Final", "vulnerable_functions": []},
+      {"package": {"ecosystem": "npm", "name": "netty-js"}, "vulnerable_version_range": "< 1.0.0", "patched_versions": null, "vulnerable_functions": []},
+      {"package": {"ecosystem": "other", "name": "netty-native"}, "vulnerable_version_range": "< 2.0.0", "patched_versions": "2.0.0", "vulnerable_functions": []}
+    ],
+    "cvss_severities": {
+      "cvss_v3": {"vector_string": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", "score": 9.8},
+      "cvss_v4": {"vector_string": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N", "score": 9.3}
+    },
+    "created_at": "2026-09-01T10:00:00Z",
+    "updated_at": "2026-09-12T00:00:00Z",
+    "published_at": "2026-09-11T00:00:00Z",
+    "closed_at": null,
+    "withdrawn_at": null
+  }
+]

@@ -58,6 +58,7 @@ class Providers:
     epss: providers.epss.Config = field(default_factory=providers.epss.Config)
     fedora: providers.fedora.Config = field(default_factory=providers.fedora.Config)
     github: providers.github.Config = field(default_factory=providers.github.Config)
+    github_repo: providers.github_repo.Config = field(default_factory=providers.github_repo.Config)
     kev: providers.kev.Config = field(default_factory=providers.kev.Config)
     mariner: providers.mariner.Config = field(default_factory=providers.mariner.Config)
     minimos: providers.minimos.Config = field(default_factory=providers.minimos.Config)
