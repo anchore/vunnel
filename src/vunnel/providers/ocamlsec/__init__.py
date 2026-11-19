@@ -49,7 +49,7 @@ class Provider(provider.Provider):
 
     @classmethod
     def name(cls) -> str:
-        return "ocaml"
+        return "ocamlsec"
 
     @classmethod
     def tags(cls) -> list[str]:

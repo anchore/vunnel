@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from vunnel.workspace import Workspace
 
 
-namespace = "ocaml"
+namespace = "ocamlsec"
 
 
 class Parser:

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from vunnel import result, schema
-from vunnel.providers.ocaml import Config, Provider
-from vunnel.providers.ocaml.parser import Parser
+from vunnel.providers.ocamlsec import Config, Provider
+from vunnel.providers.ocamlsec.parser import Parser
 
 
 def _stage(helpers):
@@ -15,8 +15,8 @@ def _stage(helpers):
     return workspace
 
 
-@patch("vunnel.providers.ocaml.parser.Parser._extract")
-@patch("vunnel.providers.ocaml.parser.Parser._download")
+@patch("vunnel.providers.ocamlsec.parser.Parser._extract")
+@patch("vunnel.providers.ocamlsec.parser.Parser._download")
 def test_provider_schema(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = _stage(helpers)
     c = Config()
@@ -28,8 +28,8 @@ def test_provider_schema(mock_download, mock_extract, helpers, auto_fake_fixdate
     assert workspace.result_schemas_valid(require_entries=True)
 
 
-@patch("vunnel.providers.ocaml.parser.Parser._extract")
-@patch("vunnel.providers.ocaml.parser.Parser._download")
+@patch("vunnel.providers.ocamlsec.parser.Parser._extract")
+@patch("vunnel.providers.ocamlsec.parser.Parser._download")
 def test_parser(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = _stage(helpers)
     parser = Parser(ws=workspace, logger=None)
@@ -45,8 +45,8 @@ def test_parser(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, 
     mock_extract.assert_called_once()
 
 
-@patch("vunnel.providers.ocaml.parser.Parser._extract")
-@patch("vunnel.providers.ocaml.parser.Parser._download")
+@patch("vunnel.providers.ocamlsec.parser.Parser._extract")
+@patch("vunnel.providers.ocamlsec.parser.Parser._download")
 def test_parser_patches_fix_dates_for_opam_ranges_only(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = _stage(helpers)
     parser = Parser(ws=workspace, logger=None)
@@ -114,8 +114,8 @@ def test_compatible_schema(schema_version, expected):
     assert Provider.compatible_schema(schema_version) == expected
 
 
-@patch("vunnel.providers.ocaml.parser.Parser._extract")
-@patch("vunnel.providers.ocaml.parser.Parser._download")
+@patch("vunnel.providers.ocamlsec.parser.Parser._extract")
+@patch("vunnel.providers.ocamlsec.parser.Parser._download")
 def test_provider_via_snapshot(mock_download, mock_extract, helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = _stage(helpers)
     c = Config()
@@ -147,7 +147,7 @@ def test_provider_skip_download(helpers, auto_fake_fixdate_finder, monkeypatch):
 
 def test_parser_default_finder_gets_skip_download(monkeypatch, helpers):
     default_finder = MagicMock()
-    monkeypatch.setattr("vunnel.providers.ocaml.parser.fixdate.default_finder", default_finder)
+    monkeypatch.setattr("vunnel.providers.ocamlsec.parser.fixdate.default_finder", default_finder)
     workspace = helpers.provider_workspace_helper(name=Provider.name())
 
     Parser(ws=workspace, logger=None, skip_download=True)

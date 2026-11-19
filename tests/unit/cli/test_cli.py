@@ -524,7 +524,7 @@ providers:
       skip_download: false
       skip_newer_archive_check: false
       user_agent: null
-  ocaml:
+  ocamlsec:
     request_timeout: 125
     runtime:
       existing_input: keep
