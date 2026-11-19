@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -30,6 +31,30 @@ BINNY_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".binny.
 # paths in a gate file resolve against the gate file's directory (tests/integration/gates)
 GATE_GRYPE = "../.tool/grype"
 GATE_CANDIDATE_DB = "../build/vulnerability.db"
+
+# (os name, label version) pairs whose unaffected records may be scoped to an architecture. grype clients that
+# predate architecture-aware matching ignore the architecture, so for them an arch-scoped unaffected record
+# suppresses the vulnerability on every architecture. Only list distros that have always had these records.
+ARCH_SCOPED_UNAFFECTED_ALLOWED = {
+    ("hummingbird", "rolling"),
+    ("chainguard", "cga"),
+}
+
+ARCH_SCOPED_UNAFFECTED_QUERY = """
+select coalesce(os.name, ''), coalesce(os.label_version, ''),
+       json_extract(b.value, '$.qualifiers.architecture'), count(*)
+from unaffected_package_handles h
+join blobs b on b.id = h.blob_id
+left join operating_systems os on os.id = h.operating_system_id
+where coalesce(json_extract(b.value, '$.qualifiers.architecture'), '') != ''
+group by 1, 2, 3
+union all
+select '', '', json_extract(b.value, '$.qualifiers.architecture'), count(*)
+from unaffected_cpe_handles h
+join blobs b on b.id = h.blob_id
+where coalesce(json_extract(b.value, '$.qualifiers.architecture'), '') != ''
+group by 3
+"""
 
 
 @dataclass
@@ -591,6 +616,16 @@ def configure(cfg: Config, provider_names: list[str]):
     return cached_providers, uncached_providers
 
 
+def find_disallowed_arch_scoped_unaffected(db_path: str) -> list[tuple[str, str, str, int]]:
+    """return (os name, label version, architecture, count) for arch-scoped unaffected records not in ARCH_SCOPED_UNAFFECTED_ALLOWED"""
+    con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        rows = con.execute(ARCH_SCOPED_UNAFFECTED_QUERY).fetchall()
+    finally:
+        con.close()
+    return [row for row in rows if (row[0], row[1]) not in ARCH_SCOPED_UNAFFECTED_ALLOWED]
+
+
 def cache_file_path(provider: str) -> str:
     return f".cache/vunnel/{provider}/grype-db-cache.tar.gz"
 
@@ -644,6 +679,14 @@ def build_db(cfg: Config):
 
     logging.info("building DB")
     subprocess.run([GRYPE_DB, "build", "-s", "6", "-v", "-c", ".grype-db.yaml"], check=True)
+
+    logging.info("checking DB for arch-scoped unaffected records")
+    disallowed = find_disallowed_arch_scoped_unaffected(os.path.join(build_dir, "vulnerability.db"))
+    for os_name, label, arch, count in disallowed:
+        logging.error(f"{count} unaffected records for os={os_name!r} label={label!r} are scoped to architecture {arch!r}")
+    if disallowed:
+        logging.error("grype clients that predate architecture-aware matching would suppress these on every architecture")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

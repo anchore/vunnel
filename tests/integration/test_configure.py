@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import sqlite3
+
 import pytest
 
 
@@ -297,3 +300,64 @@ class TestGate:
 
         with pytest.raises(ValueError, match="exactly one validation"):
             cfg.gate(Test(provider="debian", images=["img@sha256:abc"]))
+
+
+class TestFindDisallowedArchScopedUnaffected:
+    """Tests for find_disallowed_arch_scoped_unaffected(), which guards existing distros against arch-scoped unaffected records."""
+
+    @staticmethod
+    def make_db(path, package_rows=(), cpe_rows=()):
+        """package_rows are (os name, label version, qualifiers) with os name None for no OS; cpe_rows are qualifiers"""
+        con = sqlite3.connect(path)
+        con.executescript(
+            """
+            create table operating_systems (id integer primary key, name text, label_version text);
+            create table blobs (id integer primary key, value text);
+            create table unaffected_package_handles (id integer primary key, operating_system_id integer, blob_id integer);
+            create table unaffected_cpe_handles (id integer primary key, blob_id integer);
+            """,
+        )
+
+        def add_blob(qualifiers):
+            return con.execute("insert into blobs (value) values (?)", (json.dumps({"qualifiers": qualifiers}),)).lastrowid
+
+        for os_name, label, qualifiers in package_rows:
+            os_id = None
+            if os_name is not None:
+                os_id = con.execute("insert into operating_systems (name, label_version) values (?, ?)", (os_name, label)).lastrowid
+            con.execute("insert into unaffected_package_handles (operating_system_id, blob_id) values (?, ?)", (os_id, add_blob(qualifiers)))
+        for qualifiers in cpe_rows:
+            con.execute("insert into unaffected_cpe_handles (blob_id) values (?)", (add_blob(qualifiers),))
+        con.commit()
+        con.close()
+        return str(path)
+
+    @pytest.mark.parametrize(
+        ("package_rows", "cpe_rows", "expected"),
+        [
+            pytest.param([("debian", "", {"rpm_modularity": ""})], [], [], id="no architecture"),
+            pytest.param([("oracle", "", {"architecture": ""})], [], [], id="empty architecture"),
+            pytest.param([("hummingbird", "rolling", {"architecture": "src"})], [], [], id="hummingbird allowed"),
+            pytest.param([("chainguard", "cga", {"architecture": "x86_64"})], [], [], id="chainguard cga allowed"),
+            pytest.param(
+                [("chainguard", "rolling", {"architecture": "x86_64"})],
+                [],
+                [("chainguard", "rolling", "x86_64", 1)],
+                id="chainguard rolling disallowed",
+            ),
+            pytest.param(
+                [("oracle", "", {"architecture": "aarch64"}), ("oracle", "", {"architecture": "aarch64"})],
+                [],
+                [("oracle", "", "aarch64", 2)],
+                id="existing distro disallowed",
+            ),
+            pytest.param([(None, None, {"architecture": "amd64"})], [], [("", "", "amd64", 1)], id="no os disallowed"),
+            pytest.param([], [{"architecture": "x86_64"}], [("", "", "x86_64", 1)], id="cpe disallowed"),
+        ],
+    )
+    def test_find(self, tmp_path, package_rows, cpe_rows, expected):
+        from tests.integration.configure import find_disallowed_arch_scoped_unaffected
+
+        db_path = self.make_db(tmp_path / "vulnerability.db", package_rows, cpe_rows)
+
+        assert find_disallowed_arch_scoped_unaffected(db_path) == expected
