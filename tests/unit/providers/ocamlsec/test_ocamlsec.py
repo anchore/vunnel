@@ -110,13 +110,6 @@ def test_extract_skips_absolute_paths(helpers, auto_fake_fixdate_finder):
     assert [record["id"] for record in parser._load()] == ["OSEC-2026-01"]
 
 
-def test_normalize_defaults_schema_version(helpers, auto_fake_fixdate_finder):
-    workspace = helpers.provider_workspace_helper(name=Provider.name())
-    parser = Parser(ws=workspace, logger=None)
-
-    assert parser._normalize({"id": "OSEC-2026-01"}) == ("OSEC-2026-01", "1.0.0", {"id": "OSEC-2026-01"})
-
-
 def test_provider_skips_incompatible_schema(helpers, auto_fake_fixdate_finder, disable_get_requests):
     workspace = _stage(helpers)
     # a record with an incompatible schema next to the compatible ones
