@@ -17,6 +17,7 @@ Supported data sources:
 - GitHub Security Advisories (https://api.github.com/graphql)
 - NVD (https://services.nvd.nist.gov/rest/json/cves/2.0)
 - Oracle (https://linux.oracle.com/security/oval)
+- RapidFort (https://github.com/rapidfort/security-advisories)
 - RedHat (https://www.redhat.com/security/data/oval)
 - SLES (https://ftp.suse.com/pub/projects/security/oval)
 - Ubuntu (https://launchpad.net/ubuntu-cve-tracker)
@@ -71,6 +72,7 @@ mariner
 minimos
 nvd
 oracle
+rapidfort
 rhel
 sles
 ubuntu

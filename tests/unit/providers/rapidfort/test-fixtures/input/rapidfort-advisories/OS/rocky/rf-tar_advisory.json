@@ -1,0 +1,37 @@
+{
+    "package_name": "rf-tar",
+    "advisory": {
+        "9": {
+            "CVE-2023-39804": {
+                "cve_id": "CVE-2023-39804",
+                "title": "tar: Incorrectly handled extension attributes in PAX archives can lead to a crash",
+                "description": "A stack exhaustion flaw in GNU tar's xattr handling of PAX archives can lead to a crash.",
+                "severity": "MEDIUM",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "1.35",
+                        "fixed": "1.35-7.el10_0.2",
+                        "identifier": "el10"
+                    }
+                ]
+            }
+        },
+        "10": {
+            "CVE-2023-39804": {
+                "cve_id": "CVE-2023-39804",
+                "title": "tar: Incorrectly handled extension attributes in PAX archives can lead to a crash",
+                "description": "A stack exhaustion flaw in GNU tar's xattr handling of PAX archives can lead to a crash.",
+                "severity": "MEDIUM",
+                "status": "fixed",
+                "events": [
+                    {
+                        "introduced": "1.35",
+                        "fixed": "1.35-7.el10_0.2",
+                        "identifier": "el10"
+                    }
+                ]
+            }
+        }
+    }
+}
