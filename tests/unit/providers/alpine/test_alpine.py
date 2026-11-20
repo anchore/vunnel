@@ -156,6 +156,93 @@ class TestAlpineProvider:
         )
 
     @pytest.mark.parametrize(
+        ("raw_ids", "expected"),
+        [
+            pytest.param(["CVE-2026-1965"], ["CVE-2026-1965"], id="valid"),
+            pytest.param(["CVE-2026-1965_1", "CVE-2026-1965_2"], ["CVE-2026-1965"], id="underscore-suffix"),
+            pytest.param(["CVE-2017-17434-1", "CVE-2017-17434-2"], ["CVE-2017-17434"], id="dash-suffix"),
+            pytest.param(["CVE-2021-35940.patch"], ["CVE-2021-35940"], id="dot-suffix"),
+            pytest.param(["CVE-2026-109618,", "CVE-2026-109619,"], ["CVE-2026-109618", "CVE-2026-109619"], id="comma-suffix"),
+            pytest.param(["CVE-2026-291i67", "CVE-46838", "CVE-????-?????"], [], id="unrecoverable"),
+            # a typo inside the number must not be read as a different, valid CVE id
+            pytest.param(["CVE-2026-2916i7", "CVE-2026-29167x", "CVE-2026-1965a"], [], id="typo-is-not-a-shorter-id"),
+            pytest.param(["GHSA-1234-abcd-5678", "XSA-123"], [], id="non-cve"),
+        ],
+    )
+    def test_cve_ids(self, raw_ids, expected, tmpdir):
+        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        assert p._cve_ids(raw_ids) == expected
+
+    def test_normalize_repairs_cve_ids_with_junk_appended(self, tmpdir, auto_fake_fixdate_finder):
+        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        # the rsync record of the v3.4 main secdb
+        dbtype_data_dict = {
+            "main": {
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "rsync",
+                            "secfixes": {
+                                "3.1.2-r3": ["CVE-2017-16548", "CVE-2017-17433", "CVE-2017-17434-1", "CVE-2017-17434-2"],
+                                "3.1.3-r0": ["CVE-2018-5764"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        vuln_records = p._normalize("3.4", dbtype_data_dict)
+
+        assert sorted(vuln_records.keys()) == ["CVE-2017-16548", "CVE-2017-17433", "CVE-2017-17434", "CVE-2018-5764"]
+        vulnerability = vuln_records["CVE-2017-17434"]["Vulnerability"]
+        assert vulnerability["Name"] == "CVE-2017-17434"
+        assert vulnerability["Link"] == "https://security.alpinelinux.org/vuln/CVE-2017-17434"
+        assert len(vulnerability["FixedIn"]) == 1
+        assert vulnerability["FixedIn"][0]["Name"] == "rsync"
+        assert vulnerability["FixedIn"][0]["Version"] == "3.1.2-r3"
+
+    def test_normalize_skips_malformed_cve_ids(self, tmpdir, auto_fake_fixdate_finder):
+        p = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        # the linux-lts 6.6.13-r1 secfix of the v3.20 main secdb and the tailscale record of the
+        # v3.20 community secdb: neither malformed id holds a CVE id that can be recovered
+        dbtype_data_dict = {
+            "main": {
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "linux-lts",
+                            "secfixes": {"6.6.13-r1": ["CVE-46838"]},
+                        },
+                    },
+                ],
+            },
+            "community": {
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "tailscale",
+                            "secfixes": {
+                                "0": ["CVE-2022-41925 TS-2022-005"],
+                                "1.32.3-r0": ["CVE-2022-41924 TS-2022-004"],
+                                "1.66.1-r0": ["CVE-????-????? TS-2024-005"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        vuln_records = p._normalize("3.20", dbtype_data_dict)
+
+        # the valid ids of the same package keep their fixes
+        assert sorted(vuln_records.keys()) == ["CVE-2022-41924", "CVE-2022-41925"]
+        fixed_in = vuln_records["CVE-2022-41924"]["Vulnerability"]["FixedIn"]
+        assert len(fixed_in) == 1
+        assert fixed_in[0]["Name"] == "tailscale"
+        assert fixed_in[0]["Version"] == "1.32.3-r0"
+
+    @pytest.mark.parametrize(
         ("content", "expected"),
         [
             pytest.param(
@@ -334,6 +421,47 @@ nginx:
         assert "CVE-2021-45951" in vuln_records
         assert "GHSA-1234-abcd-5678" not in vuln_records
         assert "XSA-123" not in vuln_records
+
+    def test_normalize_normalizes_malformed_rejection_cve_ids(
+        self, tmpdir, auto_fake_fixdate_finder,
+    ):
+        """Test that rejection CVE ids with junk appended match the real CVE and override its secfix."""
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        p = Parser(workspace=ws)
+
+        secdb_data = {
+            "main": {
+                "distroversion": "v3.21",
+                "packages": [
+                    {
+                        "pkg": {
+                            "name": "zlib",
+                            "secfixes": {
+                                "1.3.2-r0": ["CVE-2026-22184_1"],
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        rejections_yaml = """zlib:
+  - CVE-2026-22184_1
+  - CVE-2026-22184_2
+  - CVE-46838
+"""
+        rejections_dir = os.path.join(ws.input_path, "security-rejections")
+        os.makedirs(rejections_dir, exist_ok=True)
+        with open(os.path.join(rejections_dir, "main.yaml"), "w") as fp:
+            fp.write(rejections_yaml)
+
+        vuln_records = p._normalize("3.21", secdb_data)
+
+        assert list(vuln_records.keys()) == ["CVE-2026-22184"]
+        fixed_in_list = vuln_records["CVE-2026-22184"]["Vulnerability"]["FixedIn"]
+        assert len(fixed_in_list) == 1
+        assert fixed_in_list[0]["Name"] == "zlib"
+        assert fixed_in_list[0]["Version"] == "0"
 
     def test_normalize_merges_rejection_with_existing_cve(
         self, tmpdir, auto_fake_fixdate_finder,
