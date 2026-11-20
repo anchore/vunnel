@@ -18,6 +18,7 @@ EPSS_SCHEMA_VERSION = "1.0.0"
 ANNOTATED_OPENVEX_SCHEMA_VERSION = "1.0.0"
 EOL_SCHEMA_VERSION = "1.0.0"
 CSAF_VEX_SCHEMA_VERSION = "2.0.0"
+EUVD_SCHEMA_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -123,4 +124,11 @@ def CSAFVEXSchema(version: str = CSAF_VEX_SCHEMA_VERSION) -> Schema:
     return Schema(
         version=version,
         url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/csaf-vex/schema-{version}.json",
+    )
+
+
+def EUVDSchema(version: str = EUVD_SCHEMA_VERSION) -> Schema:
+    return Schema(
+        version=version,
+        url=f"https://raw.githubusercontent.com/anchore/vunnel/main/schema/vulnerability/euvd/schema-{version}.json",
     )
