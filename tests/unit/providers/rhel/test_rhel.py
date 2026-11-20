@@ -454,6 +454,47 @@ class TestParser:
             "name": "CVE-2017-16939",
         }
 
+    @pytest.mark.parametrize(
+        "state,expected_wont_fix",
+        [
+            ("Affected", False),
+            ("Fix deferred", False),
+            ("Will not fix", True),
+            ("Out of support scope", True),
+            ("Not affected", None),
+            ("New", None),
+            ("Under investigation", None),
+        ],
+    )
+    def test_parse_eap74_package_states(self, tmpdir, state, expected_wont_fix):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        content = {
+            "package_state": [
+                {
+                    "product_name": (
+                        "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8"
+                    ),
+                    "cpe": (
+                        "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el8"
+                    ),
+                    "package_name": "eap7-hibernate-validator",
+                    "fix_state": state,
+                }
+            ]
+        }
+
+        results = driver._parse_package_state("CVE-2025-35036", content)
+
+        if expected_wont_fix is None:
+            assert results == []
+        else:
+            assert len(results) == 1
+            record = results[0]
+            assert record.platform == "8"
+            assert record.package == "eap7-hibernate-validator"
+            assert record.version == "None"
+            assert record.advisory.wont_fix is expected_wont_fix
+
     def test_parse_affected_releases_eus(self, mock_eus_cve, tmpdir):
         driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
         driver.rhsa_provider = FakeRHSAProvider.from_rhsa_dict({})
@@ -931,6 +972,410 @@ class TestParser:
     )
     def test_get_name_version(self, package, name, version):
         assert Parser._get_name_version(package) == (name, version)
+
+    @pytest.mark.parametrize(
+        "product_name,expected_platform",
+        [
+            ("Red Hat Enterprise Linux 8", "8"),
+            (
+                "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8",
+                None,
+            ),
+        ],
+        ids=["rhel8-recognized", "eap74-rhel8-unrecognized"],
+    )
+    def test_parse_platform_eap_scope(self, tmpdir, product_name, expected_platform):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+
+        assert driver._parse_platform(product_name) == expected_platform
+
+    @pytest.mark.parametrize(
+        "product_name,rhel_version,advisory",
+        [
+            (
+                "Red Hat JBoss Enterprise Application Platform 7.4 on RHEL 7",
+                "7",
+                "RHSA-2025:10924",
+            ),
+            (
+                "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8",
+                "8",
+                "RHSA-2025:10925",
+            ),
+            (
+                "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 9",
+                "9",
+                "RHSA-2025:10926",
+            ),
+        ],
+    )
+    def test_parse_eap74_rpm_fixed_release(
+        self, tmpdir, mocker, product_name, rhel_version, advisory
+    ):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        version = f"0:6.0.23-3.SP2_redhat_00001.1.el{rhel_version}eap"
+        cpe = (
+            "cpe:/a:redhat:jboss_enterprise_application_platform:"
+            f"7.4::el{rhel_version}"
+        )
+        lookup = mocker.patch.object(
+            driver,
+            "_fetch_rhsa_fix_version",
+            return_value=(version, None, None, []),
+        )
+        content = {
+            "affected_release": [
+                {
+                    "product_name": product_name,
+                    "cpe": cpe,
+                    "package": f"eap7-hibernate-validator-{version}",
+                    "advisory": advisory,
+                }
+            ]
+        }
+
+        results = driver._parse_affected_release("CVE-2025-35036", content)
+
+        assert len(results) == 1
+        assert results[0].platform == rhel_version
+        assert results[0].package == "eap7-hibernate-validator"
+        assert results[0].version == version
+        assert results[0].advisory.rhsa_id == advisory
+        lookup.assert_called_once()
+        assert lookup.call_args.args[1].platform_cpe == cpe
+
+    @pytest.mark.parametrize(
+        "changes",
+        [
+            {"cpe": "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el9"},
+            {"cpe": None},
+            {"package": "eap7-hibernate-validator-0:6.0.23-3.SP2_redhat_00001.1.el9eap"},
+            {"package": "hibernate-validator-0:6.0.23-3.SP2_redhat_00001.1.el8eap"},
+            {"package": None},
+            {
+                "product_name":
+                    "Red Hat JBoss Enterprise Application Platform 7.3 for RHEL 8"
+            },
+        ],
+        ids=[
+            "wrong-cpe-platform",
+            "missing-cpe",
+            "wrong-rpm-platform",
+            "non-eap-rpm",
+            "missing-package",
+            "unsupported-eap-stream",
+        ],
+    )
+    def test_parse_eap74_rejects_invalid_release(self, tmpdir, mocker, changes):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        lookup = mocker.patch.object(driver, "_fetch_rhsa_fix_version")
+
+        entry = {
+            "product_name": (
+                "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8"
+            ),
+            "cpe": "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el8",
+            "package": (
+                "eap7-hibernate-validator-"
+                "0:6.0.23-3.SP2_redhat_00001.1.el8eap"
+            ),
+            "advisory": "RHSA-2025:10925",
+        }
+        entry.update(changes)
+
+        results = driver._parse_affected_release(
+            "CVE-2025-35036",
+            {"affected_release": [entry]},
+        )
+
+        assert results == []
+        lookup.assert_not_called()
+
+    def test_parse_cve_eap74_with_real_csaf(
+        self, tmpdir, mocker, auto_fake_fixdate_finder
+    ):
+        from pathlib import Path
+
+        from vunnel.providers.rhel.csaf_parser import CSAFParser
+        from vunnel.utils.csaf_types import from_path
+
+        ws = workspace.Workspace(tmpdir, "test", create=True)
+        driver = Parser(workspace=ws)
+
+        fixture_path = (
+            Path(__file__).parent
+            / "test-fixtures/csaf/advisories/rhsa-2025_10925.json"
+        )
+        client = mocker.Mock()
+        client.csaf_doc_for_rhsa.return_value = from_path(fixture_path)
+
+        csaf_parser = CSAFParser(
+            workspace=ws,
+            client=client,
+            logger=mocker.Mock(),
+            download_timeout=125,
+        )
+
+        rhsa_provider = mocker.Mock(spec=RHSAProvider)
+
+        def get_fix(cve_id, ar, override_package_name):
+            return csaf_parser.get_fix_info(
+                cve_id,
+                ar.as_dict(),
+                override_package_name or ar.name,
+            )
+
+        rhsa_provider.get_fixed_version_and_module.side_effect = get_fix
+        driver.rhsa_provider = rhsa_provider
+
+        # Synthetic older Hydra version verifies that CSAF supplies the fix;
+        # this is not a captured SP1 affected_release record.
+        content = {
+            "name": "CVE-2025-35036",
+            "threat_severity": "Important",
+            "details": ["Hibernate Validator Expression Language injection."],
+            "affected_release": [
+                {
+                    "product_name": (
+                        "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8"
+                    ),
+                    "cpe": (
+                        "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el8"
+                    ),
+                    "package": (
+                        "eap7-hibernate-validator-"
+                        "0:6.0.23-2.SP1_redhat_00001.1.el8eap"
+                    ),
+                    "advisory": "RHSA-2025:10925",
+                }
+            ],
+        }
+
+        results = driver._parse_cve(content["name"], content)
+
+        assert len(results) == 1
+        assert results[0].namespace == "rhel:8"
+
+        vulnerability = results[0].payload["Vulnerability"]
+        assert vulnerability["Name"] == "CVE-2025-35036"
+        assert vulnerability["Severity"] == "High"
+
+        assert len(vulnerability["FixedIn"]) == 1
+        fixed_in = vulnerability["FixedIn"][0]
+        assert fixed_in["Name"] == "eap7-hibernate-validator"
+        assert fixed_in["NamespaceName"] == "rhel:8"
+        assert fixed_in["Version"] == "0:6.0.23-3.SP2_redhat_00001.1.el8eap"
+        assert fixed_in["VersionFormat"] == "rpm"
+        assert fixed_in["VendorAdvisory"]["AdvisorySummary"] == [
+            {
+                "ID": "RHSA-2025:10925",
+                "Link": "https://access.redhat.com/errata/RHSA-2025:10925",
+            }
+        ]
+        client.csaf_doc_for_rhsa.assert_called_once_with("RHSA-2025:10925")
+
+    @pytest.mark.parametrize(
+        "state_changes,expected_version",
+        [
+            ({}, "None"),
+            (
+                {"package_name": "eap7-other-package"},
+                "0:6.0.23-3.SP2_redhat_00001.1.el8eap",
+            ),
+            (
+                {
+                    "product_name": (
+                        "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 9"
+                    ),
+                    "cpe": (
+                        "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el9"
+                    ),
+                },
+                "0:6.0.23-3.SP2_redhat_00001.1.el8eap",
+            ),
+            (
+                {"fix_state": "Not affected"},
+                "0:6.0.23-3.SP2_redhat_00001.1.el8eap",
+            ),
+        ],
+        ids=["same-package", "different-package", "different-platform", "not-affected"],
+    )
+
+
+    def test_eap74_affected_state_takes_precedence_over_fix(
+        self, tmpdir, mocker, auto_fake_fixdate_finder,
+        state_changes, expected_version,
+    ):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        version = "0:6.0.23-3.SP2_redhat_00001.1.el8eap"
+        product = "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8"
+        cpe = "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el8"
+
+        mocker.patch.object(
+            driver,
+            "_fetch_rhsa_fix_version",
+            return_value=(version, None, None, []),
+        )
+
+        content = {
+            "affected_release": [
+                {
+                    "product_name": product,
+                    "cpe": cpe,
+                    "package": f"eap7-hibernate-validator-{version}",
+                    "advisory": "RHSA-2025:10925",
+                }
+            ],
+            "package_state": [
+                {
+                    "product_name": product,
+                    "cpe": cpe,
+                    "package_name": "eap7-hibernate-validator",
+                    "fix_state": "Affected",
+                }
+            ],
+        }
+        content["package_state"][0].update(state_changes)
+
+        results = driver._parse_cve("CVE-2025-35036", content)
+
+        rhel8 = [record for record in results if record.namespace == "rhel:8"]
+        assert len(rhel8) == 1
+
+        fixed_ins = rhel8[0].payload["Vulnerability"]["FixedIn"]
+        target = [
+            entry
+            for entry in fixed_ins
+            if entry["Name"] == "eap7-hibernate-validator"
+        ]
+        assert len(target) == 1
+        assert target[0]["Version"] == expected_version
+
+    @pytest.mark.parametrize(
+        "changes",
+        [
+            {"cpe": None},
+            {
+                "cpe": (
+                    "cpe:/a:redhat:"
+                    "jboss_enterprise_application_platform:7.4::el9"
+                ),
+            },
+            {"package_name": None},
+            {"package_name": "hibernate-validator"},
+            {
+                "product_name": (
+                    "Red Hat JBoss Enterprise Application Platform 7.3 "
+                    "for RHEL 8"
+                ),
+            },
+        ],
+        ids=[
+            "missing-cpe",
+            "wrong-cpe-platform",
+            "missing-package",
+            "non-eap-package",
+            "unsupported-eap-stream",
+        ],
+    )
+    def test_parse_eap74_rejects_invalid_package_state(self, tmpdir, changes):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        entry = {
+            "product_name": (
+                "Red Hat JBoss Enterprise Application Platform 7.4 for RHEL 8"
+            ),
+            "cpe": "cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el8",
+            "package_name": "eap7-hibernate-validator",
+            "fix_state": "Affected",
+        }
+        entry.update(changes)
+
+        assert driver._parse_package_state(
+            "CVE-2025-35036",
+            {"package_state": [entry]},
+        ) == []
+
+    def test_eap74_skips_disclosed_cross_stream_conflict(self, tmpdir, mocker):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        mocker.patch.object(
+            driver,
+            "_fetch_rhsa_fix_version",
+            return_value=(None, None, None, []),
+        )
+
+        content = {
+            "affected_release": [
+                {
+                    "product_name": (
+                        "Red Hat JBoss Enterprise Application Platform "
+                        "7.3 EUS for RHEL 7"
+                    ),
+                    "cpe": (
+                        "cpe:/a:redhat:"
+                        "jboss_enterprise_application_platform_eus:7.3::el7"
+                    ),
+                    "package": (
+                        "eap7-hal-console-"
+                        "0:3.2.17-1.Final_redhat_00001.1.el7eap"
+                    ),
+                    "advisory": "RHSA-2025:1747",
+                },
+                {
+                    "product_name": (
+                        "Red Hat JBoss Enterprise Application Platform "
+                        "7.4 on RHEL 7"
+                    ),
+                    "cpe": (
+                        "cpe:/a:redhat:"
+                        "jboss_enterprise_application_platform:7.4::el7"
+                    ),
+                    "package": (
+                        "eap7-hal-console-"
+                        "0:3.3.13-1.Final_redhat_00001.1.el7eap"
+                    ),
+                    "advisory": "RHSA-2022:5892",
+                },
+            ],
+        }
+
+        # A single RHEL threshold would flag the disclosed fixed EAP 7.3 RPM.
+        # Defer this package instead of importing only its EAP 7.4 threshold.
+        assert driver._parse_affected_release("CVE-2021-44906", content) == []
+        driver._fetch_rhsa_fix_version.assert_not_called()
+
+
+    def test_eap74_conflict_does_not_drop_rhel_release(self, tmpdir, mocker):
+        driver = Parser(workspace=workspace.Workspace(tmpdir, "test", create=True))
+        lookup = mocker.patch.object(
+            driver, "_fetch_rhsa_fix_version", return_value=(None, None, None, []),
+        )
+        releases = []
+        for stream, version in (
+            ("7.3", "0:3.2.17-1.Final_redhat_00001.1.el7eap"),
+            ("7.4", "0:3.3.13-1.Final_redhat_00001.1.el7eap"),
+        ):
+            releases.append({
+                "product_name": f"Red Hat JBoss Enterprise Application Platform {stream} on RHEL 7",
+                "cpe": f"cpe:/a:redhat:jboss_enterprise_application_platform:{stream}::el7",
+                "package": f"eap7-hal-console-{version}",
+                "advisory": "RHSA-2022:5892",
+            })
+        releases.append({
+            "product_name": "Red Hat Enterprise Linux 7",
+            "cpe": "cpe:/o:redhat:enterprise_linux:7",
+            "package": "kernel-0:3.10.0-862.2.3.el7",
+            "advisory": "RHSA-2018:1318",
+        })
+
+        records = driver._parse_affected_release(
+            "CVE-2021-44906", {"affected_release": releases},
+        )
+
+        assert len(records) == 1
+        assert records[0].package == "kernel"
+        assert records[0].version == "0:3.10.0-862.2.3.el7"
+        lookup.assert_called_once()
+        assert lookup.call_args.args[1].name == "kernel"
 
 
 def test_provider_schema(helpers, disable_get_requests, monkeypatch, auto_fake_fixdate_finder):
