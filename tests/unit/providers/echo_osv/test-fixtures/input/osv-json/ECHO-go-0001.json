@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.7.5",
+  "id": "ECHO-go-0001",
+  "modified": "2026-09-30T09:00:00.000Z",
+  "aliases": [
+    "CVE-2026-46600"
+  ],
+  "affected": [
+    {
+      "package": {
+        "ecosystem": "Echo:Go",
+        "name": "golang.org/x/net",
+        "purl": "pkg:golang/golang.org/x/net"
+      },
+      "ranges": [
+        {
+          "type": "ECOSYSTEM",
+          "events": [
+            {
+              "introduced": "0"
+            },
+            {
+              "fixed": "v0.55.0+echo.1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "type": "ADVISORY",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-46600"
+    }
+  ]
+}
