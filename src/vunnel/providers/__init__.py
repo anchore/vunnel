@@ -14,6 +14,7 @@ from vunnel.providers import (
     bitnami,
     chainguard,
     chainguard_libraries,
+    cve5,
     debian,
     dhi,
     echo,
@@ -73,6 +74,7 @@ _providers: dict[str, type[provider.Provider]] = {
     kev.Provider.name(): kev.Provider,
     epss.Provider.name(): epss.Provider,
     eol.Provider.name(): eol.Provider,
+    cve5.Provider.name(): cve5.Provider,
 }
 
 
