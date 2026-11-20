@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Amazon Linux AMI Security Bulletins</title>
+    <description>Amazon Linux AMI Security Bulletins</description>
+    <link>https://alas.aws.amazon.com</link>
+    <language>en-us</language>
+    <ttl>35</ttl>
+
+    <item>
+        <title>Amazon Linux Security Advisory</title>
+        <description>CVE-2099-0001</description>
+        <pubDate>Mon, 01 Jan 2099 00:00:00 GMT</pubDate>
+        <link>https://alas.aws.amazon.com/ALAS-2099-0001.html</link>
+    </item>
+
+    <item>
+        <title></title>
+        <description>CVE-2099-0002</description>
+        <pubDate>Mon, 01 Jan 2099 00:00:00 GMT</pubDate>
+        <link>https://alas.aws.amazon.com/ALAS-2099-0002.html</link>
+    </item>
+
+    <item>
+        <title>ALAS-2099-1000 (medium): openssl</title>
+        <description>CVE-2099-1000</description>
+        <pubDate>Mon, 01 Jan 2099 00:00:00 GMT</pubDate>
+        <link>https://alas.aws.amazon.com/ALAS-2099-1000.html</link>
+    </item>
+
+</channel>
+</rss>
