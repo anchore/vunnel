@@ -51,6 +51,7 @@ class Providers:
     bitnami: providers.bitnami.Config = field(default_factory=providers.bitnami.Config)
     chainguard: providers.chainguard.Config = field(default_factory=providers.chainguard.Config)
     chainguard_libraries: providers.chainguard_libraries.Config = field(default_factory=providers.chainguard_libraries.Config)
+    cpan: providers.cpan.Config = field(default_factory=providers.cpan.Config)
     debian: providers.debian.Config = field(default_factory=providers.debian.Config)
     dhi: providers.dhi.Config = field(default_factory=providers.dhi.Config)
     echo: providers.echo.Config = field(default_factory=providers.echo.Config)
