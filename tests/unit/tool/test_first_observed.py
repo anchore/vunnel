@@ -8,7 +8,9 @@ import pytest
 
 from vunnel import workspace
 from vunnel.tool.fixdate.first_observed import Store
-from vunnel.tool.fixdate.finder import Result
+from vunnel.tool.fixdate.finder import Finder, Result
+
+from .test_grype_db_first_observed import DatabaseFixture
 
 
 class TestStore:
@@ -131,10 +133,9 @@ class TestStore:
         # call find
         results = store.find("CVE-2023-0001", "test-package", "1.0.0", "debian")
 
-        # verify vunnel store was called first and its results returned
+        # verify both stores were consulted and the vunnel results returned
         store.vunnel_store.find.assert_called_once_with("CVE-2023-0001", "test-package", "1.0.0", "debian")
-        # grype_db should not be called when vunnel has results
-        store.grype_db_store.find.assert_not_called()
+        store.grype_db_store.find.assert_called_once_with("CVE-2023-0001", "test-package", "1.0.0", "debian")
         assert results == vunnel_results
 
     def test_find_falls_back_to_grype_db_when_no_vunnel_results(self, tmpdir):
@@ -351,3 +352,82 @@ class TestStore:
             # verify __exit__ was called on both stores after exiting
             store.grype_db_store.__exit__.assert_called_once()
             store.vunnel_store.__exit__.assert_called_once()
+
+
+def _store_with_dates(tmpdir, vunnel_date: date | None, grype_db_date: date | None, database_id: int = 2) -> Store:
+    """a Store over real databases holding the given first observed dates for one wolfi fix."""
+    ws = workspace.Workspace(tmpdir, "wolfi", create=True)
+    store = Store(ws)
+
+    DatabaseFixture(store.grype_db_store.db_path)
+    if grype_db_date:
+        DatabaseFixture.insert_custom_data(
+            store.grype_db_store.db_path,
+            [
+                (
+                    "GHSA-hcg3-q754-cr77", "wolfi", "aactl", "", "wolfi:rolling",
+                    "0.4.12-r27", grype_db_date.isoformat(), "fixed", "grype-db", None, database_id, None,
+                ),
+            ],
+        )
+    store.grype_db_store._downloaded = True
+
+    if vunnel_date:
+        store.vunnel_store.add(vunnel_date, "GHSA-hcg3-q754-cr77", "aactl", "0.4.12-r27", "wolfi:rolling")
+
+    return store
+
+
+FIX = ("GHSA-hcg3-q754-cr77", "aactl", "0.4.12-r27", "wolfi:rolling")
+
+
+class TestFindEarliest:
+    """find() answers with whichever store first observed the fix"""
+
+    def test_grype_db_date_earlier_than_vunnel_date(self, tmpdir):
+        store = _store_with_dates(tmpdir, vunnel_date=date(2026, 3, 30), grype_db_date=date(2026, 1, 7))
+
+        with store:
+            results = store.find(*FIX)
+            # the vunnel row is left as it was
+            recorded = store.vunnel_store.get(*FIX)
+
+        assert [(r.date, r.source, r.accurate) for r in results] == [(date(2026, 1, 7), "grype-db", True)]
+        assert [fd.first_observed_date for fd in recorded] == [date(2026, 3, 30)]
+
+    @pytest.mark.parametrize(
+        "grype_db_date",
+        [
+            pytest.param(date(2026, 3, 30), id="same-date"),
+            pytest.param(date(2026, 4, 2), id="later"),
+            pytest.param(None, id="missing"),
+        ],
+    )
+    def test_vunnel_date_not_later_than_grype_db_date(self, tmpdir, grype_db_date):
+        store = _store_with_dates(tmpdir, vunnel_date=date(2026, 3, 30), grype_db_date=grype_db_date)
+
+        with store:
+            results = store.find(*FIX)
+
+        assert [(r.date, r.source, r.accurate) for r in results] == [(date(2026, 3, 30), "vunnel", True)]
+
+    def test_earlier_accurate_grype_db_date_bounds_candidates(self, tmpdir):
+        """a candidate dated after the grype-db date, but before the vunnel one, no longer wins."""
+        store = _store_with_dates(tmpdir, vunnel_date=date(2026, 3, 30), grype_db_date=date(2026, 1, 7))
+        candidate = Result(date=date(2026, 2, 15), kind="advisory", accurate=True)
+
+        with Finder(strategies=[], first_observed=store) as finder:
+            best = finder.best(*FIX, candidates=[candidate])
+
+        assert (best.date, best.kind, best.source) == (date(2026, 1, 7), "first-observed", "grype-db")
+
+    def test_earlier_inaccurate_grype_db_date_does_not_bound_candidates(self, tmpdir):
+        """a grype-db date from the first database (not accurate) replaces the accurate vunnel date,
+        so a candidate dated after both is no longer discarded."""
+        store = _store_with_dates(tmpdir, vunnel_date=date(2026, 3, 30), grype_db_date=date(2026, 1, 7), database_id=1)
+        candidate = Result(date=date(2026, 4, 15), kind="advisory", accurate=True)
+
+        with Finder(strategies=[], first_observed=store) as finder:
+            best = finder.best(*FIX, candidates=[candidate])
+
+        assert (best.date, best.kind) == (date(2026, 4, 15), "advisory")
