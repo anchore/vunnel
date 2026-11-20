@@ -391,6 +391,79 @@ class TestSQLiteStoreBatchFlush:
         assert not os.path.exists(temp_path + "-wal")
         assert not os.path.exists(temp_path + "-shm")
 
+    def test_close_syncs_database_before_moving_it(self, ws, mocker):
+        """verify that close() syncs the temporary database, which is written without syncing, before moving it."""
+        store = result.SQLiteStore(
+            workspace=ws,
+            result_state_policy=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
+        store.prepare()
+        temp_path = store.temp_db_file_path
+
+        envelope = result.Envelope(identifier="rec-0", schema="test", item={"n": 0})
+        store.store("rec-0", envelope)
+
+        calls = []
+        fsync = mocker.patch.object(result.os, "fsync", side_effect=lambda fd: calls.append(("fsync", os.path.exists(temp_path))))
+        move = mocker.patch.object(result.shutil, "move", side_effect=lambda src, dst: calls.append(("move", src)))
+
+        store.close(successful=True)
+
+        assert fsync.call_count == 1
+        assert move.call_count == 1
+        assert calls == [("fsync", True), ("move", temp_path)]
+
+    def test_close_unsuccessful_does_not_sync(self, ws, mocker):
+        """verify that a failed run deletes the temporary database without syncing it."""
+        store = result.SQLiteStore(
+            workspace=ws,
+            result_state_policy=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
+        store.prepare()
+        temp_path = store.temp_db_file_path
+
+        envelope = result.Envelope(identifier="rec-0", schema="test", item={"n": 0})
+        store.store("rec-0", envelope)
+
+        fsync = mocker.patch.object(result.os, "fsync")
+        store.close(successful=False)
+
+        assert fsync.call_count == 0
+        assert not os.path.exists(temp_path)
+        assert not os.path.exists(os.path.join(ws.results_path, "results.db"))
+
+    def test_temporary_database_has_no_journal(self, ws):
+        """verify that the temporary database is written without a journal or syncing."""
+        store = result.SQLiteStore(
+            workspace=ws,
+            result_state_policy=result.ResultStatePolicy.DELETE_BEFORE_WRITE,
+        )
+        store.prepare()
+        conn, _ = store.connection()
+        raw = conn.connection.dbapi_connection
+        assert raw.execute("PRAGMA journal_mode").fetchone()[0] == "off"
+        assert raw.execute("PRAGMA synchronous").fetchone()[0] == 0
+        store.close(successful=True)
+
+    def test_close_without_writes_deletes_leftover_temporary_database(self, ws):
+        """verify that a run that writes nothing deletes a killed run's temporary database instead of moving it into place."""
+        db_path = os.path.join(ws.results_path, "results.db")
+        with open(db_path, "w") as f:
+            f.write("previous results")
+        temp_db = os.path.join(ws.results_path, "results.db.tmp")
+        with open(temp_db, "w") as f:
+            f.write("left by a killed run")
+
+        store = result.SQLiteStore(
+            workspace=ws,
+            result_state_policy=result.ResultStatePolicy.KEEP,
+        )
+        store.close(successful=True)
+
+        assert not os.path.exists(temp_db)
+        with open(db_path) as f:
+            assert f.read() == "previous results"
+
     def test_prepare_cleans_stale_sidecar_files(self, ws):
         """verify that prepare() removes stale WAL sidecar files from a previous run."""
         results_dir = ws.results_path
