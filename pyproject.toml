@@ -39,6 +39,37 @@ repository = "https://github.com/anchore/vunnel"
 [project.scripts]
 vunnel = "vunnel.cli:run"
 
+
+[project.entry-points."vunnel.providers"]
+alma = "vunnel.providers.alma:Provider"
+alpine = "vunnel.providers.alpine:Provider"
+amazon = "vunnel.providers.amazon:Provider"
+arch = "vunnel.providers.arch:Provider"
+bitnami = "vunnel.providers.bitnami:Provider"
+chainguard = "vunnel.providers.chainguard:Provider"
+chainguard_libraries = "vunnel.providers.chainguard_libraries:Provider"
+debian = "vunnel.providers.debian:Provider"
+dhi = "vunnel.providers.dhi:Provider"
+echo = "vunnel.providers.echo:Provider"
+eol = "vunnel.providers.eol:Provider"
+epss = "vunnel.providers.epss:Provider"
+fedora = "vunnel.providers.fedora:Provider"
+github = "vunnel.providers.github:Provider"
+govulndb = "vunnel.providers.govulndb:Provider"
+hummingbird = "vunnel.providers.hummingbird:Provider"
+kev = "vunnel.providers.kev:Provider"
+mariner = "vunnel.providers.mariner:Provider"
+minimos = "vunnel.providers.minimos:Provider"
+nvd = "vunnel.providers.nvd:Provider"
+oracle = "vunnel.providers.oracle:Provider"
+photon = "vunnel.providers.photon:Provider"
+rhel = "vunnel.providers.rhel:Provider"
+rocky = "vunnel.providers.rocky:Provider"
+secureos = "vunnel.providers.secureos:Provider"
+sles = "vunnel.providers.sles:Provider"
+ubuntu = "vunnel.providers.ubuntu:Provider"
+wolfi = "vunnel.providers.wolfi:Provider"
+
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling", "uv-dynamic-versioning"]
