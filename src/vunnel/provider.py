@@ -8,7 +8,8 @@ import os
 import tempfile
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from importlib import metadata
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 from vunnel.utils import archive, hasher
@@ -123,6 +124,8 @@ class Provider(abc.ABC):
     # NOTE: this value should only be changed in classes that inherit this class. Do not change the value in this class!
     __distribution_version__: int = 1
 
+    __entrypoint__: ClassVar[str] = "vunnel.providers"
+
     def __init__(self, root: str, runtime_cfg: RuntimeConfig = RuntimeConfig()):  # noqa: B008
         self.logger = logging.getLogger(self.name())
         self.workspace = workspace.Workspace(root, self.name(), logger=self.logger, create=False)
@@ -136,6 +139,49 @@ class Provider(abc.ABC):
         self.runtime_cfg = runtime_cfg
         if runtime_cfg.skip_download and not self.__class__.supports_skip_download():
             self.logger.warning(f"skip_download is not supported by {self.name()}")
+
+    @classmethod
+    def import_from(cls, name: str) -> type[Provider]:
+        """Retrieves a provider registered under the provider plugin entrypoint.
+
+        Parameters:
+            name: the name of the Provider to load.
+
+        Returns:
+            A type of `Provider` resolved from the name.
+
+        Raises:
+            `ImportError` if the name is not found as a registered plugin.
+        """
+        for entry_point in metadata.entry_points(group=cls.__entrypoint__):
+            if entry_point.name == name:
+                provider_cls = entry_point.load()
+                if not isinstance(provider_cls, type) or not issubclass(provider_cls, cls):
+                    raise ImportError(
+                        f"entry point {name!r} in group {cls.__entrypoint__!r} "
+                        f"did not resolve to a {cls.__name__} subclass",
+                    )
+                return provider_cls
+
+        raise ImportError(f"no provider named {name!r} found in entry point group {cls.__entrypoint__!r}")
+
+    @classmethod
+    def import_all(cls) -> dict[str, type[Provider]]:
+        """Retrieves all providers registered under the provider plugin entrypoint.
+
+        Returns:
+            A dictionary of Providers and their plugin names.
+        """
+        providers: dict[str, type[Provider]] = {}
+        for entry_point in metadata.entry_points(group=cls.__entrypoint__):
+            provider_cls = entry_point.load()
+            if not isinstance(provider_cls, type) or not issubclass(provider_cls, cls):
+                raise ImportError(
+                    f"entry point {entry_point.name!r} in group {cls.__entrypoint__!r} "
+                    f"did not resolve to a {cls.__name__} subclass",
+                )
+            providers[entry_point.name] = provider_cls
+        return providers
 
     def __enter__(self) -> Provider:
         return self
