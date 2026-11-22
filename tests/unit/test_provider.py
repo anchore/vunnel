@@ -143,6 +143,40 @@ def test_clear_existing_state(dummy_provider):
     assert subject.workspace.clear_results.call_count == 1
 
 
+def test_import_provider_from_entrypoint():
+    entry_point = MagicMock()
+    entry_point.name = "dummy"
+    entry_point.load.return_value = DummyProvider
+
+    with patch("vunnel.provider.metadata.entry_points", return_value=[entry_point]) as entry_points:
+        assert provider.Provider.import_from("dummy") is DummyProvider
+
+    entry_points.assert_called_once_with(group=provider.Provider.__entrypoint__)
+
+
+def test_import_all_providers_from_entrypoint():
+    entry_points = []
+    for name, provider_cls in (("dummy", DummyProvider), ("dummy-zero-count", DummyProviderWithZeroCountOnUpdate)):
+        entry_point = MagicMock()
+        entry_point.name = name
+        entry_point.load.return_value = provider_cls
+        entry_points.append(entry_point)
+
+    with patch("vunnel.provider.metadata.entry_points", return_value=entry_points) as load_entry_points:
+        assert provider.Provider.import_all() == {
+            "dummy": DummyProvider,
+            "dummy-zero-count": DummyProviderWithZeroCountOnUpdate,
+        }
+
+    load_entry_points.assert_called_once_with(group=provider.Provider.__entrypoint__)
+
+
+def test_import_provider_from_entrypoint_not_found():
+    with patch("vunnel.provider.metadata.entry_points", return_value=[]):
+        with pytest.raises(ImportError, match="no provider named 'missing'"):
+            provider.Provider.import_from("missing")
+
+
 def test_clear_existing_state_from_mismatched_versions(dummy_provider):
     policy = provider.RuntimeConfig(
         existing_input=provider.InputStatePolicy.KEEP,
