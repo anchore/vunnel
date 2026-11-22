@@ -158,8 +158,7 @@ class Provider(abc.ABC):
                 provider_cls = entry_point.load()
                 if not isinstance(provider_cls, type) or not issubclass(provider_cls, cls):
                     raise ImportError(
-                        f"entry point {name!r} in group {cls.__entrypoint__!r} "
-                        f"did not resolve to a {cls.__name__} subclass",
+                        f"entry point {name!r} in group {cls.__entrypoint__!r} did not resolve to a {cls.__name__} subclass",
                     )
                 return provider_cls
 
@@ -177,8 +176,7 @@ class Provider(abc.ABC):
             provider_cls = entry_point.load()
             if not isinstance(provider_cls, type) or not issubclass(provider_cls, cls):
                 raise ImportError(
-                    f"entry point {entry_point.name!r} in group {cls.__entrypoint__!r} "
-                    f"did not resolve to a {cls.__name__} subclass",
+                    f"entry point {entry_point.name!r} in group {cls.__entrypoint__!r} did not resolve to a {cls.__name__} subclass",
                 )
             providers[entry_point.name] = provider_cls
         return providers
