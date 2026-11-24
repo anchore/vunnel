@@ -28,8 +28,10 @@ class Config:
     request_timeout: int = 125
     rest_api_url: str = "https://api.github.com"
     # repositories whose repository-scoped advisories are fetched in addition to the global
-    # GitHub Advisory Database. These advisories have no usable GHSA ecosystem, so each entry
-    # names the syft package type (and optionally the package name) to emit them under.
+    # GitHub Advisory Database. Advisories of projects that aren't a package in a GHSA ecosystem
+    # (e.g. language runtimes) have no usable ecosystem, so the entry names the syft package type
+    # (and optionally the package name) to emit them under. When `ecosystem` is empty it is inferred
+    # from each affected package's GHSA ecosystem instead, as for the global database.
     repos: list[RepoAdvisorySource] = field(
         default_factory=lambda: [
             # the ruby interpreter is cataloged by syft as a binary package named "ruby"

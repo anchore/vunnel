@@ -68,9 +68,12 @@ class RepoAdvisorySource:
 
     Repository advisories that are never reviewed into the global database
     (common for projects that are not themselves a package in a GHSA ecosystem,
-    such as language runtimes) carry a free-form or empty ecosystem, so the
-    ecosystem (a syft package type) must be given explicitly. When package is
-    set, it replaces the package name on every affected entry.
+    such as language runtimes) carry a free-form or empty ecosystem; for those,
+    the ecosystem (a syft package type) must be given explicitly and applies to
+    every affected entry. When ecosystem is empty, it is inferred per affected
+    entry from the advisory's own GHSA ecosystem (e.g. "maven" -> java), and
+    entries in an unsupported ecosystem are dropped. When package is set, it
+    replaces the package name on every affected entry.
     """
 
     repo: str = ""
@@ -276,13 +279,21 @@ class Parser:
                 if not node["vulnerabilities"]["nodes"]:
                     self.logger.warning(f"skipping repository advisory {ghsa_id} from {source.repo}: no usable affected packages")
                     continue
-                yield NodeParser(
+                parsed = NodeParser(
                     node,
                     self.fixdater,
                     logger=self.logger,
-                    ecosystem_override=source.ecosystem,
+                    ecosystem_override=source.ecosystem or None,
                     advisory_url=rest_advisory.get("html_url"),
                 ).parse()
+                if not parsed.ecosystems:
+                    # only possible when the ecosystem is inferred from the advisory itself
+                    self.logger.warning(
+                        f"skipping repository advisory {ghsa_id} from {source.repo}: no affected package in a supported ecosystem "
+                        "(set `ecosystem` for this repository to emit it under a fixed one)",
+                    )
+                    continue
+                yield parsed
 
 
 @utils.retry_with_backoff()
@@ -409,7 +420,9 @@ def repo_advisory_to_node(rest: dict, source: RepoAdvisorySource, logger: loggin
         vulnerabilities.append(
             {
                 "package": {
-                    "ecosystem": package.get("ecosystem") or "",
+                    # the REST API reports GHSA ecosystems in lowercase ("maven"), the GraphQL API
+                    # (and ecosystem_map) in uppercase ("MAVEN")
+                    "ecosystem": (package.get("ecosystem") or "").upper(),
                     "name": source.package or package.get("name"),
                 },
                 "firstPatchedVersion": {"identifier": fix_version} if fix_version else None,
@@ -740,7 +753,7 @@ class NodeParser(dict):
         advisory_url: str | None = None,
     ):
         self.fixdater = fixdater
-        # repository advisories have no usable GHSA ecosystem, so the syft package type is configured explicitly
+        # some repository advisories have no usable GHSA ecosystem, so the syft package type can be configured explicitly
         self.ecosystem_override = ecosystem_override
         self.advisory_url = advisory_url
         self.description = None
