@@ -69,16 +69,29 @@ class RepoAdvisorySource:
     Repository advisories that are never reviewed into the global database
     (common for projects that are not themselves a package in a GHSA ecosystem,
     such as language runtimes) carry a free-form or empty ecosystem; for those,
-    the ecosystem (a syft package type) must be given explicitly and applies to
-    every affected entry. When ecosystem is empty, it is inferred per affected
-    entry from the advisory's own GHSA ecosystem (e.g. "maven" -> java), and
-    entries in an unsupported ecosystem are dropped. When package is set, it
-    replaces the package name on every affected entry.
+    the ecosystem (a syft package type, e.g. "binary" or "java") must be given
+    explicitly and applies to every affected entry. A GHSA ecosystem name (e.g.
+    "maven") is accepted too and mapped to its syft package type. When ecosystem
+    is empty, it is inferred per affected entry from the advisory's own GHSA
+    ecosystem (e.g. "maven" -> java), and entries in an unsupported ecosystem
+    are dropped.
+
+    When package is set, it replaces the package name on every affected entry,
+    whatever its ecosystem, so only set it together with ecosystem (or for a
+    repository whose advisories cover a single package).
     """
 
     repo: str = ""
     ecosystem: str = ""
     package: str | None = None
+
+    @property
+    def syft_ecosystem(self) -> str | None:
+        """The configured ecosystem as a syft package type, or None to infer it from each advisory."""
+        if not self.ecosystem:
+            return None
+        # GHSA ecosystem names that are also syft package types (go, npm, ...) map to themselves
+        return ecosystem_map.get(self.ecosystem.upper(), self.ecosystem)
 
 
 class Parser:
@@ -268,6 +281,7 @@ class Parser:
         for source in self.repos:
             advisories = get_repo_advisories(source.repo, self.token, self.download_timeout, self.rest_api_url)
             self.logger.info(f"fetched {len(advisories)} repository advisories from {source.repo}")
+            unsupported: list[str] = []
             for rest_advisory in advisories:
                 ghsa_id = rest_advisory.get("ghsa_id")
                 if not ghsa_id:
@@ -283,17 +297,20 @@ class Parser:
                     node,
                     self.fixdater,
                     logger=self.logger,
-                    ecosystem_override=source.ecosystem or None,
+                    ecosystem_override=source.syft_ecosystem,
                     advisory_url=rest_advisory.get("html_url"),
                 ).parse()
                 if not parsed.ecosystems:
                     # only possible when the ecosystem is inferred from the advisory itself
-                    self.logger.warning(
-                        f"skipping repository advisory {ghsa_id} from {source.repo}: no affected package in a supported ecosystem "
-                        "(set `ecosystem` for this repository to emit it under a fixed one)",
-                    )
+                    unsupported.append(ghsa_id)
                     continue
                 yield parsed
+            if unsupported:
+                # one line per repository rather than per advisory: these recur on every run
+                self.logger.warning(
+                    f"skipping {len(unsupported)} repository advisories from {source.repo} with no affected package in a supported "
+                    f"ecosystem (set `ecosystem` for this repository to emit them under a fixed one): {', '.join(sorted(unsupported))}",
+                )
 
 
 @utils.retry_with_backoff()
