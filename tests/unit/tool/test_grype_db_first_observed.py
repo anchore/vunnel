@@ -324,6 +324,52 @@ class TestStore:
         assert store._not_found is True
         assert store._downloaded is True
 
+    @pytest.mark.parametrize(
+        "listed, providers_error, outcome",
+        [
+            pytest.param(False, None, "not-found", id="refused for a provider missing from the published list"),
+            pytest.param(True, None, "raises", id="refused for a provider in the published list"),
+            pytest.param(False, ValueError("Cannot respond to request for authentication."), "raises", id="refused and the list cannot be fetched"),
+        ],
+    )
+    @patch("oras.client.OrasClient")
+    @patch("vunnel.tool.fixdate.grype_db_first_observed._ProgressLoggingOrasClient")
+    def test_download_refused(self, mock_oras_client_class, mock_oras_client_constructor, tmpdir, caplog, listed, providers_error, outcome):
+        ws = workspace.Workspace(tmpdir, "cve5", create=True)
+        store = Store(ws)
+
+        mock_digest_client = Mock()
+        mock_oras_client_constructor.return_value = mock_digest_client
+        mock_digest_client.do_request.return_value = Mock(status_code=200, headers={"Docker-Content-Digest": "sha256:test123"})
+
+        refusal = ValueError("Cannot respond to request for authentication.")
+
+        # ghcr refuses the provider's own image and answers for the published providers list
+        def pull(target, outdir):
+            if not target.endswith("/providers:latest"):
+                raise refusal
+            if providers_error:
+                raise providers_error
+            Path(outdir).mkdir(parents=True, exist_ok=True)
+            (Path(outdir) / "providers.txt").write_text("nvd\n" + ("cve5\n" if listed else "github\n"))
+
+        mock_client = Mock()
+        mock_client.pull.side_effect = pull
+        mock_oras_client_class.return_value = mock_client
+
+        if outcome == "raises":
+            with pytest.raises(ValueError, match="Cannot respond to request for authentication"):
+                store.download()
+            return
+
+        with caplog.at_level(logging.WARNING):
+            store.download()
+
+        assert store._not_found is True
+        assert store._downloaded is True
+        assert any("no fix date database found for provider cve5" in r.message and r.levelno == logging.WARNING for r in caplog.records)
+        assert store.get("CVE-2023-0001", "pkg", "1.0") == []
+
     def test_download_creates_directories(self, tmpdir):
         # create workspace and store
         ws = workspace.Workspace(tmpdir, "test-db", create=True)
