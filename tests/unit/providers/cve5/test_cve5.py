@@ -17,7 +17,8 @@ from vunnel import result, workspace
 from vunnel.cli import config
 from vunnel.providers import cve5
 from vunnel.providers.cve5 import manager
-from vunnel.tool.fixdate import Result
+from vunnel.tool import fixdate
+from vunnel.tool.fixdate import Result, grype_db_first_observed
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "test-fixtures")
 
@@ -289,6 +290,8 @@ def test_schema_invalid_record_is_written_unchanged(helpers, serve):
         ws.result_schemas_valid()
 
 
+# the real store, kept before the autouse fixture below replaces it
+REAL_STORE = fixdate.first_observed.Store
 FIX_DATE = datetime.date(2025, 6, 20)
 SEATA = "2025/cve-2025-32897"
 
@@ -403,3 +406,31 @@ def test_lookup_passes_locator_bound_and_purl_type(helpers, serve, observed_date
         ("CVE-2025-32897", "cpe:2.3:a:apache:seata:*:*:*:*:*:maven:*:*", "2.3.0", None),
         ("CVE-2025-32897", "cpe:2.3:a:org.apache.seata:seata-config-core:*:*:*:*:*:maven:*:*", "2.3.0", None),
     }
+
+
+def test_date_from_an_earlier_run_is_kept(helpers, serve, monkeypatch):
+    # the real store, with no grype-db dataset to download and a clock that moves a day between runs
+    monkeypatch.setattr(fixdate.first_observed, "Store", REAL_STORE)
+    monkeypatch.setattr(grype_db_first_observed.Store, "download", grype_db_first_observed.Store.skip_download)
+    today = [datetime.datetime(2026, 11, 20, tzinfo=datetime.UTC)]
+
+    class Clock(datetime.datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ARG003
+            return today[0]
+
+    monkeypatch.setattr(fixdate.first_observed, "datetime", Clock)
+
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+    first = stored(ws)[SEATA]["containers"]["cna"]["x_observedFixDates"]
+    assert [e["date"] for e in first] == ["2026-11-20"]
+    # the store sits in the results directory, which the next run keeps
+    assert (ws.results_dir / "observed-fix-dates.db").exists()
+
+    today[0] = datetime.datetime(2026, 11, 21, tzinfo=datetime.UTC)
+    p = cve5.Provider(root=ws.root, config=cve5.Config(url=MANIFEST_URL))
+    p.update(None)
+
+    assert stored(ws)[SEATA]["containers"]["cna"]["x_observedFixDates"] == first
