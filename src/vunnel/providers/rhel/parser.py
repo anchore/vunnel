@@ -439,6 +439,7 @@ class Parser:
         param: content: dict: The JSON data for the CVE."""
         fixed_ins = []
         ars = content.get("affected_release", [])
+        eap_conflicts = self._find_eap_rpm_product_conflicts(content)
 
         # to deal with affected releases missing package-version strings
         platform_packages = {}  # dictionary of platform -> set of package names
@@ -454,6 +455,8 @@ class Parser:
             for item in ars:
                 try:
                     platform = self._parse_platform(item.get("product_name", None))
+                    if not platform:
+                        platform = self._parse_eap74_rpm_platform(item, eap_conflicts)
                     if not platform:
                         continue
 
@@ -709,15 +712,18 @@ class Parser:
         out_of_support: list[FixedIn] = []  # Track items out of support to be able to add them if others are affected
         lists = {"affected": affected, "out_of_support": out_of_support}
         pss = content.get("package_state", [])
+        eap_conflicts = self._find_eap_rpm_product_conflicts(content)
 
         for item in pss:
             try:
                 platform = self._parse_platform(item.get("product_name", None))
+                if not platform:
+                    platform = self._parse_eap74_state_platform(item, eap_conflicts)
+
                 if not platform or f"{namespace}:{platform}" in self.skip_namespaces:
                     continue
 
                 package_name, module = self._parse_package_name_and_module(item)
-
                 if not package_name:
                     self.logger.debug(f"package state package_name missing for {cve_id} platform {platform}")
                     continue
@@ -745,6 +751,86 @@ class Parser:
                 self.logger.exception(f"error parsing {cve_id} package state entity: {item}")
 
         return affected + out_of_support
+
+    def _find_eap_rpm_product_conflicts(self, content: dict) -> set[tuple[str, str]]:
+        """Find disclosed EAP product conflicts that a plain RHEL namespace cannot retain.
+
+        This is a conservative guard over this CVE's input, not a claim that an
+        undisclosed product stream is unaffected. Different product CPEs (including
+        EUS/ELS variants) are kept distinct even if their fixed versions agree.
+        """
+        products: dict[tuple[str, str], set[str]] = {}
+        for section in ("affected_release", "package_state"):
+            for item in content.get(section, []):
+                key = self._eap_rpm_product_key(item, section)
+                if key is not None:
+                    products.setdefault(key, set()).add(item["cpe"])
+        return {key for key, cpes in products.items() if len(cpes) > 1}
+
+    def _eap_rpm_product_key(self, item: dict, section: str) -> tuple[str, str] | None:
+        if not isinstance(item, dict):
+            return None
+        cpe = item.get("cpe")
+        if not isinstance(cpe, str):
+            return None
+        match = re.fullmatch(
+            r"cpe:/a:redhat:jboss_enterprise_application_platform(?:_eus|_els)?:"
+            r"[0-9]+(?:\.[0-9]+)*::el([0-9]+)",
+            cpe,
+        )
+        if not match:
+            return None
+        if section == "affected_release":
+            name, _ = self._get_name_version(item.get("package"))
+        else:
+            if not isinstance(item.get("package_name"), str):
+                return None
+            name, _ = self._parse_package_name_and_module(item)
+        if not isinstance(name, str) or not name.startswith("eap7-"):
+            return None
+        return name, match.group(1)
+
+    def _parse_eap74_product_platform(self, item: dict) -> str | None:
+        product_name = item.get("product_name")
+        if not isinstance(product_name, str):
+            return None
+
+        match = re.fullmatch(
+            r"Red Hat JBoss Enterprise Application Platform 7\.4 "
+            r"(?:for|on) RHEL ([789])",
+            product_name,
+        )
+        if not match:
+            return None
+
+        platform = match.group(1)
+        expected_cpe = f"cpe:/a:redhat:jboss_enterprise_application_platform:7.4::el{platform}"
+        if item.get("cpe") != expected_cpe:
+            return None
+
+        return platform
+
+    def _parse_eap74_rpm_platform(
+        self,
+        item: dict,
+        conflicts: set[tuple[str, str]] | None = None,
+    ) -> str | None:
+        platform = self._parse_eap74_product_platform(item)
+        if not platform:
+            return None
+
+        package = item.get("package")
+        if not isinstance(package, str):
+            return None
+
+        name, version = self._get_name_version(package)
+        if not name or not name.startswith("eap7-") or not version or not version.endswith(f".el{platform}eap"):
+            return None
+
+        if conflicts and (name, platform) in conflicts:
+            return None
+
+        return platform
 
     def _parse_platform(self, product_name: str | None) -> str | None:
         is_eus = False
@@ -1083,6 +1169,28 @@ class Parser:
                 self.rhsa_dict.clear()
                 del self.rhsa_dict
 
+    def _parse_eap74_state_platform(
+        self,
+        item: dict,
+        conflicts: set[tuple[str, str]] | None = None,
+    ) -> str | None:
+        if item.get("fix_state") not in {
+            "Affected",
+            "Fix deferred",
+            "Will not fix",
+            "Out of support scope",
+        }:
+            return None
+
+        package_name, _ = self._parse_package_name_and_module(item)
+        if not isinstance(package_name, str) or not package_name.startswith("eap7-"):
+            return None
+
+        platform = self._parse_eap74_product_platform(item)
+        if conflicts and (package_name, platform) in conflicts:
+            return None
+        return platform
+
 
 def _get_version_base(version: str) -> str:
     """Return the epoch:version portion of an RPM version string, dropping the release.
@@ -1096,6 +1204,7 @@ def _get_version_base(version: str) -> str:
         "3.9.18-3.el9_4.5"      -> "3.9.18"
         "1:2.27-34.base.el7"    -> "1:2.27"
     """
+
     epoch, ver, _ = rpm.split_fullversion(version)
     if ver is None:
         return version
@@ -1124,7 +1233,6 @@ def _build_vulnerable_range(sorted_base_fixes: list) -> str | None:
     flags a 9.4 host that already carries its backport (because 3.9.18 < 3.9.19 in RPM ordering).
 
     Given the per-base fixes sorted ascending by upstream base, this produces a constraint like:
-
         < 0:3.9.18-3.el9_4.5 || >= 0:3.9.19, < 0:3.9.19-8.el9
 
     read as: vulnerable if below the lowest stream's fix, OR within a later stream (at or above that
