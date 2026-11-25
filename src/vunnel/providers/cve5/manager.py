@@ -119,7 +119,7 @@ class Manager:
         cve_id = record["cveMetadata"]["cveId"]
         containers = record.get("containers", {})
         for container in [containers.get("cna", {}), *containers.get("adp", [])]:
-            entries = [e for bound in _bounds(container) if (e := self._observed(cve_id, *bound))]
+            entries = [e for bound in _bounds(container, cve_id, self.logger) if (e := self._observed(cve_id, *bound))]
             if entries:
                 container["x_observedFixDates"] = entries
         return record
@@ -131,7 +131,7 @@ class Manager:
         return {**locator, "fixVersion": fix_version, "date": result.date.isoformat(), "kind": result.kind}
 
 
-def _bounds(container: dict[str, Any]) -> Generator[tuple[dict[str, str], str, str | None, str]]:
+def _bounds(container: dict[str, Any], cve_id: str, logger: logging.Logger) -> Generator[tuple[dict[str, str], str, str | None, str]]:
     """yield (locator as stated, lookup key, ecosystem, fix version) for each fix bound in a container."""
     for affected in container.get("affected", []):
         purl = affected.get("packageURL")
@@ -139,7 +139,12 @@ def _bounds(container: dict[str, Any]) -> Generator[tuple[dict[str, str], str, s
         if purl:
             # the purl is the locator as stated; the lookup key drops its version (the bound's job), qualifiers and subpath
             locator = {"packageURL": purl}
-            parsed = PackageURL.from_string(purl)
+            try:
+                parsed = PackageURL.from_string(purl)
+            except ValueError as e:
+                # a CNA's malformed purl must not stop the run, it just has nothing to date
+                logger.warning(f"skipping fix dates for unparseable purl {purl!r} in {cve_id}: {e}")
+                continue
             lookup = parsed._replace(version=None, qualifiers=None, subpath=None).to_string()
             ecosystem = parsed.type
         elif name:

@@ -2,6 +2,7 @@ import datetime
 import glob
 import hashlib
 import io
+import logging
 import os
 import tarfile
 import time
@@ -432,6 +433,26 @@ def test_lookup_passes_locator_bound_and_purl_type(helpers, serve, observed_date
     }
 
 
+def test_malformed_purl_is_logged_and_skipped_beside_a_valid_one(helpers, serve, observed_dates, caplog):
+    malformed = "pkg:maven"
+    record = orjson.loads(_read(os.path.join(FIXTURES, "CVE-2025-32897.json")))
+    adp = next(c for c in record["containers"]["adp"] if c["providerMetadata"]["shortName"] == "anchoreadp")
+    adp["affected"].insert(0, {"packageURL": malformed, "versions": [{"version": "0", "status": "affected", "lessThan": "9.9"}]})
+    serve(make_archive(include=FIX_DATE_RECORDS, replace={"CVE-2025-32897.json": orjson.dumps(record)}))
+    ws, p = new_provider(helpers)
+
+    with caplog.at_level(logging.WARNING):
+        p.update(None)
+
+    # the run goes on to the other records, and the valid purl beside the malformed one is dated
+    assert set(stored(ws)) == set(expected_records(exclude=("CVE-2025-32897.json",))) | {SEATA, "2026/cve-2026-53424"}
+    entries = _containers(stored(ws)[SEATA])["anchoreadp"]["x_observedFixDates"]
+    assert _entry(packageURL="pkg:maven/org.apache.seata/seata-config-core", fixVersion="2.3.0") in entries
+    assert all(e.get("packageURL") != malformed for e in entries)
+    assert not any(lookup[1] == malformed for lookup in observed_dates)
+    assert any("CVE-2025-32897" in r.message and malformed in r.message and r.levelno == logging.WARNING for r in caplog.records)
+
+
 def test_lookup_key_drops_version_qualifiers_and_subpath_and_keeps_an_unencoded_npm_scope():
     container = {
         "affected": [
@@ -447,7 +468,7 @@ def test_lookup_key_drops_version_qualifiers_and_subpath_and_keeps_an_unencoded_
         ]
     }
 
-    bounds = list(manager._bounds(container))
+    bounds = list(manager._bounds(container, "CVE-2026-0001", logging.getLogger()))
 
     # the locator stays as stated, and both spellings of one scope share a key that does not collide with a sibling package
     assert [b[0]["packageURL"] for b in bounds] == [a["packageURL"] for a in container["affected"]]
@@ -468,7 +489,7 @@ def test_unaffected_version_with_a_less_than_gets_no_bound():
         ]
     }
 
-    assert [b[3] for b in manager._bounds(container)] == ["2.0.0"]
+    assert [b[3] for b in manager._bounds(container, "CVE-2026-0001", logging.getLogger())] == ["2.0.0"]
 
 
 def test_date_from_an_earlier_run_is_kept(helpers, serve, monkeypatch):
