@@ -432,6 +432,45 @@ def test_lookup_passes_locator_bound_and_purl_type(helpers, serve, observed_date
     }
 
 
+def test_lookup_key_drops_version_qualifiers_and_subpath_and_keeps_an_unencoded_npm_scope():
+    container = {
+        "affected": [
+            {
+                "packageURL": purl,
+                "versions": [{"version": "0", "status": "affected", "lessThan": "2.0.0"}],
+            }
+            for purl in (
+                "pkg:npm/@babel/core",
+                "pkg:npm/%40babel/core@1.0.0?arch=x86#sub/path",
+                "pkg:npm/@babel/parser",
+            )
+        ]
+    }
+
+    bounds = list(manager._bounds(container))
+
+    # the locator stays as stated, and both spellings of one scope share a key that does not collide with a sibling package
+    assert [b[0]["packageURL"] for b in bounds] == [a["packageURL"] for a in container["affected"]]
+    assert [b[1] for b in bounds] == ["pkg:npm/%40babel/core", "pkg:npm/%40babel/core", "pkg:npm/%40babel/parser"]
+    assert {b[2] for b in bounds} == {"npm"}
+
+
+def test_unaffected_version_with_a_less_than_gets_no_bound():
+    container = {
+        "affected": [
+            {
+                "packageName": "example",
+                "versions": [
+                    {"version": "0", "status": "affected", "lessThan": "2.0.0"},
+                    {"version": "3.0", "status": "unaffected", "lessThan": "3.1.0"},
+                ],
+            }
+        ]
+    }
+
+    assert [b[3] for b in manager._bounds(container)] == ["2.0.0"]
+
+
 def test_date_from_an_earlier_run_is_kept(helpers, serve, monkeypatch):
     # the real store, with no grype-db dataset to download and a clock that moves a day between runs
     monkeypatch.setattr(fixdate.first_observed, "Store", REAL_STORE)

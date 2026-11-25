@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 
 import orjson
 import zstandard
+from packageurl import PackageURL
 
 from vunnel.tool import fixdate
 from vunnel.utils import hasher
@@ -136,10 +137,11 @@ def _bounds(container: dict[str, Any]) -> Generator[tuple[dict[str, str], str, s
         purl = affected.get("packageURL")
         name = affected.get("packageName")
         if purl:
-            # the purl is the locator as stated; the lookup drops its version, which is the bound's job
+            # the purl is the locator as stated; the lookup key drops its version (the bound's job), qualifiers and subpath
             locator = {"packageURL": purl}
-            lookup = purl.split("@", 1)[0].split("?", 1)[0].split("#", 1)[0]
-            ecosystem = purl.removeprefix("pkg:").split("/", 1)[0].lower()
+            parsed = PackageURL.from_string(purl)
+            lookup = parsed._replace(version=None, qualifiers=None, subpath=None).to_string()
+            ecosystem = parsed.type
         elif name:
             locator = {k: affected[k] for k in ("collectionURL",) if affected.get(k)} | {"packageName": name}
             lookup, ecosystem = name, None
@@ -148,7 +150,8 @@ def _bounds(container: dict[str, Any]) -> Generator[tuple[dict[str, str], str, s
             continue
         for version in affected.get("versions", []):
             fix_version = version.get("lessThan")
-            if fix_version and fix_version != "*":
+            # an unaffected item states no vulnerable range, so it has no fix to date
+            if version.get("status") == "affected" and fix_version and fix_version != "*":
                 yield locator, lookup, ecosystem, fix_version
 
     for config in container.get("cpeApplicability", []):
