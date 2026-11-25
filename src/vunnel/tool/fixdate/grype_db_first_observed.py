@@ -141,6 +141,13 @@ def _lookup_query(table: db.Table, by_cpe: bool, with_v6_cpe: bool, with_ecosyst
     return query
 
 
+IMAGE_BASE = "ghcr.io/anchore/grype-db-observed-fix-date"
+
+
+def _is_auth_refusal(e: Exception) -> bool:
+    return "cannot respond to request for authentication" in str(e).lower()
+
+
 @dataclass
 class FixDate:
     """
@@ -253,6 +260,19 @@ class Store(Strategy):
         elif not download_db_path.exists():
             raise FileNotFoundError(f"expected {download_db_path} or {download_zst_path} after pull")
 
+    def _is_published(self, client: _ProgressLoggingOrasClient, download_dir: Path) -> bool:
+        """whether the provider is in the providers list published alongside the fix date databases.
+
+        A list that cannot be fetched counts as published, so the caller keeps the original error.
+        """
+        try:
+            client.pull(target=f"{IMAGE_BASE}/providers:latest", outdir=str(download_dir))
+            listed = (download_dir / "providers.txt").read_text().split()
+        except Exception as e:
+            self.logger.warning(f"unable to fetch the list of published fix date providers: {e}")
+            return True
+        return self.provider in listed
+
     def skip_download(self) -> None:
         """Use the fix date database already in the workspace, without contacting the registry."""
         self._downloaded = True
@@ -274,7 +294,7 @@ class Store(Strategy):
         self._downloaded = True
 
         # construct the image reference base
-        image_base = f"ghcr.io/anchore/grype-db-observed-fix-date/{self.provider}"
+        image_base = f"{IMAGE_BASE}/{self.provider}"
 
         # ensure the parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -328,8 +348,10 @@ class Store(Strategy):
                 self.logger.debug(f"saved digest: {remote_digest}")
 
         except ValueError as e:
-            # if this is a 404 or not found error, log a warning and continue
-            if "not found" in str(e).lower():
+            # if this is a 404 or not found error, log a warning and continue. ghcr answers a pull of an image that was
+            # never published with an authentication refusal instead, so that counts as not found only for a provider
+            # missing from the published providers list: for a listed one (or an unreadable list) it is a real outage.
+            if "not found" in str(e).lower() or (_is_auth_refusal(e) and not self._is_published(client, download_dir)):
                 self.logger.warning(f"no fix date database found for provider {self.provider}")
                 self._not_found = True
             else:
