@@ -1,3 +1,4 @@
+import datetime
 import glob
 import hashlib
 import io
@@ -16,12 +17,18 @@ from vunnel import result, workspace
 from vunnel.cli import config
 from vunnel.providers import cve5
 from vunnel.providers.cve5 import manager
+from vunnel.tool.fixdate import Result
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "test-fixtures")
 
 # records from the 2026-10-21 publish. CVE-2022-35990 fails the CVE 5 schema, so it is packed only where a test asks for it.
+# The two fix-date records are likewise packed only by the tests that read their bounds: CVE-2025-32897 has a CNA package
+# bound, an anchoreadp package bound and anchoreadp CPE bounds, and CVE-2026-53424 has only `lessThan "*"` bounds.
 INVALID = "CVE-2022-35990.json"
-RECORD_FILES = sorted(p for p in glob.glob(os.path.join(FIXTURES, "CVE-*.json")) if os.path.basename(p) != INVALID)
+FIX_DATE_RECORDS = ("CVE-2025-32897.json", "CVE-2026-53424.json")
+RECORD_FILES = sorted(
+    p for p in glob.glob(os.path.join(FIXTURES, "CVE-*.json")) if os.path.basename(p) not in (INVALID, *FIX_DATE_RECORDS)
+)
 MANIFEST_URL = "https://example.test/cve5/v5/latest.json"
 ARCHIVE_PATH = "2026/10/cve-enriched-json-v5_2026-10-21T11:19:58Z.tar.zst"
 ARCHIVE_URL = "https://example.test/cve5/v5/" + ARCHIVE_PATH
@@ -280,3 +287,119 @@ def test_schema_invalid_record_is_written_unchanged(helpers, serve):
     assert orjson.loads(_read(os.path.join(FIXTURES, INVALID))) in items
     with pytest.raises(jsonschema.ValidationError):
         ws.result_schemas_valid()
+
+
+FIX_DATE = datetime.date(2025, 6, 20)
+SEATA = "2025/cve-2025-32897"
+
+
+@pytest.fixture(autouse=True)
+def no_observed_dates(fake_fixdate_finder):
+    # the store holds no dates unless a test asks for one, so records are written as published
+    return fake_fixdate_finder()
+
+
+@pytest.fixture
+def observed_dates(fake_fixdate_finder):
+    """a fix-date store that returns FIX_DATE for every lookup, recording what it was asked for."""
+    lookups = []
+
+    def respond(vuln_id, cpe_or_package, fix_version, ecosystem):
+        lookups.append((vuln_id, cpe_or_package, fix_version, ecosystem))
+        return [Result(date=FIX_DATE, kind="first-observed")]
+
+    fake_fixdate_finder(respond)
+    return lookups
+
+
+def _entry(**locator):
+    return {**locator, "date": "2025-06-20", "kind": "first-observed"}
+
+
+def _containers(record: dict) -> dict[str, dict]:
+    adp = {c["providerMetadata"]["shortName"]: c for c in record["containers"]["adp"]}
+    return {"cna": record["containers"]["cna"], **adp}
+
+
+def test_cna_package_bound_gets_an_observed_fix_date(helpers, serve, observed_dates):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+
+    cna = _containers(stored(ws)[SEATA])["cna"]
+    assert cna["x_observedFixDates"] == [
+        _entry(
+            collectionURL="https://repo.maven.apache.org/maven2",
+            packageName="org.apache.seata:seata-server",
+            fixVersion="2.3.0",
+        ),
+    ]
+
+
+def test_anchoreadp_bound_is_dated_on_its_own_container(helpers, serve, observed_dates):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+
+    containers = _containers(stored(ws)[SEATA])
+    package = _entry(packageURL="pkg:maven/org.apache.seata/seata-config-core", fixVersion="2.3.0")
+    assert package in containers["anchoreadp"]["x_observedFixDates"]
+    assert package not in containers["cna"]["x_observedFixDates"]
+    assert all("seata-config-core" not in str(e) for e in containers["cna"]["x_observedFixDates"])
+
+
+def test_cpe_match_bound_gets_an_entry_keyed_by_criteria(helpers, serve, observed_dates):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+
+    entries = _containers(stored(ws)[SEATA])["anchoreadp"]["x_observedFixDates"]
+    for criteria in (
+        "cpe:2.3:a:apache:seata:*:*:*:*:*:maven:*:*",
+        "cpe:2.3:a:org.apache.seata:seata-config-core:*:*:*:*:*:maven:*:*",
+    ):
+        assert _entry(criteria=criteria, fixVersion="2.3.0") in entries
+    # one package entry and two CPE entries
+    assert len(entries) == 3
+
+
+@pytest.mark.parametrize(
+    "cve",
+    [
+        # lessThanOrEqual bounds in the CNA and anchoreadp containers
+        "2026/cve-2026-85091",
+        # lessThan "*" bounds, which state no fix
+        "2026/cve-2026-53424",
+    ],
+)
+def test_bounds_with_no_fix_version_get_no_entry(helpers, serve, observed_dates, cve):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+
+    assert all("x_observedFixDates" not in c for c in _containers(stored(ws)[cve]).values())
+    assert not any(vuln_id.lower() == cve.split("/")[1] for vuln_id, *_ in observed_dates)
+
+
+def test_container_with_no_bound_gets_no_key(helpers, serve, observed_dates):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+
+    assert "x_observedFixDates" not in _containers(stored(ws)[SEATA])["CISA-ADP"]
+
+
+def test_lookup_passes_locator_bound_and_purl_type(helpers, serve, observed_dates):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers)
+    p.update(None)
+
+    seata = {lookup for lookup in observed_dates if lookup[0] == "CVE-2025-32897"}
+    assert seata == {
+        # a package name alone has no ecosystem
+        ("CVE-2025-32897", "org.apache.seata:seata-server", "2.3.0", None),
+        # a purl is looked up without a version, by its type (the finder normalizes maven to java-archive)
+        ("CVE-2025-32897", "pkg:maven/org.apache.seata/seata-config-core", "2.3.0", "java-archive"),
+        ("CVE-2025-32897", "cpe:2.3:a:apache:seata:*:*:*:*:*:maven:*:*", "2.3.0", None),
+        ("CVE-2025-32897", "cpe:2.3:a:org.apache.seata:seata-config-core:*:*:*:*:*:maven:*:*", "2.3.0", None),
+    }
