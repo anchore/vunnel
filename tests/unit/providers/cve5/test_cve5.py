@@ -149,7 +149,7 @@ def test_identifier_matches_nvd(helpers, serve):
 
 
 def test_default_source():
-    assert cve5.Config().url == "https://data.anchore.ninja/security/cve/enriched/json/v5/latest.json"
+    assert cve5.Config().url == "https://data.anchore.io/security/cve/enriched/json/v5/latest.json"
 
 
 def test_default_source_requests(helpers, serve):
@@ -159,8 +159,8 @@ def test_default_source_requests(helpers, serve):
     p.update(None)
 
     assert [url for url, _ in serve.calls] == [
-        "https://data.anchore.ninja/security/cve/enriched/json/v5/latest.json",
-        "https://data.anchore.ninja/security/cve/enriched/json/v5/" + ARCHIVE_PATH,
+        "https://data.anchore.io/security/cve/enriched/json/v5/latest.json",
+        "https://data.anchore.io/security/cve/enriched/json/v5/" + ARCHIVE_PATH,
     ]
 
 

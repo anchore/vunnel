@@ -23,7 +23,7 @@ def _default_user_agent() -> str:
 
 @dataclass
 class Config:
-    url: str = "https://data.anchore.ninja/security/cve/enriched/json/v5/latest.json"
+    url: str = "https://data.anchore.io/security/cve/enriched/json/v5/latest.json"
     runtime: provider.RuntimeConfig = field(
         default_factory=lambda: provider.RuntimeConfig(
             result_store=result.StoreStrategy.SQLITE,
