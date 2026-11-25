@@ -125,9 +125,9 @@ def stored(ws) -> dict[str, dict]:
         return {e.identifier: e.item for e in reader.read_all()}
 
 
-def expected_records(exclude: tuple[str, ...] = ()) -> dict[str, dict]:
+def expected_records(exclude: tuple[str, ...] = (), only: tuple[str, ...] = ()) -> dict[str, dict]:
     out = {}
-    for path in RECORD_FILES:
+    for path in [os.path.join(FIXTURES, n) for n in only] or RECORD_FILES:
         if os.path.basename(path) in exclude:
             continue
         record = orjson.loads(_read(path))
@@ -135,17 +135,41 @@ def expected_records(exclude: tuple[str, ...] = ()) -> dict[str, dict]:
     return out
 
 
-def test_records_written_unchanged(helpers, serve):
-    serve(make_archive())
+def _without_fix_dates(record: dict) -> dict:
+    """the record as published: its containers minus the x_observedFixDates lists the provider adds."""
+    containers = record["containers"]
+    for container in [containers["cna"], *containers.get("adp", [])]:
+        container.pop("x_observedFixDates", None)
+    return record
+
+
+def test_records_written_unchanged(helpers, serve, fake_fixdate_finder):
+    fake_fixdate_finder([Result(date=FIX_DATE, kind="first-observed")])
+    serve(make_archive(include=FIX_DATE_RECORDS))
     ws, p = new_provider(helpers)
     p.update(None)
 
-    # five records, nothing for README.md
-    assert stored(ws) == expected_records()
-    assert len(stored(ws)) == 5
+    # seven records, nothing for README.md, and each is its source file apart from the fix-date lists
+    assert {k: _without_fix_dates(v) for k, v in stored(ws).items()} == {
+        **expected_records(),
+        **expected_records(only=FIX_DATE_RECORDS),
+    }
+    assert len(stored(ws)) == 7
     assert any(r["cveMetadata"]["state"] == "REJECTED" for r in stored(ws).values())
     for cve in ("2026/cve-2026-85091", "2026/cve-2026-59650", "2026/cve-2026-41608"):
         assert any(c["providerMetadata"]["shortName"] == "anchoreadp" for c in stored(ws)[cve]["containers"]["adp"])
+    # the dates were added, so the comparison above is not vacuous
+    assert any("x_observedFixDates" in c for c in _containers(stored(ws)[SEATA]).values())
+
+
+def test_records_with_fix_dates_validate_against_the_cve5_schema(helpers, serve, observed_dates):
+    serve(make_archive(include=FIX_DATE_RECORDS))
+    ws, p = new_provider(helpers, store=result.StoreStrategy.FLAT_FILE)
+    p.update(None)
+
+    assert ws.num_result_entries() == 7
+    assert any("x_observedFixDates" in orjson.loads(_read(f))["item"]["containers"]["cna"] for f in ws.result_files())
+    assert ws.result_schemas_valid(require_entries=True)
 
 
 def test_identifier_matches_nvd(helpers, serve):
