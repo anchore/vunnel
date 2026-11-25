@@ -159,6 +159,11 @@ def _bounds(container: dict[str, Any], cve_id: str, logger: logging.Logger) -> G
             if version.get("status") == "affected" and fix_version and fix_version != "*":
                 yield locator, lookup, ecosystem, fix_version
 
+    yield from _cpe_bounds(container)
+
+
+def _cpe_bounds(container: dict[str, Any]) -> Generator[tuple[dict[str, str], str, str | None, str]]:
+    """yield a bound for each vulnerable cpeApplicability match with a versionEndExcluding, keyed by its criteria."""
     for config in container.get("cpeApplicability", []):
         for node in config.get("nodes", []):
             for match in node.get("cpeMatch", []):
