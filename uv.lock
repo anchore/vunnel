@@ -887,15 +887,15 @@ wheels = [
 
 [[package]]
 name = "oras"
-version = "0.2.43"
+version = "0.2.44"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonschema" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/d2/dc4a3eb07ac779455dbfbc85cd396025ad72450ed7673a323c685cfb6774/oras-0.2.43.tar.gz", hash = "sha256:761f2b518fce50e5e9482975363ff0230f63fc65f84c09510fbcc301782a047c", size = 59134, upload-time = "2026-08-08T15:45:53.559Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/92/45719088d695714259d768a286639b3563e931db8e46e3820427ca6040e8/oras-0.2.44.tar.gz", hash = "sha256:4bc8ebf56f324f5ca8e2278e4ceaa906ffb5e5030d198b80c073e8338e54acf5", size = 61918, upload-time = "2026-11-18T05:08:08.804Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2f/66/29d7e4a4784847c370a9ed3c6d20532c05aae975ebb0d355d595d30430d6/oras-0.2.43-py3-none-any.whl", hash = "sha256:bf295b1cfb5017f579c35c3394c7a71707f6aff463cb6699d5d191a6d8b56ea6", size = 72286, upload-time = "2026-08-08T15:45:52.499Z" },
+    { url = "https://files.pythonhosted.org/packages/38/99/fb7c16f35fc9085335edf996e7a57d33d79425d42011ad6201152f7306bb/oras-0.2.44-py3-none-any.whl", hash = "sha256:7bfbfa166d2874a26b2ff87d5a95262686ba12e0ae8623f20dc0cdc1bd20d26b", size = 74863, upload-time = "2026-11-18T05:08:07.507Z" },
 ]
 
 [[package]]
