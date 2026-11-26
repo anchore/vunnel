@@ -743,6 +743,28 @@ class TestRepoAdvisoryToNode:
             },
         ]
 
+    def test_infers_ecosystem_per_entry_without_override(self, auto_fake_fixdate_finder):
+        # the REST API reports GHSA ecosystems in lowercase; one advisory may span several ecosystems
+        rest = {
+            "ghsa_id": "GHSA-xxxx-xxxx-xxxx",
+            "html_url": "https://github.com/o/r/security/advisories/GHSA-xxxx-xxxx-xxxx",
+            "severity": "high",
+            "vulnerabilities": [
+                {"package": {"ecosystem": "maven", "name": "io.netty:netty-codec-http"}, "vulnerable_version_range": "<= 4.1.124.Final", "patched_versions": "4.1.125.Final"},
+                {"package": {"ecosystem": "npm", "name": "thing"}, "vulnerable_version_range": "< 2.0", "patched_versions": "2.0"},
+                {"package": {"ecosystem": "other", "name": "ignored"}, "vulnerable_version_range": "< 1.0", "patched_versions": "1.0"},
+            ],
+        }
+        source = parser.RepoAdvisorySource(repo="o/r")
+        node = parser.repo_advisory_to_node(rest, source)
+        parsed = parser.NodeParser(node, fixdate.default_finder(None), ecosystem_override=source.syft_ecosystem).parse()
+
+        assert parsed.ecosystems == {"java", "npm"}
+        assert [(f["name"], f["namespace"], f["identifier"]) for f in parsed["FixedIn"]] == [
+            ("io.netty:netty-codec-http", "github:java", "4.1.125.Final"),
+            ("thing", "github:npm", "2.0"),
+        ]
+
 
 class TestParserRepoAdvisories:
     def test_yields_repo_advisories(self, fake_get_query, fake_repo_advisories, ruby_repo_advisories, tmpdir, empty_response, auto_fake_fixdate_finder):
@@ -778,6 +800,65 @@ class TestParserRepoAdvisories:
         assert [r["ghsaId"] for r in result] == ["GHSA-mh6f-8j2x-4483"]
         assert "binary" not in result[0].ecosystems
 
+    def test_inferred_ecosystem(self, fake_get_query, fake_repo_advisories, tmpdir, empty_response, auto_fake_fixdate_finder):
+        fake_get_query([empty_response])
+        fake_repo_advisories(
+            {
+                "o/r": [
+                    {
+                        "ghsa_id": "GHSA-aaaa-aaaa-aaaa",
+                        "vulnerabilities": [{"package": {"ecosystem": "maven", "name": "g:a"}, "vulnerable_version_range": "< 1", "patched_versions": "1"}],
+                    },
+                    # nothing in a supported ecosystem: skipped rather than emitted without a namespace
+                    {
+                        "ghsa_id": "GHSA-bbbb-bbbb-bbbb",
+                        "vulnerabilities": [{"package": {"ecosystem": "", "name": "x"}, "vulnerable_version_range": "< 1", "patched_versions": "1"}],
+                    },
+                ],
+            },
+        )
+        source = parser.RepoAdvisorySource(repo="o/r")
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret", repos=[source])
+        result = list(p.get())
+        assert [(r["ghsaId"], r.ecosystems) for r in result] == [("GHSA-aaaa-aaaa-aaaa", {"java"})]
+
+    def test_unsupported_advisories_logged_once_per_repo(self, fake_get_query, fake_repo_advisories, tmpdir, empty_response, auto_fake_fixdate_finder, caplog):
+        fake_get_query([empty_response])
+        other = [{"package": {"ecosystem": "other", "name": "x"}, "vulnerable_version_range": "< 1", "patched_versions": "1"}]
+        fake_repo_advisories({"o/r": [{"ghsa_id": f"GHSA-{c}{c}{c}{c}-{c}{c}{c}{c}-{c}{c}{c}{c}", "vulnerabilities": other} for c in "abc"]})
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret", repos=[parser.RepoAdvisorySource(repo="o/r")])
+        with caplog.at_level("WARNING"):
+            assert list(p.get()) == []
+        warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1
+        assert "skipping 3 repository advisories from o/r" in warnings[0]
+
+    def test_ghsa_ecosystem_name_in_config(self, fake_get_query, fake_repo_advisories, tmpdir, empty_response, auto_fake_fixdate_finder):
+        fake_get_query([empty_response])
+        fake_repo_advisories(
+            {"o/r": [{"ghsa_id": "GHSA-aaaa-aaaa-aaaa", "vulnerabilities": [{"package": {"ecosystem": "", "name": "g:a"}, "vulnerable_version_range": "< 1", "patched_versions": "1"}]}]},
+        )
+        p = parser.Parser(workspace.Workspace(root=tmpdir.strpath, name="test", create=True), "secret", repos=[parser.RepoAdvisorySource(repo="o/r", ecosystem="maven")])
+        assert [r.ecosystems for r in p.get()] == [{"java"}]
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [
+        ("", None),
+        ("binary", "binary"),
+        ("java", "java"),
+        ("go", "go"),
+        # GHSA ecosystem names, in either case, map to their syft package type
+        ("maven", "java"),
+        ("MAVEN", "java"),
+        ("pip", "python"),
+        ("rubygems", "gem"),
+    ],
+)
+def test_repo_source_syft_ecosystem(configured, expected):
+    assert parser.RepoAdvisorySource(repo="o/r", ecosystem=configured).syft_ecosystem == expected
+
 
 def test_provider_writes_repo_advisories(helpers, fake_get_query, fake_repo_advisories, ruby_repo_advisories, empty_response, auto_fake_fixdate_finder):
     fake_get_query([empty_response])
@@ -792,6 +873,43 @@ def test_provider_writes_repo_advisories(helpers, fake_get_query, fake_repo_advi
     assert workspace.result_schemas_valid(require_entries=True)
     written = sorted(os.path.basename(os.path.dirname(f)) + "/" + os.path.basename(f) for f in workspace.result_files())
     assert written == ["github:binary/ghsa-34m4-m9fh-gqp5.json", "github:binary/ghsa-gfj3-8wj9-qx8p.json"]
+
+
+def test_provider_splits_inferred_ecosystems(helpers, fake_get_query, fake_repo_advisories, empty_response, auto_fake_fixdate_finder):
+    # one repository advisory spanning two ecosystems is written once per ecosystem, each with only its own fixes
+    fake_get_query([empty_response])
+    fake_repo_advisories(
+        {
+            "o/r": [
+                {
+                    "ghsa_id": "GHSA-aaaa-aaaa-aaaa",
+                    "html_url": "https://github.com/o/r/security/advisories/GHSA-aaaa-aaaa-aaaa",
+                    "summary": "s",
+                    "severity": "high",
+                    "published_at": "2026-01-01T00:00:00Z",
+                    "updated_at": "2026-01-02T00:00:00Z",
+                    "vulnerabilities": [
+                        {"package": {"ecosystem": "maven", "name": "g:a"}, "vulnerable_version_range": "< 1.0", "patched_versions": "1.0"},
+                        {"package": {"ecosystem": "npm", "name": "thing"}, "vulnerable_version_range": "< 2.0", "patched_versions": "2.0"},
+                    ],
+                },
+            ],
+        },
+    )
+    workspace = helpers.provider_workspace_helper(name=Provider.name())
+
+    c = Config(token="secret", api_url="https://localhost", repos=[parser.RepoAdvisorySource(repo="o/r")])
+    c.runtime.result_store = result.StoreStrategy.FLAT_FILE
+    provider = Provider(root=workspace.root, config=c)
+    provider.update(None)
+
+    assert workspace.result_schemas_valid(require_entries=True)
+    written = {}
+    for f in workspace.result_files():
+        with open(f) as fh:
+            advisory = json.load(fh)["item"]["Advisory"]
+        written[advisory["namespace"]] = [(fix["name"], fix["identifier"]) for fix in advisory["FixedIn"]]
+    assert written == {"github:java": [("g:a", "1.0")], "github:npm": [("thing", "2.0")]}
 
 
 def test_default_config_includes_ruby():
