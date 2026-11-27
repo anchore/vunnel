@@ -5,6 +5,7 @@ import gzip
 import hashlib
 import logging
 import os
+import re
 from functools import cmp_to_key
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
@@ -20,6 +21,13 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from vunnel import workspace
+
+# APK version grammar (apk-tools): digits{.digits}[letter]{_suffix[digits]}
+# Suffix order: _alpha < _beta < _pre < _rc < (no suffix) < _cvs < _svn < _git < _hg < _p
+_APK_SUFFIX_RANK = {"alpha": 0, "beta": 1, "pre": 2, "rc": 3, "cvs": 5, "svn": 6, "git": 7, "hg": 8, "p": 9}
+_APK_NO_SUFFIX_RANK = 4
+_APK_VERSION_RE = re.compile(r"^(\d+(?:\.\d+)*)([a-z]?)((?:_(?:alpha|beta|pre|rc|cvs|svn|git|hg|p)\d*)*)$")
+_APK_SUFFIX_RE = re.compile(r"_([a-z]+)(\d*)")
 
 
 class Parser:
@@ -189,18 +197,49 @@ class Parser:
         return version_parts, revision
 
     @staticmethod
+    def _apk_version_key(ver: str) -> tuple[list[int], str, list[tuple[int, int]]] | None:
+        """
+        Parse the version part of an APK version (without "-rN") into comparable components:
+        (numeric components, letter, [(suffix rank, suffix number), ...]).
+        E.g., "1.10_p1" -> ([1, 10], "", [(9, 1)]). Returns None if the version does not follow APK rules.
+        """
+        version_str = ver.rsplit("-r", 1)[0] if "-r" in ver else ver
+        match = _APK_VERSION_RE.match(version_str)
+        if not match:
+            return None
+        numbers = [int(n) for n in match.group(1).split(".")]
+        suffixes = [(_APK_SUFFIX_RANK[name], int(num) if num else 0) for name, num in _APK_SUFFIX_RE.findall(match.group(3))]
+        return numbers, match.group(2), suffixes
+
+    @staticmethod
     def _compare_apk_versions(ver_a: str, ver_b: str) -> int:
         """
         Compare APK versions. Returns -1 if ver_a < ver_b, 0 if equal, 1 if ver_a > ver_b.
-        APK versions typically follow the pattern: VERSION-rREVISION (e.g., 9.3.2-r2)
+        APK versions typically follow the pattern: VERSION[_SUFFIX]-rREVISION (e.g., 9.3.2-r2, 1.9.5_p2-r1)
         """
         if ver_a == ver_b:
             return 0
 
         parts_a, rev_a = Parser._parse_apk_version(ver_a)
         parts_b, rev_b = Parser._parse_apk_version(ver_b)
+        key_a = Parser._apk_version_key(ver_a)
+        key_b = Parser._apk_version_key(ver_b)
 
-        # Compare version parts
+        if key_a is not None and key_b is not None:
+            nums_a, letter_a, suffixes_a = key_a
+            nums_b, letter_b, suffixes_b = key_b
+            width = max(len(nums_a), len(nums_b))
+            nums_a = nums_a + [0] * (width - len(nums_a))
+            nums_b = nums_b + [0] * (width - len(nums_b))
+            width = max(len(suffixes_a), len(suffixes_b))
+            no_suffix = (_APK_NO_SUFFIX_RANK, 0)
+            suffixes_a = suffixes_a + [no_suffix] * (width - len(suffixes_a))
+            suffixes_b = suffixes_b + [no_suffix] * (width - len(suffixes_b))
+            cmp_a = (nums_a, letter_a, suffixes_a, rev_a)
+            cmp_b = (nums_b, letter_b, suffixes_b, rev_b)
+            return (cmp_a > cmp_b) - (cmp_a < cmp_b)
+
+        # Fallback for versions outside the APK grammar: compare segment by segment
         for i in range(max(len(parts_a), len(parts_b))):
             a_part = parts_a[i] if i < len(parts_a) else 0
             b_part = parts_b[i] if i < len(parts_b) else 0
